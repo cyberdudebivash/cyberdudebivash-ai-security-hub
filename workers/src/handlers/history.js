@@ -12,6 +12,7 @@
  */
 
 import { getScanHistory } from '../lib/reportEngine.js';
+import { parsePersistedFindings } from '../lib/findingsSummary.js';
 
 export async function handleScanHistory(request, env, authCtx = {}) {
   const url    = new URL(request.url);
@@ -43,30 +44,50 @@ export async function handleScanHistory(request, env, authCtx = {}) {
 
   // 1. Read from D1 scan_history (primary source — written by all scan handlers v41.0+)
   if (env?.DB && authCtx?.user_id) {
+    const mapRow = r => ({
+      scan_id:        r.scan_id,
+      target:         r.target,
+      module:         r.module,
+      risk_score:     r.risk_score,
+      risk_level:     r.risk_level,
+      grade:          r.grade || 'N/A',
+      data_source:    r.data_source,
+      status:         r.status,
+      scanned_at:     r.scanned_at,
+      source:         'd1',
+      ...(r.findings !== undefined ? { findings: parsePersistedFindings(r.findings) } : {}),
+    });
+
+    // findings (schema_migration_scan_history_findings_2026_07.sql) is a
+    // manually-gated production migration that may not have run yet on any
+    // given deploy — try the richer query first, and if the column simply
+    // doesn't exist there, fall back to the original column list rather than
+    // losing D1 history entirely to the KV shadow copy for the whole window
+    // until someone runs it.
+    let rows;
     try {
-      const rows = await env.DB.prepare(
-        `SELECT scan_id, target, module, risk_score, risk_level, grade, data_source, status, scanned_at
+      rows = await env.DB.prepare(
+        `SELECT scan_id, target, module, risk_score, risk_level, grade, data_source, status, scanned_at, findings
          FROM scan_history
          WHERE user_id = ?
          ORDER BY scanned_at DESC
          LIMIT ?`
       ).bind(authCtx.user_id, limit).all();
+    } catch {
+      try {
+        rows = await env.DB.prepare(
+          `SELECT scan_id, target, module, risk_score, risk_level, grade, data_source, status, scanned_at
+           FROM scan_history
+           WHERE user_id = ?
+           ORDER BY scanned_at DESC
+           LIMIT ?`
+        ).bind(authCtx.user_id, limit).all();
+      } catch { /* fall through to KV */ }
+    }
 
-      if (rows?.results?.length > 0) {
-        d1Scans = rows.results.map(r => ({
-          scan_id:     r.scan_id,
-          target:      r.target,
-          module:      r.module,
-          risk_score:  r.risk_score,
-          risk_level:  r.risk_level,
-          grade:       r.grade || 'N/A',
-          data_source: r.data_source,
-          status:      r.status,
-          scanned_at:  r.scanned_at,
-          source:      'd1',
-        }));
-      }
-    } catch { /* fall through to KV */ }
+    if (rows?.results?.length > 0) {
+      d1Scans = rows.results.map(mapRow);
+    }
   }
 
   // Mark all D1 scan_ids as seen

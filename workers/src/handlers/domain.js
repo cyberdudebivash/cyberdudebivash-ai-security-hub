@@ -18,6 +18,7 @@ import { enrichScanEnterprise, enrichFindingsWithATTACK, matchThreatActors, quan
 // v40.0 — MYTHOS enrichment (all scan types)
 import { enrichAssessmentWithMYTHOS } from '../services/mythosEnrichmentEngine.js';
 import { cacheScanResultForReport } from '../lib/scanResultCache.js';
+import { distillFindingsForHistory } from '../lib/findingsSummary.js';
 
 // ─── KV scan counter — reliable cross-handler increment ──────────────────────
 async function incrementScanCounter(env) {
@@ -332,6 +333,16 @@ async function trackDomainScan(env, authCtx, scanId, domain, result, dataSource)
         result.scan_status === 'unmeasurable' ? 'N/A' : (result.grade || 'A'),
         dataSource || result.data_source || 'live_dns'
       ).run();
+
+      // Separate, best-effort statement on purpose — see queue.js insertD1History
+      // for why: scan_history.findings is a manually-gated migration that may not
+      // have run yet, and this must never take the row insert above down with it.
+      const findingsJson = distillFindingsForHistory(result.findings);
+      if (findingsJson) {
+        await env.DB.prepare(
+          `UPDATE scan_history SET findings = ? WHERE scan_id = ? AND user_id = ?`
+        ).bind(findingsJson, scanId, authCtx.user_id).run().catch(() => {});
+      }
     }
   } catch { /* tracking must never break scan response */ }
 }
