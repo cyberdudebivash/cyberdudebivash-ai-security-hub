@@ -343,150 +343,23 @@ function requireAuth(authCtx) {
   return null;
 }
 
-// ─── GET /api/marketplace/catalog ─────────────────────────────────────────────
-async function handleGetCatalog(request, env, authCtx) {
-  const url = new URL(request.url);
-  const category = url.searchParams.get('category');
-  const type = url.searchParams.get('type');
-
-  let products = Object.values(PRODUCT_CATALOG);
-
-  if (category) products = products.filter(p => p.category === category);
-  if (type) products = products.filter(p => p.type === type);
-
-  const byCategory = {};
-  for (const p of products) {
-    if (!byCategory[p.category]) byCategory[p.category] = [];
-    byCategory[p.category].push(p);
-  }
-
-  return Response.json({
-    catalog: {
-      total: products.length,
-      categories: {
-        api_subscription: { label: 'API Subscriptions', count: Object.values(PRODUCT_CATALOG).filter(p => p.category === 'api_subscription').length },
-        detection_pack: { label: 'Detection Engineering Packs', count: Object.values(PRODUCT_CATALOG).filter(p => p.category === 'detection_pack').length },
-        intel_report: { label: 'Intelligence Reports', count: Object.values(PRODUCT_CATALOG).filter(p => p.category === 'intel_report').length },
-        defense_kit: { label: 'Defense Kits', count: Object.values(PRODUCT_CATALOG).filter(p => p.category === 'defense_kit').length },
-        ai_security: { label: 'AI/LLM Security', count: Object.values(PRODUCT_CATALOG).filter(p => p.category === 'ai_security').length },
-        bundle: { label: 'Bundles', count: Object.values(PRODUCT_CATALOG).filter(p => p.category === 'bundle').length },
-      },
-      products: category ? products : byCategory,
-    },
-    payment_methods: ['GPay', 'PhonePe', 'Paytm', 'BHIM UPI', 'AmazonPay', 'PayPal', 'BNB/USDT/ETH', 'NEFT/IMPS/RTGS', 'Bank Transfer'],
-    currency: 'USD',
-    last_updated: new Date().toISOString(),
-  });
-}
-
-// ─── GET /api/marketplace/catalog/:productId ──────────────────────────────────
-async function handleGetProduct(request, env, authCtx) {
-  const url = new URL(request.url);
-  const productId = url.pathname.split('/').pop();
-
-  const product = PRODUCT_CATALOG[productId];
-  if (!product) {
-    return Response.json({ error: `Product not found: ${productId}` }, { status: 404 });
-  }
-
-  // Fetch purchase count for social proof
-  let purchaseCount = 0;
-  try {
-    const r = await env.DB.prepare(
-      `SELECT COUNT(*) as c FROM marketplace_orders WHERE product_id = ? AND status = 'completed'`
-    ).bind(productId).first();
-    purchaseCount = r?.c || 0;
-  } catch {}
-
-  return Response.json({
-    product,
-    social_proof: {
-      purchases: purchaseCount,
-      rating: 4.9,
-      reviews: purchaseCount,
-    },
-    related_products: Object.values(PRODUCT_CATALOG)
-      .filter(p => p.category === product.category && p.id !== productId)
-      .slice(0, 3)
-      .map(p => ({ id: p.id, name: p.name, price: p.price, badge: p.badge })),
-  });
-}
-
-// ─── POST /api/marketplace/checkout ──────────────────────────────────────────
-async function handleCheckout(request, env, authCtx) {
-  const err = requireAuth(authCtx);
-  if (err) return err;
-
-  let body;
-  try { body = await request.json(); } catch { return Response.json({ error: 'Invalid JSON body' }, { status: 400 }); }
-
-  const { product_id, quantity = 1, coupon_code, customer_email } = body;
-  if (!product_id) return Response.json({ error: 'product_id required' }, { status: 400 });
-
-  const product = PRODUCT_CATALOG[product_id];
-  if (!product) return Response.json({ error: `Product not found: ${product_id}` }, { status: 404 });
-
-  const userId = getUserId(authCtx);
-  const sessionId = crypto.randomUUID();
-  const amount = product.price ? product.price * quantity : 0;
-
-  // Apply coupon if provided (simple 10% discount for APEX10)
-  let discount = 0;
-  if (coupon_code === 'APEX10' && amount > 0) discount = Math.floor(amount * 0.10);
-  if (coupon_code === 'APEX20' && amount > 0) discount = Math.floor(amount * 0.20);
-
-  const finalAmount = amount - discount;
-
-  // Determine payment method based on product
-  const paymentMethods = product.gumroad_url
-    ? { primary: 'gumroad', url: product.gumroad_url }
-    : { primary: 'manual', url: 'https://intel.cyberdudebivash.com/PAYMENT-GATEWAY.html' };
-
-  // Store checkout session
-  try {
-    await env.DB.prepare(
-      `INSERT INTO marketplace_orders (id, user_id, product_id, product_name, amount, currency, discount, coupon_code, status, payment_method, checkout_url, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, datetime('now'))`
-    ).bind(sessionId, userId, product_id, product.name, finalAmount, 'USD', discount, coupon_code || null, paymentMethods.primary, paymentMethods.url).run();
-  } catch {}
-
-  return Response.json({
-    session_id: sessionId,
-    product: { id: product.id, name: product.name, description: product.description },
-    pricing: {
-      original_amount: amount,
-      discount,
-      final_amount: finalAmount,
-      currency: 'USD',
-      billing_period: product.billing_period,
-    },
-    payment: {
-      method: paymentMethods.primary,
-      url: paymentMethods.url,
-      gumroad_direct: product.gumroad_url || null,
-      upi_id: 'iambivash.bn-5@okaxis',
-      paypal: 'enterprise@cyberdudebivash.com',
-      reference_id: sessionId,
-      instructions: product.gumroad_url
-        ? 'Click "Buy Now" to complete secure checkout via Gumroad. You will receive download access instantly.'
-        : `Complete payment via UPI/PayPal/Bank transfer using Reference ID: ${sessionId}. Email receipt to enterprise@cyberdudebivash.com for manual provisioning within 24 hours.`,
-    },
-    delivery: {
-      method: product.delivery,
-      estimated_delivery: product.delivery === 'instant' || product.delivery === 'instant_download' ? 'Immediate' : '24-48 hours',
-    },
-    trial: product.trial_days ? {
-      available: true,
-      days: product.trial_days,
-      trial_url: `/api/marketplace/trial`,
-      note: `Start your ${product.trial_days}-day free trial without payment.`,
-    } : null,
-    support: {
-      email: 'enterprise@cyberdudebivash.com',
-      response_time: '24 hours',
-    },
-  });
-}
+// handleGetCatalog / handleGetProduct / handleCheckout (GET catalog, GET
+// catalog/:productId, POST checkout) were removed 2026-07-11 (CAP-MKT-005):
+// workers/src/index.js registers exact-match routes for these same 3 paths
+// earlier in its if-chain (marketplaceCheckoutHandler.js's
+// handleMarketplaceCatalog/handleMarketplaceProduct/handleMarketplaceCheckout,
+// the router's actual live implementation, confirmed via
+// frontend/marketplace-checkout.html) — since the router returns on first
+// match, these 3 functions and their dispatch entries below were dead,
+// unreachable code, permanently shadowed. Diagnosed 2026-07-08, removed
+// 2026-07-11 rather than left as silently-diverging duplicate
+// implementations of a payment-adjacent path. See
+// docs/capability-registry/PROGRAM_BOARD.md for the full writeup, including
+// a related, separately-flagged finding (not fixed here): the live
+// purchase/subscribe/upgrade/compare/trial sub-actions below still resolve
+// products from this file's own PRODUCT_CATALOG, which shares zero product
+// IDs with marketplaceCheckoutHandler.js's MARKETPLACE_CATALOG that
+// customers actually browse.
 
 // ─── POST /api/marketplace/purchase ───────────────────────────────────────────
 async function handleRecordPurchase(request, env, authCtx) {
@@ -1059,14 +932,10 @@ async function handleMarketplaceWebhook(request, env, authCtx) {
 
 export async function handleMarketplace(request, env, authCtx, path, method) {
   try {
-    if (path === '/api/marketplace/catalog' && method === 'GET')
-      return handleGetCatalog(request, env, authCtx);
-
-    if (path.match(/^\/api\/marketplace\/catalog\/.+$/) && method === 'GET')
-      return handleGetProduct(request, env, authCtx);
-
-    if (path === '/api/marketplace/checkout' && method === 'POST')
-      return handleCheckout(request, env, authCtx);
+    // catalog / catalog/:productId / checkout: not handled here — see the
+    // removal note above handleRecordPurchase() earlier in this file.
+    // workers/src/index.js routes these 3 paths to
+    // marketplaceCheckoutHandler.js before this dispatcher is ever reached.
 
     if (path === '/api/marketplace/purchase' && method === 'POST')
       return handleRecordPurchase(request, env, authCtx);
@@ -1119,9 +988,10 @@ export async function handleMarketplace(request, env, authCtx, path, method) {
     return Response.json({
       error: 'Marketplace route not found',
       available: [
-        'GET /api/marketplace/catalog',
-        'GET /api/marketplace/catalog/:productId',
-        'POST /api/marketplace/checkout',
+        // catalog / catalog/:productId / checkout are real, live routes —
+        // just not served by this file (see the removal note above
+        // handleRecordPurchase()) — omitted here to avoid implying this
+        // dispatcher handles them.
         'POST /api/marketplace/purchase',
         'POST /api/marketplace/webhook',
         'POST /api/marketplace/subscribe',
