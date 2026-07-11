@@ -726,7 +726,11 @@ body::before {
 'use strict';
 
 /* ── CONFIG ──────────────────────────────────────────────────── */
-const API   = 'https://cyberdudebivash-security-hub.iambivash-bn.workers.dev';
+// Same-origin relative base — this page is served from cyberdudebivash.in
+// (see canonical link in <head>), matching the rest of the platform's
+// dashboards (soc-command-dashboard.html, billing-portal.html, etc.)
+// rather than the raw Workers URL directly.
+const API   = '';
 const TOUT  = 8000;  // 8s fetch timeout
 const RETRY = 2;     // max retries
 
