@@ -10,40 +10,40 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-11T09:36:36.095Z
-Capabilities catalogued: 67
+Generated: 2026-07-11T10:33:02.417Z
+Capabilities catalogued: 95
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 83.6% |
-| Frontend | 67.9% |
-| Parity (backend **and** frontend both exist) | 62.7% |
-| Customer Journeys complete (dynamic_browser-verified) | 0% |
+| Backend | 88.4% |
+| Frontend | 64.2% |
+| Parity (backend **and** frontend both exist) | 57.9% |
+| Customer Journeys complete (dynamic_browser-verified) | 3.2% |
 
 ## Gaps by Priority
 
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
-| Critical | P1 | 9 | Broken customer journey |
-| High | P2 | 15 | Backend exists, frontend missing |
-| Medium | P3 | 2 | Backend+frontend exist, navigation missing |
-| Medium | P4 | 3 | RBAC not enforced |
+| Critical | P1 | 10 | Broken customer journey |
+| High | P2 | 23 | Backend exists, frontend missing |
+| Medium | P3 | 7 | Backend+frontend exist, navigation missing |
+| Medium | P4 | 5 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
-| Low | P6 | 26 | No test coverage |
-| Low | P7 | 12 | Documentation missing |
+| Low | P6 | 36 | No test coverage |
+| Low | P7 | 14 | Documentation missing |
 
-**Rollup:** Critical 9 · High 15 · Medium 5 · Low 38
+**Rollup:** Critical 10 · High 23 · Medium 12 · Low 50
 
 ## Structural Findings
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 12 | Backend exists, but not discoverable via navigation |
-| Backend-only features | 9 | Backend exists, zero frontend surface |
+| Hidden features | 27 | Backend exists, but not discoverable via navigation |
+| Backend-only features | 19 | Backend exists, zero frontend surface |
 | Duplicate systems | 5 | Backend marked `duplicate` (two implementations of one capability) |
-| Broken journeys | 9 | Priority P1 |
+| Broken journeys | 10 | Priority P1 |
 
 ## Production Readiness Verdict: **NOT READY**
 
@@ -85,6 +85,16 @@ complete", "bug free", or "guaranteed".
 | CAP-BILL-001 | Coupon Redemption at Checkout | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 | CAP-BILL-002 | Coupon Administration | ✓ | ✗ | ✗ | NOT READY | P2 |
 | CAP-BILL-003 | Subscription Plans & Billing Portal | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
+
+### compliance-store (5 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-COMP-001 | Global Compliance Packs Store | ✓ | ✓ | ✗ | NOT READY | P1 |
+| CAP-COMP-002 | Compliance Assessment / Readiness Engine (CDB-COMP-001) | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-COMP-003 | Tools Marketplace Compliance Toolkits | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
+| CAP-COMP-004 | DPDP Act 2023 Compliance Management Engine | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-COMP-005 | Trust Center Compliance Framework Alignment | ✓ | ✗ | ✗ | NOT READY | P2 |
 
 ### customer-portal (4 capabilities)
 
@@ -134,6 +144,17 @@ complete", "bug free", or "guaranteed".
 | CAP-MSSP-002 | Partner Revenue, Client Roster & White-Label Branding | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 | CAP-MSSP-003 | Multi-Tenant Sub-Account Drill-Down (Per-Client Dashboard, Billing, Usage, API Keys) | ✓ | ◐ | ✓ | PILOT ONLY | P2 |
 | CAP-MSSP-004 | Delegated Admin Permissions (MSSP Staff Sub-Accounts) | ✗ | ✗ | ✗ | NOT READY | P2 |
+
+### mythos-godmode (6 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-MYTHOS-001 | MYTHOS GOD MODE — 16-Phase Autonomous Security Orchestrator | ✓ | ✓ | ✓ | PILOT ONLY | P4 |
+| CAP-MYTHOS-002 | MYTHOS Orchestrator Core (legacy v1.0 defense-tool generation pipeline) | ✓ | ✓ | ✓ | PILOT ONLY | P4 |
+| CAP-MYTHOS-003 | MYTHOS Revenue Engine (multi-rail checkout + paywalled scan/compliance) | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-MYTHOS-004 | MYTHOS Platform Governor (autonomous health monitor + auto-repair) | ✓ | ✗ | ✗ | PILOT ONLY | P6 |
+| CAP-MYTHOS-005 | MYTHOS AI Provider / "APEX NEXUS" (multi-provider AI routing library) | ✓ | ✗ | ✗ | PILOT ONLY | P7 |
+| CAP-MYTHOS-006 | MYTHOS AI Enrichment Engine (cross-cutting scan-report enrichment) | ✓ | ◐ | ✓ | PILOT ONLY | P6 |
 
 ### navigation (1 capability)
 
@@ -211,6 +232,28 @@ complete", "bug free", or "guaranteed".
 | CAP-MKT-004 | Security Tools Marketplace | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 | CAP-MKT-005 | Sentinel APEX Marketplace Mega-Dispatcher (Subscriptions, Entitlements, ROI Calculator) | ✗ | ◐ | ✓ | NOT READY | P1 |
 | CAP-MKT-006 | Threat Intel Programmatic API (IOC/CVE/Actor/TTP/Risk) | ✗ | ✗ | ✗ | NOT READY | P2 |
+
+### threat-hunting-intel (17 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-TIH-001 | Threat Hunting Engine (KQL/Sigma/YARA) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
+| CAP-TIH-002 | Threat Intelligence Feed & Versioned API (Sentinel APEX v2.0) | ✓ | ◐ | ✓ | NOT READY | P2 |
+| CAP-TIH-003 | Threat Intel Pro Workbench (MITRE ATT&CK, APT Actors, STIX/TAXII, AI Analyst) | ✓ | ✓ | ✓ | NOT READY | P6 |
+| CAP-TIH-004 | Threat Intelligence Graph (backend) — distinct from the dashboard's client-side Threat Graph | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-TIH-005 | AI Attack Library (MITRE ATLAS / OWASP LLM techniques) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
+| CAP-TIH-006 | Agent Threat Advisories (AI agent framework CVEs/advisories) | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
+| CAP-TIH-007 | AI Threat Intelligence Feed & Agent Security (Pillar 4/5) | ✓ | ✓ | ✓ | PILOT ONLY | P3 |
+| CAP-TIH-008 | Global Threat Intel Firehose (worldwide OSINT) | ✓ | ✓ | ✗ | PILOT ONLY | P3 |
+| CAP-TIH-009 | Threat Intelligence API Economy (monetized IOC/CVE/Actor/TTP/Risk) | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-TIH-010 | Production IOC Enrichment | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
+| CAP-TIH-011 | Threat Confidence & Exploitability Engine | ✓ | ✓ | ✗ | NOT READY | P6 |
+| CAP-TIH-012 | Customer/MSSP Personalized Intelligence | ✓ | ✓ | ✗ | NOT READY | P3 |
+| CAP-TIH-013 | Enterprise Premium Intelligence API | ✓ | ◐ | ✓ | NOT READY | P3 |
+| CAP-TIH-014 | Intelligence Preview (freemium teaser cards) | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-TIH-015 | Public Threat-Intel Feeds & Monetization Tier Matrix | ✓ | ◐ | ✗ | PILOT ONLY | P3 |
+| CAP-TIH-016 | Attack Graph from Scan Results | ✓ | ◐ | ✓ | NOT READY | P6 |
+| CAP-TIH-017 | Scan-Finding to CVE Correlation (legacy) | ✓ | ✗ | ✗ | NOT READY | P7 |
 
 ---
 *Regenerate with `node scripts/registry/generate-report.mjs` after any

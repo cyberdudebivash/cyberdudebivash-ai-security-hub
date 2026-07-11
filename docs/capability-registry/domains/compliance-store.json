@@ -1,1 +1,242 @@
-[]
+[
+  {
+    "id": "CAP-COMP-001",
+    "domain": "compliance-store",
+    "name": "Global Compliance Packs Store",
+    "description": "Public storefront selling framework-specific compliance document kits (ISO 27001, SOC 2, GDPR, DPDP, HIPAA, PCI-DSS, NIST CSF) via Razorpay, delivered by a human within 24 hours.",
+    "backend": {
+      "handlers": ["workers/src/services/globalScale.js"],
+      "entry_points": ["handleGetCompliancePacks", "handlePurchaseCompliancePack", "handleVerifyCompliancePack"],
+      "routes_sampled": [
+        { "path": "/api/global/compliance-packs", "method": "GET", "evidence": "workers/src/index.js:6549" },
+        { "path": "/api/global/compliance-packs/purchase", "method": "POST", "evidence": "workers/src/index.js:6555" },
+        { "path": "/api/global/compliance-packs/verify", "method": "POST", "evidence": "workers/src/index.js:6562" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/index.html"],
+      "status": "exists",
+      "evidence": "frontend/index.html:6534 renders <section data-auth-gate=\"true\" id=\"compliance-global\"> (\"Global Compliance\" grid, #compliance-grid at line 6556); window.purchaseCompliancePack() (~line 6787) calls POST /api/global/compliance-packs/purchase (line 6811) then /verify (line 6839) on Razorpay success."
+    },
+    "navigation": {
+      "discoverable": false,
+      "evidence": "Primary nav link exists and is visible to every visitor (frontend/index.html:1232, '🌐 Global Compliance'), but its target section carries data-auth-gate=\"true\" and stays display:none until the visitor is authenticated (frontend/index.html's own code comment at lines 406-407: member sections reveal for any authed user). The backend purchase/verify handlers enforce no auth at all (handlePurchaseCompliancePack never reads its authCtx parameter; handleVerifyCompliancePack isn't even passed one at its call site, workers/src/index.js:6563) — so the one class of visitor most likely to buy a compliance pack (a prospect with no account yet) can see the nav link but cannot reach the section that lets them buy."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "grep -rn \"COMPLIANCE_PACKS|handleGetCompliancePacks|handlePurchaseCompliancePack|handleVerifyCompliancePack\" workers/test/*.mjs returns 0 matches. The only tests importing anything from workers/src/services/globalScale.js (workers/test/msspOnboardingHandler.test.mjs, workers/test/msspPartnerIdentityLink.test.mjs) import MSSP_TIERS only, confirmed unrelated by direct grep."
+    },
+    "docs": [
+      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P1",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-11",
+      "evidence": "First audit of this domain (previously an unpopulated [] stub, flagged in docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md as never-audited). Discovered via background Explore agent, cross-checked directly: workers/src/services/globalScale.js (COMPLIANCE_PACKS catalog, 3 handlers) and workers/src/index.js:6549-6567 read directly; frontend/index.html read directly for both the nav entry (line 1232) and the gated section (line 6534) and the auth-gate comment (lines 406-407); workers/test/*.mjs grepped with 0 relevant hits."
+    },
+    "contradicts_doc": [],
+    "notes": "Real, live, revenue-integrated Razorpay flow — not a stub. The same conceptual product (an ISO 27001 pack) is sold at three different prices through three separate, non-cross-referencing backend code paths: ₹4,999 here, ₹3,499 via workers/src/handlers/marketplaceCheckoutHandler.js's Sentinel APEX 'cp-iso27001-2022' line item (see CAP-COMP-002's notes), and ₹999 via toolsMarketplace.js's 'compliance_starter_pack' (CAP-COMP-003). No deliverable is ever generated automatically — fulfillment is a manual, human, within-24-hours process (workers/src/services/globalScale.js:408,462,475). Recommended fix, once this reaches an active wave: gate the section's visibility on nothing (since purchase itself requires no auth), not on data-auth-gate, since the backend and the nav link both already treat this as a public flow."
+  },
+  {
+    "id": "CAP-COMP-002",
+    "domain": "compliance-store",
+    "name": "Compliance Assessment / Readiness Engine (CDB-COMP-001)",
+    "description": "A paid, detailed compliance gap-assessment engine (93 ISO 27001:2022 Annex A controls across 4 themes, NIST CSF 2.0 6-function scoring, GDPR article-level assessment, phased certification roadmap) — materially deeper than the free scanner catalogued as CAP-SCAN-005, reachable via a direct tier-gated scan route and via the generic service-order/marketplace fulfillment engine.",
+    "backend": {
+      "handlers": ["workers/src/services/complianceEngine.js", "workers/src/handlers/serviceHandlers.js", "workers/src/services/serviceOrderEngine.js"],
+      "entry_points": ["runComplianceAssessment", "handleComplianceScan", "handleCreateOrder", "handleGetReport", "handleTriggerAssessment"],
+      "routes_sampled": [
+        { "path": "/api/scan/compliance", "method": "POST", "evidence": "workers/src/index.js:5808" },
+        { "path": "/api/services/orders", "method": "POST", "evidence": "workers/src/index.js:5769" },
+        { "path": "/api/services/orders", "method": "GET", "evidence": "workers/src/index.js:5773" }
+      ],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "grep -rn \"scan/compliance\\b\" frontend/*.html returns 0 matches; no frontend file calls POST /api/services/orders with a compliance-engine reference. (A structurally distinct product-catalog entry point into the same runComplianceAssessment() engine does have a frontend caller — workers/src/handlers/marketplaceCheckoutHandler.js's Sentinel APEX 'compliance_pack' category, cp-nist-csf-2/cp-iso27001-2022 — but that belongs to the already-populated sentinel-apex-marketplace domain, not here; see notes.)"
+    },
+    "navigation": {
+      "discoverable": false,
+      "evidence": "No nav entry or page links to /api/scan/compliance or a compliance-flavored /api/services/orders flow anywhere in frontend/."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": true, "permissions": ["tier:PRO", "tier:ENTERPRISE", "admin"] },
+    "subscription_gated": true,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "grep -rn \"handleComplianceScan\" workers/test/*.mjs returns 0 matches. workers/test/serviceOrderPaymentGate.test.mjs imports createServiceOrder for real and tests the payment-gate logic generically, but its fixture services map (lines 24-33) only defines CDB-SSL-001 and CDB-CONSULT-001 — the compliance engine dispatch path itself is untested."
+    },
+    "docs": [
+      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P2",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-11",
+      "evidence": "workers/src/services/complianceEngine.js:238 (runComplianceAssessment, header comment line 3 labels it 'CDB-COMP-001 (₹24,999)'), workers/src/handlers/serviceHandlers.js:218-227 (handleComplianceScan, hard 403 unless authCtx.isAdmin or tier in ['PRO','ENTERPRISE']), workers/src/services/serviceOrderEngine.js:31,68,103-105,155,324 (ENGINE_DISPATCH.compliance, auto-dispatch tier gate) all read directly. frontend/*.html and workers/test/*.mjs grepped with the results in the fields above."
+    },
+    "contradicts_doc": [],
+    "notes": "Real naming collision worth tracking: this file's runComplianceAssessment() is a completely different, much deeper engine than the one CAP-SCAN-005 uses (workers/src/engine.js), despite both domains using the word 'compliance' throughout. A shipped, tier-gated, ₹24,999 paid capability with zero frontend caller and zero test coverage is invisible to every customer today regardless of what they pay for. Cross-domain note (not claimed here): workers/src/handlers/marketplaceCheckoutHandler.js's MARKETPLACE_CATALOG has a 'compliance_pack' category (cp-nist-csf-2 ₹2,499, cp-iso27001-2022 ₹3,499) that also calls runComplianceAssessment() on delivery (line ~637) and DOES have a real frontend caller (frontend/index.html, frontend/marketplace-checkout.html) and real test coverage (workers/test/marketplaceCheckoutHandler.test.mjs:306). docs/capability-registry/domains/sentinel-apex-marketplace.json was checked directly for 'compliance_pack'/'NIST CSF'/'cp-nist' — zero matches, meaning that specific line item isn't itemized in that domain's registry entry either. Recommend a follow-up pass on the sentinel-apex-marketplace domain to add that line item's evidence, rather than duplicating it here."
+  },
+  {
+    "id": "CAP-COMP-003",
+    "domain": "compliance-store",
+    "name": "Tools Marketplace Compliance Toolkits",
+    "description": "A third, separate low-price compliance product catalog (compliance_starter_pack ₹999, dpdp_compliance_kit ₹699, plus a compliance pack bundled into enterprise_security_bundle ₹4,499) sold from the homepage 'tools' section.",
+    "backend": {
+      "handlers": ["workers/src/handlers/toolsMarketplace.js"],
+      "entry_points": ["handleListTools", "handlePurchaseTool", "handleVerifyTool"],
+      "routes_sampled": [
+        { "path": "/api/tools/purchase", "method": "POST", "evidence": "workers/src/index.js:6586" },
+        { "path": "/api/tools/verify", "method": "POST", "evidence": "workers/src/index.js:6592" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/index.html"],
+      "status": "exists",
+      "evidence": "window.cdbHomeBuy(productId, priceInr, productName) (~line 6966) invoked via onclick=\"cdbHomeBuy('compliance_starter_pack',999,...)\" (line 7027) and onclick=\"cdbHomeBuy('dpdp_compliance_kit',699,...)\" (line 7031), in a homepage tools section separate from CAP-COMP-001's 'Global Compliance' section."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "Homepage section, no auth-gate wrapper found around it (unlike CAP-COMP-001) — reachable by any visitor who scrolls the homepage."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "grep -rln \"toolsMarketplace\" workers/test/*.mjs returns 0 matches."
+    },
+    "docs": [
+      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "PILOT ONLY",
+    "priority": "P6",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-11",
+      "evidence": "workers/src/handlers/toolsMarketplace.js:33,37,40,48,53,95 read directly (catalog entries + 3 handlers); workers/src/index.js:6586,6592 read directly, both routes explicitly commented 'public'; frontend/index.html cdbHomeBuy() call sites at lines 6966,7027,7031 read directly; workers/test/*.mjs grepped with 0 hits."
+    },
+    "contradicts_doc": [],
+    "notes": "Backend, frontend, and navigation all genuinely exist and are wired — the sole real gap is zero test coverage of an unauthenticated public payment-adjacent endpoint. See CAP-COMP-001's notes for the 3-way ISO-27001-pack price fragmentation this catalog contributes a third price point to."
+  },
+  {
+    "id": "CAP-COMP-004",
+    "domain": "compliance-store",
+    "name": "DPDP Act 2023 Compliance Management Engine",
+    "description": "A dedicated engine for India's Digital Personal Data Protection Act 2023 — section-by-section gap analysis, readiness scoring, and Records of Processing Activities (RoPA) generation — distinct from CAP-SCAN-005's generic multi-framework scanner and from CAP-COMP-002's ISO/NIST/GDPR engine.",
+    "backend": {
+      "handlers": ["workers/src/handlers/dpdpCompliance.js"],
+      "entry_points": ["handleDPDPOverview", "handleDPDPAssess", "handleDPDPSections", "handleDPDPRoPA", "handleDPDPReports", "handleDPDPReport"],
+      "routes_sampled": [
+        { "path": "/api/compliance/dpdp", "method": "GET", "evidence": "workers/src/index.js:3776" },
+        { "path": "/api/compliance/dpdp/assess", "method": "POST", "evidence": "workers/src/index.js:3780" },
+        { "path": "/api/compliance/dpdp/sections", "method": "GET", "evidence": "workers/src/index.js:3784" },
+        { "path": "/api/compliance/dpdp/ropa", "method": "POST", "evidence": "workers/src/index.js:3788" },
+        { "path": "/api/compliance/dpdp/reports", "method": "GET", "evidence": "workers/src/index.js:3792" },
+        { "path": "/api/compliance/dpdp/report/:id", "method": "GET", "evidence": "workers/src/index.js:3796" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "frontend/compliance-management.html — the page whose marketing copy most resembles this feature ('Multi-framework compliance management', 'automated evidence collection', lines 7-8) — was checked explicitly for 'dpdp' (case-insensitive) and for every fetch/axios/XHR call: its only live API call (line 146) hits /api/generate/compliance, the already-catalogued CAP-SCAN-005 route. No frontend file anywhere calls any /api/compliance/dpdp/* route."
+    },
+    "navigation": {
+      "discoverable": false,
+      "evidence": "Not applicable — no frontend page reaches this backend at all, so there is nothing to navigate to."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": true, "permissions": ["tier:PRO", "tier:ENTERPRISE", "tier:MSSP"] },
+    "subscription_gated": true,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "grep -rn \"dpdpCompliance\" workers/test/*.mjs returns 0 matches."
+    },
+    "docs": [
+      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P2",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-11",
+      "evidence": "workers/src/handlers/dpdpCompliance.js read directly in full: tier gate confirmed real (not just a doc-comment claim) at lines 156-157 (handleDPDPOverview), 198-199 (handleDPDPAssess), 331-332 (handleDPDPSections), 354-355 (handleDPDPRoPA) — all hard-403 unless tier is PRO/ENTERPRISE/MSSP; handleDPDPReports/handleDPDPReport (lines 426,446) require only authentication (any tier), scoped by user_id, which is correctly safe since a sub-PRO user can never have created a report to list. workers/src/index.js:3776-3798 read directly for all 6 routes. frontend/compliance-management.html read directly and grepped for 'dpdp' and for fetch/axios calls (0 matches for either). workers/test/*.mjs grepped with 0 hits."
+    },
+    "contradicts_doc": [],
+    "notes": "Fully backend-only today: a real, tier-gated, non-trivial engine (RoPA generation, section-level gap analysis) that no customer can reach through any UI. frontend/compliance-management.html's marketing copy ('automated evidence collection', 'continuous compliance monitoring', 'compliance as code') overstates what any backend capability in this domain actually does — every engine found in this audit (this one, CAP-COMP-002, and CAP-SCAN-005) is a one-off, on-demand gap assessment, not continuous monitoring or automated evidence collection. That page is linked from frontend/sitemap.html (lines 122, 208) and cross-linked from several other marketing pages, so the overclaim is genuinely customer-facing, not dead content. Precedent: workers/test/proposalGeneratorHonestClaims.test.mjs documents a prior, since-fixed incident of the proposal generator falsely claiming in-progress SOC 2/ISO 27001 certification — the same category of risk."
+  },
+  {
+    "id": "CAP-COMP-005",
+    "domain": "compliance-store",
+    "name": "Trust Center Compliance Framework Alignment",
+    "description": "A public, honestly-scoped list of which compliance frameworks (ISO 27001, SOC 2, GDPR, PCI-DSS, HIPAA, DPDP, OWASP LLM, MITRE, NIST AI) the platform aligns with vs. holds formal certification for.",
+    "backend": {
+      "handlers": ["workers/src/handlers/trustCenter.js"],
+      "entry_points": ["handleTrustCompliance"],
+      "routes_sampled": [
+        { "path": "/api/trust/compliance", "method": "GET", "evidence": "workers/src/index.js:7865" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "frontend/trust-center.html's only fetch() call (line 279) targets an absolute external URL, https://cyberdudebivash.in/api/trust-center — not the relative /api/trust/compliance path this handler actually serves. No frontend file calls /api/trust/compliance."
+    },
+    "navigation": {
+      "discoverable": false,
+      "evidence": "frontend/trust-center.html is linked from site navigation, but the page itself never calls the endpoint this capability serves, so the compliance-alignment data it returns never reaches any visitor."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "grep -rn \"handleTrustCompliance|trustCenter\" workers/test/*.mjs surfaces two adjacent, non-matching hits: workers/test/trustMetricsContract.test.mjs:23 imports handleTrustMetrics (a different function, same file), and workers/test/proposalGeneratorHonestClaims.test.mjs:12 references this file's certifications list only as corroborating context for an unrelated test."
+    },
+    "docs": [
+      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P2",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-11",
+      "evidence": "workers/src/handlers/trustCenter.js:81 (COMPLIANCE_FRAMEWORKS, 9 frameworks each marked 'aligned' or 'partial' with honest scope notes) and :93 (handleTrustCompliance) read directly. workers/src/index.js:7865 read directly. frontend/trust-center.html read directly and grepped for every fetch/axios call — only one found, targeting an unrelated absolute URL. workers/test/*.mjs grepped as described above."
+    },
+    "contradicts_doc": [],
+    "notes": "Positive finding, not just a gap: unlike frontend/compliance-management.html (see CAP-COMP-004's notes), this backend module is deliberately honest — e.g. 'Not yet formally assessed against SOC 2 Trust Service Criteria' and 'no formal certification held' for ISO 27001 — and should be used as the reference tone for any future customer-facing compliance-claim copy. The only defect is wiring: the real page never calls the real endpoint."
+  }
+]

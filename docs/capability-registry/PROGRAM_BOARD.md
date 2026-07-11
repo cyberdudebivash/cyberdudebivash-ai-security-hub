@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11, Competitor gap analysis vs. CrowdStrike/SentinelOne/Palo Alto/Recorded Future/Mandiant/ThreatConnect complete; wave 1 fix — org Activity Log — shipped; 4 larger gaps scoped and documented for follow-on waves. Also: Threat Graph findings-persistence fix from the prior wave still needs the owner to run the gated D1 Schema Migration workflow with `workers/schema_migration_scan_history_findings_2026_07.sql` to activate)
+## Current status (2026-07-11, Backlog-sweep wave: all 3 previously-unaudited domains — compliance-store, mythos-godmode, threat-hunting-intel — populated for the first time; identity Critical-3 (CAP-IDN-001/002/003) re-verified end-to-end against LIVE PRODUCTION with a real RFC 6238 TOTP secret, zero mocking. The 3-domain audit surfaced 1 new Critical + 8 new High item not previously counted — see session log for the honest before/after. Also still open: Threat Graph findings-persistence fix from an earlier wave still needs the owner to run the gated D1 Schema Migration workflow with `workers/schema_migration_scan_history_findings_2026_07.sql` to activate)
 
 **Scope note (2026-07-10):** starting this date, sessions on this branch
 follow the customer's "production readiness lifecycle" priority (visitor →
@@ -24,26 +24,27 @@ parallel tracking document.
 | Metric | Value | Source |
 |---|---|---|
 | Domain files | 21 | `docs/capability-registry/domains/*.json` |
-| Domains populated | 18 | see list below |
-| Domains empty (stubs) | 3 | see Remaining Work Register |
-| Capabilities registered | 66 | `node scripts/registry/validate.mjs` |
+| Domains populated | 21 | see list below (all 3 former stubs now populated) |
+| Domains empty (stubs) | 0 | none remain |
+| Capabilities registered | 95 | `node scripts/registry/validate.mjs` |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 |
-| Worker test suite | 206 files / 2118 tests passing (2 files pre-existing import-time gap, unrelated — see session log) | `npx vitest run`, run 2026-07-11 (includes 2 new tests added to `scanRequestAuthHeader.test.mjs`) |
-| Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-10 (unchanged this wave — CAP-IDN-001's evidence was updated in place, its backend/frontend/nav booleans didn't change, see session log) |
-| Backend / Frontend / Parity | 83.3% / 67.4% / 62.1% | `PRODUCTION_READINESS_REPORT.md` (unchanged — this wave fixed a regression within an already-`exists` capability; see session log) |
-| Customer journeys browser-verified | 1/66 capabilities now carry `verification.method: dynamic_browser` (CAP-IDN-001) | Continues the live-production headless-Chromium pattern from the prior UAT wave. This wave additionally measured real bounding-rects at 6 phone widths against `cyberdudebivash.in` and prototyped the fix live via `page.addStyleTag()` before committing it — see session log. Every other capability's `verification.method` is still unchanged (`static`) |
-| Gaps by severity | Critical 9 · High 15 · Medium 4 · Low 38 | `PRODUCTION_READINESS_REPORT.md` — unchanged this wave (see above) |
+| Worker test suite | 206 files / 2144 tests passing | `npx vitest run`, run 2026-07-11 (no backend code changed this wave — registry JSON + doc updates only; re-run as a discipline check, not because a regression was suspected) |
+| Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 |
+| Backend / Frontend / Parity | 88.4% / 64.2% / 57.9% | `PRODUCTION_READINESS_REPORT.md` — the 29 newly-registered capabilities from the 3-domain audit pulled frontend/parity % down from the prior wave's 67.9%/62.7% even though nothing regressed — this is real, previously-invisible backlog becoming visible, not a new defect |
+| Customer journeys browser-verified | 3/95 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — all three flipped to `true` this wave) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
+| Gaps by severity | Critical 10 · High 23 · Medium 12 · Low 50 | `PRODUCTION_READINESS_REPORT.md` — up from Critical 9 · High 15 · Medium 4 · Low 38 before this wave. The increase is the 3-domain audit doing its job: CAP-COMP-001 is 1 new Critical; CAP-COMP-002/004/005, CAP-MYTHOS-003, CAP-TIH-002/004/009/014 are 8 new High. None of the original 9 Critical/15 High items got worse — see session log |
 
 Full structural breakdown (per-domain tables, gap definitions): regenerate
 and read `docs/capability-registry/PRODUCTION_READINESS_REPORT.md` — never
 hand-copy its numbers here beyond the summary above, to avoid two sources of
 truth drifting apart.
 
-**Domains populated (18):** academy, administration, affiliate-partner,
-commercial-billing, customer-portal, dashboard-personalization,
-developer-portal-apikeys, identity, masoc, mssp, navigation, notifications,
-organizations, production-readiness, rbac, sales-crm,
-sentinel-apex-marketplace, security-scanners.
+**Domains populated (21):** academy, administration, affiliate-partner,
+commercial-billing, compliance-store, customer-portal,
+dashboard-personalization, developer-portal-apikeys, identity, masoc,
+mssp, mythos-godmode, navigation, notifications, organizations,
+production-readiness, rbac, sales-crm, sentinel-apex-marketplace,
+security-scanners, threat-hunting-intel.
 
 ## ✅ Critical finding remediated (was open, see history below)
 
@@ -201,6 +202,159 @@ see session log below.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Backlog sweep, wave 1: 3-domain audit (compliance-store, mythos-godmode, threat-hunting-intel) + identity Critical-3 live re-verification
+
+- **Trigger:** customer instruction — proceed one by one through the full
+  backlog precisely as counted in `PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md`
+  (9 Critical, 15 High), starting with the 3 domains flagged as never
+  audited at all, then sweeping the Critical items, implementing every gap
+  found "with 100% complete production grade level" — interpreted per this
+  repo's own fixed vocabulary (`docs/ENGINEERING_STANDARDS.md` §9): zero
+  Critical, zero High, every capability GA-approved and live-verified, never
+  the literal banned phrase.
+- **Method:** three background Explore agents, one per domain, each briefed
+  with the known adjacent files/schemas and told explicitly to report
+  "domain doesn't exist" rather than stretch if nothing real was found.
+  Every finding below was independently cross-checked by direct file read
+  and/or grep before being written into the registry — agent output was
+  treated as a lead, not as ground truth on its own.
+- **compliance-store** (`docs/capability-registry/domains/compliance-store.json`,
+  was `[]`): 5 real, shipped, revenue-integrated capabilities found, none of
+  them the already-catalogued CAP-SCAN-005 free scanner. **CAP-COMP-001**
+  (Global Compliance Packs Store, `workers/src/services/globalScale.js`,
+  3 live Razorpay routes) — **new Critical (P1)**: the nav link is visible
+  to every visitor, but its target section is `data-auth-gate="true"` and
+  hidden until login, even though the backend enforces no auth at all and
+  the purchase flow needs only an email address. The one visitor most likely
+  to buy (a prospect with no account) cannot reach the section. **CAP-COMP-002**
+  (Compliance Assessment Engine, `workers/src/services/complianceEngine.js`'s
+  `runComplianceAssessment`, a ₹24,999 tier-gated engine reachable via
+  `POST /api/scan/compliance` and the service-order pipeline) — new High:
+  zero frontend caller, zero tests, invisible to every paying customer today.
+  **CAP-COMP-003** (Tools Marketplace toolkits) — backend+frontend+nav all
+  genuinely wired, only test coverage missing (Low). **CAP-COMP-004** (DPDP
+  Act 2023 Compliance Engine, `workers/src/handlers/dpdpCompliance.js`, 6
+  real PRO+/ENTERPRISE-gated routes) — new High: fully backend-only, and
+  `frontend/compliance-management.html`'s marketing copy ("automated evidence
+  collection", "continuous compliance monitoring") overstates what this or
+  any other engine in the domain actually does (a one-off gap assessment,
+  not continuous monitoring) — a real content-vs-reality gap in the same
+  family `workers/test/proposalGeneratorHonestClaims.test.mjs` was written to
+  catch elsewhere. **CAP-COMP-005** (Trust Center Compliance Alignment,
+  `workers/src/handlers/trustCenter.js`) — new High, but also a **positive
+  finding**: the framework list is deliberately honest ("no formal
+  certification held" for ISO 27001), a good reference tone for future
+  compliance copy; its only defect is wiring — `frontend/trust-center.html`
+  calls an unrelated external URL instead of the real endpoint.
+  **Cross-cutting finding:** the same conceptual ISO 27001 pack is sold at
+  three different prices (₹4,999 / ₹3,499 / ₹999) through three
+  non-cross-referencing backend code paths — recorded, not silently merged.
+- **mythos-godmode** (`docs/capability-registry/domains/mythos-godmode.json`,
+  was `[]`): 6 real capabilities found, all already customer-facing to some
+  degree. **CAP-MYTHOS-001** (the flagship 16-phase GOD MODE orchestrator) —
+  backend/frontend/nav/auth/tests all genuinely exist; real gap is a
+  declared-but-never-wired RBAC permission (`admin:infra:operate` in
+  `workers/src/auth/rbac.js:103`, commented "god-mode / autonomous
+  orchestration" but never referenced anywhere), scored Medium (P4), not
+  Critical. **CAP-MYTHOS-002** (legacy v1 orchestrator) — a real auth
+  inconsistency: `workers/src/index.js` runs its own narrower inline
+  `x-admin-key`-only gate before ever reaching the handler's own broader
+  `isValidAdminKey()` check, making the broader helper unreachable on this
+  route. **CAP-MYTHOS-003** (Revenue Engine: multi-rail checkout, real
+  HMAC-SHA256 Razorpay webhook verification) — new High: zero frontend
+  caller, zero tests; flagged that a UI should not be built here without
+  first confirming it isn't superseded by the platform's existing billing
+  flow. **CAP-MYTHOS-004** (Platform Governor, autonomous health monitor) —
+  correctly no frontend (internal ops tool), strongest RBAC in the domain.
+  **CAP-MYTHOS-005** (AI Provider library) — the best-tested capability
+  found this wave, two real regression suites tied to actual past production
+  incidents (timeout overrun, prompt-injection defense). **CAP-MYTHOS-006**
+  (AI Enrichment Engine) — correctly no dedicated UI, called from 9 other
+  handlers. **Dead-schema finding:** `schema_v33_mythos_god_mode.sql`'s
+  `mythos_god_mode_runs` table is never referenced anywhere under
+  `workers/src` — the real pipeline uses the earlier, plainer `mythos_runs`
+  table instead. **Disambiguation recorded to prevent future confusion:**
+  "GOD MODE vNN" is also a generic internal release-wave codename used
+  ~14 times for unrelated features; "MYTHOS" is also the customer-facing
+  AI-chat-widget brand name — neither collides with the real `mythos*.js`
+  code.
+- **threat-hunting-intel** (`docs/capability-registry/domains/threat-hunting-intel.json`,
+  was `[]`): the largest and most fragmented domain audited this session —
+  17 distinct capabilities, condensed to 17 registry entries (CAP-TIH-001
+  through 017) rather than merged, because the fragmentation itself is the
+  headline finding: **three parallel hunting implementations, four parallel
+  graph implementations, three parallel correlation implementations, two
+  parallel APT-actor systems, and four parallel IOC-enrichment code paths**,
+  none sharing an implementation. New Critical/High items: **CAP-TIH-002**
+  (v1 API surface: correlations/graph/hunting sub-routes have zero frontend
+  callers) and **CAP-TIH-004** (a backend Threat Intelligence Graph,
+  `workers/src/handlers/threatGraph.js`, with live CISA-KEV enrichment and
+  zero frontend callers anywhere — confirmed **completely independent** of
+  the dashboard's own client-side Threat Graph already tracked from an
+  earlier wave, sharing only a name) both new High. **CAP-TIH-009** (Threat
+  Intel API Economy) and **CAP-TIH-014** (Intelligence Preview freemium
+  teasers, whose upgrade URLs point at an *external* storefront,
+  `intel.cyberdudebivash.com`, not this platform's own `/pricing` — flagged
+  for an owner decision before any UI is built, not assumed to be in scope)
+  also new High. Positive findings: **CAP-TIH-006** (Agent Threat
+  Advisories) is the most prominently-linked page in the whole domain with
+  clean backend+frontend+nav+tests; **CAP-TIH-015** (Public Threat-Intel
+  Feeds) is the best-tested capability in the domain. **CAP-TIH-017**
+  (legacy scan-to-CVE correlation) is self-declared legacy in its own code
+  comment — flagged for a deprecation decision, not built on top of.
+- **Identity Critical-3 live re-verification** (`docs/capability-registry/domains/identity.json`):
+  CAP-IDN-001/002/003 were fixed in an earlier wave (2026-07-09/10) but
+  CAP-IDN-002/003's `verification.method` was still `static` (Playwright
+  against a locally-served copy, not live production). Ran a single
+  real headless-Chromium session directly against **live production**
+  (`https://cyberdudebivash.in`), zero mocking: real signup (`POST
+  /api/auth/signup` → 201, real token), real MFA setup (`POST
+  /api/auth/mfa/setup`) and enable (`POST /api/auth/mfa/enable` with a
+  **real RFC 6238 TOTP code computed locally** — no authenticator app),
+  logout, real password login, real MFA challenge view auto-appearing with
+  zero token stored mid-challenge, a fresh real TOTP code submitted via the
+  actual `#mfa-code` field, `POST /api/auth/mfa/authenticate` completing the
+  login with a real token, and the homepage correctly showing a Dashboard
+  link instead of Sign In afterward. Test account cleaned up via `DELETE
+  /api/auth/delete-account` (200) at the end. **Bug found and fixed in the
+  test script itself, not the platform:** the first attempt sent `{ token:
+  code }` to `/api/auth/mfa/enable` and got `"totp_code must be 6 digits"`
+  back — re-read `workers/src/handlers/mfa.js`'s `handleMFAEnable` directly
+  and confirmed the real field name is `totp_code`; corrected the script and
+  re-ran clean. All three capabilities' `verification.method` set to
+  `dynamic_browser` and `customer_journey_complete` flipped to `true` — the
+  exact condition each entry's `contradicts_doc` correction had been waiting
+  on since 2026-07-09.
+- **Honest backlog accounting:** the 3-domain audit is why Critical went
+  9→10 and High went 15→23 this wave (see header table) — this is real,
+  previously-invisible backlog becoming visible and counted for the first
+  time, not new breakage. All 9 new items (1 Critical: CAP-COMP-001; 8
+  High: CAP-COMP-002/004/005, CAP-MYTHOS-003, CAP-TIH-002/004/009/014) were
+  added to the working task list alongside the original 24-item backlog.
+- **Verified:** `node scripts/registry/validate.mjs` → 0 hard failures, 0
+  warnings, 95 unique capability ids across 21 domain files (up from 66/18
+  populated + 3 stubs). Every evidence `file:line` citation in all 3 new
+  domain files and the identity.json edits resolves to a real file —
+  including fixing ~62 bare-filename citations the validator's own
+  `file:line` regex correctly rejected on the first pass (e.g. `index.js`
+  written standalone instead of `workers/src/index.js` — the validator
+  resolves every citation relative to repo root, with no memory of a fuller
+  path given earlier in the same string). `node
+  scripts/registry/generate-report.mjs` regenerated
+  `PRODUCTION_READINESS_REPORT.md` cleanly. Full backend suite:
+  206 files / 2144 tests passing (no backend code changed this wave —
+  registry JSON + docs only — re-run as a discipline check).
+- **Commits/PR:** registry population (3 domain files), `identity.json`
+  evidence updates, `PROGRAM_BOARD.md` (this entry),
+  `PRODUCTION_READINESS_REPORT.md` regeneration. See PR link in the commit
+  that introduces this entry.
+- **Follow-ups queued, not yet built:** all 9 newly-discovered items above,
+  plus the pre-existing duplication findings (3 parallel hunting engines,
+  4 parallel graph engines, 3 parallel correlation engines, 2 parallel
+  APT-actor systems, 4 parallel IOC-enrichment paths) — each needs a
+  reconciliation decision before more code is added on top, per this
+  session's standing discipline of resolving duplicates before building.
 
 ### 2026-07-11 — Competitor gap analysis (CrowdStrike, SentinelOne, Palo Alto Cortex, Recorded Future, Google Mandiant, ThreatConnect) — wave 1 fix shipped (org Activity Log), 4 larger gaps scoped for follow-on waves
 
