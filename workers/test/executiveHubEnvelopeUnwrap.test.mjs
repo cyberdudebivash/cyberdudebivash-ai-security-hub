@@ -18,9 +18,13 @@ const HTML = readFileSync(resolve(__dirname, '../../frontend/index.html'), 'utf8
 function fnBody(name) {
   const start = HTML.indexOf(`window.${name} = function`);
   expect(start, `${name} not found in index.html`).toBeGreaterThan(-1);
-  // Grab a generous slice past the function start for pattern checks —
-  // these handlers are all well under 2KB of source.
-  return HTML.slice(start, start + 2500);
+  // Slice to the block's real closing "};" rather than a fixed-length guess —
+  // a fixed 2500-char window previously broke silently-adjacent-in-spirit
+  // when an unrelated fix (auth-header wiring) added a few lines earlier in
+  // cdbMemoryRefresh, pushing histRaw.success past the old cutoff.
+  const end = HTML.indexOf('\n};', start);
+  expect(end, `${name}'s closing "};" not found`).toBeGreaterThan(-1);
+  return HTML.slice(start, end);
 }
 
 describe('Executive Hub dashboard widgets — unwrap the {success,data,error} envelope', () => {

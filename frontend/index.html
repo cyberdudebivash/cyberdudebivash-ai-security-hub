@@ -4259,7 +4259,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </div>
 </section>
 <!-- ════════ PHASE 2: SIEM INTEGRATION DEPLOY ════════ -->
-<section data-auth-gate="true" data-section-id="siem-deploy-2" id="siem-deploy" style="display:none;background:linear-gradient(180deg,#05051a 0%,#080818 100%);padding:80px 20px;border-top:1px solid rgba(124,58,237,.12)">
+<section data-auth-gate="owner" data-section-id="siem-deploy-2" id="siem-deploy" style="display:none;background:linear-gradient(180deg,#05051a 0%,#080818 100%);padding:80px 20px;border-top:1px solid rgba(124,58,237,.12)">
 <div style="max-width:1200px;margin:0 auto">
 <div style="text-align:center;margin-bottom:48px">
 <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:20px;padding:6px 16px;font-size:11px;font-weight:800;letter-spacing:.12em;color:#a78bfa;text-transform:uppercase;margin-bottom:16px">
@@ -4320,7 +4320,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </div>
 </section>
 <!-- ════════ PHASE 2: ORGANIZATION MEMORY SYSTEM ════════ -->
-<section data-auth-gate="true" data-section-id="org-memory-2" id="org-memory" style="display:none;background:linear-gradient(180deg,#080818 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(34,197,94,.1)">
+<section data-auth-gate="owner" data-section-id="org-memory-2" id="org-memory" style="display:none;background:linear-gradient(180deg,#080818 0%,#050510 100%);padding:80px 20px;border-top:1px solid rgba(34,197,94,.1)">
 <div style="max-width:1200px;margin:0 auto">
 <div style="text-align:center;margin-bottom:48px">
 <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:20px;padding:6px 16px;font-size:11px;font-weight:800;letter-spacing:.12em;color:#22c55e;text-transform:uppercase;margin-bottom:16px">
@@ -18285,7 +18285,8 @@ function showGeneratedRules(runId) {
   if (!panel) return;
   panel.innerHTML = '<div style="font-size:11px;color:rgba(0,212,255,.72)">Loading generated rules…</div>';
   panel.style.display = 'block';
-  fetch('/api/auto-soc/latest-rules')
+  var _tRules = (window.SUBSCRIPTION && SUBSCRIPTION.getToken && SUBSCRIPTION.getToken()) || '';
+  fetch('/api/auto-soc/latest-rules', { headers: _tRules ? { 'Authorization': 'Bearer ' + _tRules } : {} })
     .then(function(r){ return r.json(); })
     .then(function(data) {
       var rules = data.rules || [];
@@ -18365,8 +18366,9 @@ window.cdbAutoSOCRun = function() {
   // Real-time stage polling — updates UI every 1.5s while pipeline runs
   var stageLabels = ['Stage 1/5: Threat Detection', 'Stage 2/5: AI Analysis', 'Stage 3/5: Rule Generation', 'Stage 4/5: Deploy & Publish', 'Stage 5/5: Monitoring'];
   var stageIdx = 0;
+  var _tRun = (window.SUBSCRIPTION && SUBSCRIPTION.getToken && SUBSCRIPTION.getToken()) || '';
   var pollTimer = setInterval(function() {
-    fetch('/api/auto-soc/pipeline')
+    fetch('/api/auto-soc/pipeline', { headers: _tRun ? { 'Authorization': 'Bearer ' + _tRun } : {} })
       .then(function(r){ return r.json(); })
       .then(function(raw) {
         var d = (raw && raw.success && raw.data) ? raw.data : raw;
@@ -18379,7 +18381,7 @@ window.cdbAutoSOCRun = function() {
       }).catch(function(){});
   }, 1500);
 
-  fetch('/api/auto-soc/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+  fetch('/api/auto-soc/run', { method: 'POST', headers: _tRun ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _tRun } : { 'Content-Type': 'application/json' }, body: '{}' })
     .then(function(r){ return r.json(); })
     .then(function(raw) {
       var data = (raw && raw.success && raw.data) ? raw.data : raw;
@@ -18427,7 +18429,8 @@ window.cdbAutoSOCRun = function() {
 };
 
 window.cdbAutoSOCPollPipeline = function() {
-  fetch('/api/auto-soc/pipeline')
+  var _tPoll = (window.SUBSCRIPTION && SUBSCRIPTION.getToken && SUBSCRIPTION.getToken()) || '';
+  fetch('/api/auto-soc/pipeline', { headers: _tPoll ? { 'Authorization': 'Bearer ' + _tPoll } : {} })
     .then(function(r){ return r.json(); })
     .then(function(raw) {
       var data = (raw && raw.success && raw.data) ? raw.data : raw;
@@ -18436,7 +18439,8 @@ window.cdbAutoSOCPollPipeline = function() {
 };
 
 window.cdbAutoSOCRefreshLog = function() {
-  fetch('/api/auto-soc/log?limit=20')
+  var _tLog = (window.SUBSCRIPTION && SUBSCRIPTION.getToken && SUBSCRIPTION.getToken()) || '';
+  fetch('/api/auto-soc/log?limit=20', { headers: _tLog ? { 'Authorization': 'Bearer ' + _tLog } : {} })
     .then(function(r){ return r.json(); })
     .then(function(raw) {
       var data  = (raw && raw.success && raw.data) ? raw.data : raw;
@@ -18457,9 +18461,10 @@ window.cdbAutoSOCRefreshLog = function() {
 window.cdbAutoSOCSetSchedule = function() {
   var sel = document.getElementById('auto-soc-interval');
   var interval = sel ? parseInt(sel.value) : 60;
+  var _tSched = (window.SUBSCRIPTION && SUBSCRIPTION.getToken && SUBSCRIPTION.getToken()) || '';
   fetch('/api/auto-soc/schedule', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: _tSched ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _tSched } : { 'Content-Type': 'application/json' },
     body: JSON.stringify({ interval_minutes: interval, enabled: true }),
   })
   .then(function(r){ return r.json(); })
@@ -18497,7 +18502,8 @@ var SIEM = {
 };
 
 window.cdbSIEMLoad = function() {
-  fetch('/api/integrations')
+  var _tSiem = (window.SUBSCRIPTION && SUBSCRIPTION.getToken && SUBSCRIPTION.getToken()) || '';
+  fetch('/api/integrations', { headers: _tSiem ? { 'Authorization': 'Bearer ' + _tSiem } : {} })
     .then(function(r){ return r.json(); })
     .then(function(data) {
       if (data.error || !data.integrations || data.integrations.length === 0) {
@@ -18598,9 +18604,10 @@ window.cdbSIEMSaveConfig = function() {
 
   if (statusEl) { statusEl.textContent = 'Saving…'; statusEl.style.color = 'rgba(255,255,255,.5)'; }
 
+  var _tCfg = (window.SUBSCRIPTION && SUBSCRIPTION.getToken && SUBSCRIPTION.getToken()) || '';
   fetch('/api/integrations/configure', {
     method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: _tCfg ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _tCfg } : { 'Content-Type': 'application/json' },
     body: JSON.stringify({ platform: SIEM.currentPlatform, webhook_url: url, auth_token: token || null, hec_token: hec || null }),
   })
   .then(function(r){ return r.json(); })
@@ -18617,9 +18624,10 @@ window.cdbSIEMTestIntegration = function() {
   var statusEl = document.getElementById('siem-config-status');
   if (statusEl) { statusEl.textContent = '🔗 Testing connection…'; statusEl.style.color = '#00d4ff'; }
 
+  var _tTest = (window.SUBSCRIPTION && SUBSCRIPTION.getToken && SUBSCRIPTION.getToken()) || '';
   fetch('/api/integrations/test', {
     method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: _tTest ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _tTest } : { 'Content-Type': 'application/json' },
     body: JSON.stringify({ platform: SIEM.currentPlatform }),
   })
   .then(function(r){ return r.json(); })
@@ -18642,9 +18650,10 @@ window.cdbSIEMDeployRule = function(platformId) {
   var statusEl = document.getElementById('siem-config-status');
   if (statusEl) { statusEl.textContent = '🚀 Deploying to ' + platformId + '…'; statusEl.style.color = '#00d4ff'; }
 
+  var _tDeploy = (window.SUBSCRIPTION && SUBSCRIPTION.getToken && SUBSCRIPTION.getToken()) || '';
   fetch('/api/integrations/deploy', {
     method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: _tDeploy ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _tDeploy } : { 'Content-Type': 'application/json' },
     body: JSON.stringify({ platform: platformId, rule: rule, severity: 'HIGH' }),
   })
   .then(function(r){ return r.json(); })
@@ -18662,7 +18671,8 @@ window.cdbSIEMDeployRule = function(platformId) {
 };
 
 window.cdbSIEMDeployLatestRules = function() {
-  fetch('/api/auto-soc/latest-rules')
+  var _tLatest = (window.SUBSCRIPTION && SUBSCRIPTION.getToken && SUBSCRIPTION.getToken()) || '';
+  fetch('/api/auto-soc/latest-rules', { headers: _tLatest ? { 'Authorization': 'Bearer ' + _tLatest } : {} })
     .then(function(r){ return r.json(); })
     .then(function(data) {
       var rules = data.rules;
@@ -18673,7 +18683,7 @@ window.cdbSIEMDeployLatestRules = function() {
       var rule = rules[0];
       fetch('/api/integrations/deploy', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: _tLatest ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _tLatest } : { 'Content-Type': 'application/json' },
         body: JSON.stringify({ platform: SIEM.currentPlatform, rule: { sigma: rule.sigma, splunk: rule.splunk, kql: rule.kql, yara: rule.yara }, cve_id: rule.cve_id, severity: 'HIGH' }),
       })
       .then(function(r){ return r.json(); })
@@ -18692,7 +18702,8 @@ window.cdbSIEMDeployLatestRules = function() {
 };
 
 window.cdbSIEMRefreshLog = function() {
-  fetch('/api/integrations/deploy-log?limit=15')
+  var _tSiemLog = (window.SUBSCRIPTION && SUBSCRIPTION.getToken && SUBSCRIPTION.getToken()) || '';
+  fetch('/api/integrations/deploy-log?limit=15', { headers: _tSiemLog ? { 'Authorization': 'Bearer ' + _tSiemLog } : {} })
     .then(function(r){ return r.json(); })
     .then(function(data) {
       var logEl = document.getElementById('siem-deploy-log');
@@ -18715,7 +18726,8 @@ window.cdbSIEMRefreshLog = function() {
    ORGANIZATION MEMORY ENGINE
 ═══════════════════════════════════════════════════════════════ */
 window.cdbMemoryRefresh = function() {
-  fetch('/api/org-memory')
+  var _tMem = (window.SUBSCRIPTION && SUBSCRIPTION.getToken && SUBSCRIPTION.getToken()) || '';
+  fetch('/api/org-memory', { headers: _tMem ? { 'Authorization': 'Bearer ' + _tMem } : {} })
     .then(function(r){ return r.json(); })
     .then(function(raw) {
       if (!raw) return;
@@ -18758,7 +18770,7 @@ window.cdbMemoryRefresh = function() {
       renderMemoryRecommendations(recs);
 
       // Recent events from history endpoint
-      fetch('/api/org-memory/history?limit=10')
+      fetch('/api/org-memory/history?limit=10', { headers: _tMem ? { 'Authorization': 'Bearer ' + _tMem } : {} })
         .then(function(r2){ return r2.json(); })
         .then(function(histRaw) {
           var hist = (histRaw && histRaw.success && histRaw.data) ? histRaw.data : histRaw;
