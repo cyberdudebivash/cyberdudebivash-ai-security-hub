@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-11T09:28:16.352Z
+Generated: 2026-07-11T09:36:36.095Z
 Capabilities catalogued: 67
 
 ## Overall Completion
