@@ -28,22 +28,35 @@ async function getIncidents(env) {
 }
 
 // ─── Live platform metrics ────────────────────────────────────────────────────
-async function getLivePlatformMetrics(env) {
+// total_scans/cves_tracked/uptime_pct are sourced from the SAME canonical
+// hydrated blend GET /api/trust/metrics uses (handleTrustMetrics), not
+// computed independently here. Both callers of this function (handleTrustCenter
+// below and handleEnterpriseSalesKit) previously displayed their own divergent
+// counts instead — a COUNT(*) over service_orders (paid orders, not scans —
+// a materially different, much smaller number) mislabeled "security_scans"/
+// "scans_run", and an always-cold, unblended threat_intel count for CVEs.
+// Two real, customer/prospect-facing surfaces (the public Trust Center and the
+// Enterprise Sales Kit sent to prospects evaluating this platform) could both
+// undersell real platform volume under the wrong numbers — the exact
+// "enterprise-visible contradiction" class trustCenter.js's own
+// handleTrustMetrics doc comment describes fixing on its sibling route; this
+// was the same bug, unfixed here until now.
+async function getLivePlatformMetrics(request, env) {
   const metrics = {};
   try {
-    const [users, orders, actors, cves, mythos] = await Promise.all([
+    const [users, actors, mythos, canonical] = await Promise.all([
       env.DB?.prepare('SELECT COUNT(*) as cnt FROM users').first().catch(() => null),
-      env.DB?.prepare('SELECT COUNT(*) as cnt FROM service_orders').first().catch(() => null),
       env.DB?.prepare('SELECT COUNT(*) as cnt FROM threat_actors WHERE active=1').first().catch(() => null),
-      env.DB?.prepare('SELECT COUNT(*) as cnt FROM threat_intel').first().catch(() => null),
       env.DB?.prepare('SELECT SUM(tools_generated) as t, COUNT(*) as runs FROM mythos_runs').first().catch(() => null),
+      handleTrustMetrics(request, env).then(r => r.json()).catch(() => null),
     ]);
     metrics.total_users        = users?.cnt     || 0;
-    metrics.total_scans        = orders?.cnt    || 0;
     metrics.threat_actors      = actors?.cnt    || 0;
-    metrics.cves_tracked       = cves?.cnt      || 0;
     metrics.mythos_tools       = mythos?.t      || 0;
     metrics.mythos_runs        = mythos?.runs   || 0;
+    metrics.total_scans        = canonical?.metrics?.total_scans ?? 0;
+    metrics.cves_tracked       = canonical?.metrics?.total_cves ?? 0;
+    metrics.uptime_pct         = canonical?.metrics?.uptime_pct ?? null;
   } catch {}
   return metrics;
 }
@@ -52,17 +65,13 @@ async function getLivePlatformMetrics(env) {
 // ENDPOINT 1: GET /api/trust-center — Trust Center
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function handleTrustCenter(request, env, authCtx) {
-  const m = await getLivePlatformMetrics(env);
+  const m = await getLivePlatformMetrics(request, env);
 
-  // Real, measured uptime (same source as /api/trust/center) — never a
-  // marketing percentage. Falls back to an honest "not measured" label
-  // rather than asserting a number nothing backs.
-  let uptimeLabel = 'Not yet independently measured (Cloudflare edge network)';
-  try {
-    const metricsRes = await handleTrustMetrics(request, env);
-    const { metrics } = await metricsRes.json();
-    if (typeof metrics?.uptime_pct === 'number') uptimeLabel = `${metrics.uptime_pct}% (measured, trailing 30 days)`;
-  } catch { /* keep the honest default above */ }
+  // Real, measured uptime — never a marketing percentage. Falls back to an
+  // honest "not measured" label rather than asserting a number nothing backs.
+  const uptimeLabel = typeof m.uptime_pct === 'number'
+    ? `${m.uptime_pct}% (measured, trailing 30 days)`
+    : 'Not yet independently measured (Cloudflare edge network)';
 
   return ok({
     success:    true,
@@ -471,7 +480,7 @@ export async function handleEnterpriseInquiry(request, env, authCtx) {
 // ENDPOINT 6: GET /api/enterprise/sales-kit — Enterprise Sales Kit
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function handleEnterpriseSalesKit(request, env, authCtx) {
-  const m = await getLivePlatformMetrics(env);
+  const m = await getLivePlatformMetrics(request, env);
 
   return ok({
     success:  true,

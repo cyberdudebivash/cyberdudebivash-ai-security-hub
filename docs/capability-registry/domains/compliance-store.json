@@ -199,44 +199,45 @@
     "name": "Trust Center Compliance Framework Alignment",
     "description": "A public, honestly-scoped list of which compliance frameworks (ISO 27001, SOC 2, GDPR, PCI-DSS, HIPAA, DPDP, OWASP LLM, MITRE, NIST AI) the platform aligns with vs. holds formal certification for.",
     "backend": {
-      "handlers": ["workers/src/handlers/trustCenter.js"],
-      "entry_points": ["handleTrustCompliance"],
+      "handlers": ["workers/src/handlers/trustCenter.js", "workers/src/handlers/enterprisePortalHandlers.js"],
+      "entry_points": ["handleTrustCompliance", "handleTrustCenter (workers/src/handlers/enterprisePortalHandlers.js)"],
       "routes_sampled": [
-        { "path": "/api/trust/compliance", "method": "GET", "evidence": "workers/src/index.js:7865" }
+        { "path": "/api/trust/compliance", "method": "GET", "evidence": "workers/src/index.js:7865" },
+        { "path": "/api/trust-center", "method": "GET", "evidence": "workers/src/index.js:5304-5306 (handleEnterpriseTrustCenter, an import alias — workers/src/index.js:527 — for workers/src/handlers/enterprisePortalHandlers.js's OWN handleTrustCenter, a different function from workers/src/handlers/trustCenter.js's same-named handleTrustCenter despite the identical name)" }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "missing",
-      "evidence": "frontend/trust-center.html's only fetch() call (line 279) targets an absolute external URL, https://cyberdudebivash.in/api/trust-center — not the relative /api/trust/compliance path this handler actually serves. No frontend file calls /api/trust/compliance."
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/trust-center.html"],
+      "status": "exists",
+      "evidence": "CORRECTED 2026-07-11 — the prior diagnosis on this entry (2026-07-11 domain audit) was itself wrong and is superseded here, not just re-verified: it read frontend/trust-center.html's fetch('https://cyberdudebivash.in/api/trust-center') as an orphaned call to a nonexistent route, on the assumption it should have targeted workers/src/handlers/trustCenter.js's /api/trust/compliance. In fact /api/trust-center is a real, live, already-wired route (workers/src/index.js:5304) resolving to workers/src/handlers/enterprisePortalHandlers.js's OWN handleTrustCenter (a second function that happens to share its name with workers/src/handlers/trustCenter.js's unrelated handleTrustCenter — confirmed by reading the actual import at workers/src/index.js:527: `handleTrustCenter as handleEnterpriseTrustCenter` is imported from workers/src/handlers/enterprisePortalHandlers.js, not workers/src/handlers/trustCenter.js). That handler's real response shape (platform_stats, compliance_status.frameworks[].{framework,status,evidence}, vulnerability_disclosure) matches frontend/trust-center.html's script field-for-field — the page was never broken. This was caught before shipping a bad 'fix' in this same session: an initial attempt to rewire the frontend to workers/src/handlers/trustCenter.js's /api/trust/center + /api/trust/compliance instead (based on the flawed prior diagnosis) was reverted after directly testing the real router and finding /api/trust-center already returns real, correctly-shaped, non-empty data."
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "frontend/trust-center.html is linked from site navigation, but the page itself never calls the endpoint this capability serves, so the compliance-alignment data it returns never reaches any visitor."
+      "discoverable": true,
+      "evidence": "frontend/trust-center.html is linked from site navigation and genuinely renders real compliance-alignment data from workers/src/handlers/enterprisePortalHandlers.js's handleTrustCenter — this was never actually broken (see frontend.evidence for the corrected diagnosis)."
     },
     "auth_enforced": false,
     "rbac": { "enforced": false, "permissions": [] },
     "subscription_gated": false,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "grep -rn \"handleTrustCompliance|trustCenter\" workers/test/*.mjs surfaces two adjacent, non-matching hits: workers/test/trustMetricsContract.test.mjs:23 imports handleTrustMetrics (a different function, same file), and workers/test/proposalGeneratorHonestClaims.test.mjs:12 references this file's certifications list only as corroborating context for an unrelated test."
+      "has_tests": true,
+      "evidence": "workers/test/enterprisePortalMetricsSourcing.test.mjs (new, 2026-07-11, 3 tests) covers the real bug found and fixed this session (see notes) — not a frontend-wiring bug, a metrics-sourcing bug in the handler this page actually calls. workers/test/trustMetricsContract.test.mjs (pre-existing) covers the unrelated, separate workers/src/handlers/trustCenter.js handlers this page does NOT call."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "PILOT ONLY",
     "priority": "P2",
     "verification": {
-      "method": "static",
+      "method": "dynamic_api",
       "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/trustCenter.js:81 (COMPLIANCE_FRAMEWORKS, 9 frameworks each marked 'aligned' or 'partial' with honest scope notes) and :93 (handleTrustCompliance) read directly. workers/src/index.js:7865 read directly. frontend/trust-center.html read directly and grepped for every fetch/axios call — only one found, targeting an unrelated absolute URL. workers/test/*.mjs grepped as described above."
+      "evidence": "workers/src/handlers/enterprisePortalHandlers.js read in full (all 6 endpoints); workers/src/index.js:527,5304-5306,7856,7865 read directly to confirm the two same-named-but-different handleTrustCenter functions and their real routes. Real bug found and fixed: getLivePlatformMetrics() computed platform_stats.security_scans (Trust Center) and platform_stats.scans_run (Enterprise Sales Kit, handleEnterpriseSalesKit — a SECOND real caller of the same buggy function, found while fixing the first) from COUNT(*) FROM service_orders — paid orders, not scans, a materially smaller number under the wrong label — and cves_in_database/cves_tracked from an always-cold COUNT(*) FROM threat_intel, instead of the canonical hydrated blend GET /api/trust/metrics already uses (handleTrustMetrics, workers/src/handlers/trustCenter.js — already imported in this file for uptime only). Both real, customer/prospect-facing surfaces (public Trust Center, and the Enterprise Sales Kit sent to prospects evaluating this platform against Mandiant/CrowdStrike/etc.) could undersell real platform volume under the wrong numbers. Fixed by having getLivePlatformMetrics() call handleTrustMetrics() itself and both callers inherit the corrected values with zero call-site changes. customer_journey_complete stays false and verification.method is dynamic_api not dynamic_browser — this wave verified the real handlers directly with real stubs, not a live production browser pass; that's the natural next increment."
     },
     "contradicts_doc": [],
-    "notes": "Positive finding, not just a gap: unlike frontend/compliance-management.html (see CAP-COMP-004's notes), this backend module is deliberately honest — e.g. 'Not yet formally assessed against SOC 2 Trust Service Criteria' and 'no formal certification held' for ISO 27001 — and should be used as the reference tone for any future customer-facing compliance-claim copy. The only defect is wiring: the real page never calls the real endpoint."
+    "notes": "Positive finding, not just a gap: unlike frontend/compliance-management.html (see CAP-COMP-004's notes), trustCenter.js's COMPLIANCE_FRAMEWORKS is deliberately honest — e.g. 'Not yet formally assessed against SOC 2 Trust Service Criteria' and 'no formal certification held' for ISO 27001. **Real finding, flagged but NOT fixed this session (needs an explicit decision, not a unilateral merge — matching this registry's established convention for duplicate-system findings, e.g. CAP-CRM-004/006, CAP-MKT-005):** enterprisePortalHandlers.js maintains its OWN, independent, hand-written compliance_status.frameworks list (7 frameworks, 3-state: Implemented/Aligned/Planning) that overlaps but does not match trustCenter.js's COMPLIANCE_FRAMEWORKS (9 frameworks, 2-state: aligned/partial) — and on GDPR specifically, the two DISAGREE: trustCenter.js says 'partial' ('Not yet formally assessed against GDPR 2016/679') while enterprisePortalHandlers.js says 'Aligned' ('Data minimization, consent, deletion rights implemented') for the exact same company, same framework. This is currently NOT a live customer-visible contradiction — the only frontend code that ever called trustCenter.js's /api/trust/compliance (frontend/assets/sentinel-apex-live-metrics.js and a byte-identical duplicate at frontend/assets/js/sentinel-apex-live-metrics.js) is not loaded by any <script> tag on any page in frontend/ (confirmed by repo-wide grep) — fully dead code today. It would become a live, enterprise-visible contradiction the moment either dead file is ever wired up without first reconciling the two lists. Recommend a follow-up: (1) decide which framework list and vocabulary is canonical (or maintain one shared source both handlers read), (2) either wire up or delete the two dead duplicate JS files, not both left as unreferenced dead code indefinitely."
   }
 ]
