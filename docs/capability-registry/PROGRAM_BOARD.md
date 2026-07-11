@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11, Backlog-sweep wave: all 3 previously-unaudited domains — compliance-store, mythos-godmode, threat-hunting-intel — populated for the first time; identity Critical-3 (CAP-IDN-001/002/003) re-verified end-to-end against LIVE PRODUCTION with a real RFC 6238 TOTP secret, zero mocking. The 3-domain audit surfaced 1 new Critical + 8 new High item not previously counted — see session log for the honest before/after. Also still open: Threat Graph findings-persistence fix from an earlier wave still needs the owner to run the gated D1 Schema Migration workflow with `workers/schema_migration_scan_history_findings_2026_07.sql` to activate)
+## Current status (2026-07-11, Backlog-sweep wave 2: CAP-MSSP-001 live-reverified against production (dead-end fix confirmed deployed, real non-mutating login-endpoint check); CAP-COMP-001 (found in wave 1's 3-domain audit) fixed — a compliance-pack nav link no longer leads to a hidden, auth-gated section for logged-out visitors. Metrics table below unchanged from wave 1 — priority fields are historical-severity records, not auto-derived from the now-fixed booleans, matching this session's established convention. Also still open: Threat Graph findings-persistence fix from an earlier wave still needs the owner to run the gated D1 Schema Migration workflow with `workers/schema_migration_scan_history_findings_2026_07.sql` to activate)
 
 **Scope note (2026-07-10):** starting this date, sessions on this branch
 follow the customer's "production readiness lifecycle" priority (visitor →
@@ -28,7 +28,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 95 | `node scripts/registry/validate.mjs` |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 |
-| Worker test suite | 206 files / 2144 tests passing | `npx vitest run`, run 2026-07-11 (no backend code changed this wave — registry JSON + doc updates only; re-run as a discipline check, not because a regression was suspected) |
+| Worker test suite | 207 files / 2149 tests passing | `npx vitest run`, run 2026-07-11 (+1 file / +5 tests this wave: `workers/test/complianceGlobalPublicAccess.test.mjs`, CAP-COMP-001's fix) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 |
 | Backend / Frontend / Parity | 88.4% / 64.2% / 57.9% | `PRODUCTION_READINESS_REPORT.md` — the 29 newly-registered capabilities from the 3-domain audit pulled frontend/parity % down from the prior wave's 67.9%/62.7% even though nothing regressed — this is real, previously-invisible backlog becoming visible, not a new defect |
 | Customer journeys browser-verified | 3/95 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — all three flipped to `true` this wave) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -202,6 +202,53 @@ see session log below.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Backlog sweep, wave 2: CAP-MSSP-001 live re-verification + CAP-COMP-001 fix (nav/auth-gate mismatch)
+
+- **CAP-MSSP-001** (`docs/capability-registry/domains/mssp.json`): the
+  dead-end-link fix from 2026-07-08 had never been re-verified against live
+  production. Ran a real headless-Chromium session directly against
+  `https://cyberdudebivash.in`, zero mocking: confirmed both the
+  post-checkout and post-free-trial success cards on the live
+  `frontend/mssp-onboarding.html` link to `frontend/partner-portal.html`
+  ("Go to MSSP Dashboard"), with no link anywhere to the staff-only command
+  center; confirmed `frontend/partner-portal.html` renders a real login-link
+  request form; submitted a guaranteed-non-existent test email through that
+  real form and confirmed `POST /api/partners/login` returns the correct
+  generic, non-account-enumerating 200 response. **Deliberately did not**
+  exercise the real paid-checkout or free-trial signup, or consume a real
+  magic-link token: `workers/src/handlers/msspOnboardingHandler.js` and
+  `workers/src/services/msspOps.js` were checked directly and neither
+  exposes any partner-deletion capability, so completing that chain would
+  leave a permanent, untracktable `mssp_partners` row in production with no
+  self-service cleanup (unlike the disposable test accounts used for the
+  identity-domain work, cleaned up via `DELETE /api/auth/delete-account`).
+  `verification.method` upgraded to `dynamic_browser`; `customer_journey_
+  complete` stays `false` with the reasoning recorded directly in the
+  registry entry rather than silently overclaimed.
+- **CAP-COMP-001** (`docs/capability-registry/domains/compliance-store.json`,
+  found during the prior wave's 3-domain audit): fixed. The `#compliance-
+  global` section (`frontend/index.html`) carried `data-auth-gate="true"`
+  and a `display:none` default, hiding it from logged-out visitors even
+  though the backend it calls (`workers/src/services/globalScale.js`)
+  requires no auth at all and the nav link stays visible to everyone
+  regardless. Fixed by removing both the gate attribute and the default
+  hidden style — confirmed via a direct re-read of `cdbNavigate()`'s own
+  gate-check logic (`frontend/index.html:14714-14722`) that a section with
+  no `data-auth-gate` attribute is no longer redirected away for logged-out
+  visitors. Zero backend changes; zero changes to any other gated section.
+  New test: `workers/test/complianceGlobalPublicAccess.test.mjs` (5 tests) —
+  confirms the gate/hidden-default are gone, the nav link and purchase flow
+  are unchanged, and sibling gated sections (`executive-hub`,
+  `growth-analytics`) are untouched.
+- **Verified:** `node scripts/registry/validate.mjs` → 0 hard failures, 0
+  warnings. Full backend suite: 207 files / 2149 tests passing (up from
+  206/2144 — the 1 new test file). `scripts/seo-structure-lock.mjs`: all 22
+  pages green (change is inside `<body>`, outside `<head>`).
+- **Follow-up:** a live production `dynamic_browser` re-check of
+  CAP-COMP-001 after deploy is the natural next step before flipping its
+  `customer_journey_complete` to `true`, matching the pattern already used
+  for CAP-IDN-001/002/003 and CAP-MSSP-001 in this and the prior wave.
 
 ### 2026-07-11 — Backlog sweep, wave 1: 3-domain audit (compliance-store, mythos-godmode, threat-hunting-intel) + identity Critical-3 live re-verification
 
