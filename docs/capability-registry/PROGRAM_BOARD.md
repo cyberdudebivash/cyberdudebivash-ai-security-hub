@@ -203,6 +203,34 @@ see session log below.
 
 ## Session log (most recent first)
 
+### 2026-07-11 — Backlog sweep, wave 2 addendum: CAP-COMP-001 post-deploy live verification + CI axe catch
+
+- PR #166 (wave 2) merged (squash 6ca6fb7). CI's Accessibility (axe) check
+  — a required job — immediately caught a real, pre-existing WCAG
+  color-contrast violation on 3 of the 7 compliance-pack badges (soc2,
+  gdpr, nist_csf) the moment the section became visible; it was never
+  auditable before since axe-core does not evaluate display:none content.
+  Verified the exact failing ratios by reproducing axe-core's own
+  relative-luminance/contrast algorithm in a Node script (2.64:1, 3.21:1,
+  4.41:1 — all below the 4.5:1 AA minimum), fixed with a lighter same-hue
+  `badgeColor` for just those 3 packs' badge text (now 5.5:1+), pushed a
+  second commit to the same PR, all 32 checks green including axe, merged.
+- Polled live production until the deploy landed, then ran a real
+  headless-Chromium session against `https://cyberdudebivash.in` with no
+  login: `#compliance-global` renders (`display:block`, real height), all
+  7 badges present, and the 3 fixed badges' live computed colors match the
+  shipped fix exactly (`rgb(129,140,248)` / `rgb(96,165,250)` /
+  `rgb(248,113,113)`). Zero JS errors. `verification.method` upgraded to
+  `dynamic_browser`; `customer_journey_complete` stays `false` — this
+  verifies discoverability/visibility, not a completed Razorpay purchase.
+- No GitHub Actions workflow in this repo runs a Cloudflare deploy step
+  directly (confirmed by listing every job on the merge commit's 4
+  triggered workflows: gitleaks, CodeQL, `CI — Lint & Validate`, `Test &
+  Quality Gate` — none contain a deploy job) — deployment is handled by
+  Cloudflare's own git integration outside of Actions. Noted here since it
+  changes how "deploy landed" should be verified going forward: poll the
+  live site directly rather than looking for an Actions-visible deploy job.
+
 ### 2026-07-11 — Backlog sweep, wave 2: CAP-MSSP-001 live re-verification + CAP-COMP-001 fix (nav/auth-gate mismatch)
 
 - **CAP-MSSP-001** (`docs/capability-registry/domains/mssp.json`): the
