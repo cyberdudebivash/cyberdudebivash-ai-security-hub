@@ -304,13 +304,46 @@ see session log below.
 - **Commits this wave:** `frontend/index.html`, new test
   `workers/test/homepageOwnerGateVerification.test.mjs`,
   `docs/capability-registry/PROGRAM_BOARD.md` (this entry).
-- **Still open from wave 1's follow-up list:** item (5) —
-  `soc-dashboard.html` and `enterprise-portal.html` were flagged as lower-
-  confidence candidates but never deep-dived; a dedicated investigation is
-  in progress to determine whether they need the same fix or are already
-  fine (the pattern established this wave: verify by reading the actual
-  auth code before touching anything, since 5 of 6 originally-flagged items
-  turned out not to need changes at all).
+- **Wave 1's last open item, resolved — no fix needed:** `soc-dashboard.html`
+  and `enterprise-portal.html`, the two lower-confidence candidates flagged
+  but never deep-dived, were investigated by reading the full files and
+  cross-checking the backend routes they call:
+  - `enterprise-portal.html` — legitimately public marketing/integration-docs
+    content for prospective enterprise customers (SSO/SIEM/TAXII setup
+    steps, roadmap, "Book Integration Session" CTA). No `display:none`, no
+    auth code anywhere in the file. Its one API call
+    (`/api/enterprise/capability`) is intentionally public server-side
+    (`workers/src/index.js` ~line 2853: defaults to `{tier:'FREE'}` on auth
+    failure rather than blocking — a status/capability endpoint for
+    evaluators). Same category as `ciso-hub.html`; correctly left alone.
+  - `soc-dashboard.html` — this one is a real, customer-facing PAID product
+    surface (not admin/internal — has an "Upgrade Plan" link and a
+    plan-tier chip, i.e. freemium SaaS UX), and it does render its main
+    shell (sidebar, KPI cards, alert feed, posture ring, IOC table, attack
+    graph) unconditionally with no login wall. Its one internal
+    Enterprise-tier gate (`decision-gate` overlay) reads
+    `localStorage.getItem('cdb_plan')` client-side — spoofable, same
+    anti-pattern class as everything else this investigation has been
+    checking for. **But** the underlying data calls
+    (`workers/src/handlers/soc.js`: `handleGetAlerts` requires STARTER+,
+    `handleGetDecisions` requires `authCtx.tier === 'ENTERPRISE'`) derive
+    `authCtx.tier` exclusively from `resolveAuthV5()` — real credentials
+    only, never from anything client-supplied — so spoofing the localStorage
+    flag bypasses only the cosmetic overlay; the subsequent fetch still gets
+    a real server-side 403 and the visitor sees an empty/mock state, not
+    real data. No admin or customer data actually exposed. Correctly left
+    alone — this is a subscription paywall UX question (worth a future
+    product-polish pass: `loadAlerts()`/`loadDecisions()` could check
+    `r.ok` like `loadIOCs()` already does, to show "upgrade required"
+    instead of a misleading empty state), not the admin-access-control gap
+    the customer reported.
+  - Neither file has a `<meta name="robots">` tag. Correct/expected for
+    `enterprise-portal.html` (should be indexed, same as `ciso-hub.html`).
+    Absent on `soc-dashboard.html` too — low-severity since real data is
+    already server-gated regardless, but flagged for a future pass.
+  - **This closes out every item on wave 1's follow-up list** — 6 candidates
+    total, 1 genuine gap found and fixed (`index.html`), 5 false positives
+    corrected above, 0 new gaps found on the final 2.
 
 ### 2026-07-11 — Customer-reported access-control gap: admin/revenue dashboard shells rendered for any visitor; one real paid-feature bypass in the customer dashboard — wave 1 of the fix (highest-severity cases)
 
