@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11, Backlog-sweep wave 2: CAP-MSSP-001 live-reverified against production (dead-end fix confirmed deployed, real non-mutating login-endpoint check); CAP-COMP-001 (found in wave 1's 3-domain audit) fixed — a compliance-pack nav link no longer leads to a hidden, auth-gated section for logged-out visitors. **Session resumed after a usage-limit cutoff mid-edit** (see EXECUTION_PROCEDURE.md §0 — the in-flight p4LoadFunnel edit was never committed and was not recoverable from git, so it was redone from scratch rather than resumed): CAP-CRM-007 (Conversion Trigger & Funnel Tracking) fixed — all 6 frontend call sites into conversionTriggers.js now match the real backend contract, including closing a paywall gate that failed OPEN for every feature/plan (zero live callers today, so zero current blast radius, but now correct before anything gets wired to it). Metrics table below updated for the CAP-CRM-007 fix only (frontend/parity % + test count) — priority fields are historical-severity records, not auto-derived from the now-fixed booleans, matching this session's established convention. Also still open: Threat Graph findings-persistence fix from an earlier wave still needs the owner to run the gated D1 Schema Migration workflow with `workers/schema_migration_scan_history_findings_2026_07.sql` to activate)
+## Current status (2026-07-11, Backlog-sweep wave 2: CAP-MSSP-001 live-reverified against production (dead-end fix confirmed deployed, real non-mutating login-endpoint check); CAP-COMP-001 (found in wave 1's 3-domain audit) fixed — a compliance-pack nav link no longer leads to a hidden, auth-gated section for logged-out visitors. **Session resumed after a usage-limit cutoff mid-edit** (see EXECUTION_PROCEDURE.md §0 — the in-flight p4LoadFunnel edit was never committed and was not recoverable from git, so it was redone from scratch rather than resumed): CAP-CRM-007 (Conversion Trigger & Funnel Tracking) fixed — all 6 frontend call sites into conversionTriggers.js now match the real backend contract, including closing a paywall gate that failed OPEN for every feature/plan (zero live callers today, so zero current blast radius, but now correct before anything gets wired to it). Metrics table below updated for the CAP-CRM-007 fix only (frontend/parity % + test count) — priority fields are historical-severity records, not auto-derived from the now-fixed booleans, matching this session's established convention. Also still open: Threat Graph findings-persistence fix from an earlier wave still needs the owner to run the gated D1 Schema Migration workflow with `workers/schema_migration_scan_history_findings_2026_07.sql` to activate. **Session resumed a second time after another usage-limit cutoff** (mid-check on PR #173's post-merge production deploy — confirmed landed cleanly, see session log): CAP-COMP-005 (Trust Center Compliance Framework Alignment) investigated per this wave's own selection process, but its registry diagnosis turned out to be wrong — the page was never actually unwired. Caught before shipping a bad "fix" that would have broken a working integration (full account in the session log entry below). The real bug found and fixed instead: a platform-metrics mislabeling bug affecting both the public Trust Center and the Enterprise Sales Kit sent to prospects. CAP-MKT-005's catalog-mismatch question and this wave's merge-workflow preference are both now with the owner, awaiting explicit input before continuing further.)
 
 **Scope note (2026-07-10):** starting this date, sessions on this branch
 follow the customer's "production readiness lifecycle" priority (visitor →
@@ -202,6 +202,143 @@ see session log below.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Second recovery; PR #173 deploy verified live; CAP-COMP-005 misdiagnosis caught before shipping; real fix: platform-metrics mislabeling on 2 customer/prospect-facing surfaces
+
+- **Trigger:** the prior session hit a second hard usage-limit cutoff — this
+  time not mid-edit, but mid-way through a scheduled post-merge check for
+  PR #173 (CAP-ORG-001), immediately after scheduling a `send_later` wakeup
+  to re-check in ~6 minutes. Resumed per a customer request to review the
+  attached task-progress transcript and continue with production-grade
+  precision.
+- **Recovery (EXECUTION_PROCEDURE.md §3):** fresh container. `git status`
+  clean; `git log` HEAD matched `origin/main` exactly (`git fetch origin
+  main` + bidirectional `git log A..B --oneline` both empty) — PR #173 was
+  already merged and no work was lost or stranded, unlike the prior
+  cutoff. `mcp__github__list_pull_requests` confirmed zero open PRs (#168-173
+  all merged) and PR #173's own body/timestamps directly, rather than
+  trusting the transcript's narration alone.
+- **Verified PR #173's deploy (the exact check the prior session was
+  mid-way through when it was cut off):** fetched
+  `https://cyberdudebivash.in/user-dashboard` directly — `loadOrgScans`,
+  `orgScansPage`, and the "Scan History" card markup are all present (7
+  occurrences each). Deploy landed cleanly; the prior session's scheduled
+  check-in is no longer needed.
+- **Gap-report triage:** regenerated context confirmed exactly **one**
+  genuinely open Critical (P1 + operational_status NOT READY) item across
+  the entire registry — CAP-MKT-005, the marketplace catalog mismatch —
+  and 20 genuinely open High (P2 + NOT READY) items, the large majority of
+  which are full greenfield UI builds or flagged duplicate-system/owner-
+  decision situations (CAP-MYTHOS-003, CAP-TIH-014, CAP-CRM-004/006), not
+  bounded wiring gaps. Selected **CAP-COMP-005** (Trust Center Compliance
+  Framework Alignment) as the best-scoped candidate — its own `notes` field
+  said "the only defect is wiring."
+- **That diagnosis was wrong, and an initial fix attempt was caught and
+  reverted before shipping — full account, since this is exactly the
+  failure class this registry's own discipline (EXECUTION_PROCEDURE.md §0:
+  "never trust a prior session's narrated summary as evidence by itself")
+  exists to catch:** the prior wave-1 domain audit found
+  `frontend/trust-center.html` calling
+  `https://cyberdudebivash.in/api/trust-center` and, finding no matching
+  route in its own read of `trustCenter.js`, concluded the route didn't
+  exist and should have been `/api/trust/compliance`. A first fix pass
+  rewired the frontend to call `/api/trust/center` +
+  `/api/trust/compliance` instead, built a shape-translation layer, and
+  wrote passing tests against it — before a router-level test exposed the
+  real behavior: `/api/trust-center` **does** exist
+  (`workers/src/index.js:5304-5306`) and returns rich, non-empty,
+  correctly-shaped data. The route resolves to `handleEnterpriseTrustCenter`
+  — an import alias (`workers/src/index.js:527`) that was assumed, without
+  checking the `from` clause, to point at `trustCenter.js`'s
+  `handleTrustCenter`. It actually imports a **second, different function
+  with the same name** from `workers/src/handlers/enterprisePortalHandlers.js`
+  — and that function's real response shape (`platform_stats`,
+  `compliance_status.frameworks[].{framework,status,evidence}`,
+  `vulnerability_disclosure`) matches the frontend's script field-for-field.
+  The page was never broken. The in-progress fix and its test file were
+  reverted (`git checkout --`, file deletion) before any of it was
+  committed.
+- **The real bug, found while re-diagnosing:**
+  `enterprisePortalHandlers.js`'s `getLivePlatformMetrics()` computed
+  `platform_stats.security_scans` (Trust Center) as `COUNT(*) FROM
+  service_orders` — paid orders, not scans, a materially smaller number
+  under the wrong label — and `cves_in_database` from an always-cold,
+  unblended `COUNT(*) FROM threat_intel`, instead of the canonical hydrated
+  blend `GET /api/trust/metrics` already uses
+  (`handleTrustMetrics`, `workers/src/handlers/trustCenter.js` — already
+  imported in this same file, but only ever read for uptime). Grepping for
+  other callers of the same function surfaced a **second real caller**,
+  `handleEnterpriseSalesKit` (`GET /api/enterprise/sales-kit` — the kit sent
+  to prospects evaluating this platform against Mandiant/CrowdStrike/Recorded
+  Future/etc.), displaying the identical wrong numbers as `scans_run` /
+  `cves_tracked`. This is the same "enterprise-visible contradiction" bug
+  class `trustCenter.js`'s own `handleTrustMetrics` doc comment describes
+  fixing on its sibling route — unfixed here on a second, independent code
+  path until now.
+- **Fixed:** `getLivePlatformMetrics()` now calls `handleTrustMetrics()`
+  itself and folds `total_scans`/`cves_tracked`/`uptime_pct` into its
+  returned object from that one canonical source; both callers inherit the
+  corrected values with zero changes to either call site's own body. The
+  now-redundant direct `service_orders`/`threat_intel` queries were removed
+  entirely (their only two consumers now come from the canonical blend).
+- **Also flagged, NOT fixed (a real product/business decision, matching this
+  registry's established convention for duplicate-system findings — CAP-CRM-
+  004/006, CAP-MKT-005):** `enterprisePortalHandlers.js` maintains its own,
+  independent, hand-written 7-framework/3-state compliance list that
+  overlaps with but does not match `trustCenter.js`'s 9-framework/2-state
+  `COMPLIANCE_FRAMEWORKS`, and on GDPR specifically the two **disagree**
+  (`trustCenter.js`: "partial — not yet formally assessed";
+  `enterprisePortalHandlers.js`: "Aligned — data minimization, consent,
+  deletion rights implemented"). Not currently live-customer-visible — the
+  only frontend code that ever called `trustCenter.js`'s
+  `/api/trust/compliance` (`frontend/assets/sentinel-apex-live-metrics.js`,
+  duplicated byte-for-byte at `frontend/assets/js/sentinel-apex-live-
+  metrics.js`) is loaded by zero `<script>` tags anywhere in `frontend/` —
+  fully dead code today, confirmed by repo-wide grep. Would become a live
+  contradiction the instant either dead copy is ever wired up without first
+  reconciling the two lists.
+- **Verified:** new `workers/test/enterprisePortalMetricsSourcing.test.mjs`
+  (3 tests) — direct handler tests (not router-level; no routing/shadowing
+  risk here, unlike CAP-MKT-005) confirming both `handleTrustCenter` and
+  `handleEnterpriseSalesKit` return the canonical seeded metrics rather than
+  a deliberately-different, deliberately-small `service_orders`-sourced
+  number, with a DB stub that **throws** if `service_orders` is ever queried
+  again (regression guard, same style as `trustMetricsContract.test.mjs`'s
+  own unwritten-key guard); confirms the real uptime-label formatting.
+  `node scripts/registry/validate.mjs`: 0 hard failures, 0 warnings (after
+  fixing several bare-filename evidence citations the validator correctly
+  rejected — the same class of mistake flagged as a lesson in the 2026-07-11
+  wave-1 session-log entry below, repeated and caught again here). Full
+  backend suite: 213 files / 2203 tests passing (up from 211/2188 — the 1
+  new file's 3 tests plus 2 test-runner-only smoke spec files that fail to
+  *load* in this environment for an unrelated, pre-existing reason —
+  `@playwright/test` is installed by a dedicated CI step
+  (`.github/workflows/test.yml:193-195`) this container's plain `npm
+  install` doesn't run; confirmed via `git status` that neither smoke spec
+  is part of this change). `scripts/seo-structure-lock.mjs`: 22/22 pages
+  green (unaffected — no frontend HTML changed in the final fix).
+- **Commits this session:**
+  `workers/src/handlers/enterprisePortalHandlers.js` (metrics-sourcing fix),
+  new test `workers/test/enterprisePortalMetricsSourcing.test.mjs`,
+  `docs/capability-registry/domains/compliance-store.json` (CAP-COMP-005
+  entry corrected and updated), `docs/capability-registry/
+  PRODUCTION_READINESS_REPORT.md` (regenerated), `docs/capability-registry/
+  PROGRAM_BOARD.md` (this entry). `frontend/trust-center.html` is
+  **unchanged** — the reverted fix attempt never reached a commit.
+- **Risks / follow-ups:** (1) the GDPR compliance-claim contradiction and
+  dead duplicate `sentinel-apex-live-metrics.js` files above, flagged for an
+  owner decision; (2) `customer_journey_complete` stays `false` and
+  `verification.method` is `dynamic_api` not `dynamic_browser` — this wave
+  verified the real handlers with real stubs, not a live production browser
+  pass; a live `dynamic_browser` check of the corrected numbers against
+  `cyberdudebivash.in` is the natural next increment; (3) two decisions are
+  now with the customer and this session is not proceeding past them
+  unilaterally: CAP-MKT-005's catalog-mismatch question (open since the
+  prior session), and — new this session, since no durable authorization
+  for it was found anywhere in the repo (checked for a `CLAUDE.md`; none
+  exists) — explicit confirmation of the auto-merge-once-green cadence
+  narrated in the prior session's transcript before continuing to use it,
+  given merges here trigger an immediate, ungated live production deploy.
 
 ### 2026-07-11 — Recovery + CAP-CRM-007 fix: Conversion Trigger & Funnel Tracking, all 6 call sites
 
