@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11, P1: Threat Graph findings-persistence fix prepared — code merged and live-verified as a safe no-op; ACTION NEEDED from the owner to activate it: run the gated D1 Schema Migration workflow with `workers/schema_migration_scan_history_findings_2026_07.sql`)
+## Current status (2026-07-11, Competitor gap analysis vs. CrowdStrike/SentinelOne/Palo Alto/Recorded Future/Mandiant/ThreatConnect complete; wave 1 fix — org Activity Log — shipped; 4 larger gaps scoped and documented for follow-on waves. Also: Threat Graph findings-persistence fix from the prior wave still needs the owner to run the gated D1 Schema Migration workflow with `workers/schema_migration_scan_history_findings_2026_07.sql` to activate)
 
 **Scope note (2026-07-10):** starting this date, sessions on this branch
 follow the customer's "production readiness lifecycle" priority (visitor →
@@ -201,6 +201,128 @@ see session log below.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Competitor gap analysis (CrowdStrike, SentinelOne, Palo Alto Cortex, Recorded Future, Google Mandiant, ThreatConnect) — wave 1 fix shipped (org Activity Log), 4 larger gaps scoped for follow-on waves
+
+- **Trigger:** customer asked to research how six named world-class threat-intel/
+  security platforms manage production customers, users, paid accounts, admin
+  accounts, and CRM, compare strictly against this platform, and fix the gaps
+  found — "complete with them at the highest max level globally."
+- **Method:** a background research agent gathered publicly-documented
+  (vendor docs/help centers/trust pages only, no invented architecture)
+  practices across 8 dimensions per vendor: org/tenant model, RBAC/named
+  roles, SSO/SAML/SCIM/MFA, admin console capabilities, billing self-service,
+  API key management, customer-success/account-management touch, and audit
+  logging. In parallel, re-read this session's own capability-registry
+  domain files (organizations, rbac, sales-crm, developer-portal-apikeys,
+  identity, administration, commercial-billing, customer-portal, mssp) —
+  already-verified, evidence-backed ground truth for this platform's actual
+  current state, not re-derived from scratch.
+- **Cross-vendor patterns found** (full per-vendor detail was in the research
+  agent's report; this is the actionable synthesis):
+  1. Predefined roles (Admin/Analyst/Viewer-equivalent) enforced **pervasively**
+     across the whole product, with growing (if inconsistent) custom-role support.
+  2. SAML SSO is table stakes; SCIM is the universal weak point (gated/tied to
+     specific IdPs or missing entirely even at these vendors).
+  3. MFA is real but usually delegated to the connected IdP.
+  4. MSSP/parent-child multi-tenancy is heavily marketed by the three
+     endpoint/XDR-rooted platforms, but weak-to-absent at the three "pure"
+     threat-intel platforms — not a universal baseline for this sub-category.
+  5. **No vendor publishes self-service enterprise billing** above entry tier
+     — all quote/sales-mediated.
+  6. API keys ride on top of RBAC (permissions inherited from the creating
+     user's role) rather than having independent fine-grained scoping; no
+     vendor publishes numeric rate limits.
+  7. A named Customer Success Manager + onboarding specialist + support-portal
+     ticketing is the near-universal public proxy for "how CRM/account
+     management works," since real internal tooling is never public.
+  8. Audit logging exists in some documented form for 4 of 6 vendors
+     (absent for Recorded Future and Mandiant Advantage); ThreatConnect's is
+     the most granular (actor/action/timestamp/source IP/session ID).
+- **Mapped against this platform's actual, already-verified state — 5
+  concrete gaps identified, ranked by how universal the violated pattern is
+  and how customer/trust-visible it is:**
+  1. **Org RBAC (OWNER/ADMIN/ANALYST/MEMBER/VIEWER) is real and enforced
+     within org management itself, but is entirely unwired everywhere else**
+     (CAP-RBAC-002's own prior finding) — a VIEWER has identical scan/API-key/
+     billing access to an OWNER outside the one org-settings page. Violates
+     pattern #1 (pervasive enforcement is the norm, not enforcement scoped to
+     one settings page). **Largest, most cross-cutting gap — not attempted
+     this wave, needs its own dedicated multi-file effort.**
+  2. **API keys: 5 parallel/duplicated systems**, one (`sap_`-prefixed
+     growth/plan keys, CAP-DEVPORTAL-004) still cannot authenticate any live
+     request at all despite being provisionable. Violates pattern #6 (every
+     vendor has exactly one key system tied to RBAC). Prior waves already
+     consolidated 2 of the 4 duplicates onto the canonical system
+     (CAP-DEVPORTAL-002, -003); the registry's own existing recommendation
+     for the last orphan is to confirm with the business owner whether it's
+     still a live requirement before investing further — **not re-litigated
+     this wave, already correctly scoped as a product decision, not a bug.**
+  3. **In-product support ticketing does not exist at all** (CAP-PORTAL-004
+     — mailto: links only). Violates pattern #7 (universal vendor baseline).
+     **Real, substantial, greenfield feature — scoped out this wave, flagged
+     as the clear next-wave candidate** (needs a new schema migration for a
+     tickets table, so also needs the same safe-no-op-until-migration
+     treatment as the Threat Graph fix).
+  4. **Enterprise SSO configuration has a backend (ssoAuth.js) but zero UI
+     anywhere, and today only the platform OWNER — not even an org's own
+     admin — can configure it** (CAP-ADMIN-002). Violates pattern #2 (every
+     vendor has at minimum admin-configurable SAML). **Scoped out this wave
+     deliberately** — loosening an owner-only gate to per-org self-service
+     has real security-design implications worth its own deliberate review,
+     not a quick add.
+  5. **No customer-facing audit log** — only a staff-only one
+     (CAP-ADMIN-001). Violates pattern #8 (4 of 6 vendors document this).
+     **Fixed this wave** — see below; the only one of the five gaps that was
+     both fully within a single bounded PR's scope and required zero new
+     schema/migration dependency.
+- **Fix shipped this wave — CAP-ORG-002, Organization Activity Log:** reuses
+  the existing, already-migrated D1 `audit_log` table (same table
+  `aiSecurityCopilot.js`'s `writeCopilotAuditLog()` and the SSO handler
+  already write to, and the staff console's `handleAdminAudit` already
+  merges into its own view) — zero new schema, zero migration dependency,
+  unlike the Threat Graph fix. `orgManagement.js` gained `writeOrgAuditLog()`
+  (best-effort, never blocks the action it logs) called from all 5 real
+  mutating actions (invite/role-change/remove-or-leave/update/delete), plus
+  `handleGetOrgAuditLog()` (`GET /api/orgs/:id/audit`, OWNER/ADMIN-only,
+  matching every researched vendor's admin-only audit-view bar). Frontend:
+  a new "Activity Log" card in the existing org detail view, visible only to
+  OWNER/ADMIN (same gate as the existing Settings card), rendering actor
+  name, a human-readable action label, and a per-action detail string, all
+  HTML-escaped.
+- **Verified:** backend — `workers/test/orgAuditLog.test.mjs` (17 tests, real
+  in-memory SQLite executing the real handler code): audit rows written
+  correctly for every mutating action with correct actor+metadata; audit
+  writing degrades gracefully if `audit_log` is unavailable (never blocks
+  the org action); the read endpoint correctly 403s a plain MEMBER, a
+  non-member outsider, and a real OWNER of a *different* org (no cross-org
+  leak); route-registration contract locked in. Frontend — real
+  headless-Chromium Playwright session: signup and org-create hit the REAL
+  live backend (those routes already exist in production); the one new
+  route (`/api/orgs/:id/audit`, which cannot exist on production until this
+  merges) was verified via a locally-mocked response shaped field-for-field
+  to match the handler's real, already-tested output — confirmed the
+  Activity Log card renders correctly with human-readable labels and
+  per-action detail, zero JS errors.
+- **Commits this session:** `workers/src/handlers/orgManagement.js`
+  (`writeOrgAuditLog`, `handleGetOrgAuditLog`, 5 call sites),
+  `workers/src/index.js` (route registration), `frontend/user-dashboard.html`
+  (Activity Log card + `loadOrgAudit`/`orgAuditDetail`/`ORG_AUDIT_LABELS`),
+  new test `workers/test/orgAuditLog.test.mjs` (17 tests).
+- **Validator:** 21 domain files, 67 capability ids (up from 66 — new
+  CAP-ORG-002), 0 failures, 0 warnings.
+- **Tests:** 206 files / 2144 tests passing (full suite, up from
+  205/2127). `scripts/seo-structure-lock.mjs`: 22/22 pages green.
+- **Risks / follow-ups:** the 4 larger gaps above (pervasive org-RBAC
+  enforcement, API-key consolidation of the one remaining orphan, in-product
+  support ticketing, enterprise SSO self-service config) are explicitly
+  scoped out of this wave, not silently dropped — each has enough detail
+  above (and in its own registry entry) to start directly whenever
+  prioritized. Support ticketing is the most likely next candidate: it's the
+  most universally-expected-by-competitors capability this platform is
+  missing entirely, and — like the Threat Graph fix — would need a new
+  schema migration prepared but left for the owner to apply via the gated
+  workflow.
 
 ### 2026-07-11 — P1: Threat Graph findings-persistence fix — code shipped as a safe no-op, ACTION NEEDED from the owner to activate
 

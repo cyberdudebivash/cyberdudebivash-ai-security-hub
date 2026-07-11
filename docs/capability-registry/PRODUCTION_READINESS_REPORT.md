@@ -10,16 +10,16 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-11T08:39:30.951Z
-Capabilities catalogued: 66
+Generated: 2026-07-11T09:28:16.352Z
+Capabilities catalogued: 67
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 83.3% |
-| Frontend | 67.4% |
-| Parity (backend **and** frontend both exist) | 62.1% |
+| Backend | 83.6% |
+| Frontend | 67.9% |
+| Parity (backend **and** frontend both exist) | 62.7% |
 | Customer Journeys complete (dynamic_browser-verified) | 0% |
 
 ## Gaps by Priority
@@ -29,12 +29,12 @@ Capabilities catalogued: 66
 | Critical | P1 | 9 | Broken customer journey |
 | High | P2 | 15 | Backend exists, frontend missing |
 | Medium | P3 | 2 | Backend+frontend exist, navigation missing |
-| Medium | P4 | 2 | RBAC not enforced |
+| Medium | P4 | 3 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
 | Low | P6 | 26 | No test coverage |
 | Low | P7 | 12 | Documentation missing |
 
-**Rollup:** Critical 9 · High 15 · Medium 4 · Low 38
+**Rollup:** Critical 9 · High 15 · Medium 5 · Low 38
 
 ## Structural Findings
 
@@ -150,11 +150,12 @@ complete", "bug free", or "guaranteed".
 | CAP-NOTIF-003 | Outbound Webhooks (Developer + Organization) | ✗ | ✗ | ✗ | NOT READY | P2 |
 | CAP-NOTIF-004 | Transactional & Lifecycle Email Engine | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 
-### organizations (1 capability)
+### organizations (2 capabilities)
 
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
 | CAP-ORG-001 | Organization Management | ✓ | ◐ | ✓ | PILOT ONLY | P2 |
+| CAP-ORG-002 | Organization Activity Log (Audit Trail) | ✓ | ✓ | ✓ | PILOT ONLY | P4 |
 
 ### production-readiness (4 capabilities)
 

@@ -59,5 +59,49 @@
       }
     ],
     "notes": "Was the highest-value single gap identified across the whole platform: full, working, RBAC-enforced backend with a complete admin loop, and precisely zero customer-facing UI. Fixed as a minimally-disruptive, additive build: zero changes to the existing, working orgManagement.js backend; a new sidebar section and page reusing the dashboard's exact existing markup/CSS/JS conventions (form-group/modal/card/table patterns) rather than introducing a new design language. Client-side permission checks were derived directly from the backend's own enforcement code (read first, then mirrored), not guessed at, and independently regression-tested against both. Known, deliberately disclosed remaining gap: org-wide scan history (handleOrgScans) has no UI yet — the detail view's dashboard summary covers the 5 most recent scans but not a full paginated browser; a reasonable next increment, not bundled into this pass to keep the change reviewable."
+  },
+  {
+    "id": "CAP-ORG-002",
+    "domain": "organizations",
+    "name": "Organization Activity Log (Audit Trail)",
+    "description": "OWNER/ADMIN-visible audit trail of org membership and settings changes (invites, role changes, removals, org updates/deletion) — the customer-facing counterpart to the platform staff's own merged audit log (CAP-ADMIN-001).",
+    "backend": {
+      "handlers": ["workers/src/handlers/orgManagement.js"],
+      "entry_points": ["writeOrgAuditLog", "handleGetOrgAuditLog"],
+      "routes_sampled": [
+        { "path": "/api/orgs/:id/audit", "method": "GET", "evidence": "workers/src/index.js — registered immediately after /api/orgs/:id/scans" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/user-dashboard.html"],
+      "status": "exists",
+      "evidence": "ADDED 2026-07-11 (competitor-parity wave). New 'Activity Log' card in the existing org detail view (#org-audit-card), positioned between Settings and Danger Zone, visible only to OWNER/ADMIN (same canManage gate as #org-settings-card). loadOrgAudit() calls the new GET /api/orgs/:id/audit endpoint and renders actor name, a human-readable action label (ORG_AUDIT_LABELS), and a per-action detail string (orgAuditDetail()), all HTML-escaped via the existing orgEsc() helper."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "Embedded in the already-discoverable Organizations page (CAP-ORG-001) — no new nav entry needed, loads automatically when an OWNER/ADMIN opens their org's detail view."
+    },
+    "auth_enforced": true,
+    "rbac": { "enforced": true, "permissions": ["OWNER:read_audit", "ADMIN:read_audit"] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/orgAuditLog.test.mjs (17 tests, new): real in-memory SQLite (node:sqlite, same convention as workers/test/orgRbacIsolation.test.mjs) proving audit rows are written on invite/role-change/remove/leave/update/delete with correct actor+metadata; audit writing degrades gracefully (never blocks the underlying action) if audit_log is unavailable; the read endpoint is OWNER/ADMIN-only (plain MEMBER, a non-member outsider, and a real OWNER of a DIFFERENT org all correctly get 403 — no cross-org existence leak); route-registration contract check; frontend static-parse checks confirming the Activity Log card's visibility gate, data loading, and escaped rendering."
+    },
+    "docs": [],
+    "customer_journey_complete": false,
+    "operational_status": "PILOT ONLY",
+    "priority": "P4",
+    "verification": {
+      "method": "dynamic_browser",
+      "last_verified": "2026-07-11",
+      "evidence": "Backend: 17/17 tests passing against a real SQLite engine executing the real handler code. Frontend: real headless-Chromium Playwright session against the changed frontend/user-dashboard.html, hitting the REAL live backend for signup/org-create (routes that already exist in production) and a locally-mocked response — shaped field-for-field to match handleGetOrgAuditLog's real, tested output — for the one new route that cannot exist on production until this PR merges and deploys. Confirmed: Activity Log card visible and correctly populated for the OWNER with human-readable labels and per-action detail text, zero JS errors. customer_journey_complete stays false pending a post-merge production pass once the real endpoint is live (same discipline as every other capability in this registry — dynamic_api/dynamic_browser against a route that doesn't exist yet pre-merge is a contradiction in terms, not a shortcut taken here)."
+    },
+    "contradicts_doc": [],
+    "notes": "Found via a structured competitor comparison (CrowdStrike, SentinelOne, Palo Alto Cortex, Recorded Future, Google Mandiant, ThreatConnect): 4 of 6 vendors publicly document some form of customer-admin-visible audit trail (ThreatConnect's is the most granular — actor/action/timestamp/source IP/session ID). This platform had a staff-only equivalent (CAP-ADMIN-001) but nothing an org OWNER could see for their own org. Reuses the existing, already-migrated D1 audit_log table (the same one aiSecurityCopilot.js's writeCopilotAuditLog() and the SSO handler already write to, and handleAdminAudit already merges into its staff view) — zero new schema, zero migration dependency, unlike the Threat Graph findings-persistence fix (PR #159) which needed a genuinely new column. See docs/capability-registry/PROGRAM_BOARD.md's 2026-07-11 competitor-gap-analysis session log entry for the full comparison and the larger, explicitly-scoped-out gaps (pervasive org-RBAC enforcement outside this one page, in-product support ticketing, enterprise SSO self-service configuration, API-key system consolidation)."
   }
 ]

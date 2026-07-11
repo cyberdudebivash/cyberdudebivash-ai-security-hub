@@ -1115,6 +1115,20 @@
           </div>
         </div>
 
+        <div class="card" id="org-audit-card" style="display:none">
+          <div class="card-header"><span class="card-title">Activity Log</span></div>
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr><th>Time</th><th>Actor</th><th>Action</th><th>Details</th></tr>
+              </thead>
+              <tbody id="org-audit-table">
+                <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px"><span class="spinner"></span> Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <div class="card" id="org-danger-card" style="display:none;border-color:rgba(239,68,68,.3)">
           <div class="card-header"><span class="card-title" style="color:var(--danger)">Danger Zone</span></div>
           <div class="card-body">
@@ -2678,12 +2692,14 @@
 
     document.getElementById('org-invite-btn').style.display    = canManage ? 'inline-flex' : 'none';
     document.getElementById('org-settings-card').style.display = canManage ? 'block' : 'none';
+    document.getElementById('org-audit-card').style.display    = canManage ? 'block' : 'none';
     document.getElementById('org-danger-card').style.display   = isOwner ? 'block' : 'none';
 
     if (canManage) {
       document.getElementById('org-name-input').value     = org.name || '';
       document.getElementById('org-domain-input').value   = org.domain || '';
       document.getElementById('org-industry-input').value = org.industry || '';
+      loadOrgAudit(org.id);
     }
 
     const members = org.members || [];
@@ -2706,6 +2722,49 @@
           <td>${roleControl}${removeControl}</td>
         </tr>`;
     }).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">No members yet.</td></tr>';
+  }
+
+  const ORG_AUDIT_LABELS = {
+    member_invited:      'Invited member',
+    member_role_changed: 'Changed member role',
+    member_removed:      'Removed member',
+    member_left:         'Left organization',
+    org_updated:         'Updated organization settings',
+    org_deleted:         'Deleted organization',
+  };
+
+  function orgAuditDetail(action, metadata) {
+    const m = metadata || {};
+    switch (action) {
+      case 'member_invited':      return `${orgEsc(m.email || '—')} as ${orgEsc(m.role || '—')}`;
+      case 'member_role_changed': return `→ ${orgEsc(m.new_role || '—')}`;
+      case 'org_updated':         return orgEsc((m.fields || []).join(', ') || '—');
+      case 'org_deleted':         return orgEsc(m.name || '—');
+      default:                    return '';
+    }
+  }
+
+  async function loadOrgAudit(orgId) {
+    const tbody = document.getElementById('org-audit-table');
+    try {
+      const res = await apiFetch('/api/orgs/' + encodeURIComponent(orgId) + '/audit');
+      if (!res.ok) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">Could not load activity log.</td></tr>'; return; }
+      const d = await res.json();
+      const entries = d.entries || [];
+      if (!entries.length) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">No activity recorded yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = entries.map(e => `
+        <tr>
+          <td style="color:var(--muted);font-size:.8rem">${fmtDate(e.created_at)}</td>
+          <td>${orgEsc(e.actor_name || e.actor_email || 'Unknown')}</td>
+          <td><span class="badge badge-blue">${orgEsc(ORG_AUDIT_LABELS[e.action] || e.action)}</span></td>
+          <td style="color:var(--muted);font-size:.82rem">${orgAuditDetail(e.action, e.metadata)}</td>
+        </tr>`).join('');
+    } catch (e) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">Could not load activity log.</td></tr>';
+    }
   }
 
   async function loadOrgDashboard(orgId) {
