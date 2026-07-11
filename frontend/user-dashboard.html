@@ -1822,6 +1822,7 @@
           <option value="ip">IP Addresses</option>
           <option value="cve">CVEs</option>
           <option value="actor">Threat Actors</option>
+          <option value="finding">Findings</option>
         </select>
         <select class="form-input" id="tg-filter-severity" style="max-width:160px" onchange="renderThreatGraph()">
           <option value="all">All Severities</option>
@@ -3721,7 +3722,10 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
   };
 
   function tgNodeColor(n) {
-    if (n.type === 'cve') {
+    // 'finding' (config-audit style issues with no CVE attribution, e.g. the
+    // domain scanner's) shares cve's severity-based coloring — same concept
+    // (a discovered issue attached to the domain), just without a CVE id.
+    if (n.type === 'cve' || n.type === 'finding') {
       if (n.severity === 'critical') return TG_COLORS.cve_critical;
       if (n.severity === 'high')     return TG_COLORS.cve_high;
       return TG_COLORS.cve_medium;
@@ -3732,7 +3736,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
   function tgNodeRadius(n) {
     if (n.type === 'domain') return 18;
     if (n.type === 'actor')  return 15;
-    if (n.type === 'cve' && n.severity === 'critical') return 13;
+    if ((n.type === 'cve' || n.type === 'finding') && n.severity === 'critical') return 13;
     return 10;
   }
 
@@ -3758,8 +3762,14 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
       addNode(domId, s.target, 'domain', null, { module: s.module });
       if (s.findings && Array.isArray(s.findings)) {
         s.findings.forEach(f => {
+          // Hoisted above the if-blocks (not declared inside the first one) —
+          // an actor-carrying finding needs to link to this same finding's
+          // cve node when one was added below, falling back to the domain
+          // otherwise. A per-if-block `const` here would leave cveId out of
+          // scope by the time the actor branch reads it.
+          let cveId = null;
           if (f.cve_id) {
-            const cveId = f.cve_id;
+            cveId = f.cve_id;
             addNode(cveId, cveId, 'cve', f.severity || 'medium', { cvss: f.cvss, description: f.description });
             edges.push({ source: domId, target: cveId });
           }
@@ -3772,6 +3782,16 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
             const actId = 'actor_' + f.actor;
             addNode(actId, f.actor, 'actor', null, { ttps: f.ttps });
             edges.push({ source: cveId || domId, target: actId });
+          }
+          // Findings with none of cve_id/ip/actor (e.g. the domain scanner's
+          // config-audit findings — id/title/severity, no CVE attribution)
+          // still deserve a node and an edge back to the domain; otherwise
+          // every scan using that shape would keep showing zero relationship
+          // edges even once real findings are recorded.
+          if (!f.cve_id && !f.ip && !f.actor && (f.id || f.title)) {
+            const findId = 'find_' + (f.id || f.title);
+            addNode(findId, f.title || f.id, 'finding', f.severity || 'medium', { cvss: f.cvss, cwe_ids: f.cwe_ids });
+            edges.push({ source: domId, target: findId });
           }
         });
       }
@@ -3926,7 +3946,8 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
           Type: ${hit.type}<br>Severity: ${hit.severity}
           ${hit.meta.cvss ? '<br>CVSS: ' + hit.meta.cvss : ''}
           ${hit.meta.country ? '<br>Country: ' + hit.meta.country : ''}
-          ${hit.meta.ttps ? '<br>TTPs: ' + hit.meta.ttps : ''}`;
+          ${hit.meta.ttps ? '<br>TTPs: ' + hit.meta.ttps : ''}
+          ${hit.meta.cwe_ids && hit.meta.cwe_ids.length ? '<br>CWE: ' + hit.meta.cwe_ids.join(', ') : ''}`;
         canvas.style.cursor = 'pointer';
       } else {
         tip.style.display = 'none';

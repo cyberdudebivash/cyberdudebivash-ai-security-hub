@@ -16,6 +16,7 @@ import { storeReport, buildReport }        from './reportEngine.js';
 import { storeResultR2 }                   from './r2.js';
 import { triggerAlerts }                   from './alerts.js';
 import { cacheScanResultForReport }        from './scanResultCache.js';
+import { distillFindingsForHistory }       from './findingsSummary.js';
 
 // ─── Job ID generator ─────────────────────────────────────────────────────────
 export function generateJobId() {
@@ -116,18 +117,33 @@ async function insertD1Job(env, jobId, jobData) {
 
 async function insertD1History(env, jobId, scanResult, authCtx) {
   if (!env?.DB || !authCtx?.user_id) return;
+  const scanId = scanResult.scan_metadata?.scan_id || null;
   try {
     await env.DB.prepare(
       `INSERT INTO scan_history (user_id, job_id, scan_id, target, module, risk_score, risk_level, grade, data_source, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')`
     ).bind(
       authCtx.user_id, jobId,
-      scanResult.scan_metadata?.scan_id || null,
+      scanId,
       scanResult.target, scanResult.module,
       scanResult.risk_score ?? null, scanResult.risk_level ?? null,
       scanResult.grade ?? null, scanResult.data_source ?? null,
     ).run();
   } catch {}
+
+  // Best-effort, separate from the INSERT above on purpose: scan_history.findings
+  // (schema_migration_scan_history_findings_2026_07.sql) is a manually-gated
+  // production migration that may not have run yet on any given deploy. Keeping
+  // this as its own statement means a missing column only ever no-ops this
+  // UPDATE — it can never take the core history row down with it.
+  const findingsJson = distillFindingsForHistory(scanResult.findings);
+  if (findingsJson && scanId) {
+    try {
+      await env.DB.prepare(
+        `UPDATE scan_history SET findings = ? WHERE scan_id = ? AND user_id = ?`
+      ).bind(findingsJson, scanId, authCtx.user_id).run();
+    } catch {}
+  }
 }
 
 // ─── Enqueue a new scan job ───────────────────────────────────────────────────

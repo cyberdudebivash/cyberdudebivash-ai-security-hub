@@ -1,0 +1,29 @@
+-- =============================================================================
+-- CYBERDUDEBIVASH AI Security Hub — scan_history.findings column
+-- =============================================================================
+-- Found during a live customer-flow audit: a real completed scan produces
+-- rich findings (MITRE ATT&CK technique mappings, CVSS, CWE, EPSS — genuinely
+-- good enterprise threat-intel content), but scan_history has never had
+-- anywhere to persist them. Once the scan response is sent, that data is
+-- gone forever — never retrievable via GET /api/history, never usable by the
+-- dashboard's Threat Graph (which builds relationship edges from
+-- s.findings), and the Scans page's "Findings" count column always reads
+-- "—". Confirmed live: every real scan produces exactly one isolated
+-- "domain" node on the Threat Graph and zero edges, for every customer,
+-- regardless of how many real findings the scan discovered.
+--
+-- This migration only adds the column. It does not backfill historical
+-- rows (their original findings were never captured anywhere, so there is
+-- nothing to backfill — they will correctly show as "no findings on
+-- record" going forward, same as before this migration). New scans start
+-- populating it as soon as the corresponding code (workers/src/lib/queue.js
+-- insertD1History, workers/src/handlers/domain.js trackDomainScan) is
+-- deployed — that code already ships defensively (a best-effort UPDATE
+-- after the existing INSERT, wrapped in its own try/catch) so it does not
+-- depend on this migration having run first; it simply no-ops until it has.
+--
+-- Nullable, additive, zero impact on any existing query that doesn't
+-- reference it.
+-- =============================================================================
+
+ALTER TABLE scan_history ADD COLUMN findings TEXT;

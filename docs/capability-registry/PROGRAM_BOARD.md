@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11, P1: Scans page "Download" report link was dead for every completed scan of every customer — fixed; Threat Graph relationship edges diagnosed as structurally impossible today — documented, not yet fixed, needs an owner decision)
+## Current status (2026-07-11, P1: Threat Graph findings-persistence fix prepared — code merged and live-verified as a safe no-op; ACTION NEEDED from the owner to activate it: run the gated D1 Schema Migration workflow with `workers/schema_migration_scan_history_findings_2026_07.sql`)
 
 **Scope note (2026-07-10):** starting this date, sessions on this branch
 follow the customer's "production readiness lifecycle" priority (visitor →
@@ -201,6 +201,83 @@ see session log below.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — P1: Threat Graph findings-persistence fix — code shipped as a safe no-op, ACTION NEEDED from the owner to activate
+
+- **Trigger:** direct follow-up to the entry below, which diagnosed this gap
+  and explicitly stopped short of fixing it pending an owner decision (it
+  requires a production D1 schema change). Given the go-ahead to prepare
+  the full fix, with the explicit constraint that actually applying the
+  migration to production stays a manual, human-confirmed step — not
+  something taken unilaterally.
+- **What shipped:**
+  - `workers/schema_migration_scan_history_findings_2026_07.sql` — adds a
+    nullable `scan_history.findings` column. **Not yet applied to
+    production.** `schema_master.sql`'s canonical `scan_history` definition
+    updated to match (so a brand-new environment gets it automatically).
+  - `workers/src/lib/findingsSummary.js` (new) — `distillFindingsForHistory()`
+    compacts a scan's real findings (id/title/severity/cvss/cwe_ids, plus
+    cve_id/ip/actor when a module's findings carry them) to keep
+    `scan_history` rows lean, capped at 20 findings/scan;
+    `parsePersistedFindings()` reverses it.
+  - `workers/src/lib/queue.js` `insertD1History()` and
+    `workers/src/handlers/domain.js` `trackDomainScan()` — both now issue a
+    **separate** best-effort `UPDATE scan_history SET findings = ...` after
+    their existing, unchanged `INSERT`, each in its own `try/catch`. Built
+    this way on purpose: with the migration not yet applied, the column
+    doesn't exist yet, so this UPDATE simply fails silently — the original
+    INSERT (and the scan response itself) is never at risk. The moment the
+    migration runs, this starts working with no further deploy.
+  - `workers/src/handlers/history.js` `handleScanHistory()` — tries the
+    richer `SELECT ... , findings` first; if that throws (column doesn't
+    exist), falls back to the original column list instead of losing D1
+    history entirely to the KV shadow copy for the whole pre-migration
+    window.
+  - `frontend/user-dashboard.html` `initThreatGraph()` — findings with none
+    of `cve_id`/`ip`/`actor` (the domain scanner's real shape: `id`,
+    `title`, `severity`, `cwe_ids`, no CVE attribution) now get a generic
+    `finding` node + edge back to the domain, instead of being silently
+    skipped. `tgNodeColor()`/`tgNodeRadius()` extended to style the new type
+    (same severity-based treatment as `cve`). Filter dropdown gained a
+    "Findings" option. Tooltip now shows CWE ids when present.
+  - **Bonus bug caught before it could ever fire:** the existing
+    finding-processing loop declared `const cveId` inside the `if
+    (f.cve_id)` block, then referenced that identifier from the sibling `if
+    (f.actor)` block — out of scope, a guaranteed `ReferenceError` for any
+    finding with an `actor` but no `cve_id`. Never triggered before because
+    `s.findings` was always empty in production; would have started
+    crashing `initThreatGraph()` the moment this fix made findings flow.
+    Fixed by hoisting `let cveId = null` above the if-blocks.
+- **Verified live** (Playwright, against real `cyberdudebivash.in`, before
+  the migration has run): seeded a real scan with real findings (2 findings
+  from `scanme.nmap.org`), confirmed `/api/history` and the Threat Graph
+  behave exactly as before this change — a safe no-op, zero JS errors,
+  zero regression — proving this is safe to merge and deploy now, ahead of
+  the schema change.
+- **ACTION NEEDED (owner, not automatable from here):** run the "D1 Schema
+  Migration (gated)" GitHub Action
+  (`.github/workflows/db-migrate.yml`) with `schema_file:
+  workers/schema_migration_scan_history_findings_2026_07.sql` and `confirm:
+  APPLY`. The workflow takes its own pre-migration backup automatically.
+  Once applied, no further deploy is needed — the code already in
+  production starts persisting and serving findings on the next scan. I
+  can live-verify the Threat Graph showing real relationship edges as soon
+  as that's done.
+- **Commits this session:** `workers/schema_migration_scan_history_findings_2026_07.sql`
+  (new), `workers/schema_master.sql` (scan_history definition updated),
+  `workers/src/lib/findingsSummary.js` (new),
+  `workers/src/lib/queue.js`, `workers/src/handlers/domain.js`,
+  `workers/src/handlers/history.js`, `frontend/user-dashboard.html`, new
+  test `workers/test/scanHistoryFindingsPersistence.test.mjs` (16 tests).
+- **Validator:** 21 domain files, 66 capability ids, 0 failures, 0 warnings.
+- **Tests:** 205 files / 2127 tests passing (full suite, up from
+  204/2111). `scripts/seo-structure-lock.mjs`: 22/22 pages green.
+- **Risks / follow-ups:** none from this change itself (it's inert until
+  the migration runs). Once active, worth spot-checking a couple of other
+  scan modules (redteam, identity) whose finding shapes weren't traced in
+  as much detail as the domain scanner's, to confirm they distill sensibly
+  too — `distillFindingsForHistory()` degrades gracefully either way
+  (missing fields just come through as `null`/absent).
 
 ### 2026-07-11 — P1: Scans page "Download" report link dead for every customer; Threat Graph relationship edges diagnosed as structurally impossible (fix not yet applied — needs owner decision)
 

@@ -2785,6 +2785,12 @@ CREATE TABLE IF NOT EXISTS scan_dedup (
 );
 
 -- From: schema_v22_production_fix.sql
+-- findings: added by schema_migration_scan_history_findings_2026_07.sql —
+-- compact JSON array ([{id,title,severity,cvss,cwe_ids,cve_id?,ip?,actor?}]),
+-- nullable, so the Scans page (findings_count) and Threat Graph
+-- (relationship edges) can be populated from real data instead of always
+-- showing empty/isolated state. NULL for scans recorded before this column
+-- existed — readers must treat NULL/absent the same as "no findings".
 CREATE TABLE IF NOT EXISTS scan_history (
   id          TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(8)))),
   user_id     TEXT,
@@ -2798,7 +2804,8 @@ CREATE TABLE IF NOT EXISTS scan_history (
   data_source TEXT,
   status      TEXT DEFAULT 'completed',
   scanned_at  TEXT NOT NULL DEFAULT (datetime('now')),
-  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  findings    TEXT
 );
 
 -- From: schema_v24.sql
