@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry eight below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed Tier-1 items #1–#7 (of 10): `enterprise-kpi-dashboard.html`'s impossible-tier admin gate and `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory auth gaps (PR #184, merged); `revenue-command-center.html`'s 6-of-8 broken panels, `mssp-command-center.html`'s Add Partner 400 bug, `automation-dashboard.html`'s 5 dead/wrong endpoints, `soc-dashboard.html`'s AI Decision Engine field/scaling bugs, and `user-dashboard.html`'s post-upgrade billing token-storage + `loadDashboard()` bug (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 7 session-log entries below. 17 of the 24 backlog items remain (3 more Tier 1, all of Tier 2 and Tier 3), queued in the same stated priority order.)
+## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry nine below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed Tier-1 items #1–#8 (of 10): `enterprise-kpi-dashboard.html`'s impossible-tier admin gate and `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory auth gaps (PR #184, merged); `revenue-command-center.html`'s 6-of-8 broken panels, `mssp-command-center.html`'s Add Partner 400 bug, `automation-dashboard.html`'s 5 dead/wrong endpoints, `soc-dashboard.html`'s AI Decision Engine field/scaling bugs, `user-dashboard.html`'s post-upgrade billing token-storage + `loadDashboard()` bug, and `user-dashboard.html`'s My Trainings/My Purchases/My Reports envelope-unwrap bug (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 8 session-log entries below. 16 of the 24 backlog items remain (2 more Tier 1, all of Tier 2 and Tier 3), queued in the same stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 228 files / 2370 tests passing | `npx vitest run`, run 2026-07-11 — +1 file / +5 tests this wave (`userDashboardBillingTokenAndRefresh.test.mjs`, 5 new; also corrected one pre-existing test in `dashboardProUpgradeAuthPath.test.mjs` that asserted the exact `localStorage` bug this wave fixed — see session log). Baseline going into this wave was 227 files / 2365 tests (Tier-1 item #6) |
+| Worker test suite | 229 files / 2376 tests passing | `npx vitest run`, run 2026-07-11 — +1 file / +6 tests this wave (`userDashboardPurchasesEnvelopeFix.test.mjs`, 6 new). Baseline going into this wave was 228 files / 2370 tests (Tier-1 item #7) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,52 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Tier-1 backlog item #8: user-dashboard.html — My Trainings/My Purchases envelope-unwrap bug (plus a third, previously unnamed tab with the identical bug)
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-1 item #7.
+- **Re-verified against actual code — found the real bug is one level
+  deeper than the audit's paraphrase:** the finding said "both read
+  data.deliveries; the real endpoint returns data.purchases." Reading
+  `handleMyPurchases` (`workers/src/handlers/delivery.js`) directly:
+  it returns `jsonOk({purchases, total})`, and `jsonOk()` wraps *every*
+  response in this codebase's standard `{success, data, error, timestamp}`
+  envelope. So the real path is `response.data.purchases` — fixing only
+  the field name (`data.purchases` instead of `data.deliveries`, without
+  also unwrapping the envelope) would have left the bug exactly as broken,
+  just failing at a different property access. `loadMyTrainings()` and
+  `loadMyDeliveries()` both had this exact double gap.
+- **A third, unnamed tab found with the identical bug while fixing the
+  named two:** `loadUserReports()` ("My Reports") calls
+  `GET /api/user/reports` (`handleUserReports`, same file, same `jsonOk()`
+  envelope, real field `reports`) as its primary source, falling back to
+  `/api/delivery/my-purchases` on empty. Both its primary read (`d?.reports
+  || d?.deliveries`) and its fallback read (`d2?.deliveries || d2?.purchases`)
+  had the same missing-envelope-unwrap bug — the fallback's own
+  `d2?.purchases` addition (from some earlier, partial fix attempt) was
+  still wrong for the same reason, just one property deeper into the
+  wrong object. This tab was not named in the original audit finding but
+  shares the identical root cause and was fixed alongside it rather than
+  left for a future pass to rediscover independently.
+- **Fix:** all three call sites now unwrap `(raw && raw.success && raw.data)
+  ? raw.data : raw` first — the same idiom already established elsewhere
+  in this exact file (`loadCisoMetrics()`'s own comment: "Unwrap standard
+  { success, data, error } response envelope") — then read the real field
+  names (`purchases`, `reports`) instead of the nonexistent `deliveries`.
+- **Tests:** new `test/userDashboardPurchasesEnvelopeFix.test.mjs` (6
+  tests, static source-parse) — confirms all three call sites (2 named +
+  1 discovered) unwrap the envelope and read the real field names, and
+  that `.deliveries` no longer appears anywhere in the file (confirmed via
+  full-file grep, 0 matches). Full suite green: 229 files / 2376 tests
+  (baseline 228/2370 from Tier-1 item #7).
+- **Validator:** 0 failures, 0 warnings, 97 capabilities (unchanged — same
+  reasoning as items #1–#7). `PRODUCTION_READINESS_REPORT.md` regenerated
+  (timestamp-only diff).
+- **Remaining in the Tier 1–3 backlog (16 of 24):** next up, in stated
+  order: `developer-onboarding.html`'s trial-key tier normalization bug
+  (Tier-1 #9), then `tools.html`'s marketplace field mismatches (Tier-1
+  #10), then all of Tier 2/3 (full original list in the audit entry nine
+  below).
 
 ### 2026-07-11 — Tier-1 backlog item #7: user-dashboard.html — post-upgrade billing token-storage + loadDashboard() bug
 

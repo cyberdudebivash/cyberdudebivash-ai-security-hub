@@ -4252,10 +4252,14 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
         : `${window.API_BASE || 'https://cyberdudebivash.in'}/api/delivery/my-purchases?email=${encodeURIComponent(email)}`;
 
       const res  = await fetch(url, { headers }).catch(() => null);
-      const data = res?.ok ? await res.json().catch(() => null) : null;
+      const raw  = res?.ok ? await res.json().catch(() => null) : null;
+      // handleMyPurchases wraps its response in the standard
+      // {success,data,error} envelope, under the real field name
+      // `purchases` — not the top-level `deliveries` this used to read.
+      const data = (raw && raw.success && raw.data) ? raw.data : raw;
 
       // Filter to training/bundle only
-      const purchases = (data?.deliveries || []).filter(d =>
+      const purchases = (data?.purchases || []).filter(d =>
         d.product_type === 'training' || d.product_type === 'bundle'
       );
 
@@ -4398,8 +4402,11 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
         : `${window.API_BASE || 'https://cyberdudebivash.in'}/api/delivery/my-purchases?email=${encodeURIComponent(email)}`;
 
       const res  = await fetch(url, { headers }).catch(() => null);
-      const data = res?.ok ? await res.json().catch(() => null) : null;
-      const deliveries = data?.deliveries || [];
+      const raw  = res?.ok ? await res.json().catch(() => null) : null;
+      // See loadMyTrainings() above — handleMyPurchases wraps its response
+      // in {success,data,error}, and the real field is `purchases`.
+      const data = (raw && raw.success && raw.data) ? raw.data : raw;
+      const deliveries = data?.purchases || [];
 
       if (!deliveries.length) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">No purchases found for this account.</td></tr>`;
@@ -4597,11 +4604,17 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
       // Primary: dedicated reports endpoint
+      // Both handleUserReports and handleMyPurchases wrap their response in
+      // the standard {success,data,error} envelope — reading d?.reports (the
+      // top-level object) instead of d?.data?.reports always missed, so this
+      // primary path never worked and silently fell to the fallback below,
+      // which had the identical bug plus a wrong field name.
       let reports = [];
       const res = await fetch(`${base}/api/user/reports`, { headers }).catch(() => null);
       if (res?.ok) {
-        const d = await res.json().catch(() => null);
-        reports = d?.reports || d?.deliveries || [];
+        const raw = await res.json().catch(() => null);
+        const d   = (raw && raw.success && raw.data) ? raw.data : raw;
+        reports = d?.reports || [];
       }
 
       // Fallback: filter my-purchases for report_access type
@@ -4611,8 +4624,9 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
           : `${base}/api/delivery/my-purchases?email=${encodeURIComponent(email)}`;
         const res2 = await fetch(url2, { headers }).catch(() => null);
         if (res2?.ok) {
-          const d2 = await res2.json().catch(() => null);
-          const all = d2?.deliveries || d2?.purchases || [];
+          const raw2 = await res2.json().catch(() => null);
+          const d2   = (raw2 && raw2.success && raw2.data) ? raw2.data : raw2;
+          const all  = d2?.purchases || [];
           reports = all.filter(r => r.product_type === 'report_access' || r.product_type === 'report');
         }
       }
