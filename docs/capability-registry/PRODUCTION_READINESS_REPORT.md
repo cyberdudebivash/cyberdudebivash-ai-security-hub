@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-11T14:35:16.451Z
+Generated: 2026-07-11T14:54:40.161Z
 Capabilities catalogued: 95
 
 ## Overall Completion
@@ -26,15 +26,15 @@ Capabilities catalogued: 95
 
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
-| Critical | P1 | 10 | Broken customer journey |
-| High | P2 | 23 | Backend exists, frontend missing |
+| Critical | P1 | 9 | Broken customer journey |
+| High | P2 | 24 | Backend exists, frontend missing |
 | Medium | P3 | 7 | Backend+frontend exist, navigation missing |
 | Medium | P4 | 5 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
 | Low | P6 | 36 | No test coverage |
 | Low | P7 | 14 | Documentation missing |
 
-**Rollup:** Critical 10 · High 23 · Medium 12 · Low 50
+**Rollup:** Critical 9 · High 24 · Medium 12 · Low 50
 
 ## Structural Findings
 
@@ -43,7 +43,7 @@ Capabilities catalogued: 95
 | Hidden features | 25 | Backend exists, but not discoverable via navigation |
 | Backend-only features | 18 | Backend exists, zero frontend surface |
 | Duplicate systems | 4 | Backend marked `duplicate` (two implementations of one capability) |
-| Broken journeys | 10 | Priority P1 |
+| Broken journeys | 9 | Priority P1 |
 
 ## Production Readiness Verdict: **NOT READY**
 
@@ -230,7 +230,7 @@ complete", "bug free", or "guaranteed".
 | CAP-MKT-002 | Marketplace Catalog & Checkout (Generic) | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P3 |
 | CAP-MKT-003 | Sentinel-Specific Purchase Flow | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 | CAP-MKT-004 | Security Tools Marketplace | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
-| CAP-MKT-005 | Sentinel APEX Marketplace Mega-Dispatcher (Subscriptions, Entitlements, ROI Calculator) | ✓ | ◐ | ✓ | NOT READY | P1 |
+| CAP-MKT-005 | Sentinel APEX Marketplace Mega-Dispatcher (Subscriptions, Entitlements, ROI Calculator) | ✓ | ◐ | ✓ | PILOT ONLY | P2 |
 | CAP-MKT-006 | Threat Intel Programmatic API (IOC/CVE/Actor/TTP/Risk) | ✗ | ✗ | ✗ | NOT READY | P2 |
 
 ### threat-hunting-intel (17 capabilities)
