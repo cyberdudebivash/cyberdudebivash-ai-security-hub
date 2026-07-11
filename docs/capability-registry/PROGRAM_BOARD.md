@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry eleven below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed all 10 Tier-1 items: `enterprise-kpi-dashboard.html`'s impossible-tier admin gate and `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory auth gaps (PR #184, merged); `revenue-command-center.html`'s 6-of-8 broken panels, `mssp-command-center.html`'s Add Partner 400 bug, `automation-dashboard.html`'s 5 dead/wrong endpoints, `soc-dashboard.html`'s AI Decision Engine field/scaling bugs, `user-dashboard.html`'s post-upgrade billing token-storage + `loadDashboard()` bug, `user-dashboard.html`'s My Trainings/My Purchases/My Reports envelope-unwrap bug, `developer-onboarding.html`'s trial-key tier normalization bug, and `tools.html`'s Tools/AI/Marketplace grids — a doubled-backslash regex literal (`/\\d+/`) that threw inside every priced-item render and silently emptied all three grids, plus a Marketplace field-mismatch + wrong-catalog purchase-routing bug (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 10 session-log entries below. 14 of the 24 backlog items remain (all of Tier 2 [8] and Tier 3 [6]), queued in the same stated priority order.)
+## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry twelve below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed all 10 Tier-1 items — `enterprise-kpi-dashboard.html`'s impossible-tier admin gate and `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory auth gaps (PR #184, merged); `revenue-command-center.html`'s 6-of-8 broken panels, `mssp-command-center.html`'s Add Partner 400 bug, `automation-dashboard.html`'s 5 dead/wrong endpoints, `soc-dashboard.html`'s AI Decision Engine field/scaling bugs, `user-dashboard.html`'s post-upgrade billing token-storage + `loadDashboard()` bug, `user-dashboard.html`'s My Trainings/My Purchases/My Reports envelope-unwrap bug, `developer-onboarding.html`'s trial-key tier normalization bug, and `tools.html`'s Tools/AI/Marketplace grids (a doubled-backslash regex literal that threw inside every priced-item render, plus a Marketplace field-mismatch + wrong-catalog purchase-routing bug) — and has now started Tier 2: item #1, `threat-intel-workbench.html`'s AI Analyst chat / AI CVE-brief / AI sector-brief routes, each a real unmetered LLM call reachable with zero authentication and zero rate limiting (open cost-abuse vector), fixed by wiring the existing shared `checkRateLimitCost()` into all 3 routes (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 11 session-log entries below. 13 of the 24 backlog items remain (7 more Tier 2, all 6 of Tier 3), queued in the same stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 230 files / 2391 tests passing | `npx vitest run`, run 2026-07-11 — +14 tests this wave, new file `toolsMarketplaceFieldAndPurchaseFix.test.mjs` (Tier-1 item #10: the doubled-backslash regex that crashed all 3 tools.html grids, the Marketplace field mismatches, and the wrong-catalog purchase routing). Baseline going into this wave was 229 files / 2377 tests (Tier-1 item #9) |
+| Worker test suite | 231 files / 2403 tests passing | `npx vitest run`, run 2026-07-11 — +12 tests this wave, new file `threatIntelProAiRateLimit.test.mjs` (Tier-2 item #1: rate-limit gating on threat-intel-workbench.html's 3 LLM-calling routes). Baseline going into this wave was 230 files / 2391 tests (Tier-1 item #10, the last Tier-1 item) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,92 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Tier-2 backlog item #1 (of 8): threat-intel-workbench.html — AI Analyst / CVE-brief / sector-brief routes had zero auth and zero rate limiting
+
+- **Trigger:** all 10 Tier-1 items closed (see the entry immediately below);
+  starting Tier 2, first item.
+- **Re-verified against actual code, traced the full call chain from the
+  frontend through to the LLM provider:** `threat-intel-workbench.html`'s
+  AI Analyst chat (`sendChat()` → `POST /api/intel/analyst/query`, line 1405)
+  is dispatched by `index.js:5251-5273` to `handleThreatIntelPro()`
+  (`workers/src/handlers/threatIntelPro.js`) with `authCtx` best-effort —
+  `resolveAuthV5(...).catch(() => null) || {}`, i.e. it never rejects the
+  request even if auth resolution fails entirely. Inside that handler, the
+  `analyst`/`analyst/query` route (line 513, pre-fix) called `analyzeQuery()`
+  (`workers/src/services/aiThreatAnalyst.js`) — a **real LLM call** via
+  `callLLM()` — with no auth check, no tier check, and no rate-limit check
+  of any kind anywhere in the file. Two sibling routes in the same handler
+  have the identical defect: `cve-brief/:id` (line 471, calls
+  `generateCVEBrief()` → LLM) and `sector/:sector` (line 439, calls
+  `generateSectorBrief()` → LLM). All three were reachable by any anonymous
+  visitor, unlimited times — every request is billed as real third-party LLM
+  API usage, a genuine open cost-abuse vector (this domain's own registry
+  entry, CAP-TIH-003, already recorded `auth_enforced: false` and
+  `test_coverage.has_tests: false` for this exact handler — corroborating,
+  not new information invented for this fix).
+- **Found the fix should reuse existing, tested infrastructure rather than
+  invent new:** `workers/src/middleware/rateLimit.js` already exports
+  `checkRateLimitCost(env, authCtx, endpoint)` + `rateLimitResponse(result,
+  module)`, a KV-backed, tier-aware, cost-weighted quota system with an
+  established `ENDPOINT_COST` registry — already used identically by
+  `handlers/threatHunting.js` (`'hunt'`, `'hunt/ioc'`),
+  `handlers/vulnManagement.js` and `handlers/auditLog.js` for their own
+  costly operations. `authCtx.identity`/`authCtx.tier` are reliably
+  populated even for anonymous callers: `resolveAuthV5()`'s IP-fallback
+  branch (`auth/middleware.js:242-253`) sets `identity: `ip:${ip}``,
+  `tier: 'FREE'` for any keyless/session-less request, so the quota keys
+  correctly per-IP instead of collapsing to one shared anonymous bucket.
+  Confirmed a **different**, unrelated `/api/intel/*` product
+  (`handlers/intelAPIHandlers.js`'s `ioc`/`cve`/`actor`/`ttp`/`risk`
+  developer-API-key economy, its own `checkIntelQuota()`) exists at
+  overlapping-looking but distinct route paths — deliberately left
+  untouched; conflating the two would entangle an unrelated monetized
+  product's tier policy with this workbench's AI-chat feature.
+- **Fix:**
+  - `workers/src/middleware/rateLimit.js`: added 3 new `ENDPOINT_COST`
+    entries — `'intel/analyst': 2, 'intel/cve-brief': 2, 'intel/sector': 2`
+    (cost 2 mirrors the existing `'ai/chat': 2` entry — same class of
+    operation).
+  - `workers/src/handlers/threatIntelPro.js`: imported
+    `checkRateLimitCost`/`rateLimitResponse`; added `const rl = await
+    checkRateLimitCost(env, authCtx, '<endpoint>'); if (!rl.allowed) return
+    rateLimitResponse(rl, '<module>');` as the first action inside each of
+    the 3 LLM-calling route blocks, before any D1 query or LLM call.
+  - **Deliberately not touched:** `auth_enforced` stays `false` — this fix
+    closes the cost-abuse gap via a per-IP/per-tier daily quota (~5 calls/day
+    for anonymous/FREE callers under `TIERS.FREE`'s 10-cost-unit budget,
+    scaling up by tier), not by requiring login; the other ~12 non-LLM
+    sub-routes in the same handler (actors, tactics, techniques, heatmap,
+    STIX/TAXII, etc.) were not part of this finding and are untouched.
+- **Verification:** `node --check` on both modified `.js` files; new
+  `workers/test/threatIntelProAiRateLimit.test.mjs` (12 tests) — mocks
+  `middleware/rateLimit.js` and the LLM-calling service functions
+  (`analyzeQuery`/`generateCVEBrief`/`generateSectorBrief`) to assert: each
+  of the 3 routes calls `checkRateLimitCost` with its distinct endpoint key
+  before any LLM work; a denied quota returns 429 and never invokes the LLM
+  function; an allowed quota proceeds normally (asserted via the mocked LLM
+  functions actually being called); the GET `?q=` alias at `/api/intel/analyst`
+  is gated identically to the POST path; an unrelated sibling route
+  (`/api/intel/actors`) is confirmed NOT gated by the new check (guards
+  against a future overly-broad refactor); a static source-check pins the 3
+  new `ENDPOINT_COST` entries. Searched `workers/test/` for any pre-existing
+  test referencing `threatIntelPro.js` or these route paths — none existed
+  (matches the registry's own "zero test coverage" finding), so no
+  bug-reinforcing assertion needed correcting. Full suite: 231 files / 2403
+  tests passing (was 230/2391 before this item — +1 file, +12 tests).
+  `node scripts/registry/validate.mjs`: 0 failures, 0 warnings.
+  `node scripts/registry/generate-report.mjs` regenerated (only the
+  timestamp changed). Also updated CAP-TIH-003's `test_coverage`,
+  `verification.evidence` and `notes` fields in
+  `docs/capability-registry/domains/threat-hunting-intel.json` to record
+  the fix and the now-partial (3-of-~15-sub-routes) test coverage — first
+  fixing a validator hard-failure of my own making (bare filenames like
+  `mitreAttackService.js` in the new evidence text resolved against repo
+  root and failed the "cited file must exist" check; corrected to the full
+  `workers/src/services/...` paths the validator requires).
+- **7 Tier-2 items remain** (of 8), plus all 6 Tier-3 items, queued next in
+  the audit's stated priority order.
 
 ### 2026-07-11 — Tier-1 backlog item #10 (last of 10): tools.html — Tools/AI/Marketplace grids crashed empty + Marketplace wrong-catalog Buy Now 404s
 

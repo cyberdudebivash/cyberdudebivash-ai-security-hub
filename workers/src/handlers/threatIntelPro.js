@@ -28,6 +28,7 @@ import { scoreCVE, scoreBatch, fetchEPSS, analyzeRiskDistribution } from '../ser
 import { analyzeQuery, generateCVEBrief, generateSectorBrief } from '../services/aiThreatAnalyst.js';
 import { buildSTIXBundle, buildBundleFromD1, buildTAXIIDiscovery, buildTAXIICollections } from '../services/stix21Engine.js';
 import { ok, fail } from '../lib/response.js';
+import { checkRateLimitCost, rateLimitResponse } from '../middleware/rateLimit.js';
 
 // ─── CORS + Security headers ──────────────────────────────────────────────────
 const BASE_HEADERS = {
@@ -437,6 +438,11 @@ export async function handleThreatIntelPro(request, env, authCtx = {}) {
 
   // ── GET /api/intel/sector/:sector ─────────────────────────────────────────
   if (path.match(/^\/api\/intel\/sector\/[^/]+$/) && method === 'GET') {
+    // Generates an AI sector brief (real LLM call, generateSectorBrief() below) —
+    // was reachable with zero auth or rate limiting, an open cost-abuse vector.
+    const rl = await checkRateLimitCost(env, authCtx, 'intel/sector');
+    if (!rl.allowed) return rateLimitResponse(rl, 'intel-sector-brief');
+
     const sector  = decodeURIComponent(path.split('/').pop());
     const actors  = getActorsBySector(sector).slice(0, 5);
     const entries = await loadEntries(env, 50);
@@ -469,6 +475,11 @@ export async function handleThreatIntelPro(request, env, authCtx = {}) {
 
   // ── GET /api/intel/cve-brief/:id ──────────────────────────────────────────
   if (path.match(/^\/api\/intel\/cve-brief\/[^/]+$/) && method === 'GET') {
+    // Generates an AI CVE deep-dive brief (real LLM call, generateCVEBrief()
+    // below) — was reachable with zero auth or rate limiting.
+    const rl = await checkRateLimitCost(env, authCtx, 'intel/cve-brief');
+    if (!rl.allowed) return rateLimitResponse(rl, 'intel-cve-brief');
+
     const cveId = decodeURIComponent(path.split('/').pop());
     let entry = null;
 
@@ -511,6 +522,12 @@ export async function handleThreatIntelPro(request, env, authCtx = {}) {
 
   // ── POST /api/intel/analyst/query (or GET with ?q=) ───────────────────────
   if ((path === '/api/intel/analyst' || path === '/api/intel/analyst/query') && (method === 'GET' || method === 'POST')) {
+    // AI analyst chat (real LLM call via analyzeQuery() -> callLLM() below) —
+    // was reachable by anyone, unauthenticated, with no rate limiting at all:
+    // an open cost-abuse vector (every message triggers a paid LLM API call).
+    const rl = await checkRateLimitCost(env, authCtx, 'intel/analyst');
+    if (!rl.allowed) return rateLimitResponse(rl, 'intel-analyst');
+
     let query      = url.searchParams.get('q') || '';
     let session_id = url.searchParams.get('session') || null;
 

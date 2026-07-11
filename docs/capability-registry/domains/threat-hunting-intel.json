@@ -131,8 +131,8 @@
     "subscription_gated": true,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "No import-confirmed test for handleThreatIntelPro or any internal sub-handler. workers/src/services/mitreAttackService.js, workers/src/services/aptActorProfiles.js, workers/src/services/compositeRiskScoring.js, workers/src/services/stix21Engine.js, workers/src/services/aiThreatAnalyst.js all have zero import-confirmed tests."
+      "has_tests": true,
+      "evidence": "workers/test/threatIntelProAiRateLimit.test.mjs (12 tests, added 2026-07-11 Tier-2 backlog item #1) covers the 3 LLM-calling sub-routes only (analyst/query, cve-brief/:id, sector/:sector) — specifically their new rate-limit gating. The other ~12 sub-routes (actors, actor/:id, tactics, techniques, attack-map, heatmap, risk-score, risk-queue, stix, taxii/*, attribute/:id) and all 5 backing services (workers/src/services/mitreAttackService.js, workers/src/services/aptActorProfiles.js, workers/src/services/compositeRiskScoring.js, workers/src/services/stix21Engine.js, workers/src/services/aiThreatAnalyst.js's internals beyond the mocked call boundary) remain untested — still the single highest-value test-writing target in this domain by surface area."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
@@ -143,10 +143,10 @@
     "verification": {
       "method": "static",
       "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/threatIntelPro.js read directly (565 lines, single router handleThreatIntelPro:71 dispatching ~15 internal sub-paths by path match); workers/src/index.js:5251-5273 read directly (single prefix dispatch block, routes_fully_enumerated correctly set false per docs/capability-registry/SCHEMA.md's own convention for this pattern); frontend/threat-intel-workbench.html read directly for all call sites; workers/test/*.mjs grepped with 0 hits for this file or its 5 backing services."
+      "evidence": "workers/src/handlers/threatIntelPro.js read directly (now 581 lines after the 2026-07-11 rate-limit fix, single router handleThreatIntelPro:72 dispatching ~15 internal sub-paths by path match); workers/src/index.js:5251-5273 read directly (single prefix dispatch block, routes_fully_enumerated correctly set false per docs/capability-registry/SCHEMA.md's own convention for this pattern); frontend/threat-intel-workbench.html read directly for all call sites; workers/test/threatIntelProAiRateLimit.test.mjs confirmed via direct run (12/12 passing)."
     },
     "contradicts_doc": [],
-    "notes": "Real, complete, prominently-discoverable feature with genuinely zero test coverage across both the router and all 5 backing services — the single highest-value test-writing target in this entire domain given how much surface area it covers. Sub-routes are individually tier-gated inside their handlers (e.g. STIX actors at ENTERPRISE, IOCs at PRO+) rather than at the router level, so rbac.enforced is marked \"unknown\" pending a full per-sub-route trace."
+    "notes": "Real, complete, prominently-discoverable feature. Sub-routes are individually tier-gated inside their handlers (e.g. STIX actors at ENTERPRISE, IOCs at PRO+) rather than at the router level, so rbac.enforced is marked \"unknown\" pending a full per-sub-route trace. 2026-07-11 (Tier-2 backlog item #1): the 3 sub-routes that make a real LLM call (analyst/query chat, AI-generated cve-brief, AI-generated sector brief) had zero authentication requirement AND zero rate limiting — any anonymous visitor could script unlimited calls, each one billed as real third-party LLM API usage; an open cost-abuse vector. Fixed by wiring the existing shared checkRateLimitCost() (workers/src/middleware/rateLimit.js — already used by threatHunting.js/vulnManagement.js/auditLog.js for their own costly operations) into all 3 routes, with 3 new ENDPOINT_COST entries (intel/analyst, intel/cve-brief, intel/sector, each cost 2). auth_enforced intentionally still false — this closes the cost-abuse gap via per-IP/per-tier quota, not a login requirement change; FREE-tier/anonymous callers get a capped daily budget (~5 calls/day at cost 2 each under TIERS.FREE's 10-unit budget) instead of unlimited access. The other ~12 sub-routes were not in scope for this fix (they don't call an LLM and were not part of the audit finding) and remain exactly as previously documented."
   },
   {
     "id": "CAP-TIH-004",
