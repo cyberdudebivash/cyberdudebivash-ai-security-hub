@@ -20,6 +20,37 @@ import { checkRateLimitCost, rateLimitResponse }  from '../middleware/rateLimit.
 import { prioritizeVulns } from '../core/cyberBrain.js';
 import { isRealUser } from '../auth/middleware.js';
 import { KEV_PREDICATE, KEV_ORDER } from '../lib/businessMetrics.js';
+import { fetchEPSS } from '../services/compositeRiskScoring.js';
+
+// ─── KEV membership (KV-cached live CISA feed — mirrors fetchEPSS's caching
+// pattern in compositeRiskScoring.js). handleCVELookup's live-NVD path needs
+// this for arbitrary CVEs that may not be seeded/ingested into D1's
+// threat_intel table; handleKEVFeed below fetches the same feed uncached
+// (full-catalog browse is a different access pattern than a single-id check).
+const KEV_IDS_CACHE_KEY = 'kev:ids:cache';
+const KEV_IDS_CACHE_TTL = 3600 * 6; // 6h
+
+async function fetchKEVIds(env) {
+  if (env?.SECURITY_HUB_KV) {
+    try {
+      const cached = await env.SECURITY_HUB_KV.get(KEV_IDS_CACHE_KEY, { type: 'json' });
+      if (cached) return cached;
+    } catch {}
+  }
+  try {
+    const resp = await fetch('https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json', {
+      headers: { 'User-Agent': 'CYBERDUDEBIVASH-SecurityHub/19.0' },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const ids  = (data.vulnerabilities || []).map(v => v.cveID).filter(Boolean);
+    if (env?.SECURITY_HUB_KV) {
+      env.SECURITY_HUB_KV.put(KEV_IDS_CACHE_KEY, JSON.stringify(ids), { expirationTtl: KEV_IDS_CACHE_TTL }).catch(() => {});
+    }
+    return ids;
+  } catch { return null; }
+}
 
 // ─── Remediation stage lifecycle ─────────────────────────────────────────────
 const STAGES = ['open', 'in_progress', 'testing', 'patched', 'accepted_risk', 'false_positive'];
@@ -563,6 +594,19 @@ export async function handleCVELookup(request, env, authCtx, cveId) {
         const metrics = cve.metrics?.cvssMetricV31?.[0] ||
                         cve.metrics?.cvssMetricV30?.[0] ||
                         cve.metrics?.cvssMetricV2?.[0];
+
+        // NVD's own API carries neither EPSS nor KEV status — this response
+        // previously had no epss_score/in_kev fields at all whenever the live
+        // NVD lookup succeeded (the common case), so every consumer reading
+        // them (e.g. cyber-defense.html's live lookup tool) always showed
+        // "N/A" / "Not in KEV", even for famous actively-exploited CVEs like
+        // the page's own default example, CVE-2024-3400. Enrich from the same
+        // real sources the rest of this platform already uses.
+        const [epssMap, kevIds] = await Promise.all([
+          fetchEPSS([cve.id], env),
+          fetchKEVIds(env),
+        ]);
+
         return Response.json({
           cve_id:      cve.id,
           published:   cve.published,
@@ -576,6 +620,8 @@ export async function handleCVELookup(request, env, authCtx, cveId) {
           cwe:         cve.weaknesses?.map(w => w.description?.[0]?.value).filter(Boolean) || [],
           references:  cve.references?.slice(0, 10).map(r => ({ url: r.url, tags: r.tags })) || [],
           configurations: cve.configurations?.length || 0,
+          epss_score:  epssMap[cve.id] ?? null,
+          in_kev:      Array.isArray(kevIds) ? kevIds.includes(cve.id) : null,
           source:      'NVD NIST',
           platform:    'CYBERDUDEBIVASH AI Security Hub v19.0',
         });

@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry fourteen below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed all 10 Tier-1 items (see prior entries) and has now completed Tier-2 items #1–#3: `threat-intel-workbench.html`'s AI Analyst/CVE-brief/sector-brief routes (real unmetered LLM calls, zero auth/rate-limiting — fixed via the existing shared `checkRateLimitCost()`); `sentinel-apex-marketplace.html`'s Threat Actor and Malware intel cards (100% hardcoded fabricated data presented as live SENTINEL APEX™ intelligence — fixed by wiring both renderers to the platform's real APT actor database and malware-family preview API); and `index.html`'s fabricated "PATCHED" KPI (an invented `confirmed_exploited/10` formula with no real backing field — now an honest dash), its "Platform: Operational" badge (100% static HTML never touched by any script — now wired into the page's own already-real `/api/platform/health` poller), and 3 false "CYBERBRAIN V2" claims on the MYTHOS AI Analyst / Autonomous SOC Mode panels (a real, differently-versioned v20.0 engine the chat backend never actually calls — corrected to accurate MYTHOS-only branding) (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 13 session-log entries below. 11 of the 24 backlog items remain (5 more Tier 2, all 6 of Tier 3), queued in the same stated priority order.)
+## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry fifteen below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed all 10 Tier-1 items and has now completed Tier-2 items #1–#4 (of 8) — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable: #1 `threat-intel-workbench.html`'s unauthenticated/unrate-limited AI-analyst LLM routes; #2 `sentinel-apex-marketplace.html`'s 100%-fabricated Threat Actor/Malware cards; #3 `index.html`'s fabricated "PATCHED" KPI, hardcoded platform-status badge, and false "CyberBrain V2" claims; #4 `cyber-defense.html`'s EPSS/KEV fields (missing from the live-NVD response entirely) and IOC-lookup nested-field mismatch (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 14 session-log entries below. 10 of the 24 backlog items remain (4 more Tier 2, all 6 of Tier 3), queued in the same stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 233 files / 2422 tests passing | `npx vitest run`, run 2026-07-11 — +9 tests this wave, new file `indexFabricatedStatsAndStatusFix.test.mjs` (Tier-2 item #3: index.html's fake PATCHED KPI, hardcoded Platform-status badge, and 3 false CyberBrain V2 claims). Baseline going into this wave was 232 files / 2413 tests (Tier-2 item #2) |
+| Worker test suite | 234 files / 2429 tests passing | `npx vitest run`, run 2026-07-11 — +7 tests this wave, new file `cveEpssKevEnrichmentFix.test.mjs` (Tier-2 item #4: real EPSS/KEV enrichment on handleCVELookup's live-NVD path, plus cyber-defense.html's IOC nested-field-path fix). Baseline going into this wave was 233 files / 2422 tests (Tier-2 item #3) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,88 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Tier-2 backlog item #4 (of 8): cyber-defense.html — EPSS/KEV fields never populate on live-NVD lookups + IOC lookup nested-field mismatch
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-2 item #3.
+- **Re-verified against actual code — two independent bugs, one backend, one
+  frontend:**
+  1. **EPSS/KEV never populate:** `cyber-defense.html`'s "Live CVE Threat
+     Intelligence Lookup" (`cdLookup()`) calls `GET /api/vulns/cve/:cveId`
+     (`handleCVELookup`, `workers/src/handlers/vulnManagement.js`) and reads
+     `d.epss_score`/`d.in_kev`. Traced the handler: its primary path (live
+     NVD API lookup, the common case for any real, well-known CVE) returned
+     only `cvss_score/cvss_vector/cvss_version/severity/cwe/references/
+     configurations` — **no `epss_score` or `in_kev` field at all**, because
+     NVD's own API carries neither. Only the secondary fallback path (local
+     seed data, used only when NVD is unreachable or the CVE isn't in NVD)
+     included them. Net effect: the page's own default pre-filled example,
+     `CVE-2024-3400` — a real, famous, actively-exploited CISA KEV entry —
+     showed EPSS "N/A" and "⚪ Not in KEV" on every normal page load.
+  2. **IOC lookup nested-field mismatch:** the same tool's IOC branch calls
+     `POST /api/hunt/ioc` (`handleIOCLookup`,
+     `workers/src/handlers/threatHunting.js`) and reads `d.virustotal`/
+     `d.abuseipdb` directly off the top-level response. Traced the real
+     response shape: this endpoint supports batch lookups
+     (`{ioc}` or `{iocs:[]}`), so the real per-target result is nested at
+     `d.results[0]`, and the real field names inside it
+     (`services/iocEnrichmentEngine.js`'s `enrichIOC`) are `raw_data.
+     virustotal` (not a top-level `virustotal`) and `abuse_score` (a plain
+     0–100 number, not a nested `abuseipdb.abuse_confidence_score`).
+     `d.virustotal`/`d.abuseipdb` never existed at any level of the real
+     response — the tile always showed 0 malicious engines and "AbuseIPDB
+     checked" (the generic fallback text), regardless of the real verdict.
+- **Fix:**
+  - `workers/src/handlers/vulnManagement.js`: imported the existing
+    `fetchEPSS()` (`services/compositeRiskScoring.js`, already used
+    elsewhere in this codebase, KV-cached against the real FIRST.org EPSS
+    API) and added a small new `fetchKEVIds(env)` helper mirroring its exact
+    KV-caching pattern (`kev:ids:cache`, 6h TTL) against the same live CISA
+    KEV feed URL `handleKEVFeed` (right below, in the same file) already
+    fetches uncached for its own full-catalog-browse use case. The NVD
+    live-lookup success path now enriches its response with a real
+    `epss_score` (from `fetchEPSS`) and real `in_kev` (CVE-ID membership
+    check against `fetchKEVIds`'s cached list) — `in_kev` is `null` (not a
+    false "not exploited" claim) if the KEV feed itself is unreachable.
+  - `frontend/cyber-defense.html`: the IOC branch now unwraps
+    `d.results[0]`, reads VirusTotal stats from `res.raw_data.virustotal`,
+    and the abuse score from `res.abuse_score` directly (a number) instead
+    of a non-existent nested `abuseipdb.abuse_confidence_score`.
+- **Verification:** `node --check` on both modified files; new
+  `workers/test/cveEpssKevEnrichmentFix.test.mjs` (7 tests) — 4 real
+  behavioral tests importing `handleCVELookup` directly with mocked
+  `fetch` (NVD + FIRST.org EPSS + CISA KEV, all three branched by URL) and
+  a mock KV, asserting: a KEV-listed CVE gets `epss_score`+`in_kev:true`; a
+  genuinely non-KEV CVE gets `in_kev:false`; an unreachable KEV feed yields
+  `in_kev:null` (never a fabricated `false`); the new KEV-ids KV cache is
+  actually used (a second lookup within the TTL doesn't re-fetch CISA) — plus
+  3 static-parse tests confirming `cyber-defense.html`'s IOC branch unwraps
+  `d.results[0]` and reads the real `raw_data.virustotal`/`abuse_score`
+  paths, with the old buggy code patterns (`= d.virustotal`, `d.abuseipdb
+  ?`, `abuse_confidence_score`) confirmed gone. One self-inflicted false
+  failure caught and fixed immediately: an overly broad `not.toContain
+  ('d.virustotal')` assertion matched this fix's own explanatory code
+  comment (which necessarily names the old buggy pattern); narrowed to the
+  actual executable-code substring. Searched `workers/test/` for any
+  pre-existing test referencing `handleCVELookup`/`cyber-defense.html`/
+  these field names — none existed, so no bug-reinforcing assertion needed
+  correcting. Full suite: 234 files / 2429 tests passing (was 233/2422
+  before this item — +1 file, +7 tests). `node scripts/registry/
+  validate.mjs`: 0 failures, 0 warnings. Updated `CAP-TIH-001`'s `notes` in
+  `docs/capability-registry/domains/threat-hunting-intel.json` (it already
+  documented `handleIOCLookup` and explicitly cited
+  `frontend/cyber-defense.html:156` as a caller) to record the frontend fix
+  — `test_coverage.has_tests` deliberately left `false` since no new
+  import-based test of `handleIOCLookup` itself was added (that handler
+  was never the bug; only its frontend consumer's field-path assumptions
+  were wrong). No existing registry entry covers `handleCVELookup`/
+  `/api/vulns/cve` at all (a pre-existing cataloguing gap, not created by
+  this fix) — consistent with this session's practice, no new capability
+  entry was added for a bounded bug fix.
+  `node scripts/registry/generate-report.mjs` regenerated (only the
+  timestamp changed).
+- **4 Tier-2 items remain** (of 8), plus all 6 Tier-3 items, queued next in
+  the audit's stated priority order.
 
 ### 2026-07-11 — Tier-2 backlog item #3 (of 8): index.html — fabricated "PATCHED" KPI, hardcoded "Platform: Operational" badge, and 3 false "CyberBrain V2" claims
 
