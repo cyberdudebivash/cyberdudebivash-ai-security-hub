@@ -63,6 +63,18 @@ describe('org invites + roles + RBAC', () => {
     const res = await handleInviteMember(post({ email: 'ghost@x.com' }), env, owner, 'org1');
     expect(res.status).toBe(404);
   });
+  it('finds an existing user regardless of the casing/whitespace the inviter typed (P1 fix)', async () => {
+    // handleSignup stores email as validateEmail(rawEmail).value —
+    // trim().toLowerCase() — so 'cand@x.com' below is exactly how it's really
+    // stored. Inviting by a differently-cased copy (a directory export, an
+    // email client, a business card) previously 404'd with "No account found"
+    // for a genuinely-existing account — confirmed live against a real,
+    // freshly-signed-up, re-logged-in-and-verified user.
+    const res = await handleInviteMember(post({ email: '  CaND@X.CoM  ', role: 'ANALYST' }), env, owner, 'org1');
+    expect(res.status).toBe(201);
+    const row = db.prepare(`SELECT role FROM org_members WHERE user_id='cand'`).get();
+    expect(row.role).toBe('ANALYST');
+  });
   it('duplicate invite is 409', async () => {
     await handleInviteMember(post({ email: 'cand@x.com' }), env, owner, 'org1');
     const res = await handleInviteMember(post({ email: 'cand@x.com' }), env, owner, 'org1');

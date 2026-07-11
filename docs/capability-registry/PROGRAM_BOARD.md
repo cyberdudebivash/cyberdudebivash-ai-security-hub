@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-10, P1: APEX Copilot widget unauthenticated on dashboard + FAB/sidebar overlap — fixed)
+## Current status (2026-07-11, P0: 2FA enrollment completely broken for every customer — fixed, plus 3 more real gaps from the Organizations/API-Keys/MFA/CISO-export mutation audit)
 
 **Scope note (2026-07-10):** starting this date, sessions on this branch
 follow the customer's "production readiness lifecycle" priority (visitor →
@@ -27,8 +27,8 @@ parallel tracking document.
 | Domains populated | 18 | see list below |
 | Domains empty (stubs) | 3 | see Remaining Work Register |
 | Capabilities registered | 66 | `node scripts/registry/validate.mjs` |
-| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-10 |
-| Worker test suite | 202 files / 2096 tests passing (2 files pre-existing import-time gap, unrelated — see session log) | `npx vitest run`, run 2026-07-10 (includes 7 new tests: `copilotWidgetDashboardFix.test.mjs`) |
+| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 |
+| Worker test suite | 204 files / 2107 tests passing (2 files pre-existing import-time gap, unrelated — see session log) | `npx vitest run`, run 2026-07-11 (includes 11 new tests: `apiKeysActiveFilterFix.test.mjs` (3), `dashboardMfaAndGraphExportFix.test.mjs` (7), +1 case in `orgRbacIsolation.test.mjs`) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-10 (unchanged this wave — CAP-IDN-001's evidence was updated in place, its backend/frontend/nav booleans didn't change, see session log) |
 | Backend / Frontend / Parity | 83.3% / 67.4% / 62.1% | `PRODUCTION_READINESS_REPORT.md` (unchanged — this wave fixed a regression within an already-`exists` capability; see session log) |
 | Customer journeys browser-verified | 1/66 capabilities now carry `verification.method: dynamic_browser` (CAP-IDN-001) | Continues the live-production headless-Chromium pattern from the prior UAT wave. This wave additionally measured real bounding-rects at 6 phone widths against `cyberdudebivash.in` and prototyped the fix live via `page.addStyleTag()` before committing it — see session log. Every other capability's `verification.method` is still unchanged (`static`) |
@@ -201,6 +201,113 @@ see session log below.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — P0: 2FA enrollment permanently broken for every customer; org-invite email case-sensitivity; revoked API keys never left the list; Threat Graph export mislabeled
+
+- **Trigger:** customer asked to continue the audit into the specific
+  next-wave targets flagged at the end of the prior session — Organizations
+  (create/invite/remove/delete), API Keys (create/revoke), MFA setup, and the
+  CISO export buttons — since those involve real state mutation, not just
+  page loads, framed as an enterprise-buyer ("Cisco Samsung Intel AMD Dell
+  Google customer") acceptance pass.
+- **Method:** read every mutation function end-to-end first (Organizations,
+  API Keys, MFA setup, CISO/Threat-Graph exports), then drove every flow for
+  real against live production with two/three real accounts as needed
+  (signup, cross-account org invite, MFA enrollment with a genuine RFC 6238
+  TOTP code computed locally from the real returned secret, key create/revoke,
+  CSV/PDF/graph export, org delete) — not just reading code, per this
+  program's standing methodology. Every surprising result was re-verified
+  independently (direct `apiFetch()` calls bypassing the UI, a second signup
+  to rule out eventual-consistency, wider network-response capture) before
+  being treated as a real finding, which caught and discarded one of my own
+  test-script bugs (reading `window._mfaSecret`, a module-scope variable
+  never attached to `window`) before it could be mis-reported as an app bug.
+- **Finding 1 (P0, most severe — a core security feature was unusable):**
+  `frontend/user-dashboard.html` has two elements with `id="mfa-code"`: the
+  login overlay's `#mfa-view` (pre-auth 2FA challenge, `doMfaVerify()`, a
+  working feature from a prior wave) is static HTML that stays in the DOM
+  forever after login (only `display:none`'d, never removed); the Settings
+  page's 2FA-**setup** flow (`mfaBeginSetup()`) dynamically injects its own
+  `#mfa-code` input into `#mfa-body`. Once both exist, `mfaConfirmEnable()`'s
+  `document.getElementById('mfa-code')` always resolves to the FIRST one in
+  document order — the hidden, permanently-empty login-overlay input, never
+  the visible Settings-page one. Live-confirmed: typed a correctly-computed
+  TOTP code into the visible field, clicked the real "Verify & Enable"
+  button, still got "Enter the 6-digit code from your app" — **no real
+  customer could ever enable 2FA on this platform.** Fixed by renaming the
+  Settings-page instance to `mfa-setup-code`; the login-flow instance and its
+  `doMfaVerify()`/keydown listener are untouched. Re-verified live end-to-end:
+  enable → `ENABLED` badge → disable → `DISABLED` badge, full cycle working.
+- **Finding 2 (P1):** `handleInviteMember` (`workers/src/handlers/
+  orgManagement.js`) looked up the invitee with a raw, case-sensitive
+  `WHERE email = ?`. `handleSignup`/`validateEmail` store every email as
+  `trim().toLowerCase()` (and `auth/rbac.js` already normalizes the same way
+  for its own user lookups), but the invite endpoint didn't — inviting a
+  genuinely-existing teammate by an email copied with different casing (a
+  directory export, an email client, a business card) always 404'd with "No
+  account found", confirmed against a real account: fresh signup (201),
+  independently re-confirmed via a full re-login (200), then still 404'd on
+  invite from a different account. Fixed with the same `.trim().toLowerCase()`
+  normalization already used identically elsewhere in the codebase for this
+  exact purpose.
+- **Finding 3 (P1):** `GET /api/keys` (`handleListKeys`,
+  `workers/src/handlers/apikeys.js`) returned every key regardless of
+  `active` status, so a revoked key stayed permanently visible (with a live
+  "Revoke" button) and permanently counted in the dashboard's key list and
+  stat badge — even though `handleCreateKey`'s own per-tier limit check
+  already correctly filtered to active keys, so the two endpoints disagreed.
+  Confirmed live: real `DELETE /api/keys/:id` → 200, "Key revoked", key
+  correctly set `active=0` in D1 — the very next `GET /api/keys` still
+  listed it and reported `count:1`. Fixed by filtering to `active` keys in
+  `handleListKeys` only (the shared `listUserApiKeys()` helper stays
+  unfiltered — `handleRotateKey`/`handleKeyUsage` need to see inactive keys
+  too, to give correct "already revoked" vs "not found" responses).
+- **Finding 4 (cosmetic/trust):** the Threat Graph's "⬇ Export SVG" button
+  called `canvas.toDataURL('image/png')` and downloaded a `.png` — it has
+  never produced SVG (the graph is a live force-directed canvas simulation,
+  no retained vector scene graph). Confirmed live: real PNG magic bytes,
+  never XML. Renamed the button and function (`exportGraphPNG`) to match
+  what it actually delivers rather than promise a format it can't produce —
+  same "don't let a button claim a format it doesn't produce" principle
+  already established in this file's `exportCisoPDF()`.
+- **Also ruled out as NOT a defect:** creating a 2nd API key on FREE tier
+  (1-key limit) while the auto-provisioned first key is still active
+  correctly 409s — expected, not a bug. `POST /api/copilot/chat`-adjacent
+  403s observed during the sweep trace to normal FREE-tier feature gating,
+  consistent with prior waves' findings — not re-litigated in depth here
+  since nothing new pointed at a defect.
+- **Commits this session:**
+  - `frontend/user-dashboard.html` — MFA duplicate-id fix, Threat Graph
+    export rename.
+  - `workers/src/handlers/orgManagement.js` — email normalization in
+    `handleInviteMember`.
+  - `workers/src/handlers/apikeys.js` — active-only filter in
+    `handleListKeys`.
+  - `workers/test/dashboardMfaAndGraphExportFix.test.mjs` (new, 7 tests),
+    `workers/test/apiKeysActiveFilterFix.test.mjs` (new, 3 tests), +1 case
+    added to `workers/test/orgRbacIsolation.test.mjs`.
+- **Validator:** 21 domain files, 66 capability ids, 0 failures, 0 warnings
+  (no registry entry cleanly matched these fixes — same precedent as the
+  prior two waves — logged here instead).
+- **Tests:** 204 files / 2107 tests passing (full suite, up from 202/2096).
+  `scripts/seo-structure-lock.mjs`: 22/22 pages green.
+- **Risks / follow-ups:** the org-invite and API-key fixes are backend-only
+  (Cloudflare Worker) — this sandbox can't run the Workers runtime locally,
+  so unlike the frontend-only fixes (verified pre-merge via the
+  route-intercepted-Playwright-against-live-backend technique), these two
+  were verified via a real in-memory-SQLite test harness
+  (`node:sqlite`, mirroring `orgRbacIsolation.test.mjs`'s existing pattern)
+  driving the actual handler functions, plus precise code-reading against
+  the exact live repro. Both need a final live re-confirmation against the
+  real repro scenario once this merges and deploys — planned as the
+  immediate next step, not skipped.
+- **Next recommended wave:** Organizations (create/invite/role-change/
+  remove/delete) and CSV/PDF/PNG exports all worked correctly end-to-end in
+  this pass once account-existence was confirmed properly — no further
+  findings there. Remaining unexercised mutation surfaces from the original
+  ~100-onclick-handler inventory: notification panel actions, session revoke
+  (Settings → Active Sessions), and the booking/checkout flows reachable
+  from upsell prompts.
 
 ### 2026-07-10 — P1: APEX Copilot widget unauthenticated on the dashboard; FAB overlapped sidebar nav; dead AI-analysis badge removed
 

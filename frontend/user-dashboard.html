@@ -1831,7 +1831,7 @@
           <option value="low">Low</option>
         </select>
         <button class="btn btn-outline btn-sm" onclick="initThreatGraph()">↺ Refresh</button>
-        <button class="btn btn-outline btn-sm" onclick="exportGraphSVG()">⬇ Export SVG</button>
+        <button class="btn btn-outline btn-sm" onclick="exportGraphPNG()">⬇ Export PNG</button>
       </div>
 
       <div class="threat-graph-wrap" style="position:relative">
@@ -3568,7 +3568,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
         + '<div style="text-align:center;margin-bottom:16px"><div style="font-size:11px;color:#64748b;margin-bottom:4px">Manual entry key</div>'
         + '<code id="mfa-secret" style="font-size:14px;letter-spacing:2px;color:#e2e8f0;background:#0f0f1a;border:1px solid #2d2d4e;border-radius:6px;padding:6px 12px;cursor:pointer" onclick="mfaCopySecret()" title="Click to copy">' + mfaEsc(formatSecret(d.secret)) + '</code></div>'
         + '<div class="form-group"><label class="form-label"><b style="color:#e2e8f0">Step 2.</b> Enter the 6-digit code from your app</label>'
-        + '<input id="mfa-code" class="form-input" inputmode="numeric" maxlength="6" placeholder="123456" style="max-width:200px;font-size:18px;letter-spacing:4px" autocomplete="one-time-code" /></div>'
+        + '<input id="mfa-setup-code" class="form-input" inputmode="numeric" maxlength="6" placeholder="123456" style="max-width:200px;font-size:18px;letter-spacing:4px" autocomplete="one-time-code" /></div>'
         + '<button class="btn btn-primary" onclick="mfaConfirmEnable()">Verify &amp; Enable</button> '
         + '<button class="btn" style="background:transparent;border:1px solid #2d2d4e;color:#94a3b8" onclick="loadMFAStatus()">Cancel</button>';
       renderMfaQR(d.otpauth_url, d.secret);
@@ -3601,7 +3601,15 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
 
   async function mfaConfirmEnable() {
     mfaMsg();
-    const code = (document.getElementById('mfa-code').value || '').trim();
+    // Must be 'mfa-setup-code', not 'mfa-code' — the login overlay's #mfa-view
+    // (pre-auth 2FA challenge, doMfaVerify()) has its own permanent, merely
+    // display:none'd input with id="mfa-code" that stays in the DOM for the
+    // rest of the session. getElementById('mfa-code') always resolves to that
+    // first (hidden, forever-empty) element, not this one, so this always
+    // read '' and enable-2FA could never succeed for any real customer —
+    // confirmed live: a correct code typed into this field still hit "Enter
+    // the 6-digit code from your app" on every attempt.
+    const code = (document.getElementById('mfa-setup-code').value || '').trim();
     if (!/^\d{6}$/.test(code)) { mfaMsg('err', 'Enter the 6-digit code from your app.'); return; }
     try {
       const res = await apiFetch('/api/auth/mfa/enable', { method: 'POST', body: JSON.stringify({ totp_code: code }) });
@@ -3930,7 +3938,13 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     panel.style.display = 'block';
   }
 
-  function exportGraphSVG() {
+  // Named/labeled "Export SVG" until this fix — the graph is drawn on a <canvas>
+  // (force-directed simulation, no retained vector scene graph), so this has
+  // only ever produced a canvas.toDataURL('image/png') raster snapshot.
+  // Confirmed live: the downloaded file is a real PNG (correct magic bytes),
+  // never XML/SVG. Renamed the button and function to match what it actually
+  // produces rather than promise a vector format it can't deliver.
+  function exportGraphPNG() {
     const canvas = document.getElementById('tg-canvas');
     const dataUrl = canvas.toDataURL('image/png');
     const a = document.createElement('a');

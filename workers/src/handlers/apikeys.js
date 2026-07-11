@@ -21,7 +21,19 @@ export async function handleListKeys(request, env, authCtx) {
   if (!authCtx.user_id) return Response.json({ error: 'Authentication required' }, { status: 401 });
   if (!env?.DB) return Response.json({ error: 'Database unavailable' }, { status: 503 });
 
-  const keys = await listUserApiKeys(env.DB, authCtx.user_id);
+  // listUserApiKeys() intentionally returns every key regardless of active
+  // status — handleRotateKey/handleKeyUsage need that to make their own
+  // active/ownership decisions. But this is the endpoint the dashboard's "My
+  // API Keys" table and stat count render directly, with no revoked-state UI
+  // at all (renderKeys() always shows a live "Revoke" button); handleCreateKey
+  // already filters to active-only for its own limit check. Not filtering
+  // here left a revoked key permanently visible in the table — confirmed
+  // live: after a real DELETE /api/keys/:id (200, key correctly set
+  // active=0), the very next GET /api/keys still listed it and reported
+  // count:1, count of 1 (limit for FREE), even though the customer had zero
+  // usable keys.
+  const allKeys = await listUserApiKeys(env.DB, authCtx.user_id);
+  const keys = allKeys.filter(k => k.active);
   const maxKeys = maxKeysForTier(authCtx.tier);
   return Response.json({
     keys,
