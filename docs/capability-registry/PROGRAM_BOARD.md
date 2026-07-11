@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry ten below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed Tier-1 items #1–#9 (of 10): `enterprise-kpi-dashboard.html`'s impossible-tier admin gate and `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory auth gaps (PR #184, merged); `revenue-command-center.html`'s 6-of-8 broken panels, `mssp-command-center.html`'s Add Partner 400 bug, `automation-dashboard.html`'s 5 dead/wrong endpoints, `soc-dashboard.html`'s AI Decision Engine field/scaling bugs, `user-dashboard.html`'s post-upgrade billing token-storage + `loadDashboard()` bug, `user-dashboard.html`'s My Trainings/My Purchases/My Reports envelope-unwrap bug, and `developer-onboarding.html`'s trial-key tier normalization bug (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 9 session-log entries below. 15 of the 24 backlog items remain (1 more Tier 1, all of Tier 2 and Tier 3), queued in the same stated priority order.)
+## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry eleven below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed all 10 Tier-1 items: `enterprise-kpi-dashboard.html`'s impossible-tier admin gate and `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory auth gaps (PR #184, merged); `revenue-command-center.html`'s 6-of-8 broken panels, `mssp-command-center.html`'s Add Partner 400 bug, `automation-dashboard.html`'s 5 dead/wrong endpoints, `soc-dashboard.html`'s AI Decision Engine field/scaling bugs, `user-dashboard.html`'s post-upgrade billing token-storage + `loadDashboard()` bug, `user-dashboard.html`'s My Trainings/My Purchases/My Reports envelope-unwrap bug, `developer-onboarding.html`'s trial-key tier normalization bug, and `tools.html`'s Tools/AI/Marketplace grids — a doubled-backslash regex literal (`/\\d+/`) that threw inside every priced-item render and silently emptied all three grids, plus a Marketplace field-mismatch + wrong-catalog purchase-routing bug (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 10 session-log entries below. 14 of the 24 backlog items remain (all of Tier 2 [8] and Tier 3 [6]), queued in the same stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 229 files / 2377 tests passing | `npx vitest run`, run 2026-07-11 — +1 test this wave, added to the existing `developerOnboardingHandler.test.mjs` (no new file — its `makeEnv()` mock already covered `handleTrialKeyRequest`; extended to also capture `daily_limit`/`monthly_limit` from the INSERT). Baseline going into this wave was 229 files / 2376 tests (Tier-1 item #8) |
+| Worker test suite | 230 files / 2391 tests passing | `npx vitest run`, run 2026-07-11 — +14 tests this wave, new file `toolsMarketplaceFieldAndPurchaseFix.test.mjs` (Tier-1 item #10: the doubled-backslash regex that crashed all 3 tools.html grids, the Marketplace field mismatches, and the wrong-catalog purchase routing). Baseline going into this wave was 229 files / 2377 tests (Tier-1 item #9) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,111 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Tier-1 backlog item #10 (last of 10): tools.html — Tools/AI/Marketplace grids crashed empty + Marketplace wrong-catalog Buy Now 404s
+
+- **Trigger:** continuing the Tier 1–3 backlog, final Tier-1 item, next after
+  item #9.
+- **Re-verified against actual code — found the real bug was worse than the
+  audit's one-line paraphrase ("'Buy Now' 404s ... falls back to WhatsApp
+  quoting the wrong price"), and traced it to three separate, compounding
+  defects across `renderOfficialTools()`, `renderAITools()` and
+  `renderMarketplace()`:**
+  1. **All three render functions built their Buy button's price argument
+     via `price.match(/\\d+/)[0]`** — a regex literal with a *doubled*
+     backslash (confirmed byte-for-byte with `cat -A`/`od -c`, not a display
+     artifact). `/\\d+/` matches a literal backslash character followed by
+     digits, which never appears in a `'₹999'`-style string, so `.match()`
+     always returned `null` and `null[0]` threw a `TypeError` — synchronously,
+     during template-literal evaluation inside the `Array#map` callback.
+     A throw inside a `.map()` callback aborts the *entire* `.map()` call, so
+     `grid.innerHTML` was never assigned. Net effect: `officialToolsGrid`
+     (for any premium item), `aiToolsGrid` (unconditionally — every AI tool
+     has a Buy button) and `marketplaceGrid` (unconditionally, both live and
+     fallback data) rendered **nothing at all**, for every visitor, not just
+     a broken purchase button on an otherwise-visible catalog.
+  2. **`renderOfficialTools()`'s live `/api/tools/catalog` path dropped
+     `category`/`description`** when mapping API tools to render objects —
+     even after fixing the regex, every API-sourced card would have shown
+     the literal text "undefined" for its category badge and description
+     (the fallback array already carried both fields; only the live-API
+     mapping forgot them).
+  3. **`renderMarketplace()` read `item.demand`/`item.cve`/`item.price`**,
+     but the real `/api/defense/solutions` response (`enrichSolution()` in
+     `workers/src/handlers/defenseMarketplace.js`) returns
+     `demand_score`/`cve_id`/`price_inr` (a number, no `.price` string field
+     at all) — so every live listing silently showed the hardcoded fallback
+     demand (75%), CVE ('N/A') and price (₹999) instead of its real values.
+  4. **Worse, "Buy Now" on a live (API-sourced) marketplace item was wired to
+     `cdbToolBuy()` → `POST /api/tools/purchase`**, which looks up
+     `TOOLS_CATALOG[product_id]` — a small static dict of ~28 fixed product
+     IDs in `workers/src/handlers/toolsMarketplace.js` covering the Official
+     Tools and AI Tools sections only. Every dynamic `defense_solutions` row
+     ID (the Marketplace section's real, live inventory) is absent from that
+     dict, so the purchase call always returned `404 {error:'Product not
+     found'}`, tripping `cdbToolBuy`'s `manualFallback()` — which opens a
+     WhatsApp deep link quoting the `priceNum` already computed wrong by
+     defect #3 above (hardcoded ₹999 instead of the item's real `price_inr`).
+     The correct backend endpoints for these dynamic solutions
+     (`POST /api/defense/purchase/:id` + `POST /api/defense/verify/:id`,
+     `handleInitiatePurchase`/`handleVerifyPurchase` in
+     `defenseMarketplace.js`) already existed, fully implemented and
+     correct — nothing in the frontend called them.
+  Confirmed the Official Tools (`fallbackOfficialTools`), AI Tools
+  (`aiTools`, no live fetch at all) and Marketplace-fallback
+  (`fallbackMarketplace`) hardcoded arrays' product IDs *do* all exist in
+  `TOOLS_CATALOG` — so `cdbToolBuy`/`CDB_PAY.open` remains correct for every
+  item sourced from those three arrays; the wrong-catalog defect is scoped
+  specifically to Marketplace items sourced from the live
+  `/api/defense/solutions` fetch.
+- **Fix (`frontend/tools.html`):**
+  - Changed all three `match(/\\d+/)` occurrences to the correct single-
+    backslash `match(/\d+/)` (lines in `renderOfficialTools`, `renderAITools`,
+    `renderMarketplace`).
+  - `renderOfficialTools()`: added `category: t.category || '', description:
+    t.description || ''` to the live-API tool mapping.
+  - `renderMarketplace()`: reads `item.demand_score ?? item.demand ?? 75` and
+    `item.cve_id || item.cve || 'N/A'`; builds `priceNum`/`price` from
+    `item.price_inr` (numeric) when present, falling back to parsing
+    `item.price` (fallback-array string) otherwise; tracks a new
+    `liveSource` flag (true only when the live fetch actually returned
+    solutions) and branches the Buy button's `onclick` accordingly.
+  - Added a new `cdbBuySolution(solutionId, priceInr, label)` function
+    (in the same bottom-of-file Razorpay-checkout IIFE as `cdbToolBuy`,
+    reusing its `loadRzp()` loader and manual/WhatsApp-fallback shape) that
+    posts to `/api/defense/purchase/:id` and `/api/defense/verify/:id`
+    instead, adapted to that endpoint's real response field names
+    (`order.order_id`, not `order.razorpay_order_id`; `vData.solution_title`,
+    not `vData.product_name`; no `product_id`/`email` in the verify body —
+    the solution ID lives in the URL). Exposed as `window.cdbBuySolution`.
+    Live-sourced Marketplace items now call this; fallback-array items keep
+    calling `window.CDB_PAY.open()` (→ `cdbToolBuy`) exactly as before,
+    since their IDs are genuinely in the static `TOOLS_CATALOG`.
+- **Verification:** `node --check` on both extracted inline `<script>`
+  blocks; new `workers/test/toolsMarketplaceFieldAndPurchaseFix.test.mjs`
+  (14 tests, pure static parse of the raw HTML — same convention as this
+  session's other frontend-fix tests) asserting: the doubled-backslash regex
+  is gone from all three render functions; `renderOfficialTools` carries
+  `category`/`description` through; `renderMarketplace` reads the real
+  `demand_score`/`cve_id`/`price_inr` fields; `renderMarketplace` routes
+  `liveSource` items to `window.cdbBuySolution` and fallback items to
+  `window.CDB_PAY.open`; `cdbBuySolution` is defined, exported on `window`,
+  calls the `/api/defense/purchase|verify/:id` endpoints (never the
+  `/api/tools/*` ones), and correctly falls back to the manual/WhatsApp flow
+  when no real Razorpay order is returned. Searched `workers/test/` for any
+  pre-existing test referencing `tools.html`/these function names — none
+  existed, so no bug-reinforcing assertion needed correcting. Full suite:
+  230 files / 2391 tests passing (was 229/2377 before this item — +1 file,
+  +14 tests). `node scripts/registry/validate.mjs`: 0 failures, 0 warnings
+  (unchanged — no capability registry entries touched by this item).
+  `node scripts/registry/generate-report.mjs` regenerated (only the
+  timestamp changed — same 97 capabilities, same Backend/Frontend/Parity
+  percentages, still **NOT READY**, as expected since this item fixed
+  existing capabilities' bugs rather than adding new capabilities).
+- **This closes all 10 Tier-1 items from the full-frontend audit.** 14 of
+  the 24-item backlog remain: all 8 Tier-2 items (cost-abuse / misleading-
+  data class) and all 6 Tier-3 items (minor/cosmetic class), queued next in
+  the audit's stated priority order.
 
 ### 2026-07-11 — Tier-1 backlog item #9: developer-onboarding.html — trial-key tier normalization bug
 

@@ -1437,6 +1437,7 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
                         tools = apiTools.map(function(t) {
                             return {
                                 id: t.id, name: t.name,
+                                category: t.category || '', description: t.description || '',
                                 price: t.price_inr ? '₹' + Number(t.price_inr).toLocaleString('en-IN') : 'FREE',
                                 isPremium: !!t.price_inr,
                                 features: [t.description || t.category || ''],
@@ -1476,7 +1477,7 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
                                 Launch Tool →
                             </a>
                             ${tool.isPremium ? `
-                                <button class="btn btn-secondary" onclick="window.CDB_PAY && window.CDB_PAY.open('${tool.id}', ${parseInt(tool.price.match(/\\d+/)[0])}, '${tool.name} Report')">
+                                <button class="btn btn-secondary" onclick="window.CDB_PAY && window.CDB_PAY.open('${tool.id}', ${parseInt(tool.price.match(/\d+/)[0])}, '${tool.name} Report')">
                                     Buy Report
                                 </button>
                             ` : ''}
@@ -1512,7 +1513,7 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
                             </div>
                         </div>
                         <div class="ai-tool-price">${tool.price}</div>
-                        <button class="btn btn-primary ai-tool-button" onclick="window.CDB_PAY && window.CDB_PAY.open('${tool.id}', ${parseInt(tool.price.match(/\\d+/)[0])}, '🔥 ${tool.title}')">
+                        <button class="btn btn-primary ai-tool-button" onclick="window.CDB_PAY && window.CDB_PAY.open('${tool.id}', ${parseInt(tool.price.match(/\d+/)[0])}, '🔥 ${tool.title}')">
                             🔥 Unlock Tool
                         </button>
                     </div>
@@ -1524,6 +1525,7 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
         async function renderMarketplace() {
             const grid = document.getElementById('marketplaceGrid');
             let items = fallbackMarketplace;
+            let liveSource = false;
 
             try {
                 const response = await fetch('/api/defense/solutions?limit=6', {
@@ -1534,6 +1536,7 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
                     const data = await response.json();
                     if (data.solutions && Array.isArray(data.solutions) && data.solutions.length > 0) {
                         items = data.solutions.slice(0, 6);
+                        liveSource = true;
                     }
                 }
             } catch (error) {
@@ -1541,18 +1544,31 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
             }
 
             grid.innerHTML = items.map(item => {
-                const demandPercent = item.demand || 75;
+                // Live items come from /api/defense/solutions (enrichSolution() in
+                // defenseMarketplace.js), which returns demand_score/cve_id/price_inr —
+                // not demand/cve/price. Reading the wrong field names silently fell back
+                // to hardcoded defaults (75%, 'N/A', ₹999) for every real listing.
+                const demandPercent = item.demand_score ?? item.demand ?? 75;
                 const severity = item.severity || 'MEDIUM';
                 const badgeClass = item.severityBadge || `badge-${severity.toLowerCase()}`;
-                const price = item.price || '₹999';
-                const priceNum = parseInt(price.match(/\\d+/)[0]);
+                const cveLabel = item.cve_id || item.cve || 'N/A';
+                const priceNum = item.price_inr != null ? Number(item.price_inr) : parseInt((item.price || '₹999').match(/\d+/)[0], 10);
+                const price = item.price_inr != null ? '₹' + priceNum.toLocaleString('en-IN') : (item.price || '₹999');
+                // Live items are dynamic defense_solutions rows — their IDs were never in
+                // the static TOOLS_CATALOG that /api/tools/purchase (CDB_PAY/cdbToolBuy)
+                // checks, so Buy Now always 404'd ("Product not found") and silently fell
+                // back to a WhatsApp message quoting the wrong (hardcoded) price above.
+                // Route these through the endpoint that already knows how to sell them.
+                const buyHandler = liveSource
+                    ? `window.cdbBuySolution && window.cdbBuySolution('${item.id}', ${priceNum}, '${item.title}')`
+                    : `window.CDB_PAY && window.CDB_PAY.open('${item.id}', ${priceNum}, '${item.title}')`;
 
                 return `
                     <div class="card marketplace-card">
                         <div class="marketplace-header">
                             <div class="threat-badges">
                                 <span class="badge ${badgeClass}">${severity}</span>
-                                <span class="badge badge-category">${item.cve || 'N/A'}</span>
+                                <span class="badge badge-category">${cveLabel}</span>
                             </div>
                         </div>
                         <h3 class="marketplace-title">${item.title}</h3>
@@ -1567,7 +1583,7 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
                             </div>
                         </div>
                         <div class="marketplace-price">${price}</div>
-                        <button class="btn btn-primary marketplace-button" onclick="window.CDB_PAY && window.CDB_PAY.open('${item.id}', ${priceNum}, '${item.title}')">
+                        <button class="btn btn-primary marketplace-button" onclick="${buyHandler}">
                             Buy Now →
                         </button>
                     </div>
@@ -1707,6 +1723,86 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
   }
 
   window.cdbToolBuy = cdbToolBuy;
+
+  /* Instant Razorpay checkout for Sentinel APEX defense-solutions marketplace
+   * items (dynamic defense_solutions rows) \u2014 mirrors cdbToolBuy above but talks
+   * to /api/defense/purchase/:id + /api/defense/verify/:id, the endpoints that
+   * actually know these solution IDs (the static /api/tools/purchase catalog
+   * does not, and always 404s for them). */
+  async function cdbBuySolution(solutionId, priceInr, label) {
+    var email = '';
+    try { email = localStorage.getItem('cdb_email') || ''; } catch (e) {}
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      email = (window.prompt('Enter your email to receive the purchased file/report:') || '').trim().toLowerCase();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+        alert('A valid email address is required to complete purchase and receive your file.');
+        return;
+      }
+      try { localStorage.setItem('cdb_email', email); } catch (e) {}
+    }
+
+    var manualFallback = function () {
+      if (window.CDB_PAYMENT && window.CDB_PAYMENT.open) {
+        CDB_PAYMENT.open({ product: solutionId, productLabel: label || solutionId,
+          amountLabel: priceInr ? '\u20B9' + Number(priceInr).toLocaleString('en-IN') : '', amount: priceInr ? String(priceInr) : '', email: email });
+      } else {
+        var msg = encodeURIComponent('Hi! I want to purchase: ' + (label || solutionId) + ' (\u20B9' + priceInr + '). Please share payment details.');
+        window.open('https://wa.me/918179881447?text=' + msg, '_blank');
+      }
+    };
+
+    try {
+      var oRes = await fetch('/api/defense/purchase/' + encodeURIComponent(solutionId), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, currency: 'INR' }),
+      });
+      var oData = await oRes.json().catch(function () { return {}; });
+      var order = oData && oData.order;
+
+      if (!oRes.ok || !order || !order.razorpay_key || !order.order_id ||
+          String(order.order_id).indexOf('order_') !== 0) {
+        manualFallback(); return;
+      }
+
+      await loadRzp();
+      if (!window.RazorpayNative) { manualFallback(); return; }
+
+      var rzp = new window.RazorpayNative({
+        key: order.razorpay_key, amount: order.amount, currency: order.currency || 'INR',
+        name: 'CYBERDUDEBIVASH AI Security Hub',
+        description: label || solutionId,
+        order_id: order.order_id,
+        prefill: { email: email },
+        theme: { color: '#10b981' },
+        handler: async function (rp) {
+          try {
+            var vRes = await fetch('/api/defense/verify/' + encodeURIComponent(solutionId), {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: rp.razorpay_order_id,
+                razorpay_payment_id: rp.razorpay_payment_id,
+                razorpay_signature: rp.razorpay_signature,
+              }),
+            });
+            var vData = await vRes.json().catch(function () { return {}; });
+            if (vRes.ok && vData.success) {
+              alert('\u2705 Purchase Confirmed!\n\n' + (vData.solution_title || label || solutionId) +
+                '\n\nYour file/report will be delivered to ' + email + ' within 24 hours.\n\nPayment ID: ' + rp.razorpay_payment_id);
+            } else {
+              alert('Payment received (ID: ' + rp.razorpay_payment_id + '). Delivery to ' + email + ' within 24 hours. Contact contact@cyberdudebivash.in for support.');
+            }
+          } catch (e) {
+            alert('Payment received (ID: ' + rp.razorpay_payment_id + '). Our team will deliver to ' + email + ' within 24 hours.');
+          }
+        },
+      });
+      rzp.open();
+    } catch (err) {
+      manualFallback();
+    }
+  }
+
+  window.cdbBuySolution = cdbBuySolution;
 
   /* CDB_PAY bridge \u2014 routes all existing onclick calls through instant Razorpay */
   window.CDB_PAY = { open: cdbToolBuy };
