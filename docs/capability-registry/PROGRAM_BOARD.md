@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11, P0: dashboard-authenticated customers ran homepage scans/AI analysis/feature-gates as anonymous — SUBSCRIPTION.getToken() key mismatch, fixed)
+## Current status (2026-07-11, P1: Scans page "Download" report link was dead for every completed scan of every customer — fixed; Threat Graph relationship edges diagnosed as structurally impossible today — documented, not yet fixed, needs an owner decision)
 
 **Scope note (2026-07-10):** starting this date, sessions on this branch
 follow the customer's "production readiness lifecycle" priority (visitor →
@@ -201,6 +201,102 @@ see session log below.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — P1: Scans page "Download" report link dead for every customer; Threat Graph relationship edges diagnosed as structurally impossible (fix not yet applied — needs owner decision)
+
+- **Trigger:** continuing the same audit directive as the entry below
+  ("check everything... the way customers use it"), traced what happens
+  *after* a scan completes — does it actually show up correctly across the
+  dashboard (Overview, Scans, Threat Graph, CISO Metrics) — since the prior
+  wave only fixed getting a real customer's token onto the scan request
+  itself, not what the dashboard does with the result afterward.
+- **Method:** signed up a fresh account via `user-dashboard.html`, ran a
+  real scan of a live target (`scanme.nmap.org` / `example.com`) through
+  the now-fixed homepage flow, waited for actual backend completion (not
+  simulated), then inspected `/api/history`, the Scans page, Threat Graph,
+  and CISO Metrics for that account with real data behind them — the exact
+  gap flagged as a follow-up in the previous wave's entry ("Threat
+  Graph/CISO Metrics population from a real scan's data... previously only
+  tested against empty-state").
+- **Finding 1 (FIXED) — Download report link always "—":**
+  `renderAllScans()` gated the Download cell on `s.report_url` from `GET
+  /api/history`. Grepped every write path to `scan_history`
+  (`workers/src/lib/queue.js` `insertD1History()`, the schema itself, and
+  the sync path `workers/src/handlers/domain.js` `trackDomainScan()`) —
+  none of them, nor the D1 schema, has ever had a `report_url` column or
+  concept. This field was permanently `undefined` for every scan of every
+  customer since this table shipped; the button never worked, for anyone.
+  The backend capability to build a real report already existed, fully
+  built and already unit-tested (`workers/test/reportGeneration.test.mjs`):
+  `POST /api/report/generate` resolves a report from just a `scan_id` via
+  the identity-scoped cache `cacheScanResultForReport()` already writes on
+  every scan (confirmed `domain.js` calls it on both the fresh-scan and
+  cache-hit paths) — it simply had no caller anywhere on the Scans page.
+  Same recurring pattern this whole session: a complete, tested backend
+  feature with zero frontend wiring.
+  - **Fix:** Download cell now renders a button
+    (`onclick="downloadScanReport('${s.scan_id}', this)"`, shown whenever
+    the row has a `scan_id` — effectively always) that POSTs
+    `/api/report/generate` through the page's own authenticated
+    `apiFetch()` and opens the real returned `download_url`. A 422 (scan
+    older than the 7-day cache window) shows a friendly toast instead of
+    silently doing nothing. Purely additive/frontend-only — zero backend
+    changes, zero schema changes.
+  - **Verified live** (Playwright, local file relayed against the real
+    backend): signed up, ran a real scan of `example.com`, clicked
+    Download on the Scans page — it opened a genuine generated report
+    (`/api/report/<uuid>`, titled "Domain Security Assessment —
+    example.com") in a new tab, not a dead link.
+  - **Regression coverage:** `workers/test/scanHistoryReportDownloadFix.test.mjs`
+    (5 tests).
+- **Finding 2 (DIAGNOSED, NOT FIXED) — Threat Graph can never show
+  relationship edges, for any customer, regardless of scan volume:**
+  `initThreatGraph()` builds nodes/edges from `s.findings` on each history
+  entry — but `scan_history` (both the D1 write path and its KV
+  predecessor) has never persisted a `findings` column at all, only
+  summary fields (`risk_score`, `grade`, etc.). Confirmed via a direct
+  backend call: a real scan of `scanme.nmap.org` returns 7 rich, genuinely
+  good findings (MITRE ATT&CK technique mappings, CVSS, CWE, EPSS) in the
+  live HTTP response, all of which are discarded the moment that response
+  is sent — never written anywhere retrievable. Live-verified end state:
+  every real scan produces exactly one isolated "domain" node on the
+  Threat Graph and zero edges, forever — the feature is structurally
+  incapable of showing a graph, not just occasionally sparse. Even if
+  `findings` were persisted, `initThreatGraph()`'s edge-building only
+  recognizes `f.cve_id`/`f.ip`/`f.actor` fields — the domain scanner's real
+  finding shape (`id`, `title`, `severity`, `cwe_ids`, `mitre_techniques`)
+  has none of those, so edges would still not appear for this module
+  without also correcting that field mapping.
+  - **Why not fixed this wave:** closing this properly needs a new nullable
+    column on the live `scan_history` D1 table. Schema changes in this repo
+    are deliberately gated behind a manual, human-confirmed GitHub Action
+    (`.github/workflows/db-migrate.yml` — requires typing `APPLY`,
+    explicitly "manual-only by design: schema changes must never ride
+    silently on a code push"). That gate exists on purpose and isn't mine
+    to bypass by shipping code that silently depends on a migration no one
+    has run yet — doing so risks the D1 history read falling back to its
+    (undated) KV shadow copy the moment the richer query is attempted
+    against a column that doesn't exist yet in production. Flagged for the
+    owner rather than unilaterally scheduling a production schema change.
+  - **Recommended next step (owner decision needed):** add a nullable
+    `findings` column to `scan_history`, persist a compact
+    (id/title/severity/cvss/cwe) summary per scan, extend
+    `handleScanHistory`'s SELECT to return it (with a safe fallback query
+    if the column isn't there yet), and remap `initThreatGraph()`'s node
+    types to the real finding shape instead of the CVE/IP/actor fields
+    only some modules populate.
+- **Commits this session:** `frontend/user-dashboard.html`
+  (`downloadScanReport()` + Download-cell wiring), new test
+  `workers/test/scanHistoryReportDownloadFix.test.mjs`.
+- **Validator:** 21 domain files, 66 capability ids, 0 failures, 0 warnings.
+- **Tests:** 204 files / 2111 tests passing (full suite).
+  `scripts/seo-structure-lock.mjs`: 22/22 pages green.
+- **Risks / follow-ups:** Threat Graph fix above is pending an owner
+  go-ahead on the schema migration. CISO Metrics' honest-fallback
+  arithmetic (derives risk/critical/assets from `_allScans` when the CISO
+  API has no data) was exercised live and is already correct given what
+  `scan_history` currently stores — it will automatically pick up richer
+  CVE-level detail too once/if the findings column lands.
 
 ### 2026-07-11 — P0: dashboard-authenticated customers silently ran homepage scans as anonymous visitors
 

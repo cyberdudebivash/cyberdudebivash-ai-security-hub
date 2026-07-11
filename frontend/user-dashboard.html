@@ -2431,9 +2431,42 @@
         <td><span style="color:${riskColor(s.risk_score)}">${s.risk_score ?? '—'}/100</span></td>
         <td>${s.findings_count ?? (s.findings?.length ?? '—')}</td>
         <td style="color:var(--muted);font-size:.8rem">${fmtDate(s.scanned_at)}</td>
-        <td>${s.report_url ? `<a href="${s.report_url}" target="_blank" class="btn btn-outline btn-sm">Download</a>` : '<span style="color:var(--muted);font-size:.78rem">—</span>'}</td>
+        <td>${s.scan_id ? `<button class="btn btn-outline btn-sm" onclick="downloadScanReport('${s.scan_id}', this)">Download</button>` : '<span style="color:var(--muted);font-size:.78rem">—</span>'}</td>
       </tr>
     `).join('');
+  }
+
+  // scan_history rows never carry a pre-built report_url (nothing in the
+  // backend ever writes one) — this Download button was always rendering
+  // "—" for every completed scan of every customer. POST /api/report/generate
+  // already builds a real downloadable report from just a scan_id (it reads
+  // the identity-scoped result cacheScanResultForReport() writes on every
+  // scan), it just had no caller anywhere in the dashboard. Generates
+  // on-demand, on click, instead of requiring a pre-computed URL.
+  async function downloadScanReport(scanId, btn) {
+    if (!scanId) return;
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Generating…';
+    try {
+      const res = await apiFetch('/api/report/generate', {
+        method: 'POST',
+        body: JSON.stringify({ scan_id: scanId }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || !d.download_url) {
+        showToast(res.status === 422
+          ? 'This scan is more than 7 days old — re-run it to generate a fresh report.'
+          : (d.error || 'Could not generate report.'), 'err');
+        return;
+      }
+      window.open(d.download_url, '_blank');
+    } catch (e) {
+      showToast('Could not generate report. Please try again.', 'err');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
   }
 
   function filterScans() {
