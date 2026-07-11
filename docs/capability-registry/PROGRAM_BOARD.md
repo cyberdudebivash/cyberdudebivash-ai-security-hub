@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry six below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed Tier-1 items #1–#5: `enterprise-kpi-dashboard.html`'s impossible-tier admin gate, `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory auth gaps, `revenue-command-center.html`'s 6-of-8 broken panels, `mssp-command-center.html`'s Add Partner 400 bug, and `automation-dashboard.html`'s 5 dead/wrong endpoints. **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 (open) rather than lost or force-pushed over the merged history. See the top 5 session-log entries below. 19 of the 24 backlog items remain, queued in the same stated priority order.)
+## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry seven below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed Tier-1 items #1–#6 (of 10): `enterprise-kpi-dashboard.html`'s impossible-tier admin gate and `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory auth gaps (PR #184, merged); `revenue-command-center.html`'s 6-of-8 broken panels, `mssp-command-center.html`'s Add Partner 400 bug, `automation-dashboard.html`'s 5 dead/wrong endpoints, and `soc-dashboard.html`'s AI Decision Engine field/scaling bugs (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 6 session-log entries below. 18 of the 24 backlog items remain (4 more Tier 1, all of Tier 2 and Tier 3), queued in the same stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 226 files / 2358 tests passing | `npx vitest run`, run 2026-07-11 — +1 file / +11 tests this wave (`automationDashboardDeadEndpoints.test.mjs`, 11 new). Baseline going into this wave was 225 files / 2347 tests (Tier-1 item #4) |
+| Worker test suite | 227 files / 2365 tests passing | `npx vitest run`, run 2026-07-11 — +1 file / +7 tests this wave (`socDashboardDecisionEngineFieldFix.test.mjs`, 7 new). Baseline going into this wave was 226 files / 2358 tests (Tier-1 item #5) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -245,6 +245,71 @@ already shipped under it:
 - CAP-DEVPORTAL-002/003/004 fixes: ✅ DONE (2026-07-09, plus CAP-DEVPORTAL-004's
   own residual sap_-key auth-resolution gap closed 2026-07-11) — see the
   remediation section above and today's session log entry below.
+
+## Session log (most recent first)
+
+### 2026-07-11 — Tier-1 backlog item #6: soc-dashboard.html — AI Decision Engine field/scaling bugs
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-1 item #5.
+- **Re-verified against actual code:** `loadDecisions()`'s real-data path
+  read `d.action`/`d.reasoning`/`d.timestamp`. The real object shape
+  (`services/decisionEngine.js`'s own header comment: `{decision, reason,
+  confidence, priority, actions_recommended, risk_score}`, plus
+  `decided_at` added at construction) never matched — every real decision
+  rendered as a generic "ANALYZE" badge with "Processing threat data..."
+  text, regardless of what the engine actually decided. Separately,
+  `confidence` is already 0–100 (`computeConfidence()`'s own
+  `Math.min(100, Math.round(...))`) — the frontend did `Math.round(d.confidence
+  * 100)` for the percentage and `(d.confidence||.85)*80` for the bar
+  width, both assuming a 0–1 scale, so a real confidence of 75 rendered as
+  "7500%" with a confidence bar ~6000px wide.
+- **Mock-data fallback, re-examined as two distinct call sites, not one bug:**
+  `buildMockDecisions()` (fabricated CVE-2025-xxxx / 185.234.x.x IP data)
+  is called from two places. (1) When `USER_PLAN !== 'ENTERPRISE'`
+  (`USER_PLAN` is read from `localStorage.getItem('cdb_plan')` — the
+  "client-controlled localStorage value" in the audit finding) — this path
+  sits behind `#decision-gate`, an overlay that clearly reads "Autonomous
+  threat triage and response requires ENTERPRISE plan" with an "Upgrade to
+  Enterprise" button. Confirmed this is a legitimate, honestly-disclosed
+  teaser pattern (matches this codebase's own established convention for
+  gated preview content) — left unchanged. (2) The `catch` block of the
+  *real* fetch, with no gate or disclosure of any kind — a genuine
+  ENTERPRISE customer hitting a transient network error would silently see
+  fabricated threat data presented as live. This is the actual bug: fixed
+  to show an honest "Unable to load decisions — try refreshing" message
+  instead, matching the disclosure standard this file already uses
+  elsewhere (`loadIOCs()`'s own comment: "a clear upgrade prompt rather
+  than a confusing empty state").
+- **Fix:** `d.action`→`d.decision`, `d.reasoning`→`d.reason`,
+  `d.timestamp`→`d.decided_at`; confidence display is now
+  `Math.round(d.confidence)` (no `*100`) and the bar width scales by `*0.8`
+  (not `*80`) to correctly map a 0–100 value onto the existing 0–80px bar.
+  Also added the 5 missing `.dt-*` CSS classes for real decision values
+  that had never had one (`auto_contain`, `fast_patch`, `monitor_closely`,
+  `low_priority`, `false_positive` — only `escalate`/`block`/`alert`/`allow`
+  existed), since real decisions will now actually reach this code path.
+- **Tests:** new `test/socDashboardDecisionEngineFieldFix.test.mjs` (7
+  tests, static source-parse) — confirms the real field names are read and
+  the old ones are gone, confidence is not re-scaled, the catch block no
+  longer calls `buildMockDecisions()` and shows the honest message instead,
+  the legitimate non-ENTERPRISE teaser path is untouched and still clearly
+  overlaid, and all 6 real `DECISIONS` values have a matching CSS class.
+  Full suite green: 227 files / 2365 tests (baseline 226/2358 from Tier-1
+  item #5).
+- **Validator:** 0 failures, 0 warnings, 97 capabilities (unchanged — same
+  reasoning as items #1–#5). `PRODUCTION_READINESS_REPORT.md` regenerated
+  (timestamp-only diff).
+- **Also fixed in this entry's commit:** restored the `## Session log (most
+  recent first)` heading, accidentally dropped by the previous entry's own
+  edit (item #5) — confirmed via `git show b8bca62 -- PROGRAM_BOARD.md`,
+  the heading line was replaced instead of preserved. No content was lost,
+  only the section heading itself; this fixes it in place per this file's
+  own convention of correcting mistakes visibly rather than silently.
+- **Remaining in the Tier 1–3 backlog (18 of 24):** next up, in stated
+  order: `user-dashboard.html` billing token-storage + `loadDashboard()`
+  bug (Tier-1 #7), then My Trainings/My Purchases field mismatch (Tier-1
+  #8), then developer-onboarding.html and tools.html (Tier-1 #9–#10)
+  before Tier 2/3 (full original list in the audit entry seven below).
 
 ### 2026-07-11 — Tier-1 backlog item #5: automation-dashboard.html — 5 dead/wrong endpoints
 
