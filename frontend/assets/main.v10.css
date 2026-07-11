@@ -377,12 +377,15 @@ nav.nav-scrolled{box-shadow:0 4px 32px rgba(0,0,0,.55)}
 a.nav-brand{font-size:17px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap;text-decoration:none!important;cursor:pointer;display:flex;align-items:center;gap:6px;transition:opacity .2s;flex-shrink:0}
 a.nav-brand:hover{opacity:.82}
 .nav-links{display:flex;gap:20px;align-items:center;font-size:13px;font-weight:600}
-.nav-links a{color:var(--text-muted);transition:color .2s;position:relative;padding-bottom:3px;text-decoration:none}
-.nav-links a:hover{color:var(--accent);text-decoration:none}
-.nav-links a.nav-active{color:var(--accent)!important}
-.nav-links a.nav-active::after{content:'';position:absolute;bottom:-4px;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px}
-.nav-cta{background:linear-gradient(135deg,var(--accent2),#4f46e5);color:#fff!important;padding:8px 16px;border-radius:8px;transition:transform .2s,box-shadow .2s!important}
-.nav-cta:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(124,58,237,.4)!important}
+.nav-links a{color:var(--text);opacity:.82;transition:color .2s,opacity .2s,text-shadow .2s;position:relative;padding-bottom:3px;text-decoration:none}
+.nav-links a:hover{color:var(--accent);opacity:1;text-decoration:none;text-shadow:0 0 12px rgba(0,212,255,.55)}
+.nav-links a.nav-active{color:var(--accent)!important;opacity:1}
+.nav-links a.nav-active::after{content:'';position:absolute;bottom:-4px;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;box-shadow:0 0 8px rgba(0,212,255,.6)}
+.nav-cta{background:linear-gradient(135deg,var(--accent2),#4f46e5);color:#fff!important;padding:8px 16px;border-radius:8px;transition:transform .2s,box-shadow .2s!important;box-shadow:0 0 18px rgba(124,58,237,.3)!important}
+.nav-cta:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(124,58,237,.55)!important}
+/* ── Sign In (logged-out desktop CTA, injected by cdbApplyGates) ── */
+.nav-signin-cta{background:linear-gradient(135deg,rgba(0,212,255,.16),rgba(99,102,241,.12))!important;border-color:rgba(0,212,255,.4)!important;color:#00d4ff!important;font-weight:800!important;box-shadow:0 0 14px rgba(0,212,255,.22);transition:box-shadow .2s,transform .2s,border-color .2s}
+.nav-signin-cta:hover{box-shadow:0 0 24px rgba(0,212,255,.45);transform:translateY(-1px);border-color:rgba(0,212,255,.65)!important}
 /* ── Nav Dropdown ── */
 .nav-dropdown{position:relative}
 .nav-dd-toggle{cursor:pointer;display:flex;align-items:center;gap:4px;background:none;border:none;font-size:13px;font-weight:600;color:var(--text-muted);padding:0;transition:color .2s;font-family:inherit}
@@ -439,10 +442,26 @@ a.nav-brand:hover{opacity:.82}
   .breadcrumb-inner{padding:0 16px}
 }
 
-/* ── Ticker ────────────────────────────────────── */
-.ticker{background:var(--surface2);border-bottom:1px solid var(--border);overflow:hidden;padding:6px 0}
-.ticker-track{display:flex;gap:48px;animation:tick 30s linear infinite;white-space:nowrap;width:max-content}
-.ticker-item{font-size:11px;font-weight:700;color:var(--accent3);letter-spacing:1px;text-transform:uppercase}
+/* ── Ticker — SOC-2-style glowing compliance badges ─────────────────────── */
+.ticker{background:var(--surface2);border-bottom:1px solid var(--border);overflow:hidden;padding:10px 0}
+.ticker-track{display:flex;gap:14px;animation:tick 30s linear infinite;white-space:nowrap;width:max-content}
+.ticker-item{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:800;color:var(--accent3);letter-spacing:1px;text-transform:uppercase;
+  padding:6px 14px;border-radius:20px;
+  background:rgba(16,185,129,.09);border:1px solid rgba(16,185,129,.28);
+  box-shadow:0 0 10px rgba(16,185,129,.18);
+  transition:box-shadow .2s,transform .2s;
+}
+.ticker-item:hover{box-shadow:0 0 20px rgba(16,185,129,.4);transform:translateY(-1px)}
+/* 4-color rotation across the sequence — pure CSS, no HTML changes, works
+   identically across the duplicated (seamless-loop) half of the track. */
+.ticker-item:nth-child(4n+2){color:#00d4ff;background:rgba(0,212,255,.09);border-color:rgba(0,212,255,.28);box-shadow:0 0 10px rgba(0,212,255,.18)}
+.ticker-item:nth-child(4n+2):hover{box-shadow:0 0 20px rgba(0,212,255,.4)}
+.ticker-item:nth-child(4n+3){color:#a78bfa;background:rgba(124,58,237,.09);border-color:rgba(124,58,237,.28);box-shadow:0 0 10px rgba(124,58,237,.18)}
+.ticker-item:nth-child(4n+3):hover{box-shadow:0 0 20px rgba(124,58,237,.4)}
+.ticker-item:nth-child(4n){color:#f59e0b;background:rgba(245,158,11,.09);border-color:rgba(245,158,11,.28);box-shadow:0 0 10px rgba(245,158,11,.18)}
+.ticker-item:nth-child(4n):hover{box-shadow:0 0 20px rgba(245,158,11,.4)}
 @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 
 /* ── Hero ──────────────────────────────────────── */
