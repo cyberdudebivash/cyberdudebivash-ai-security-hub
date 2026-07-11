@@ -295,12 +295,19 @@ see session log below.
   (Cloudflare Worker) — this sandbox can't run the Workers runtime locally,
   so unlike the frontend-only fixes (verified pre-merge via the
   route-intercepted-Playwright-against-live-backend technique), these two
-  were verified via a real in-memory-SQLite test harness
+  were verified pre-merge via a real in-memory-SQLite test harness
   (`node:sqlite`, mirroring `orgRbacIsolation.test.mjs`'s existing pattern)
   driving the actual handler functions, plus precise code-reading against
-  the exact live repro. Both need a final live re-confirmation against the
-  real repro scenario once this merges and deploys — planned as the
-  immediate next step, not skipped.
+  the exact live repro. **Post-merge update (same session):** re-ran the
+  exact repro scenarios live against `cyberdudebivash.in` after deploy —
+  inviting an existing user by a deliberately mismatched-case + whitespace
+  email (`  P0-LIVEB-…@EXAMPLE.COM  `) now returns 201 "added to the
+  organization" (was 404); revoking a customer's only API key now correctly
+  drops `GET /api/keys` to `{keys:[], count:0}` (was still listing it at
+  `count:1`). The MFA fix was also re-confirmed live end-to-end: a real TOTP
+  code typed into the visible Settings input now shows "✅ 2FA is now
+  enabled" (was "Enter the 6-digit code from your app" on every attempt).
+  All four fixes in this wave are now live-verified, not just merged.
 - **Next recommended wave:** Organizations (create/invite/role-change/
   remove/delete) and CSV/PDF/PNG exports all worked correctly end-to-end in
   this pass once account-existence was confirmed properly — no further
