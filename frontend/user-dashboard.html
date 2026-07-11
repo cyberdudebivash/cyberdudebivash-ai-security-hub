@@ -1096,6 +1096,34 @@
           </div>
         </div>
 
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Scan History</span>
+            <select class="form-input" id="org-scans-module-filter" style="max-width:160px" onchange="loadOrgScans(_currentOrg.id, 0)">
+              <option value="">All Modules</option>
+              <option>domain</option><option>ai</option><option>redteam</option>
+              <option>identity</option><option>compliance</option>
+            </select>
+          </div>
+          <div class="card-body">
+            <table>
+              <thead>
+                <tr><th>Module</th><th>Target</th><th>Risk Score</th><th>Scanned By</th><th>Date</th></tr>
+              </thead>
+              <tbody id="org-scans-table">
+                <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px"><span class="spinner"></span> Loading…</td></tr>
+              </tbody>
+            </table>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+              <span style="color:var(--muted);font-size:.8rem" id="org-scans-range">—</span>
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-outline btn-sm" id="org-scans-prev" onclick="orgScansPage(-1)" disabled>← Prev</button>
+                <button class="btn btn-outline btn-sm" id="org-scans-next" onclick="orgScansPage(1)" disabled>Next →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="card" id="org-settings-card" style="display:none">
           <div class="card-header"><span class="card-title">Organization Settings</span></div>
           <div class="card-body">
@@ -2584,6 +2612,8 @@
   let _orgs = [];
   let _currentOrg = null;          // full GET /api/orgs/:id response
   let _removeMemberTarget = null;  // { orgId, userId }
+  let _orgScansOffset = 0;
+  const ORG_SCANS_LIMIT = 20;      // matches handleOrgScans' own default/cap
 
   function orgEsc(s) {
     const d = document.createElement('div');
@@ -2672,10 +2702,12 @@
       if (!res.ok) throw new Error(d.error || 'Failed to load organization');
       _currentOrg = d;
       renderOrgDetail(d);
-      // handleOrgDashboard requires the real UUID (unlike GET /api/orgs/:id,
-      // it does not resolve a slug) — d.id (from the raw organizations row
-      // spread into the response) is always the real id, not the slug.
+      // handleOrgDashboard/handleOrgScans require the real UUID (unlike GET
+      // /api/orgs/:id, neither resolves a slug) — d.id (from the raw
+      // organizations row spread into the response) is always the real id.
       loadOrgDashboard(d.id);
+      document.getElementById('org-scans-module-filter').value = '';
+      loadOrgScans(d.id, 0);
     } catch (e) {
       showToast(e.message, 'err');
       showOrgList();
@@ -2783,6 +2815,52 @@
     } catch (e) {
       // Non-fatal — the member list/settings above are still usable.
     }
+  }
+
+  // GET /api/orgs/:id/scans — org-wide scan history across every active
+  // member, the one backend handler deliberately left unwired in the
+  // 2026-07-09 org-management build (the detail view above only ever showed
+  // a 30-day summary count via loadOrgDashboard, never the underlying rows).
+  async function loadOrgScans(orgId, offset) {
+    _orgScansOffset = offset;
+    const tbody = document.getElementById('org-scans-table');
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px"><span class="spinner"></span> Loading…</td></tr>`;
+    const module = document.getElementById('org-scans-module-filter').value;
+    try {
+      let url = '/api/orgs/' + encodeURIComponent(orgId) + '/scans?limit=' + ORG_SCANS_LIMIT + '&offset=' + offset;
+      if (module) url += '&module=' + encodeURIComponent(module);
+      const res = await apiFetch(url);
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to load scan history');
+      const scans = d.scans || [];
+      if (!scans.length) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No scans yet.</td></tr>`;
+      } else {
+        tbody.innerHTML = scans.map(s => `
+          <tr>
+            <td><span class="badge badge-blue">${orgEsc(s.module || '—')}</span></td>
+            <td style="font-family:var(--mono);font-size:.8rem">${orgEsc(s.target_summary || '—')}</td>
+            <td><span style="color:${riskColor(s.risk_score)}">${s.risk_score ?? '—'}/100</span></td>
+            <td>${orgEsc(s.scanned_by || '—')}</td>
+            <td style="color:var(--muted);font-size:.8rem">${fmtDate(s.scanned_at)}</td>
+          </tr>`).join('');
+      }
+      const total  = d.total || 0;
+      const rangeStart = total ? offset + 1 : 0;
+      const rangeEnd   = Math.min(offset + scans.length, total);
+      document.getElementById('org-scans-range').textContent = total ? `${rangeStart}–${rangeEnd} of ${total}` : '0 of 0';
+      document.getElementById('org-scans-prev').disabled = offset <= 0;
+      document.getElementById('org-scans-next').disabled = offset + scans.length >= total;
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Could not load scan history.</td></tr>`;
+      document.getElementById('org-scans-prev').disabled = true;
+      document.getElementById('org-scans-next').disabled = true;
+    }
+  }
+
+  function orgScansPage(direction) {
+    if (!_currentOrg) return;
+    loadOrgScans(_currentOrg.id, Math.max(0, _orgScansOffset + direction * ORG_SCANS_LIMIT));
   }
 
   function openInviteModal() {

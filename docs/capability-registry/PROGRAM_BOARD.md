@@ -28,9 +28,9 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 95 | `node scripts/registry/validate.mjs` |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 |
-| Worker test suite | 210 files / 2180 tests passing | `npx vitest run`, run 2026-07-11 (+2 files / +11 tests since the CAP-CRM-007 entry above: `workers/test/wafOnAttributeFalsePositive.test.mjs` +7, `workers/test/marketplaceDeadCodeRemoval.test.mjs` +4) |
+| Worker test suite | 211 files / 2188 tests passing | `npx vitest run`, run 2026-07-11 (+3 files / +19 tests since the CAP-CRM-007 entry above: `workers/test/wafOnAttributeFalsePositive.test.mjs` +7, `workers/test/marketplaceDeadCodeRemoval.test.mjs` +4, `workers/test/orgScansPagination.test.mjs` +8) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
-| Backend / Frontend / Parity | 89.5% / 64.7% / 58.9% | `PRODUCTION_READINESS_REPORT.md` — backend up from 88.4%; CAP-MKT-005's backend.status flipped duplicate→exists this session (dead shadowed code removed) |
+| Backend / Frontend / Parity | 89.5% / 65.3% / 60.0% | `PRODUCTION_READINESS_REPORT.md` — frontend/parity up from 64.7%/58.9%; CAP-ORG-001's frontend.status flipped partial→exists this session (last deferred handler wired) |
 | Customer journeys browser-verified | 3/95 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — all three flipped to `true` this wave) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
 | Gaps by severity | Critical 10 · High 23 · Medium 12 · Low 50 | `PRODUCTION_READINESS_REPORT.md` — up from Critical 9 · High 15 · Medium 4 · Low 38 before this wave. The increase is the 3-domain audit doing its job: CAP-COMP-001 is 1 new Critical; CAP-COMP-002/004/005, CAP-MYTHOS-003, CAP-TIH-002/004/009/014 are 8 new High. None of the original 9 Critical/15 High items got worse — see session log |
 
@@ -318,6 +318,71 @@ see session log below.
   below this one for the full finding and fix). `customer_journey_complete`
   correctly stays `false` for CAP-CRM-007 pending a follow-up live check
   once that second fix is also deployed.
+
+### 2026-07-11 — CAP-ORG-001: wired the last deferred handler (org-wide scan history); fixed a real pagination-total bug found alongside it
+
+- **Trigger:** continuing the backlog per the customer's "auto-merge +
+  continue" authorization, after CAP-MKT-005's catalog-mismatch finding was
+  surfaced for a separate decision (still pending). Picked CAP-ORG-001
+  specifically because it was "mostly fixed" already (9 of 10 backend
+  handlers had real UI as of 2026-07-09) with one small, precisely-scoped,
+  deliberately-deferred increment left — not a business decision, not a
+  greenfield build, the same shape of task as CAP-CRM-007/CAP-MKT-005.
+- **What shipped:** a new "Scan History" card in the organization detail
+  view (`frontend/user-dashboard.html`'s `#page-orgs`), module filter +
+  Prev/Next pager, calling `GET /api/orgs/:id/scans` — the one backend
+  handler (`handleOrgScans`) left unwired in the 2026-07-09 build. Follows
+  the existing page's established conventions exactly (card/table markup,
+  `apiFetch`/`orgEsc`/`riskColor`/`fmtDate` helpers already used elsewhere
+  on the same page) rather than introducing new patterns.
+- **Backend bug found and fixed in the same pass:** `handleOrgScans`'
+  `total` field was `results?.length` — i.e. always capped at whatever
+  `limit` was requested (default 20), never the real row count across the
+  org. A pager built directly on it would work fine on page 1 and then have
+  no way to tell "more pages exist" from "this is everything" the moment an
+  org had more scans than one page — shipping the new UI against the
+  as-documented contract without checking would have reproduced the exact
+  "looks right until it doesn't" bug class this whole registry exists to
+  catch. Fixed with a real `COUNT(*)` over the identical WHERE clause
+  (member ids + optional module filter); the `SELECT ... LIMIT ... OFFSET`
+  query itself is byte-for-byte unchanged.
+- **Verified:** new `workers/test/orgScansPagination.test.mjs` (8 tests) —
+  backend tests seed 28 `scan_history` rows (deliberately more than the
+  20-row default page size, since the pre-existing 2-row fixture in
+  `phase9OrgDashboardSchema.test.mjs` can't distinguish the bug from the fix
+  — both return 2 either way) to prove `total` is the real 28, not 20;
+  confirm page-2 math (offset=20 → 8 remaining rows, `total` unchanged);
+  confirm the module filter narrows `scans` and `total` consistently;
+  confirm a non-member and a real member of a *different* org both
+  correctly 403 (no cross-org leak). Frontend static tests confirm
+  `loadOrgScans()`/`orgScansPage()` use the real field names
+  (`target_summary`/`scanned_by`/`risk_score`/`scanned_at`) and the pager's
+  disabled-state logic. Additionally, a real headless-Chromium session drove
+  the actual, unmodified extracted `loadOrgScans()`/`orgScansPage()`
+  functions against a minimal DOM harness seeded with the same 28-row
+  fixture: confirmed page 1 shows 20 rows with a correct "1–20 of 28" range
+  and Next enabled/Prev disabled; clicking Next shows the remaining 8 with
+  "21–28 of 28" and the buttons correctly flipped; clicking Prev returns to
+  page 1; the module filter narrows to 3 rows with Next correctly disabled;
+  an empty-org response renders "No scans yet." Zero page errors across the
+  whole sequence. `node --check` on the extracted script: syntax valid.
+  Full backend suite: 211 files / 2188 tests (up from 210/2180 — the 1 new
+  file). `node scripts/registry/validate.mjs`: 0 failures, 0 warnings.
+  `scripts/seo-structure-lock.mjs`: 22/22 pages green.
+- **Commits this session:** `workers/src/handlers/orgManagement.js`
+  (`total` fix), `frontend/user-dashboard.html` (Scan History card +
+  `loadOrgScans`/`orgScansPage` + 2 call-site hooks), new test
+  `workers/test/orgScansPagination.test.mjs`,
+  `docs/capability-registry/domains/organizations.json` (CAP-ORG-001
+  entry), `docs/capability-registry/PRODUCTION_READINESS_REPORT.md`
+  (regenerated), `docs/capability-registry/PROGRAM_BOARD.md` (this entry).
+- **Risks / follow-ups:** `operational_status` stays `PILOT ONLY` — this
+  pass verified against a local harness with a mocked backend, not a real
+  `dynamic_browser` pass against live production (true of the entire
+  org-management capability since its 2026-07-09 build, not new to this
+  increment). A production pass covering the full flow (create → invite →
+  scan-history pagination → settings → delete) is the natural next
+  increment to flip this to GA, whenever prioritized.
 
 ### 2026-07-11 — CAP-MKT-005: removed dead shadowed marketplace routes; discovered and flagged (not fixed) a deeper catalog product-id mismatch
 
