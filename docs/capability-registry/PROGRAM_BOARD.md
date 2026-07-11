@@ -203,6 +203,82 @@ see session log below.
 
 ## Session log (most recent first)
 
+### 2026-07-11 — Platform-wide API-wiring audit: confirmed correctly wired to cyberdudebivash.in end-to-end; fixed 2 real outliers
+
+- **Trigger:** the owner asked for a full check — is the entire platform,
+  backend to frontend, consistently wired to the platform's own API
+  (`https://cyberdudebivash.in/api/`), or are there stray places calling
+  somewhere else — before continuing to the next task.
+- **Method:** enumerated every distinct external domain referenced anywhere
+  in `frontend/` (repo-wide grep for `https?://` targets), then every
+  distinct API-base variable declaration (`const/let/var API`/`API_BASE`)
+  across all ~40 frontend pages/scripts that define one, then checked the
+  entire backend (`workers/src`) for any outbound `fetch()` to a sibling
+  cyberdudebivash domain.
+- **Finding: the platform is correctly wired end-to-end**, with 2 small,
+  real exceptions (below). Of ~40 API-base declarations checked: the large
+  majority use a same-origin relative path (`''`) or the explicit
+  `https://cyberdudebivash.in`, several with a deliberate, well-engineered
+  primary-domain-first-with-resilience-fallback pattern (`frontend/
+  index.html`'s `API_ENDPOINTS` array: `CONFIG.API_BASE` primary, raw
+  Workers URL fallback, with retry/timeout — a feature, not a bug). The
+  backend never calls out to any sibling domain — fully self-contained;
+  every `cyberdudebivash.in` URL found in `workers/src` is a developer-
+  facing curl/JS/Python code example (`developerOnboardingHandler.js`),
+  correctly absolute since those are for external use. One historical bug of
+  exactly this class (a non-resolving bare `workers.dev` fallback that made
+  a whole dashboard 100% dead) was already found and fixed in an earlier
+  pass — `soc-dashboard.html`'s own in-code comment documents it in detail.
+- **Ecosystem cross-links are correct as-is, not a gap — owner-confirmed:**
+  `tools.cyberdudebivash.com`, `blog.cyberdudebivash.in`,
+  `www.cyberdudebivash.com`, and `intel.cyberdudebivash.com` are deliberate
+  links to sibling CYBERDUDEBIVASH-vendor properties (a Tools Suite, a blog,
+  the core corporate site, and the separate Threat Intel product this
+  platform's own API-subscription tiers are sold through — see CAP-MKT-005's
+  session entry below). Nothing on `cyberdudebivash.in` fetches data from
+  them for core platform functionality; they're navigational cross-
+  promotion and, for the API-subscription line, an intentional external
+  storefront — not a wiring defect. Explicitly confirmed with the owner
+  before treating this as settled.
+- **2 real, fixed exceptions — same-platform backend, wrong hostname (not
+  an ecosystem-link question at all):** `frontend/index.html`'s
+  "CDB_HARDENED_STATS" widget and the entirety of `frontend/gadgets.html`'s
+  dashboard engine both hardcoded the raw Cloudflare Workers URL
+  (`cyberdudebivash-security-hub.iambivash-bn.workers.dev`) unconditionally
+  — this platform's own backend, just not through its own custom domain.
+  Both still worked (the raw Workers URL stays live alongside the custom
+  domain) but were needlessly fragile and the only 2 places in the whole
+  codebase not following the established convention. Fixed:
+  `index.html`'s widget now goes through `CONFIG.API_BASE` first (this
+  file's own documented primary source) with the same
+  `https://cyberdudebivash.in` fallback default; `gadgets.html` now uses a
+  same-origin relative base (`''`), matching its own canonical URL
+  (`https://cyberdudebivash.in/gadgets`) and the majority-pattern used by
+  `billing-portal.html`, `ai-security-scorecard.html`, and others.
+- **Verified:** new `workers/test/frontendApiBaseConsistency.test.mjs` (6
+  tests): confirms neither file hardcodes the raw Workers URL anymore;
+  confirms the new patterns are present; confirms `index.html`'s separate,
+  deliberate multi-endpoint resilience fallback (a different, correct
+  pattern) is untouched; confirms `gadgets.html`'s API calls (template-
+  literal `${API}/api/...` usage) still resolve correctly with an empty-
+  string relative base; confirms the ecosystem cross-links weren't
+  accidentally removed. `node --check` on both extracted script blocks:
+  syntax valid. Full backend suite: 215 files / 2221 tests passing (up from
+  214/2215 — the 1 new file). `node scripts/registry/validate.mjs`: 0
+  failures, 0 warnings (no domain JSON touched — this is cross-cutting
+  frontend infrastructure, not itself a customer-facing capability in this
+  registry's schema sense, matching the WAF false-positive fix's precedent
+  of not minting a `CAP-*` id for infra-level findings).
+  `scripts/seo-structure-lock.mjs`: 22/22 pages green.
+- **Commits this session:** `frontend/index.html` (1 API-base fix),
+  `frontend/gadgets.html` (1 API-base fix), new test
+  `workers/test/frontendApiBaseConsistency.test.mjs`,
+  `docs/capability-registry/PROGRAM_BOARD.md` (this entry).
+- **Risks / follow-ups:** none identified — this was a clean, bounded,
+  low-risk consistency fix with no functional behavior change (both pages
+  still resolve to the exact same backend, just via the platform's own
+  domain instead of bypassing it).
+
 ### 2026-07-11 — GDPR/compliance-framework-claims contradiction reconciled (owner: "make the tough decision correctly & perfectly")
 
 - **Trigger:** the owner explicitly delegated the CAP-COMP-005 follow-on
