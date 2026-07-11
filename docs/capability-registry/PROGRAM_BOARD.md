@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11, Backlog-sweep wave 2: CAP-MSSP-001 live-reverified against production (dead-end fix confirmed deployed, real non-mutating login-endpoint check); CAP-COMP-001 (found in wave 1's 3-domain audit) fixed — a compliance-pack nav link no longer leads to a hidden, auth-gated section for logged-out visitors. Metrics table below unchanged from wave 1 — priority fields are historical-severity records, not auto-derived from the now-fixed booleans, matching this session's established convention. Also still open: Threat Graph findings-persistence fix from an earlier wave still needs the owner to run the gated D1 Schema Migration workflow with `workers/schema_migration_scan_history_findings_2026_07.sql` to activate)
+## Current status (2026-07-11, Backlog-sweep wave 2: CAP-MSSP-001 live-reverified against production (dead-end fix confirmed deployed, real non-mutating login-endpoint check); CAP-COMP-001 (found in wave 1's 3-domain audit) fixed — a compliance-pack nav link no longer leads to a hidden, auth-gated section for logged-out visitors. **Session resumed after a usage-limit cutoff mid-edit** (see EXECUTION_PROCEDURE.md §0 — the in-flight p4LoadFunnel edit was never committed and was not recoverable from git, so it was redone from scratch rather than resumed): CAP-CRM-007 (Conversion Trigger & Funnel Tracking) fixed — all 6 frontend call sites into conversionTriggers.js now match the real backend contract, including closing a paywall gate that failed OPEN for every feature/plan (zero live callers today, so zero current blast radius, but now correct before anything gets wired to it). Metrics table below updated for the CAP-CRM-007 fix only (frontend/parity % + test count) — priority fields are historical-severity records, not auto-derived from the now-fixed booleans, matching this session's established convention. Also still open: Threat Graph findings-persistence fix from an earlier wave still needs the owner to run the gated D1 Schema Migration workflow with `workers/schema_migration_scan_history_findings_2026_07.sql` to activate)
 
 **Scope note (2026-07-10):** starting this date, sessions on this branch
 follow the customer's "production readiness lifecycle" priority (visitor →
@@ -28,9 +28,9 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 95 | `node scripts/registry/validate.mjs` |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 |
-| Worker test suite | 207 files / 2149 tests passing | `npx vitest run`, run 2026-07-11 (+1 file / +5 tests this wave: `workers/test/complianceGlobalPublicAccess.test.mjs`, CAP-COMP-001's fix) |
-| Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 |
-| Backend / Frontend / Parity | 88.4% / 64.2% / 57.9% | `PRODUCTION_READINESS_REPORT.md` — the 29 newly-registered capabilities from the 3-domain audit pulled frontend/parity % down from the prior wave's 67.9%/62.7% even though nothing regressed — this is real, previously-invisible backlog becoming visible, not a new defect |
+| Worker test suite | 208 files / 2169 tests passing | `npx vitest run`, run 2026-07-11 (+1 file / +20 tests this wave: `workers/test/conversionTriggersFieldNameFix.test.mjs`, CAP-CRM-007's fix) |
+| Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: 9 other Critical (P1) items are untouched by this wave, and CAP-CRM-007 itself still counts toward the 10 per this file's own historical-priority convention (see below) |
+| Backend / Frontend / Parity | 88.4% / 64.7% / 58.9% | `PRODUCTION_READINESS_REPORT.md` — up from 64.2%/57.9%; CAP-CRM-007's frontend.status flipped partial→exists this wave, the only change |
 | Customer journeys browser-verified | 3/95 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — all three flipped to `true` this wave) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
 | Gaps by severity | Critical 10 · High 23 · Medium 12 · Low 50 | `PRODUCTION_READINESS_REPORT.md` — up from Critical 9 · High 15 · Medium 4 · Low 38 before this wave. The increase is the 3-domain audit doing its job: CAP-COMP-001 is 1 new Critical; CAP-COMP-002/004/005, CAP-MYTHOS-003, CAP-TIH-002/004/009/014 are 8 new High. None of the original 9 Critical/15 High items got worse — see session log |
 
@@ -202,6 +202,104 @@ see session log below.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Recovery + CAP-CRM-007 fix: Conversion Trigger & Funnel Tracking, all 6 call sites
+
+- **Trigger:** the prior session hit a hard usage-limit cutoff mid-edit
+  (mid-way through fixing `p4LoadFunnel`, immediately after fixing
+  `p4LoadTriggers`/removing `p4ShowTriggers` and fixing `p4CheckPaywall`, per
+  its own narrated transcript). Resumed per a customer request to review the
+  attached task-progress transcript, audit real state, and continue with
+  production-grade precision.
+- **Recovery (EXECUTION_PROCEDURE.md §3):** fresh container, so no local
+  state survived. `git status` on `claude/production-task-progress-q8el5e`
+  was clean; `git log` showed HEAD at `2128b58` (PR #167, `main`) with zero
+  divergence — confirmed via `git log origin/main -1` and
+  `git diff main origin/<branch> --stat` (empty). Per EXECUTION_PROCEDURE.md
+  §0's own stated lesson ("uncommitted work is not real"): the in-flight
+  `p4LoadFunnel` edit, and the already-narrated-as-done `p4LoadTriggers`/
+  `p4ShowTriggers`/`p4CheckPaywall` fixes, did not exist anywhere in git, on
+  any branch, local or remote — none of it was recoverable. All of it was
+  independently re-derived from the registry's own CAP-CRM-007 entry and a
+  fresh read of `workers/src/handlers/conversionTriggers.js`, then redone
+  from scratch and verified before trusting any of it, exactly as this
+  document's own discipline prescribes.
+- **Fixed — CAP-CRM-007** (`docs/capability-registry/domains/sales-crm.json`):
+  all 5 broken frontend call sites into `conversionTriggers.js` (the 6th,
+  CTA, was already correct) now match the real backend contract:
+  `p4RecordBehaviorEvent()` sends `{session_id,event}` (was
+  `{user_id,event_type}` — every call 400'd MISSING_EVENT, including the one
+  real production caller, the homepage Enterprise Inquiry form's post-submit
+  tracking beacon); `p4LoadTriggers()` queries `?session_id=` and reads
+  `d.active_triggers[].{id,cta,title}` (was `?user_id=` /
+  `d.triggers[].{trigger_id,cta_text}`, neither ever returned by the
+  backend — the trigger list showed "No active triggers." unconditionally);
+  `p4ShowTriggers()` deleted as unreachable dead code with its own
+  additional internal field-shape bugs; `p4DismissTrigger()` sends
+  `session_id` (was `user_id` — every signed-out visitor's dismissal was
+  recorded under the single shared key `'anonymous'`); `p4CheckPaywall()`
+  queries `?feature=` (was `?feature_id=` — handleGetPaywall 400s
+  MISSING_FEATURE without it), which is the highest-severity finding in this
+  fix: since a 400 response has no `gated` field, the old code read that as
+  falsy and called `onAllowed()` unconditionally — **the paywall gate failed
+  OPEN for every feature, on every plan, always.** Confirmed zero current
+  blast radius (repo-wide search: `p4CheckPaywall()` itself has zero callers
+  anywhere yet), but the fix is required-correct infrastructure before it
+  safely can be wired to one. `p4LoadFunnel()` now reads the real
+  `d.funnel_stages` (6 stages: Visitors/Ran a scan/Used AI/Viewed
+  pricing/Clicked upgrade/Converted, each `{stage,count,pct_of_prev}`) in
+  place of a `d.funnel` object shape that never existed
+  (`total_sessions`/`signups`/`scans`/`upgrades`/`enterprise`/`revenue_inr`/
+  `cta_impressions`/`cta_clicks` — none of these fields exist anywhere in
+  `handleGetFunnel`'s response). `#p4-f-visitors` is deliberately left alone
+  by the fix (already correctly kept live by the independent
+  `loadVisitorStats()` / `GET /api/visitor/stats` — the funnel's own
+  `session_start`-derived count would show a near-permanent 0 since
+  production code doesn't fire that event today). `#p4-f-upgrades` now maps
+  to the real "Converted" stage. `#p4-f-signups`/`#p4-f-revenue`/CTA-impression
+  cards are left at their honest static "—" placeholder — no backend concept
+  for any of them exists — rather than showing a fabricated number, matching
+  this registry's established precedent (CAP-CRM-005's ROI-figure removal).
+- **Verified:** `workers/test/conversionTriggersFieldNameFix.test.mjs` (new,
+  20 tests) — backend contract-lock tests against a real in-memory-KV-backed
+  exercise of all 5 fixed handlers (required-field 400s, real response
+  shapes, a dismissed trigger correctly disappearing from a subsequent
+  `active_triggers` read, ENTERPRISE-vs-FREE gating), plus frontend
+  static body-assertion tests on the corrected field names and
+  `p4ShowTriggers`'s removal. Additionally — beyond this registry's usual
+  frontend-only-fix precedent of an uncommitted ad-hoc check — a real
+  headless-Chromium (Playwright) session drove the actual, unmodified
+  extracted script against a minimal DOM harness with all 6 endpoints
+  mocked to their exact real shapes: confirmed correct outgoing field names
+  on every request, correct rendering of triggers/paywall/funnel from real
+  response shapes, and — the critical check — that `onAllowed()` is
+  correctly **not** called for a `gated:true` paywall response, proving the
+  fail-open bug is closed rather than relocated. Zero console/page errors.
+  `node scripts/registry/validate.mjs`: 0 failures, 0 warnings, 95
+  capability ids. Full backend suite: 208 files / 2169 tests (up from
+  207/2149 — the 1 new file). `scripts/seo-structure-lock.mjs`: 22/22 pages
+  green (change is inside `<body>`, outside `<head>`).
+  `node --check` on the extracted script block: syntax valid.
+- **Commits this session:** `frontend/index.html` (6 function fixes +
+  1 grid-column adjustment), new test
+  `workers/test/conversionTriggersFieldNameFix.test.mjs`,
+  `docs/capability-registry/domains/sales-crm.json` (CAP-CRM-007 entry),
+  `docs/capability-registry/PRODUCTION_READINESS_REPORT.md` (regenerated),
+  `docs/capability-registry/PROGRAM_BOARD.md` (this entry).
+- **Risks / follow-ups:** (1) `funnel_stages`' 6 stage-defining event names
+  are essentially never fired by real production traffic today (only 3 real
+  `p4RecordBehaviorEvent()` call sites exist codebase-wide, none using those
+  names) — the funnel is now correctly wired but will show sparse data until
+  upstream code actually fires them; a real, separate follow-up. (2)
+  Signups/revenue/CTA-impression tracking has no backend concept at all —
+  would need new backend work, out of scope for this fix. (3) Not yet
+  live-verified against production — `customer_journey_complete` stays
+  `false` pending a post-merge deploy check, matching established
+  convention. **Merge/deploy gate:** per this session's own explicit check
+  with the customer, merging to `main` on this repo triggers a live
+  Cloudflare production deploy with no separate approval step — PR opened
+  and CI watched, but not auto-merged without an explicit go-ahead this
+  session (see PR for current status).
 
 ### 2026-07-11 — Backlog sweep, wave 2 addendum: CAP-COMP-001 post-deploy live verification + CI axe catch
 

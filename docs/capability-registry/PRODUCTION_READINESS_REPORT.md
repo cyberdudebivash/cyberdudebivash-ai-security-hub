@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-11T11:04:33.216Z
+Generated: 2026-07-11T11:40:47.368Z
 Capabilities catalogued: 95
 
 ## Overall Completion
@@ -18,8 +18,8 @@ Capabilities catalogued: 95
 | Dimension | % |
 |---|---|
 | Backend | 88.4% |
-| Frontend | 64.2% |
-| Parity (backend **and** frontend both exist) | 57.9% |
+| Frontend | 64.7% |
+| Parity (backend **and** frontend both exist) | 58.9% |
 | Customer Journeys complete (dynamic_browser-verified) | 3.2% |
 
 ## Gaps by Priority
@@ -204,7 +204,7 @@ complete", "bug free", or "guaranteed".
 | CAP-CRM-004 | Customer Success Health Scoring | ✗ | ✗ | ✗ | NOT READY | P2 |
 | CAP-CRM-005 | Proposal Generation | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 | CAP-CRM-006 | Security Assessment Booking | ✗ | ✗ | ✗ | NOT READY | P2 |
-| CAP-CRM-007 | Conversion Trigger & Funnel Tracking | ✓ | ◐ | ✓ | NOT READY | P1 |
+| CAP-CRM-007 | Conversion Trigger & Funnel Tracking | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P1 |
 | CAP-CRM-008 | Growth & Revenue Automation Suite | ✓ | ✗ | ✗ | NOT READY | P2 |
 
 ### security-scanners (10 capabilities)

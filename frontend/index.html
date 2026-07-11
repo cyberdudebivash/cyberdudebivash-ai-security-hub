@@ -5221,7 +5221,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </div>
 <button onclick="p4LoadFunnel()" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 14px;color:#94a3b8;cursor:pointer;font-size:12px">↻ Refresh</button>
 </div>
-<div id="p4-funnel-viz" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:20px">
+<div id="p4-funnel-viz" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:20px">
 <!-- Injected by JS -->
 <div style="color:#64748b;font-size:13px;text-align:center;padding:20px;grid-column:1/-1">Loading funnel…</div>
 </div>
@@ -21069,13 +21069,11 @@ window.p4LoadLeaderboard = function() {
 
 /* ── Behavior Event Recorder ────────────────────────────────────────────── */
 function p4RecordBehaviorEvent(eventType, metadata) {
-  var userId = window.CDB_USER_ID || localStorage.getItem('cdb_user_id') || 'anonymous';
-  p4Post('/api/conversion/event', { user_id: userId, event_type: eventType, metadata: metadata || {} })
-    .then(function(d) {
-      if (d.triggers && d.triggers.length) {
-        p4ShowTriggers(d.triggers);
-      }
-    });
+  var sessionId = window.CDB_USER_ID || localStorage.getItem('cdb_user_id') || 'anonymous';
+  // handleRecordEvent (workers/src/handlers/conversionTriggers.js) reads
+  // `event` + `session_id`, not `event_type`/`user_id`, and its response is
+  // only {recorded,event,new_value} — no `triggers` field to react to here.
+  p4Post('/api/conversion/event', { session_id: sessionId, event: eventType, metadata: metadata || {} });
 }
 
 /* ── Fire Event (from UI) ───────────────────────────────────────────────── */
@@ -21090,46 +21088,36 @@ window.p4FireEvent = function() {
 
 /* ── Load Active Triggers ───────────────────────────────────────────────── */
 function p4LoadTriggers() {
-  var userId = window.CDB_USER_ID || localStorage.getItem('cdb_user_id') || 'anonymous';
+  var sessionId = window.CDB_USER_ID || localStorage.getItem('cdb_user_id') || 'anonymous';
   var el = document.getElementById('p4-triggers-list');
   if (!el) return;
-  p4Get('/api/conversion/triggers?user_id=' + userId).then(function(d) {
-    if (!d.triggers || !d.triggers.length) {
+  // handleGetTriggers reads `session_id` (not user_id) and returns
+  // {active_triggers:[...]} where each item is a real TRIGGERS record
+  // ({id,title,cta,urgency,...}) — not {trigger_id,cta_text}.
+  p4Get('/api/conversion/triggers?session_id=' + encodeURIComponent(sessionId)).then(function(d) {
+    if (!d.active_triggers || !d.active_triggers.length) {
       el.innerHTML = '<div style="color:#64748b;font-size:12px;text-align:center;padding:16px">No active triggers.</div>';
       return;
     }
     var html = '';
-    d.triggers.slice(0, 5).forEach(function(t) {
+    d.active_triggers.slice(0, 5).forEach(function(t) {
       var urgCls = t.urgency === 'CRITICAL' ? 'p4-trig-critical' : t.urgency === 'HIGH' ? 'p4-trig-high' : '';
       html += '<div class="p4-trigger-card ' + urgCls + '">' +
         '<div class="p4-trig-icon">' + (t.urgency === 'CRITICAL' ? '🚨' : '⚡') + '</div>' +
         '<div class="p4-trig-text">' +
-          '<div class="p4-trig-title">' + (t.trigger_id || '') + '</div>' +
-          '<div class="p4-trig-sub">' + (t.cta_text || '') + '</div>' +
+          '<div class="p4-trig-title">' + (t.title || '') + '</div>' +
+          '<div class="p4-trig-sub">' + (t.cta || '') + '</div>' +
         '</div>' +
-        '<button class="p4-trigger-dismiss" onclick="p4DismissTrigger(\'' + (t.trigger_id || '') + '\')">✕</button>' +
+        '<button class="p4-trigger-dismiss" onclick="p4DismissTrigger(\'' + (t.id || '') + '\')">✕</button>' +
         '</div>';
     });
     el.innerHTML = html;
   });
 }
 
-function p4ShowTriggers(triggers) {
-  if (!triggers || !triggers.length) return;
-  var first = triggers[0];
-  // Show paywall modal for critical triggers
-  if (first.urgency === 'CRITICAL' || first.trigger_id === 'HIGH_THREAT_DETECTED') {
-    p4ShowPaywallModal(first.feature_name || 'Auto-Defense', first.required_plan || 'PRO', first.roi_message || '');
-  } else {
-    p4Toast('⚡ ' + (first.cta_text || 'Upgrade for more'), '#f59e0b');
-  }
-  var el = document.getElementById('p4-triggers-list');
-  if (el) { p4LoadTriggers(); }
-}
-
 window.p4DismissTrigger = function(triggerId) {
-  var userId = window.CDB_USER_ID || localStorage.getItem('cdb_user_id') || 'anonymous';
-  p4Post('/api/conversion/dismiss', { user_id: userId, trigger_id: triggerId });
+  var sessionId = window.CDB_USER_ID || localStorage.getItem('cdb_user_id') || 'anonymous';
+  p4Post('/api/conversion/dismiss', { session_id: sessionId, trigger_id: triggerId });
   p4LoadTriggers();
 };
 
@@ -21152,12 +21140,20 @@ window.p4ShowPaywallModal = function(featureName, requiredPlan, roiMsg) {
 
 /* ── Paywall Gate (called from other parts of the app) ─────────────────── */
 window.p4CheckPaywall = function(featureId, onAllowed) {
-  p4Get('/api/conversion/paywall?feature_id=' + featureId).then(function(d) {
+  // handleGetPaywall 400s ("feature parameter required") without a `feature`
+  // query param — the old `feature_id` name meant every call 400'd, and
+  // since a 400 has no `gated` field, the check below read that as falsy
+  // and called onAllowed() unconditionally: the gate failed OPEN for every
+  // feature, every plan, always. Response when gated is {gated,feature,
+  // required_plan,user_plan,upgrade_url,trigger:{title,description,cta,icon}}
+  // — there is no roi_message or upsell_trigger field anywhere in it.
+  p4Get('/api/conversion/paywall?feature=' + encodeURIComponent(featureId)).then(function(d) {
     if (!d.gated) {
       if (onAllowed) onAllowed();
     } else {
-      p4ShowPaywallModal(d.feature_name || featureId, d.required_plan || 'PRO', d.roi_message || '');
-      p4RecordBehaviorEvent(d.upsell_trigger || featureId + '_access_attempt', {});
+      var trig = d.trigger || {};
+      p4ShowPaywallModal(d.feature || featureId, d.required_plan || 'PRO', trig.description || '');
+      p4RecordBehaviorEvent(featureId + '_access_attempt', {});
     }
   });
 };
@@ -21183,50 +21179,50 @@ window.p4PreviewCTA = function() {
 };
 
 /* ── Conversion Funnel ──────────────────────────────────────────────────── */
+// handleGetFunnel (workers/src/handlers/conversionTriggers.js) returns
+// {funnel_stages:[{stage,count,pct_of_prev}, ...6 real stages], raw_events,
+// overall_conversion_rate, top_drop_off} — there has never been a `funnel`
+// object, nor signups/scans/enterprise/revenue_inr/cta_impressions/
+// cta_clicks fields anywhere in this response.
 window.p4LoadFunnel = function() {
   var el = document.getElementById('p4-funnel-viz');
   if (!el) return;
   p4Get('/api/conversion/funnel').then(function(d) {
-    if (!d.funnel) {
+    if (!d.funnel_stages || !d.funnel_stages.length) {
       el.innerHTML = '<div style="color:#64748b;text-align:center;padding:20px;grid-column:1/-1">No funnel data yet.</div>';
       return;
     }
-    var f = d.funnel;
-    var steps = [
-      { label: 'Visits',     count: f.total_sessions  || 0, color: '#6366f1' },
-      { label: 'Signups',    count: f.signups         || 0, color: '#8b5cf6' },
-      { label: 'Scans',      count: f.scans           || 0, color: '#a855f7' },
-      { label: 'Upgrades',   count: f.upgrades        || 0, color: '#10b981' },
-      { label: 'Enterprise', count: f.enterprise      || 0, color: '#f59e0b' }
-    ];
-    var maxCount = Math.max.apply(null, steps.map(function(s) { return s.count; })) || 1;
+    var stages = d.funnel_stages;
+    var colors = ['#6366f1', '#8b5cf6', '#a855f7', '#ec4899', '#f59e0b', '#10b981'];
+    var maxCount = Math.max.apply(null, stages.map(function(s) { return s.count; })) || 1;
     var html = '';
-    steps.forEach(function(s, i) {
+    stages.forEach(function(s, i) {
       var hPct = Math.max(10, Math.round((s.count / maxCount) * 100));
-      var convPct = i > 0 && steps[i-1].count ? Math.round((s.count / steps[i-1].count) * 100) : 100;
       html += '<div class="p4-funnel-step">' +
         '<div class="p4-funnel-bar-wrap">' +
-          '<div class="p4-funnel-bar" style="background:' + s.color + ';opacity:.7;height:' + hPct + '%;min-height:8px"></div>' +
+          '<div class="p4-funnel-bar" style="background:' + (colors[i] || '#6366f1') + ';opacity:.7;height:' + hPct + '%;min-height:8px"></div>' +
         '</div>' +
         '<div class="p4-funnel-count">' + s.count.toLocaleString() + '</div>' +
-        (i > 0 ? '<div class="p4-funnel-pct">' + convPct + '%</div>' : '<div class="p4-funnel-pct">—</div>') +
-        '<div class="p4-funnel-label">' + s.label + '</div>' +
+        (i > 0 ? '<div class="p4-funnel-pct">' + s.pct_of_prev + '%</div>' : '<div class="p4-funnel-pct">—</div>') +
+        '<div class="p4-funnel-label">' + s.stage + '</div>' +
         '</div>';
     });
     el.innerHTML = html;
 
-    // Update metrics
-    var set = function(id, v) { var e = document.getElementById(id); if (e) e.textContent = v; };
-    set('p4-f-visitors', (f.total_sessions || 0).toLocaleString());
-    set('p4-f-signups',  (f.signups        || 0).toLocaleString());
-    set('p4-f-upgrades', (f.upgrades       || 0).toLocaleString());
-    set('p4-f-revenue',  '₹' + ((f.revenue_inr || 0).toLocaleString('en-IN')));
-
-    // CTA stats
-    var imp = document.getElementById('p4-cta-impressions');
-    var clk = document.getElementById('p4-cta-clicks');
-    if (imp) imp.textContent = (f.cta_impressions || 0).toLocaleString();
-    if (clk) clk.textContent = (f.cta_clicks      || 0).toLocaleString();
+    // #p4-f-visitors is deliberately left alone here: loadVisitorStats()
+    // (GET /api/visitor/stats) already keeps it live from a real dedicated
+    // visitor counter. funnel_stages[0] ("Visitors") only counts explicit
+    // session_start events posted to /api/conversion/event, which no
+    // production code path fires today (only the manual Fire-Event test
+    // dropdown can), so it would show a near-permanent 0 if used here.
+    // Signups / Funnel Revenue / CTA impressions / CTA clicks have no
+    // corresponding field anywhere in this handler's response — left at
+    // their static "—" placeholder rather than showing a fabricated number.
+    var converted = stages.filter(function(s) { return s.stage === 'Converted'; })[0];
+    if (converted) {
+      var elU = document.getElementById('p4-f-upgrades');
+      if (elU) elU.textContent = converted.count.toLocaleString();
+    }
   });
 };
 
