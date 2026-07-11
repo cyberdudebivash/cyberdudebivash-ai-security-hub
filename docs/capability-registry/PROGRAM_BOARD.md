@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry five below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed Tier-1 items #1–#4: `enterprise-kpi-dashboard.html`'s impossible-tier admin gate, `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory auth gaps, `revenue-command-center.html`'s 6-of-8 broken panels, and `mssp-command-center.html`'s Add Partner 400 bug (all on PR #184, still open). See the top 4 session-log entries below. 20 of the 24 backlog items remain, queued in the same stated priority order.)
+## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry six below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed Tier-1 items #1–#5: `enterprise-kpi-dashboard.html`'s impossible-tier admin gate, `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory auth gaps, `revenue-command-center.html`'s 6-of-8 broken panels, `mssp-command-center.html`'s Add Partner 400 bug, and `automation-dashboard.html`'s 5 dead/wrong endpoints (all on PR #184, still open). See the top 5 session-log entries below. 19 of the 24 backlog items remain, queued in the same stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 225 files / 2347 tests passing | `npx vitest run`, run 2026-07-11 — +1 file / +5 tests this wave (`msspAddPartnerFieldMismatch.test.mjs`, 5 new). Baseline going into this wave was 224 files / 2342 tests (Tier-1 item #3) |
+| Worker test suite | 226 files / 2358 tests passing | `npx vitest run`, run 2026-07-11 — +1 file / +11 tests this wave (`automationDashboardDeadEndpoints.test.mjs`, 11 new). Baseline going into this wave was 225 files / 2347 tests (Tier-1 item #4) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -246,7 +246,76 @@ already shipped under it:
   own residual sap_-key auth-resolution gap closed 2026-07-11) — see the
   remediation section above and today's session log entry below.
 
-## Session log (most recent first)
+### 2026-07-11 — Tier-1 backlog item #5: automation-dashboard.html — 5 dead/wrong endpoints
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-1 item #4.
+- **Re-verified against actual code**, each of the 5 named issues independently:
+  1. **Connector Health** (`loadConnectors`) called `/api/integrations/connectors`
+     — the owner-only internal domain (`index.js:1550`'s
+     `/^\/api\/(integrations|org-memory|...)/` prefix gate, `isOwner()`
+     required). The real, customer-facing, API-key-authenticated route is
+     `/api/auto/integrations/connectors` (`handleAutoRoute` →
+     `handleIntegrationConnectors`, confirmed in the route's own
+     `API_MANIFEST` entry). Once the path is fixed the field names already
+     matched — this was a pure wrong-path bug, no shape mismatch.
+  2. **SIEM Test** (`testConnector`) called `POST /api/integrations/test` —
+     same wrong owner-only domain; the real route is
+     `/api/auto/integrations/test` (`handleIntegrationTest`). Separately,
+     that handler always returns HTTP 200 even for a failed connection test
+     (`{success:false, message}` in the body, never a non-2xx status) —
+     `testConnector`'s try/catch only had a failure branch for a thrown
+     error, so it unconditionally rendered "Connection successful" as long
+     as the request itself didn't throw. Fixed to branch on `d.success`.
+  3. **Usage tab** (`loadUsage`) read `d.summary.{total_calls,cache_hit_ratio}`,
+     `d.quota.{quota_pct,radar_limit,month_calls}`, and `d.by_endpoint` — the
+     real handler (`handleUsageDashboard`) never computed a `summary` or
+     `quota` object at all (only `hourly_trend`/`daily_trend`/
+     `top_endpoints`/`breakdown_by_day` existed), and called the endpoint
+     breakdown `top_endpoints`, not `by_endpoint`. `summary`/`quota` are a
+     missing capability, not a rename (same class as the revenue-command-center.html
+     KPI-tiles fix, item #3) — added real queries against the existing
+     `ops_usage_events` table (already used by this same handler) plus
+     `auth/apiKeys.js`'s `TIER_LIMITS` for the per-tier monthly quota.
+     `radar_limit` sends `null` (not `TIER_LIMITS`'s internal `-1`) for
+     unlimited tiers, matching the truthiness check `loadUsage` already
+     uses. Frontend's `d.by_endpoint` corrected to `d.top_endpoints`
+     (simpler than adding a backend alias, unlike the revenue fix's
+     `pipeline`/`pipeline_value` case — no other consumer to preserve).
+  4. **Governance tab** (`loadGovernance`) read `d.released`, `d.user_tier`,
+     `d.quota_warning`, `d.throttle_limits` — `handleGovernance` just
+     returned the static `API_MANIFEST` (version/endpoints/deprecations —
+     platform-wide, not personalized) with none of those fields. Same
+     missing-capability class as #3 above: added `user_tier` (from
+     `authCtx`), `throttle_limits` (from `TIER_LIMITS[tier]`), `released`
+     (aliases the manifest's existing `last_updated`), and a computed
+     `quota_warning` (populated once calendar-month usage crosses 80% of
+     the tier's monthly limit, `null` otherwise) — reusing the exact same
+     `ops_usage_events`/`TIER_LIMITS` building blocks as the Usage tab fix.
+  5. **Webhooks list** (`loadWebhooks`) called `JSON.parse(w.events||'[]')`
+     on a field the real handler (`handleWebhookList`) already runs through
+     `safeParseJSON()` server-side — `w.events` arrives as a real array, and
+     `JSON.parse()` on a non-string argument coerces it via `.toString()`
+     (producing a comma-joined, non-JSON string) and throws, silently
+     caught by the surrounding try/catch, leaving the list permanently
+     empty despite real webhooks existing. Fixed to use `w.events||[]`
+     directly — no parsing needed, it's already the real array.
+- **Tests:** new `test/automationDashboardDeadEndpoints.test.mjs` (11 tests)
+  — backend: real in-memory SQLite (`node:sqlite`, same pattern as
+  `enterpriseAutomationTeamManagement.test.mjs`) verifying `summary`/`quota`
+  are computed correctly from real `ops_usage_events` rows (including that
+  `radar_limit` is `null` not `-1` for unlimited tiers, and that
+  `quota_warning` correctly appears only past the 80% threshold); frontend:
+  static source-parse confirming the corrected paths, the `d.success`
+  branch, the non-parsing webhook render, and the `top_endpoints` field
+  name. Full suite green: 226 files / 2358 tests (baseline 225/2347 from
+  Tier-1 item #4).
+- **Validator:** 0 failures, 0 warnings, 97 capabilities (unchanged — same
+  reasoning as items #1–#4). `PRODUCTION_READINESS_REPORT.md` regenerated
+  (timestamp-only diff).
+- **Remaining in the Tier 1–3 backlog (19 of 24):** next up, in stated
+  order: `soc-dashboard.html`'s AI Decision Engine field/scaling bugs, then
+  `user-dashboard.html`'s billing token-storage bug, then the rest of Tier
+  1 before Tier 2/3 (full original list in the audit entry six below).
 
 ### 2026-07-11 — Tier-1 backlog item #4: mssp-command-center.html — Add Partner always 400'd
 

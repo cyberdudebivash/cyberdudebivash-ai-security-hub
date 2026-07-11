@@ -547,6 +547,11 @@ document.getElementById('event-checkboxes').innerHTML=EVENTS.map(e=>
 
 async function loadWebhooks(){
   try{
+    // handleWebhookList already runs each row's events through safeParseJSON
+    // server-side, so w.events arrives as a real array — JSON.parse()-ing it
+    // again here threw (JSON.parse on a non-string coerces via toString(),
+    // producing an invalid JSON string), which this try/catch silently
+    // swallowed, leaving the list permanently empty.
     const d=await apiFetch('/api/auto/webhooks');
     document.getElementById('k-wh').textContent=d.webhooks?.length||0;
     const list=document.getElementById('webhooks-list');
@@ -554,7 +559,7 @@ async function loadWebhooks(){
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
         <div style="flex:1">
           <div style="font-size:13px;font-weight:600;margin-bottom:4px">${escHtml(w.url)}</div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">${(JSON.parse(w.events||'[]')||[]).map(e=>`<span class="chip chip-blue">${escHtml(e)}</span>`).join('')}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">${(w.events||[]).map(e=>`<span class="chip chip-blue">${escHtml(e)}</span>`).join('')}</div>
           <div style="color:var(--muted);font-size:11px;margin-top:4px">Last triggered: ${w.last_triggered?w.last_triggered.slice(0,16):'Never'} | Retries: ${w.retry_count||0}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
@@ -710,7 +715,7 @@ async function loadUsage(){
     document.getElementById('k-quota').className='kpi-value '+(qpct>90?'red':qpct>70?'yellow':'green');
     document.getElementById('k-quota-sub').textContent=d.quota?.radar_limit?`${d.quota.month_calls}/${d.quota.radar_limit}`:'Unlimited';
     const tbody=document.querySelector('#usage-endpoints tbody');
-    tbody.innerHTML=(d.by_endpoint||[]).map(e=>`<tr>
+    tbody.innerHTML=(d.top_endpoints||[]).map(e=>`<tr>
       <td style="font-size:12px">${escHtml(e.endpoint||'—')}</td>
       <td>${e.calls}</td><td>${Math.round(e.avg_ms||0)}ms</td>
     </tr>`).join('')||`<tr><td colspan="3" class="empty">No usage data</td></tr>`;
@@ -802,7 +807,11 @@ async function loadConnectors(){
   const evDiv=document.getElementById('connector-events');
   if(!grid)return;
   try{
-    const d=await apiFetch('/api/integrations/connectors');
+    // Real registered path is under /api/auto/* (handleAutoRoute) — the
+    // owner-only-gated /api/integrations/* prefix is a different, internal
+    // domain (see revenue-command-center.html's SIEM Deploy) and always
+    // rejected a regular API-key customer here.
+    const d=await apiFetch('/api/auto/integrations/connectors');
     const connectors=d.connectors||[];
     grid.innerHTML=connectors.length?connectors.map(c=>`
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
@@ -837,8 +846,20 @@ async function testConnector(){
   if(!url){toast('Endpoint URL required',false);return;}
   res.innerHTML='<div style="color:var(--muted);font-size:12px;margin-top:10px">Testing connection…</div>';
   try{
-    const d=await apiPost('/api/integrations/test',{type,url,token});
-    res.innerHTML=`<div style="margin-top:10px;padding:10px;background:#064e3b22;border:1px solid var(--green);border-radius:6px;font-size:12px;color:var(--green)">Connection successful — ${escHtml(d.message||'OK')}</div>`;
+    // Real registered path is /api/auto/integrations/test (handleIntegrationTest,
+    // customer-facing) — /api/integrations/test is the owner-only internal
+    // domain and always rejected a regular API-key customer here. That
+    // handler also always returns HTTP 200 with {success:false} on a failed
+    // connection (never a non-2xx status), so success must be read from the
+    // body — this previously showed "Connection successful" unconditionally
+    // as long as the request didn't throw.
+    const d=await apiPost('/api/auto/integrations/test',{type,url,token});
+    if(d.success){
+      res.innerHTML=`<div style="margin-top:10px;padding:10px;background:#064e3b22;border:1px solid var(--green);border-radius:6px;font-size:12px;color:var(--green)">Connection successful — ${escHtml(d.message||'OK')}</div>`;
+      loadConnectors();
+    }else{
+      res.innerHTML=`<div style="margin-top:10px;padding:10px;background:#7f1d1d22;border:1px solid var(--red);border-radius:6px;font-size:12px;color:var(--red)">Connection failed — ${escHtml(d.message||'Unknown error')}</div>`;
+    }
   }catch(e){
     res.innerHTML=`<div style="margin-top:10px;padding:10px;background:#7f1d1d22;border:1px solid var(--red);border-radius:6px;font-size:12px;color:var(--red)">Connection failed — ${escHtml(e.message)}</div>`;
   }
