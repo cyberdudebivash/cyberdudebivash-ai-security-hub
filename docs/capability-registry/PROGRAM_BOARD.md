@@ -278,6 +278,17 @@ see session log below.
   as much detail as the domain scanner's, to confirm they distill sensibly
   too — `distillFindingsForHistory()` degrades gracefully either way
   (missing fields just come through as `null`/absent).
+- **Production verification (post-merge addendum):** PR #159 merged
+  (squash `2d8dc96`). All 32 checks individually inspected green pre-merge.
+  Deploy confirmed live. Re-ran the full flow directly against
+  `https://cyberdudebivash.in` with zero local-file substitution: seeded a
+  real scan with real findings, confirmed PR #157's Download button still
+  works (no regression), the new "Findings" Threat Graph filter option is
+  live, the Threat Graph still correctly shows domain-only/zero-edges
+  (expected — the migration hasn't been applied yet, exactly the safe
+  no-op this was designed for), and zero JS errors across the whole flow.
+  **Still waiting on the owner to run the gated D1 migration** — see
+  "ACTION NEEDED" above — before the Threat Graph will show real edges.
 
 ### 2026-07-11 — P1: Scans page "Download" report link dead for every customer; Threat Graph relationship edges diagnosed as structurally impossible (fix not yet applied — needs owner decision)
 
