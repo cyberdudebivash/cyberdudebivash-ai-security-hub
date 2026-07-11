@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry twelve below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed all 10 Tier-1 items — `enterprise-kpi-dashboard.html`'s impossible-tier admin gate and `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory auth gaps (PR #184, merged); `revenue-command-center.html`'s 6-of-8 broken panels, `mssp-command-center.html`'s Add Partner 400 bug, `automation-dashboard.html`'s 5 dead/wrong endpoints, `soc-dashboard.html`'s AI Decision Engine field/scaling bugs, `user-dashboard.html`'s post-upgrade billing token-storage + `loadDashboard()` bug, `user-dashboard.html`'s My Trainings/My Purchases/My Reports envelope-unwrap bug, `developer-onboarding.html`'s trial-key tier normalization bug, and `tools.html`'s Tools/AI/Marketplace grids (a doubled-backslash regex literal that threw inside every priced-item render, plus a Marketplace field-mismatch + wrong-catalog purchase-routing bug) — and has now started Tier 2: item #1, `threat-intel-workbench.html`'s AI Analyst chat / AI CVE-brief / AI sector-brief routes, each a real unmetered LLM call reachable with zero authentication and zero rate limiting (open cost-abuse vector), fixed by wiring the existing shared `checkRateLimitCost()` into all 3 routes (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 11 session-log entries below. 13 of the 24 backlog items remain (7 more Tier 2, all 6 of Tier 3), queued in the same stated priority order.)
+## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry thirteen below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed all 10 Tier-1 items (see prior entries) and has now completed Tier-2 items #1–#2: `threat-intel-workbench.html`'s AI Analyst chat / AI CVE-brief / AI sector-brief routes (real unmetered LLM calls reachable with zero authentication and zero rate limiting — fixed by wiring the existing shared `checkRateLimitCost()` into all 3 routes), and `sentinel-apex-marketplace.html`'s Threat Actor and Malware intel cards (100% hardcoded fabricated data — fake risk scores, an invented "AI-Enhanced RAT" — presented as "Live... intelligence... powered by SENTINEL APEX™"; fixed by wiring both card renderers to the platform's real APT actor database and malware-family preview API, following the honest-fallback pattern this same file's `loadCVECards()` already established) (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 12 session-log entries below. 12 of the 24 backlog items remain (6 more Tier 2, all 6 of Tier 3), queued in the same stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 231 files / 2403 tests passing | `npx vitest run`, run 2026-07-11 — +12 tests this wave, new file `threatIntelProAiRateLimit.test.mjs` (Tier-2 item #1: rate-limit gating on threat-intel-workbench.html's 3 LLM-calling routes). Baseline going into this wave was 230 files / 2391 tests (Tier-1 item #10, the last Tier-1 item) |
+| Worker test suite | 232 files / 2413 tests passing | `npx vitest run`, run 2026-07-11 — +10 tests this wave, new file `sentinelApexMarketplaceRealIntel.test.mjs` (Tier-2 item #2: sentinel-apex-marketplace.html's Threat Actor/Malware cards now fetch real data instead of a fabricated static list). Baseline going into this wave was 231 files / 2403 tests (Tier-2 item #1) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,100 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Tier-2 backlog item #2 (of 8): sentinel-apex-marketplace.html — Threat Actor and Malware intel cards were 100% fabricated static data
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-2 item #1.
+- **Re-verified against actual code:** the page's Intelligence tabs
+  (`loadIntelTab()`, line ~740) dispatch to 4 loader functions —
+  `loadCVECards()`, `loadThreatActorCards()`, `loadMalwareCards()`,
+  `loadReportCatalogGrid()`. `loadCVECards()` was already correctly fixed in
+  an earlier pass (real fetch to `/api/v1/intel/latest.json`, honest
+  "temporarily unavailable" fallback on failure — explicit code comments at
+  lines 753-754/796-797 document this). `loadThreatActorCards()` (line 806)
+  and `loadMalwareCards()` (line 840), by contrast, had **zero fetch calls of
+  any kind** — a fixed JS array of 6 hardcoded objects each, unconditionally
+  rendered every single page load, no live/fallback distinction at all. Two
+  of the malware entries were entirely invented with no basis in this
+  platform's own data (`'AI-Enhanced RAT'`, `'BianLian'` — neither appears in
+  `workers/src/handlers/intelligencePreview.js`'s real `MALWARE_FAMILIES`
+  dict), and every numeric "Risk Score" (9.8, 9.5, 8.9, …) and "Vector"
+  string was fabricated prose with no backing field in any real API. This
+  page's own meta description and hero copy advertise "Live CVE
+  intelligence, threat actor dossiers, malware reports... powered by
+  SENTINEL APEX™" — every visitor saw the identical static fiction
+  presented as live, regardless of what the platform's real intelligence
+  actually contains.
+- **Found real, already-working backend sources for both, requiring no new
+  capability:** `GET /api/intel/actors` (`workers/src/handlers/threatIntelPro.js`,
+  confirmed public/no-auth-required in the Tier-2 item #1 investigation
+  immediately prior) already serves the platform's real APT actor database
+  (`workers/src/services/aptActorProfiles.js`'s `APT_ACTORS`, 60+ tracked
+  groups with real `id`/`aliases`/`origin`/`target_sectors`/`known_tools`/
+  `risk_score` fields) — the exact same backend `threat-intel-workbench.html`
+  already uses. For malware, `GET /api/preview/malware/:familyId`
+  (`workers/src/handlers/intelligencePreview.js`) serves a real, curated
+  `MALWARE_FAMILIES` dict (8 families: lockbit, blackcat, cobeacon, qakbot,
+  emotet, icedid, sliver, metasploit) with real `name`/`malware_type`/
+  `severity`/`active_in_wild`/`summary` fields — confirmed public (only a
+  FREE-tier + logged-in rate limit applies; anonymous calls are unmetered,
+  a separate pre-existing characteristic of that router not touched here
+  since these are cheap DB/dict lookups, not LLM calls — not the same
+  cost-abuse class as Tier-2 item #1). No "list all malware families"
+  endpoint exists yet, only this single-id preview; rather than add a new
+  backend route (out of scope for a bug fix), the frontend now fetches a
+  fixed set of 6 of the 8 known real family ids in parallel and renders
+  only the real fields the API returns — the *content* is never invented
+  client-side, only the *list of ids to ask about* is client-known, the
+  same pattern `tools.html`'s marketplace already uses for its own catalog.
+- **Fix (`frontend/sentinel-apex-marketplace.html`):**
+  - `loadThreatActorCards()`: now fetches `/api/intel/actors`, maps up to 6
+    real actors (severity bucketed from real `risk_score`: ≥90 CRITICAL,
+    ≥75 HIGH, else MEDIUM; tactics from real `known_tools`/`motivation`;
+    sectors from real `target_sectors`), and falls back to a new
+    `renderFallbackThreatActors()` honest-unavailable state (mirroring
+    `renderFallbackCVEs()`'s exact pattern) if the feed is empty or the
+    fetch fails — never the old fabricated array.
+  - `loadMalwareCards()`: now fetches `/api/preview/malware/:id` for 6 known
+    real family ids in parallel, renders only real returned fields
+    (`name`, `malware_type`, `severity`, `active_in_wild`, `summary`), and
+    falls back to a new `renderFallbackMalware()` honest-unavailable state
+    on total failure — never the old fabricated array.
+  - All backend-sourced display text now passed through the page's existing
+    `escHtml()` helper (already used by `loadCVECards()`) before injection.
+  - The "Buy Dossier"/"Buy Report" purchase-modal buttons and
+    `openModal(...)` wiring are unchanged — this fix only replaces the data
+    source, not the purchase flow (already covered by CAP-MKT-003).
+- **Verification:** `node --check` on the extracted inline `<script>` block;
+  new `workers/test/sentinelApexMarketplaceRealIntel.test.mjs` (10 tests,
+  static parse, same convention as this session's other frontend-fix tests)
+  asserting: both loaders fetch the real endpoints and read the real
+  response shapes; neither contains the old hardcoded array literal; the
+  fabricated static roster (`AI-Enhanced RAT`, `BianLian`, the fake risk-
+  score/vector literals, `SideCopy (Pakistan)`, `Scattered Spider`) is gone
+  from the file entirely; both new fallback functions exist and are honest
+  ("temporarily unavailable", not a re-hidden fabricated list); both loaders
+  escape backend-sourced fields via `escHtml()`. Searched `workers/test/`
+  for any pre-existing test referencing this file or these two function
+  names — found 3 unrelated hits (`marketplaceDeadCodeRemoval.test.mjs`,
+  `seoStructuredDataTruth.test.mjs`, `truthClaims.test.mjs`); read each
+  reference and confirmed none assert anything about the Threat Actor/
+  Malware cards specifically (`truthClaims.test.mjs`'s two
+  `sentinel-apex-marketplace.html` describe blocks cover the CVE feed and
+  report catalog only — both already-fixed, different functions) — no
+  bug-reinforcing assertion needed correcting. Full suite: 232 files / 2413
+  tests passing (was 231/2403 before this item — +1 file, +10 tests).
+  `node scripts/registry/validate.mjs`: 0 failures, 0 warnings.
+  `node scripts/registry/generate-report.mjs` regenerated (only the
+  timestamp changed — no capability registry entry was touched: none of
+  this domain's existing 6 `CAP-MKT-*` entries cover the intel-grid preview
+  cards specifically, only the separate purchase/checkout flows, so there
+  was no existing entry to correct; adding a brand-new capability entry for
+  a previously-uncatalogued feature was judged out of scope for a bounded
+  bug fix, consistent with how Tier-1 items #1–#10 and this same page's
+  earlier CVE-feed fix were handled).
+- **6 Tier-2 items remain** (of 8), plus all 6 Tier-3 items, queued next in
+  the audit's stated priority order.
 
 ### 2026-07-11 — Tier-2 backlog item #1 (of 8): threat-intel-workbench.html — AI Analyst / CVE-brief / sector-brief routes had zero auth and zero rate limiting
 

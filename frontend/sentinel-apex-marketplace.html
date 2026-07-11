@@ -804,60 +804,98 @@ function renderFallbackCVEs() {
 }
 
 async function loadThreatActorCards(container) {
-  const actors = [
-    { name: 'APT29 (Cozy Bear)', origin: 'Russia', status: 'TRACKED', sectors: 'Government, Defence, Energy', tactics: 'Spear-phishing, supply chain, cloud credential theft', sev: 'CRITICAL' },
-    { name: 'Lazarus Group', origin: 'North Korea', status: 'TRACKED', sectors: 'Financial, Crypto, Defence', tactics: 'SWIFT fraud, crypto theft, RAT deployment', sev: 'CRITICAL' },
-    { name: 'APT41 (Double Dragon)', origin: 'China', status: 'TRACKED', sectors: 'Technology, Healthcare, Gaming', tactics: 'Dual espionage + cybercrime, zero-day exploitation', sev: 'HIGH' },
-    { name: 'BlackCat Ransomware Gang', origin: 'Unknown', status: 'TRACKED', sectors: 'All sectors', tactics: 'Double extortion, ALPHV ransomware, data leak threats', sev: 'CRITICAL' },
-    { name: 'SideCopy (Pakistan)', origin: 'Pakistan', status: 'TRACKED', sectors: 'India Government, Defence', tactics: 'RAT deployment, credential harvesting, DPDP-era targeting', sev: 'HIGH' },
-    { name: 'Scattered Spider', origin: 'Multi-national', status: 'TRACKED', sectors: 'Hospitality, Retail, Finance', tactics: 'SIM swapping, social engineering, MFA bypass', sev: 'HIGH' },
-  ];
-  container.innerHTML = actors.map(a => `
-    <div class="intel-card ${a.sev.toLowerCase()}">
+  try {
+    // Real APT actor database (60+ tracked groups, same backend as
+    // threat-intel-workbench.html) — not the fabricated static list below.
+    const r = await fetch(`${API_BASE}/api/intel/actors`);
+    const d = r.ok ? await r.json() : {};
+    const actors = (d.actors || []).slice(0, 6);
+
+    if (!actors.length) {
+      container.innerHTML = renderFallbackThreatActors();
+      return;
+    }
+
+    container.innerHTML = actors.map(a => {
+      const risk = a.risk_score || 0;
+      const sev  = risk >= 90 ? 'CRITICAL' : risk >= 75 ? 'HIGH' : 'MEDIUM';
+      const displayName = a.aliases?.[0] ? `${a.id} (${a.aliases[0]})` : a.id;
+      const tactics = (a.known_tools || []).slice(0, 3).join(', ') || (a.motivation || []).join(', ') || 'Multiple TTPs tracked';
+      const sectors = (a.target_sectors || []).slice(0, 3).join(', ') || 'Multiple sectors';
+      return `
+    <div class="intel-card ${sev.toLowerCase()}">
       <div class="card-header">
         <span class="card-type">Threat Actor Intelligence</span>
-        <span class="severity-badge sev-${a.sev}">${a.sev}</span>
+        <span class="severity-badge sev-${sev}">${sev}</span>
       </div>
       <div class="card-body">
-        <h3>${a.name}</h3>
-        <p>${a.tactics}</p>
+        <h3>${escHtml(displayName)}</h3>
+        <p>${escHtml(tactics)}</p>
         <div class="card-meta">
-          <span class="meta-item">Origin <strong>${a.origin}</strong></span>
-          <span class="meta-item" style="color:#ef4444">● <strong>${a.status}</strong></span>
-          <span class="meta-item">Targets <strong>${a.sectors}</strong></span>
+          <span class="meta-item">Origin <strong>${escHtml(a.origin || 'Unknown')}</strong></span>
+          <span class="meta-item" style="color:#ef4444">● <strong>TRACKED</strong></span>
+          <span class="meta-item">Targets <strong>${escHtml(sectors)}</strong></span>
         </div>
       </div>
       <div class="card-preview-bar">
         <span class="preview-text">🔒 Full dossier, IOC feeds, MITRE TTPs locked</span>
         <button class="btn btn-primary" style="font-size:0.75rem;padding:6px 14px"
-          onclick="openModal('${a.name} Threat Actor Dossier','Full TTP analysis, IOC feeds, MITRE ATT&CK mappings, campaign timeline, and sector targeting.','$79 / ₹6,499')">
+          onclick="openModal('${a.id} Threat Actor Dossier','Full TTP analysis, IOC feeds, MITRE ATT&CK mappings, campaign timeline, and sector targeting.','$79 / ₹6,499')">
           Buy Dossier
         </button>
       </div>
-    </div>`).join('');
+    </div>`;
+    }).join('');
+  } catch {
+    container.innerHTML = renderFallbackThreatActors();
+  }
+}
+
+function renderFallbackThreatActors() {
+  // Honest error state (matches renderFallbackCVEs()) — never present a
+  // static actor list as live intelligence.
+  return `
+    <div style="grid-column:1/-1;text-align:center;padding:40px 20px;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.15);border-radius:12px">
+      <div style="font-size:28px;margin-bottom:10px">📡</div>
+      <div style="color:#e2e8f0;font-weight:700;margin-bottom:6px">Live threat actor feed temporarily unavailable</div>
+      <div style="color:rgba(255,255,255,.55);font-size:.85rem;margin-bottom:14px">We only show real, current intelligence — no cached samples. Please retry in a moment.</div>
+      <button class="btn btn-ghost" onclick="location.reload()" style="font-size:.8rem;padding:8px 20px">↻ Retry</button>
+    </div>`;
 }
 
 async function loadMalwareCards(container) {
-  const malware = [
-    { name: 'LockBit 4.0', type: 'Ransomware', risk: 9.8, targets: 'All sectors', vector: 'RDP brute-force, phishing, exposed VPN', sev: 'CRITICAL' },
-    { name: 'ALPHV / BlackCat', type: 'Ransomware', risk: 9.5, targets: 'Healthcare, Finance', vector: 'Compromised credentials, supply chain', sev: 'CRITICAL' },
-    { name: 'Emotet v5', type: 'Loader/Botnet', risk: 8.9, targets: 'Finance, Manufacturing', vector: 'Macro-enabled Office docs, malspam', sev: 'HIGH' },
-    { name: 'QakBot 2026 Variant', type: 'Banking Trojan', risk: 8.4, targets: 'Banking, Insurance', vector: 'HTML smuggling, ZIP-based delivery', sev: 'HIGH' },
-    { name: 'BianLian', type: 'Ransomware', risk: 8.7, targets: 'Healthcare, Education', vector: 'ProxyShell, compromised RDP', sev: 'HIGH' },
-    { name: 'AI-Enhanced RAT', type: 'Remote Access Trojan', risk: 9.1, targets: 'Technology, Defence', vector: 'LLM-generated phishing, API abuse', sev: 'CRITICAL' },
-  ];
-  container.innerHTML = malware.map(m => `
-    <div class="intel-card ${m.sev.toLowerCase()}">
+  // Real malware-family preview cards (workers/src/handlers/intelligencePreview.js's
+  // authoritative MALWARE_FAMILIES dict) — not the fabricated static list below.
+  // No list endpoint exists yet, so each known family is fetched by id; every
+  // fact rendered (name, type, severity, summary) comes from the real API
+  // response, never invented on the frontend.
+  const FAMILY_IDS = ['lockbit', 'blackcat', 'emotet', 'qakbot', 'icedid', 'sliver'];
+  try {
+    const results = await Promise.all(
+      FAMILY_IDS.map(id => fetch(`${API_BASE}/api/preview/malware/${id}`).then(r => r.ok ? r.json() : null).catch(() => null))
+    );
+    const cards = results.filter(Boolean);
+
+    if (!cards.length) {
+      container.innerHTML = renderFallbackMalware();
+      return;
+    }
+
+    container.innerHTML = cards.map(m => {
+      const sev  = (m.severity || 'HIGH').toUpperCase();
+      const type = (m.malware_type || 'malware').replace(/_/g, ' ');
+      return `
+    <div class="intel-card ${sev.toLowerCase()}">
       <div class="card-header">
         <span class="card-type">Malware Intelligence</span>
-        <span class="severity-badge sev-${m.sev}">${m.sev}</span>
+        <span class="severity-badge sev-${sev}">${sev}</span>
       </div>
       <div class="card-body">
-        <h3>${m.name}</h3>
-        <p>Type: ${m.type} · Targets: ${m.targets}</p>
+        <h3>${escHtml(m.name)}</h3>
+        <p>${escHtml(m.summary || '')}</p>
         <div class="card-meta">
-          <span class="meta-item">Risk Score <strong>${m.risk}/10</strong></span>
-          <span class="meta-item">Vector <strong>${m.vector.substring(0,30)}…</strong></span>
+          <span class="meta-item">Type <strong>${escHtml(type)}</strong></span>
+          ${m.active_in_wild ? '<span class="meta-item" style="color:#ef4444">● <strong>ACTIVE</strong></span>' : ''}
         </div>
       </div>
       <div class="card-preview-bar">
@@ -867,7 +905,23 @@ async function loadMalwareCards(container) {
           Buy Report
         </button>
       </div>
-    </div>`).join('');
+    </div>`;
+    }).join('');
+  } catch {
+    container.innerHTML = renderFallbackMalware();
+  }
+}
+
+function renderFallbackMalware() {
+  // Honest error state (matches renderFallbackCVEs()) — never present a
+  // static malware list as live intelligence.
+  return `
+    <div style="grid-column:1/-1;text-align:center;padding:40px 20px;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.15);border-radius:12px">
+      <div style="font-size:28px;margin-bottom:10px">📡</div>
+      <div style="color:#e2e8f0;font-weight:700;margin-bottom:6px">Live malware intelligence feed temporarily unavailable</div>
+      <div style="color:rgba(255,255,255,.55);font-size:.85rem;margin-bottom:14px">We only show real, current intelligence — no cached samples. Please retry in a moment.</div>
+      <button class="btn btn-ghost" onclick="location.reload()" style="font-size:.8rem;padding:8px 20px">↻ Retry</button>
+    </div>`;
 }
 
 // ── Report Catalog ─────────────────────────────────────────────────────────
