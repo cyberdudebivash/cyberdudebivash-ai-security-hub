@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry three below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed Tier-1 items #1 and #2: `enterprise-kpi-dashboard.html`'s impossible-tier admin gate (PR #184), and `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory widgets — 14 fetch() calls missing their auth token, plus 2 sections gated to "any authenticated user" when their backend actually requires the literal platform owner. See the top 2 session-log entries below. 22 of the 24 backlog items remain, queued in the same stated priority order.)
+## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry four below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed Tier-1 items #1–#3: `enterprise-kpi-dashboard.html`'s impossible-tier admin gate, `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory auth gaps, and `revenue-command-center.html`'s 6-of-8 broken panels (all on PR #184, still open). See the top 3 session-log entries below. 21 of the 24 backlog items remain, queued in the same stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 223 files / 2327 tests passing | `npx vitest run`, run 2026-07-11 — +1 file / +17 tests this wave (`homepageOwnerAndTierGatedActionsAuthGaps.test.mjs`, 17 new; also widened a pre-existing test's fixed-length source slice in `executiveHubEnvelopeUnwrap.test.mjs` that broke when this wave's fix added lines earlier in `cdbMemoryRefresh` — see session log). Baseline going into this wave was 222 files / 2310 tests (Tier-1 item #1, PR #184) |
+| Worker test suite | 224 files / 2342 tests passing | `npx vitest run`, run 2026-07-11 — +1 file / +15 tests this wave (`revenueCommandCenterPanelFixes.test.mjs`, 15 new). Baseline going into this wave was 223 files / 2327 tests (Tier-1 item #2) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,92 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Tier-1 backlog item #3: revenue-command-center.html — 6 of 8 panels broken by response-shape mismatches
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-1 item #2.
+- **Re-verified against actual code**, endpoint by endpoint, rather than
+  trusting the audit's category label ("object vs array, flat vs nested").
+  Read every one of the 8 panels' frontend consumers
+  (`frontend/revenue-command-center.html`) against their real backend
+  handlers (`workers/src/handlers/revenueOps.js`,
+  `workers/src/handlers/revenueMetrics.js`). 2 panels (Breakdown, MSSP
+  Opportunities) were already correctly wired — confirmed, not touched. The
+  other 6 each had a distinct, independently-verified mismatch:
+  1. **KPI Metrics tiles** (`loadRevMetrics`) — MRR/ARR were correct, but
+     `d.today`/`d.week`/`d.month` had **no corresponding backend field at
+     all** (`handlers/revenueMetrics.js` only ever computed MRR/ARR from
+     subscription-tier counts, never actual cash collected), and `d.pipeline`
+     read a field the backend calls `pipeline_value`. This is a missing
+     capability, not a rename — fixed by adding real `today`/`week`/`month`
+     queries against the same `payments` table `revenueOps.js` already reads
+     correctly (confirmed `env.DB` and `env.SECURITY_HUB_DB` are the same
+     D1 database via `index.js`'s `if (env.SECURITY_HUB_DB && !env.DB) env.DB
+     = env.SECURITY_HUB_DB` alias), plus a `pipeline` alias field.
+  2. **Lead Sources** (`loadLeads`) — hardcoded a 6-item Title-Case taxonomy
+     (`'Organic Search'`, `'Direct'`, …) that never matched any real
+     `source` value; the real response is `{breakdown:[{source,count,pct}]}`.
+     Fixed to render `d.breakdown` directly with a generic humanizer instead
+     of a fixed, guessed taxonomy.
+  3. **Conversion Funnel** (`loadFunnel`) — hardcoded 5 keys
+     (`visitors`/`free_scan`/`lead_captured`/…) that matched none of the
+     backend's real 7 stage ids (`visit`/`scan_start`/…/`purchase`); the
+     real response is `{stages:[{stage,label,count,conversion_from_prev}]}`,
+     already computed server-side. Fixed to render `d.stages` directly,
+     with bar width now proportional to real counts instead of a fixed,
+     fake sequence (100%/80%/60%/40%/25%).
+  4. **Transactions** (`loadTransactions`) — checked `Array.isArray(data)`
+     on a response that's actually `{transactions:[...], total}`, so the
+     table was always empty; rows also read `tx.date`, a field that doesn't
+     exist (`created_at`/`paid_at` do). Fixed to unwrap `data.transactions`
+     and format `tx.paid_at || tx.created_at`.
+  5. **Forecast** (`loadForecast`) — read flat
+     `current_month_actual`/`next_month_projection`/`quarterly_forecast`;
+     the real response nests these under `current_month.actual`,
+     `next_month.projected`, `quarterly.projected`. Fixed to read the real
+     nested paths.
+  6. **Pipeline Kanban + Add Deal** (`loadPipeline`, `renderKanban`,
+     `submitDeal`) — the deepest mismatch: `loadPipeline` expected the raw
+     response to be an array of deals; it's actually
+     `{stages:{lead:{count,value,deals},...}, total_deals, pipeline_value}`,
+     already grouped server-side. The frontend's own stage taxonomy
+     (`Lead`/`Qualified`/`Discovery`/`Proposal Sent`/`Negotiation`/`Won`)
+     also didn't match any of the backend's real keys (`lead`/`qualified`/
+     `demo`/`proposal`/`negotiation`/`closed_won`/`closed_lost`), so even a
+     correctly-shaped deal could never land in the right column.
+     Separately, `submitDeal` posted `{contact, value}`; the backend
+     requires `contact_email` specifically (400s without it) and reads
+     `deal_value_inr` — and the modal never had an email input at all
+     (only a generic "Contact Person" name field), so this couldn't be
+     fixed by renaming alone. Added a real Contact Email field to the
+     modal, updated the stage `<select>` to the real backend values, and
+     rewrote `loadPipeline`/`renderKanban` to consume the real grouped
+     shape directly instead of re-grouping a (nonexistent) flat array
+     client-side.
+- **Deliberately not fixed in this pass:** `handleRevenueMetrics`'s own
+  inner tier check (`isAdmin` or tier ENTERPRISE/MSSP) is redundant with
+  — and stricter than — the route-level `isOwner()` gate `index.js` already
+  applies before calling it; a real owner whose own account isn't tier
+  ENTERPRISE/MSSP and isn't using the ADMIN_KEY bypass could theoretically
+  still 403 here. Not touched: out of scope for a response-shape fix, not
+  confirmed as an active problem (the owner's own account is ENTERPRISE in
+  practice), and flagged here rather than silently left for a future pass
+  to rediscover.
+- **Tests:** new `test/revenueCommandCenterPanelFixes.test.mjs` (15 tests)
+  — backend: real `payments`-table sums bucketed correctly into
+  today/week/month with non-`success` and out-of-window rows excluded, and
+  `pipeline` aliasing `pipeline_value`; frontend: static source-parse
+  (same established pattern as `homepageSignInPath.test.mjs`) confirming
+  each panel now reads the real field/shape and no longer references the
+  old, never-matching one. Full suite green: 224 files / 2342 tests
+  (baseline 223/2327 from Tier-1 item #2).
+- **Validator:** 0 failures, 0 warnings, 97 capabilities (unchanged — same
+  reasoning as items #1–#2). `PRODUCTION_READINESS_REPORT.md` regenerated
+  (timestamp-only diff).
+- **Remaining in the Tier 1–3 backlog (21 of 24):** next up, in stated
+  order: `mssp-command-center.html` Add Partner field mismatch, then
+  `automation-dashboard.html`'s dead/wrong endpoints, then the rest of Tier
+  1 before Tier 2/3 (full original list in the audit entry four below).
 
 ### 2026-07-11 — Tier-1 backlog item #2: index.html Autonomous SOC / SIEM Integration Deploy / Org Memory auth gaps
 
