@@ -73,3 +73,38 @@ describe('Scan requests carry the paying customer\'s JWT (post 2026-07-10 incide
     expect(fnBody2).toContain("tier:          payload.tier || 'FREE'");
   });
 });
+
+/* 2026-07-11 follow-on: the fix above assumed SUBSCRIPTION.getToken() itself
+ * always returns a real token for any authenticated customer — it only
+ * checked localStorage/sessionStorage 'cdb_token', the homepage's own
+ * login/signup key. frontend/user-dashboard.html's login/signup overlay —
+ * the platform's primary customer-facing auth surface — writes its real
+ * session token to sessionStorage['cdb_access'] only. A customer who signed
+ * up or logged in there and then used the homepage's scanner still got
+ * every SUBSCRIPTION.getToken() call (executeScan's Authorization header,
+ * the plan badge, every feature-gate check on this page) silently treated
+ * as anonymous — the exact same key-mismatch bug already found and fixed in
+ * the copilot widget and the org-invite email lookup, this time in the
+ * single shared function the whole scan-auth fix above depends on.
+ * Confirmed live: before this fix, a real POST /api/scan/domain fired with
+ * no Authorization header at all for a dashboard-only-authenticated
+ * customer; after, it carries `Bearer <their real cdb_access token>`. */
+describe('SUBSCRIPTION.getToken() also recognizes a dashboard-only-authenticated customer', () => {
+  it('checks sessionStorage cdb_access before its own cdb_token keys', () => {
+    const start = fe.indexOf('function _loadToken()');
+    expect(start).toBeGreaterThan(-1);
+    const body = fe.slice(start, start + 1000);
+    const accessIdx = body.indexOf("sessionStorage.getItem('cdb_access')");
+    const tokenIdx = body.indexOf('localStorage.getItem(JWT_KEY)');
+    expect(accessIdx).toBeGreaterThan(-1);
+    expect(tokenIdx).toBeGreaterThan(-1);
+    expect(accessIdx).toBeLessThan(tokenIdx);
+  });
+
+  it('the homepage\'s own cdb_token fallback is preserved (still used by its own login/signup/OAuth-callback flows)', () => {
+    const start = fe.indexOf('function _loadToken()');
+    const body = fe.slice(start, start + 1000);
+    expect(body).toContain('localStorage.getItem(JWT_KEY)');
+    expect(body).toContain('sessionStorage.getItem(JWT_KEY)');
+  });
+});

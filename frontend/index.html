@@ -10882,7 +10882,18 @@ const SUBSCRIPTION = (function() {
   let _cache = null; // in-memory plan cache { plan, features, usage, token }
 
   function _loadToken() {
-    try { return localStorage.getItem(JWT_KEY) || sessionStorage.getItem(JWT_KEY) || null; } catch { return null; }
+    // frontend/user-dashboard.html's own login/signup overlay — the platform's
+    // primary authenticated-customer surface — writes its real session token
+    // to sessionStorage['cdb_access'] only (saveTokens()), never to this
+    // object's 'cdb_token' key. A customer who signed up or logged in there
+    // and then used the homepage's scanner (SUBSCRIPTION.getToken() backs
+    // executeScan()'s Authorization header, the plan badge, and every
+    // feature-gate check on this page) got every one of those treated as an
+    // anonymous FREE visitor regardless of their real paid tier — the exact
+    // same key-mismatch bug already found and fixed in the copilot widget
+    // and the org-invite email lookup. Checked first so it takes priority
+    // when both exist; falls back to this object's own key unchanged.
+    try { return sessionStorage.getItem('cdb_access') || localStorage.getItem(JWT_KEY) || sessionStorage.getItem(JWT_KEY) || null; } catch { return null; }
   }
   function _saveToken(token) {
     try { localStorage.setItem(JWT_KEY, token); } catch {}
