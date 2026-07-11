@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11 — latest wave closed a customer report about 11 homepage sections: 3 made properly reachable/explained instead of silently bouncing unqualified visitors, 2 mis-wired `#enterprise` buttons fixed, 3 dead/wrong-domain links fixed elsewhere, 2 registry gaps closed including a real unauthenticated-access gap in the Auto-Defense Engine — full account in the top session-log entry below. See the two entries below that for PRs #174–#179 and CAP-DEVPORTAL-004's sap_-key fix.)
+## Current status (2026-07-11 — latest wave is a full 80-page frontend API-wiring audit: overwhelmingly the platform is genuinely live-wired, but 26 concrete bugs were found and ranked by severity; the 2 most severe — an unauthenticated cross-tenant AI-governance report exposure and a CISO dashboard that leaked every customer's scan/incident data to every other customer — are fixed in the top session-log entry below, remaining 24 queued as follow-up. See the two entries below that for the prior wave's PRs #174–#179 and CAP-DEVPORTAL-004's sap_-key fix.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 219 files / 2281 tests passing | `npx vitest run`, run 2026-07-11 — +34 tests this wave (9 + 8 + 13 + 3 new, 1 pre-existing test's fixed-size slice window widened after a legitimate code-length increase, not a logic regression) |
+| Worker test suite | 221 files / 2299 tests passing | `npx vitest run`, run 2026-07-11 — +2 files / +14 tests this wave (`aiGovernanceOrgScoping.test.mjs` 8 new, `cisoMetricsTenantIsolation.test.mjs` 6 new). Verified pre-fix baseline is actually 219 files / 2285 tests (the PR #182 entry below already noted "2281 + net 4 = 2285"; this row's prior "2281" had simply never been rolled forward to include that same-day rewrite — corrected here, not a new discrepancy introduced by this wave) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,103 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Full-frontend API-wiring audit (80 pages) + first 2 critical fixes (cross-tenant data exposure)
+
+- **Trigger:** owner asked for a systematic audit of all 80 frontend pages —
+  for each, is it genuinely wired to a live, correct backend, or does it show
+  placeholder/hardcoded data — followed by production-grade fixes for
+  whatever the audit found, same "report findings before touching anything"
+  discipline as the homepage-anchor investigation two entries below.
+- **Method:** re-derived the page categorization independently (11 pages are
+  legitimately static — legal/marketing; ~23 are marketing pages with one
+  legitimate embedded live-tool call; 46 are real dashboard/tool pages).
+  Dispatched 8 parallel research passes covering all 46 dashboard/tool pages
+  plus the two largest pages (`index.html`'s ~180 API call sites,
+  `user-dashboard.html`'s ~70) — each cross-referenced every frontend
+  fetch/authFetch call against its actual backend handler for: hardcoded/mock
+  data dressed up as live, auth-gating mismatches, cross-tenant data leakage,
+  field-name mismatches between frontend and backend, and dead/unregistered
+  endpoints.
+- **Overall verdict:** the platform is overwhelmingly real, not fake — most
+  audited pages (autonomous-soc-dashboard, security-fabric-dashboard,
+  cyber-signal-radar, admin-portal, admin-payments, revenue-intelligence-dashboard,
+  customer-dashboard, customer-success-dashboard, partner-portal,
+  enterprise-dashboard, decision-dashboard, mcp-security, attack-library,
+  booking, enterprise-portal, marketplace-checkout, mssp-onboarding,
+  vibe-code-scanner, copilot-admin, intel.html, intel-hub.html,
+  ai-security-scorecard.html, ciso-hub.html, threat-hunting.html and more)
+  verified genuinely live and correctly wired with no action needed. The
+  audit surfaced 26 concrete, independently-verified bugs across the
+  remaining pages, ranked by severity; this entry documents the first 2
+  (active confidential-data exposure) fixed immediately. The remaining 24
+  (broken-but-not-leaking features, cost-abuse gaps, and cosmetic issues) are
+  queued as their own bounded follow-up fixes, same as this board's
+  established practice for the Wave 2 Developer Portal findings.
+- **Fix 1 — `docs/capability-registry/domains/*` gap, AI Governance domain
+  (`workers/src/handlers/aiGovernancePro.js`,
+  `workers/src/handlers/aiGovernancePdfHandler.js`, `frontend/ai-governance-pdf.html`):**
+  every route in this domain (AI model registry CRUD, policies, shadow-AI
+  detection, dashboard, report generation, and PDF export) had **zero
+  authentication** and took `org_id` directly from client body/query
+  params — any anonymous visitor could read, modify, or delete another
+  organisation's confidential AI model registry (including `owner_email`),
+  policies, and generated governance/compliance PDF reports just by
+  supplying that org's id. `handleAIGovernancePro`/`handlePdfGenerate`/
+  `handlePdfList` now require `isRealUser(authCtx)` and derive org scope
+  exclusively from `authCtx.org_id` (the same per-user tenant id
+  `withAuthAliases()` already establishes for every other scoped domain in
+  this codebase), never from client input. Also closed, found while fixing
+  the same bug class: `GET/PUT/DELETE /api/ai-governance/models/:id` and
+  `POST /api/ai-governance/policies/:id/evaluate` had no ownership check at
+  all (IDOR by guessable/known id) — now 404 for a non-owning caller.
+  `frontend/ai-governance-pdf.html`'s "Organisation ID" free-text input
+  (the actual attack surface — it let a visitor type any org's id) is
+  removed; the page now requires sign-in and derives the report scope from
+  the caller's own session token, matching the platform's existing
+  `cdb_token` auth pattern (same as `billing-portal.html`).
+- **Fix 2 — CISO Command Center cross-tenant leak (`workers/src/handlers/cisoMetrics.js`):**
+  `frontend/user-dashboard.html`'s "CISO Executive Metrics" panel — explicitly
+  subtitled "derived from your scan data" — actually showed the
+  **platform-wide aggregate across every other customer's scans and
+  incidents**, for three independent reasons: (1) `fetchRealMetricsFromD1()`
+  queried `scan_history` (which does have a `user_id` column) with no `WHERE`
+  clause at all; (2) `loadIncidents()`/`saveIncidents()` used one single
+  shared KV key (`ciso:incidents`) for every caller — any customer's logged
+  incident was visible, and mutable, by every other customer; (3)
+  `handleGetCISOMetrics()` cached the entire computed response under one
+  single shared KV key (`ciso:metrics_cache`), which would have leaked
+  correctly-scoped data across users via the cache alone even after fixing
+  (1) and (2) in isolation. `handleExportCisoPdf`'s board-report PDF export
+  inherits (and is fixed by) the same change, since it calls
+  `handleGetCISOReport` internally. All three are now namespaced by
+  `authCtx.user_id`. `mythos_runs`/`threat_intel` are deliberately left
+  unscoped — platform-level tool-generation stats and a shared CVE feed, not
+  per-customer data. Also added, found while in this file: `isRealUser(authCtx)`
+  gates on `GET /api/ciso/posture` and `GET /api/ciso/compliance-status`
+  (previously had none — not an active leak today since both query tables
+  that don't yet exist in the schema and always returned an empty/honest
+  result, but needed for correct per-user scoping going forward); and fixed
+  `handleGetComplianceStatus`'s pre-existing `buildComplianceStatus([])`
+  call (wrong arg **and** missing `await`, meaning `.reduce` ran on an
+  unresolved Promise and threw uncaught on every real call — a second,
+  independent crash bug, of the exact same class `handleGetCISOReport`'s own
+  inline comment already documents fixing elsewhere in this same file).
+- **Tests:** `workers/test/aiGovernanceOrgScoping.test.mjs` (new, 8 tests,
+  real in-memory D1 via `node:sqlite` matching the live schema — asserts
+  anonymous 401s, that client-supplied `org_id` is ignored on both read and
+  write paths, and that a second user cannot list/get/update/delete the
+  first user's models, policies, shadow-AI scan, or generated reports).
+  `workers/test/cisoMetricsTenantIsolation.test.mjs` (new, 6 tests — asserts
+  two different authenticated users each see only their own scan stats,
+  incidents, and risk-register entries, and that the response cache doesn't
+  cross tenants). Full suite green: 221 files / 2299 tests (baseline 219/2285,
+  +14 from these 2 new files).
+- **Not done this pass:** the remaining 24 audit findings (10 "customer paid
+  for a feature that silently 403s or shows wrong data" bugs, 8 cost-abuse/
+  misleading-data bugs, 6 minor/cosmetic issues) — queued as follow-up
+  bounded fixes, full list preserved in this session's conversation record
+  for the next wave to work from.
 
 ### 2026-07-11 — Self-correction, same day: the immediately-prior entry's "no nav link existed anywhere" claim was wrong; fixed the real bug instead
 

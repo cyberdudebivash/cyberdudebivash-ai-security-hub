@@ -151,12 +151,14 @@
       <div class="card">
         <div class="card-title"><span class="icon">📋</span> Generate Compliance Report</div>
 
-        <div id="form-area">
-          <div class="form-group">
-            <label>Organisation ID</label>
-            <input id="org_id" type="text" value="default" placeholder="e.g. org-acme-corp" />
-          </div>
+        <div id="signin-required" style="display:none; text-align:center; padding: 30px 10px;">
+          <div style="font-size:28pt; margin-bottom:10px;">🔒</div>
+          <div style="font-size:12pt; font-weight:700; margin-bottom:8px;">Sign in to generate your report</div>
+          <div style="color:var(--muted); font-size:10.5pt; margin-bottom:18px;">Compliance reports are generated from your own organisation's AI model registry and assessment data.</div>
+          <a href="/user-dashboard.html" class="btn btn-primary">Sign In</a>
+        </div>
 
+        <div id="form-area">
           <div class="form-group">
             <label>Report Type</label>
             <select id="report_type">
@@ -284,6 +286,27 @@
 <script>
 const API = '/api/ai-governance/pdf';
 
+// Same key SUBSCRIPTION uses elsewhere on the platform (localStorage/sessionStorage
+// 'cdb_token', set at login/signup). The backend derives the report's org scope
+// entirely from this token now — org_id is never client-supplied (previously any
+// visitor could type another organisation's id here and pull its confidential
+// governance report; see docs/capability-registry/PROGRAM_BOARD.md).
+function authToken() {
+  try { return localStorage.getItem('cdb_token') || sessionStorage.getItem('cdb_token') || null; }
+  catch { return null; }
+}
+function authedFetch(path, opts = {}) {
+  const token = authToken();
+  const headers = { ...(opts.headers || {}) };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  return fetch(`${API}${path}`, { ...opts, headers });
+}
+
+if (!authToken()) {
+  document.getElementById('signin-required').style.display = 'block';
+  document.getElementById('form-area').style.display = 'none';
+}
+
 // ── Checkbox styling ───────────────────────────────────────────────────────
 document.querySelectorAll('.fw-option input[type=checkbox]').forEach(cb => {
   cb.addEventListener('change', () => {
@@ -298,7 +321,6 @@ async function generateReport() {
     showError('Select at least one framework.'); return;
   }
   const body = {
-    org_id:          document.getElementById('org_id').value.trim() || 'default',
     report_type:     document.getElementById('report_type').value,
     frameworks,
     classification:  document.getElementById('classification').value,
@@ -311,7 +333,7 @@ async function generateReport() {
   document.getElementById('result-area').style.display = 'none';
 
   try {
-    const res  = await fetch(`${API}/generate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const res  = await authedFetch(`/generate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || 'Generation failed');
 
@@ -332,7 +354,7 @@ async function generateReport() {
     document.getElementById('progress-area').style.display = 'none';
     document.getElementById('result-area').style.display  = 'block';
 
-    loadReports(body.org_id);
+    loadReports();
   } catch (err) {
     document.getElementById('progress-area').style.display = 'none';
     document.getElementById('form-area').style.display     = 'block';
@@ -364,16 +386,16 @@ function showError(msg) {
 }
 
 // ── Load recent reports ────────────────────────────────────────────────────
-async function loadReports(orgId) {
-  const id = orgId || document.getElementById('org_id').value.trim() || 'default';
+async function loadReports() {
   try {
-    const res  = await fetch(`${API}/list?org_id=${encodeURIComponent(id)}`);
+    const res  = await authedFetch(`/list`);
+    if (!res.ok) throw new Error('not authorized');
     const data = await res.json();
     const list = data.reports || [];
     document.getElementById('report-count').textContent = `(${list.length})`;
     const el = document.getElementById('report-list');
     if (list.length === 0) {
-      el.innerHTML = '<div style="color:var(--muted);font-size:10pt;text-align:center;padding:20px">No reports generated yet for this org.</div>';
+      el.innerHTML = '<div style="color:var(--muted);font-size:10pt;text-align:center;padding:20px">No reports generated yet for your organisation.</div>';
       return;
     }
     el.innerHTML = list.map(r => `
@@ -391,7 +413,7 @@ async function loadReports(orgId) {
   }
 }
 
-loadReports();
+if (authToken()) loadReports();
 </script>
 <script src="/assets/copilot-widget.js" defer></script>
 </body>
