@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Executive KPI Dashboard — CYBERDUDEBIVASH AI Security Hub</title>
   <meta name="description" content="CEO, Board, and CISO Executive Intelligence Dashboard — CYBERDUDEBIVASH AI Security Hub"/>
+  <meta name="robots" content="noindex,nofollow"/>
   <style>
     :root {
       --bg: #080b12;
@@ -23,6 +24,10 @@
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+
+    /* Staff gate overlay — real, server-verified session auth (assets/staff-auth.js) */
+    .gate-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px}
+    .gate-box{background:var(--surface);border:1px solid rgba(239,68,68,.3);border-radius:16px;padding:36px;width:100%;max-width:420px;text-align:center}
 
     /* Header */
     .header {
@@ -174,6 +179,11 @@
 </head>
 <body>
 
+<!-- Staff Gate Modal (real session auth — see assets/staff-auth.js) -->
+<div class="gate-overlay" id="gateOverlay" style="display:none">
+  <div class="gate-box" id="gateBox"></div>
+</div>
+
 <header class="header">
   <div class="logo">
     <div class="logo-badge">APEX</div>
@@ -248,6 +258,7 @@
   </div>
 </div>
 
+<script src="/assets/staff-auth.js"></script>
 <script>
 const API = '';
 let kpiData = null;
@@ -283,7 +294,7 @@ function trendHtml(v, prefix='') {
 
 async function loadKPI() {
   try {
-    const r = await fetch(`${API}/api/platform/kpi`, { credentials: 'include' });
+    const r = await CDB_STAFF_AUTH.authFetch(`${API}/api/platform/kpi`);
     const raw = await r.json();
     if (!r.ok || raw.error) {
       document.getElementById('main-loading').innerHTML = `<div style="color:var(--red)">${raw?.error || 'Failed to load KPIs. Please check your permissions.'}</div>`;
@@ -525,9 +536,18 @@ async function refreshDashboard() {
   await loadKPI();
 }
 
-loadKPI();
-// Auto-refresh every 5 minutes
-setInterval(loadKPI, 300000);
+// Real, server-verified session auth (assets/staff-auth.js). Data loading
+// and the auto-refresh interval only ever start once CDB_STAFF_AUTH confirms
+// a real platform-staff session; an unauthenticated visitor sees only the
+// login gate, never the dashboard shell or any live data.
+CDB_STAFF_AUTH.guard(
+  document.getElementById('gateOverlay'),
+  document.getElementById('gateBox'),
+  () => {
+    loadKPI();
+    setInterval(loadKPI, 300000); // Auto-refresh every 5 minutes
+  }
+);
 </script>
 <script src="/assets/copilot-widget.js" defer></script>
 </body>

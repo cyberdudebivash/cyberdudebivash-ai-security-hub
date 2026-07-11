@@ -24,6 +24,10 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
 
+  /* Staff gate overlay — real, server-verified session auth (assets/staff-auth.js) */
+  .gate-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px}
+  .gate-box{background:var(--surface);border:1px solid rgba(239,68,68,.3);border-radius:16px;padding:36px;width:100%;max-width:420px;text-align:center}
+
   header {
     background: linear-gradient(135deg, #0d1421 0%, #0a1628 100%);
     border-bottom: 1px solid var(--border);
@@ -124,6 +128,11 @@
   <link rel="stylesheet" href="/assets/cdb-ux-upgrade.css">
 </head>
 <body>
+
+<!-- Staff Gate Modal (real session auth — see assets/staff-auth.js) -->
+<div class="gate-overlay" id="gateOverlay" style="display:none">
+  <div class="gate-box" id="gateBox"></div>
+</div>
 
 <header>
   <div>
@@ -256,6 +265,7 @@
   </div>
 </div>
 
+<script src="/assets/staff-auth.js"></script>
 <script>
 const API = '';
 let activeTab = 'overview';
@@ -307,7 +317,7 @@ function actionBtn(orgId, label = 'Intervene', cls = '') {
 
 async function loadDashboard() {
   try {
-    const r = await fetch(`${API}/api/platform/revenue-intelligence`, { credentials: 'include' });
+    const r = await CDB_STAFF_AUTH.authFetch(`${API}/api/platform/revenue-intelligence`);
     dashboardData = await r.json();
     renderOverview();
   } catch (e) {
@@ -376,7 +386,7 @@ function renderOverview() {
 
 async function loadChurn() {
   try {
-    const r = await fetch(`${API}/api/platform/revenue-intelligence/churn-alerts`, { credentials: 'include' });
+    const r = await CDB_STAFF_AUTH.authFetch(`${API}/api/platform/revenue-intelligence/churn-alerts`);
     const d = await r.json();
     churnData = d;
     const alerts = d.alerts || [];
@@ -415,7 +425,7 @@ async function loadChurn() {
 
 async function loadUpgrade() {
   try {
-    const r = await fetch(`${API}/api/platform/revenue-intelligence/upgrade-signals`, { credentials: 'include' });
+    const r = await CDB_STAFF_AUTH.authFetch(`${API}/api/platform/revenue-intelligence/upgrade-signals`);
     const d = await r.json();
     upgradeData = d;
     const signals = d.signals || [];
@@ -454,7 +464,7 @@ async function loadUpgrade() {
 
 async function loadForecast() {
   try {
-    const r = await fetch(`${API}/api/platform/revenue-intelligence/nrr-forecast`, { credentials: 'include' });
+    const r = await CDB_STAFF_AUTH.authFetch(`${API}/api/platform/revenue-intelligence/nrr-forecast`);
     const d = await r.json();
     forecastData = d;
     const f = d.forecast || {};
@@ -511,9 +521,8 @@ async function submitIntervention() {
   const action = document.getElementById('modalAction').value;
   const notes = document.getElementById('modalNotes').value;
   try {
-    const r = await fetch(`${API}/api/platform/revenue-intelligence/intervention`, {
+    const r = await CDB_STAFF_AUTH.authFetch(`${API}/api/platform/revenue-intelligence/intervention`, {
       method: 'POST',
-      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ org_id: orgId, action_type: action, notes }),
     });
@@ -533,9 +542,18 @@ async function refreshAll() {
   if (activeTab === 'forecast') loadForecast();
 }
 
-// Init
-loadDashboard();
-setInterval(refreshAll, 300_000); // 5-min auto-refresh
+// Init — real, server-verified session auth (assets/staff-auth.js). Data
+// loading and the auto-refresh interval only ever start once CDB_STAFF_AUTH
+// confirms a real platform-staff session; an unauthenticated visitor sees
+// only the login gate, never the dashboard shell or any live data.
+CDB_STAFF_AUTH.guard(
+  document.getElementById('gateOverlay'),
+  document.getElementById('gateBox'),
+  () => {
+    loadDashboard();
+    setInterval(refreshAll, 300_000); // 5-min auto-refresh
+  }
+);
 document.getElementById('interventionModal').addEventListener('click', e => {
   if (e.target === document.getElementById('interventionModal')) closeModal();
 });
