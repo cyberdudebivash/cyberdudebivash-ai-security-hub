@@ -71,23 +71,46 @@ export async function handleTrustCompany(request, env) {
 }
 
 // GET /api/trust/compliance — framework alignment records ("honest badges").
-// frontend/assets/js/sentinel-apex-live-metrics.js has called this since it
-// was written but the route never existed. COMPANY_INFO.certifications is
-// deliberately []: this platform holds no formal third-party certifications
-// yet, so no framework is ever reported "certified" here — only "aligned"
-// (explicitly referenced in the real methodology.standards list above) or
-// "partial" (not yet formally mapped), matching the codebase's existing
-// de-fabrication stance.
-const COMPLIANCE_FRAMEWORKS = [
-  { framework: 'iso27001',  alignment_level: 'aligned', scope_note: 'ISO 27001 controls referenced in platform security architecture; no formal certification held.' },
-  { framework: 'dpdp',      alignment_level: 'aligned', scope_note: 'DPDP Act 2023 — dedicated compliance engine (/api/compliance/dpdp) available on PRO+.' },
-  { framework: 'owasp_llm', alignment_level: 'aligned', scope_note: 'OWASP LLM Top 10 mapped across AI Security scan modules.' },
-  { framework: 'mitre',     alignment_level: 'aligned', scope_note: 'MITRE ATT&CK techniques mapped in Red Team and Threat Intel modules.' },
-  { framework: 'soc2',      alignment_level: 'partial', scope_note: 'Not yet formally assessed against SOC 2 Trust Service Criteria.' },
-  { framework: 'gdpr',      alignment_level: 'partial', scope_note: 'Not yet formally assessed against GDPR 2016/679.' },
-  { framework: 'pcidss',    alignment_level: 'partial', scope_note: 'No cardholder data is stored by the platform; formal PCI-DSS assessment not performed.' },
-  { framework: 'hipaa',     alignment_level: 'partial', scope_note: 'Not yet formally assessed against HIPAA/HITECH.' },
-  { framework: 'nist_ai',   alignment_level: 'partial', scope_note: 'Not yet formally assessed against NIST AI RMF.' },
+// COMPANY_INFO.certifications is deliberately []: this platform holds no
+// formal third-party certifications yet, so no framework is ever reported
+// "certified" here — only "aligned" (explicitly referenced in the real
+// methodology.standards list above, or backed by a real, working mechanism
+// in code) or "partial" (not yet formally assessed / mapped), matching the
+// codebase's existing de-fabrication stance.
+//
+// SINGLE SOURCE OF TRUTH as of 2026-07-11: this was previously duplicated by
+// a second, independently hand-maintained list in workers/src/handlers/
+// enterprisePortalHandlers.js's handleTrustCenter (7 frameworks, a different
+// 3-state vocabulary) — found to directly disagree with this list on GDPR
+// specifically (that list claimed "Aligned — data minimization, consent,
+// deletion rights implemented"; this one said "not yet formally assessed").
+// Investigated both claims against real evidence before reconciling (see
+// docs/capability-registry/PROGRAM_BOARD.md for the full writeup): a real,
+// working GDPR/DPDP right-to-erasure mechanism exists (DELETE /api/auth/
+// delete-account, workers/src/handlers/auth.js — anonymizes the account row
+// and purges personal data across every table keyed by user_id), a real DPA
+// template exists (DATA_PROCESSING_AGREEMENT_TEMPLATE.md) committing to
+// 72-hour breach notification and SCC/IDTA-covered international transfers,
+// and scan-target data is genuinely processed in-flight, not stored. None of
+// that amounts to a formal, audited GDPR compliance program, so "aligned" is
+// used in this list's own defined sense (built with real regard for the
+// framework; no formal certification/audit claimed) rather than overstating
+// it as fully "Aligned" the way the other list did. enterprisePortalHandlers.js
+// now imports this same list instead of maintaining its own — see that
+// file's handleTrustCenter for the derivation.
+export const COMPLIANCE_FRAMEWORKS = [
+  { framework: 'iso27001',    alignment_level: 'aligned', scope_note: 'ISO 27001 controls referenced in platform security architecture; no formal certification held.' },
+  { framework: 'dpdp',        alignment_level: 'aligned', scope_note: 'DPDP Act 2023 — dedicated compliance engine (/api/compliance/dpdp) available on PRO+.' },
+  { framework: 'gdpr',        alignment_level: 'aligned', scope_note: 'Real data-subject-rights mechanisms in place (account deletion/erasure, a Data Processing Agreement template committing to 72-hour breach notification, in-flight-only processing of scan targets); no formal third-party GDPR audit has been performed.' },
+  { framework: 'ccpa',        alignment_level: 'partial', scope_note: 'Privacy policy discloses data practices and a deletion mechanism exists; no formal CCPA compliance assessment has been performed.' },
+  { framework: 'owasp_top10', alignment_level: 'aligned', scope_note: 'Input validation, parameterized queries, and auth hardening applied platform-wide.' },
+  { framework: 'owasp_llm',   alignment_level: 'aligned', scope_note: 'OWASP LLM Top 10 mapped across AI Security scan modules; dedicated AI-SPM product suite available.' },
+  { framework: 'mitre',       alignment_level: 'aligned', scope_note: 'MITRE ATT&CK techniques mapped in Red Team and Threat Intel modules.' },
+  { framework: 'nist_csf2',   alignment_level: 'aligned', scope_note: 'Identify/Protect/Detect/Respond/Recover functions represented across the platform’s security operations.' },
+  { framework: 'soc2',        alignment_level: 'partial', scope_note: 'Security controls are in place; no formal third-party SOC 2 Type II audit has been engaged.' },
+  { framework: 'pcidss',      alignment_level: 'partial', scope_note: 'No cardholder data is stored by the platform; formal PCI-DSS assessment not performed.' },
+  { framework: 'hipaa',       alignment_level: 'partial', scope_note: 'Not yet formally assessed against HIPAA/HITECH.' },
+  { framework: 'nist_ai',     alignment_level: 'partial', scope_note: 'Not yet formally assessed against NIST AI RMF.' },
 ];
 
 export async function handleTrustCompliance(request, env) {

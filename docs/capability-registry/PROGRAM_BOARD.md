@@ -203,6 +203,97 @@ see session log below.
 
 ## Session log (most recent first)
 
+### 2026-07-11 — GDPR/compliance-framework-claims contradiction reconciled (owner: "make the tough decision correctly & perfectly")
+
+- **Trigger:** the owner explicitly delegated the CAP-COMP-005 follow-on
+  finding flagged at the end of the prior entry — two files independently
+  maintaining compliance-framework claims that disagree on GDPR — with the
+  instruction to resolve it correctly, in service of a global production
+  customer release and closing competitive gaps (Mandiant/CrowdStrike/
+  Recorded Future/ThreatConnect/IBM X-Force/Microsoft Sentinel all publish
+  real, audited trust/compliance postures — getting this platform's own
+  claims right and internally consistent is table stakes before any of that
+  comparison is even fair).
+- **Treated as a real evidence question, not a coin flip.** Before picking a
+  side, read: DATA_PROCESSING_AGREEMENT_TEMPLATE.md (a real, substantive DPA
+  template — 72-hour breach notification matching GDPR Art. 33's own
+  timeline, SCC/IDTA-covered international transfers, a named Data
+  Protection Officer, sub-processor 30-day notice); `DELETE /api/auth/
+  delete-account` (workers/src/handlers/auth.js) — a real, working
+  right-to-erasure mechanism, not just documented intent, that anonymizes
+  the account row and purges personal data across every table keyed by
+  user_id; SUB_PROCESSOR_LIST.md; frontend/privacy-policy.html in full.
+  Conclusion: real mechanisms exist (enough to justify "aligned" in
+  trustCenter.js's own defined sense — built with real regard for the
+  framework, no certification claimed) but nothing formal/audited exists
+  (not enough to justify enterprisePortalHandlers.js's stronger, unqualified
+  "Aligned — implemented" claim). Landed on "aligned" with an accurate,
+  evidence-backed scope_note rather than either original claim verbatim.
+- **A narrower worry didn't hold up on a fuller read — noted rather than
+  acted on, to avoid manufacturing a problem that isn't there:** an early
+  grep hit on frontend/privacy-policy.html's "We process data with your
+  explicit consent" looked like a possible mismatch (no consent checkbox
+  found in the primary signup flow, frontend/user-dashboard.html). Reading
+  the full §3 showed the policy already cites 4 distinct GDPR legal bases
+  (Consent, Contract Performance, Legal Obligation, Legitimate Interest) —
+  standard, sound multi-basis structure, not a blanket "everything is
+  consent-based" claim; "Consent" most plausibly covers §4's separately-
+  listed "promotional emails" specifically. One small adjacent finding did
+  survive the fuller check: no dedicated marketing-email opt-out/preference
+  mechanism exists anywhere in workers/src/handlers/ (confirmed
+  notificationPlatform.js / CAP-NOTIF-001 handles a different, unrelated
+  channel — Slack/Teams ops-alert webhooks, not email marketing
+  preferences) — flagged in the registry as its own small, standalone,
+  not-yet-built item, not conflated with CAP-NOTIF-001.
+- **Fixed — real single-source-of-truth consolidation, not just a value
+  change:** `trustCenter.js`'s `COMPLIANCE_FRAMEWORKS` (previously a local,
+  unexported const) is now `export`ed and is the one canonical list, expanded
+  from 9 to 12 frameworks (added `ccpa`, `owasp_top10`, `nist_csf2` — real
+  claims `enterprisePortalHandlers.js`'s list was already making that
+  `trustCenter.js`'s didn't cover at all). `enterprisePortalHandlers.js` no
+  longer hand-writes its own `compliance_status.frameworks` array; it now
+  imports `COMPLIANCE_FRAMEWORKS` and derives its response via a small
+  display-layer transform (`complianceFrameworksForDisplay()`) that
+  preserves the existing response shape (`{framework, status, evidence}`,
+  Title-Case status strings) for zero frontend changes — this makes the
+  specific class of bug that caused the GDPR contradiction (two independent
+  hand-maintained copies silently drifting apart) structurally impossible to
+  reintroduce by accident, not just fixed for today.
+- **Verified:** new `workers/test/complianceFrameworksReconciliation.test.mjs`
+  (4 tests): confirms `GET /api/trust/compliance` and `GET /api/trust-center`
+  now report the identical GDPR status; confirms every framework the second
+  route displays traces back to a real `COMPLIANCE_FRAMEWORKS` entry (byte-
+  identical `scope_note`/`evidence`, no orphaned data); confirms the
+  reconciled list covers the full 12-framework union; confirms no framework
+  claims formal certification or a fabricated audit date. Pre-existing
+  `workers/test/truthClaims.test.mjs` (which locks in the *absence* of
+  fabricated SOC 2/ISO 27001 claims on this exact route) and
+  `workers/test/trustMetricsContract.test.mjs` both still pass unmodified
+  against the reconciled data. Full backend suite: 214 files / 2215 tests
+  passing (up from 213/2211 — the 1 new file). `node
+  scripts/registry/validate.mjs`: 0 failures, 0 warnings (2 more bare-
+  filename evidence citations caught and fixed — same recurring class of
+  mistake as this session's other 2 registry updates). `scripts/seo-
+  structure-lock.mjs`: 22/22 pages green (unaffected — no frontend HTML
+  changed).
+- **Commits this session:** `workers/src/handlers/trustCenter.js`
+  (`COMPLIANCE_FRAMEWORKS` exported + expanded to 12 frameworks, GDPR
+  reconciled), `workers/src/handlers/enterprisePortalHandlers.js`
+  (`compliance_status.frameworks` now derived from the shared list), new
+  test `workers/test/complianceFrameworksReconciliation.test.mjs`,
+  `docs/capability-registry/domains/compliance-store.json` (CAP-COMP-005
+  entry: reconciliation documented, prior duplicate-list finding closed
+  out), `docs/capability-registry/PRODUCTION_READINESS_REPORT.md`
+  (regenerated), `docs/capability-registry/PROGRAM_BOARD.md` (this entry).
+- **Risks / follow-ups:** the two dead, byte-identical
+  `frontend/assets/(js/)sentinel-apex-live-metrics.js` files (the only prior
+  callers of `/api/trust/compliance`, loaded by zero `<script>` tags
+  anywhere) are unaffected by this fix — still real, still small, still not
+  fixed; either wire one up or delete both, whenever prioritized. The
+  marketing-email-preference gap noted above is new-to-the-registry this
+  session and not yet a capability with its own ID — worth one if the
+  platform starts real promotional email campaigns.
+
 ### 2026-07-11 — CAP-MKT-005 catalog question resolved with the owner; corrected diagnosis: the "broken browse-to-purchase journey" premise was wrong; real fix: removed 14 genuinely dead PRODUCT_CATALOG products
 
 - **Trigger:** the owner responded to this session's carried-over CAP-MKT-005

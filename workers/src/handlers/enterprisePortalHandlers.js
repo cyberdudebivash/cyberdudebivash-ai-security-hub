@@ -12,9 +12,32 @@
  */
 
 import { callClaude } from '../core/mythosAIProvider.js';
-import { handleTrustMetrics } from './trustCenter.js';
+import { handleTrustMetrics, COMPLIANCE_FRAMEWORKS } from './trustCenter.js';
 
 function ok(data, status = 200) { return Response.json(data, { status }); }
+
+// Display-layer transform for this file's compliance_status.frameworks
+// response shape ({framework: <display name>, status: <Title Case>, evidence})
+// — kept for zero-change backward compatibility with frontend/trust-center.html's
+// existing rendering script — sourced from the single canonical
+// COMPLIANCE_FRAMEWORKS list (trustCenter.js) rather than a second,
+// independently hand-maintained copy. See that list's own comment for the
+// 2026-07-11 reconciliation writeup (this file previously disagreed with it
+// on GDPR specifically).
+const FRAMEWORK_DISPLAY_NAMES = {
+  iso27001: 'ISO 27001', dpdp: 'DPDP Act 2023', gdpr: 'GDPR', ccpa: 'CCPA',
+  owasp_top10: 'OWASP Top 10', owasp_llm: 'OWASP LLM Top 10', mitre: 'MITRE ATT&CK',
+  nist_csf2: 'NIST CSF 2.0', soc2: 'SOC 2 Type II', pcidss: 'PCI-DSS',
+  hipaa: 'HIPAA', nist_ai: 'NIST AI RMF',
+};
+const ALIGNMENT_STATUS_LABEL = { aligned: 'Aligned', partial: 'Planning' };
+function complianceFrameworksForDisplay() {
+  return COMPLIANCE_FRAMEWORKS.map(f => ({
+    framework: FRAMEWORK_DISPLAY_NAMES[f.framework] || f.framework,
+    status: ALIGNMENT_STATUS_LABEL[f.alignment_level] || f.alignment_level,
+    evidence: f.scope_note,
+  }));
+}
 
 // ─── Platform uptime / incident check ────────────────────────────────────────
 async function getIncidents(env) {
@@ -123,19 +146,16 @@ export async function handleTrustCenter(request, env, authCtx) {
 
     // Compliance claims must never exceed real, verified status — no auditor
     // is currently engaged for SOC 2 or ISO 27001 (GENERAL_AVAILABILITY_REPORT.md
-    // GA-O4). Mirrors trustCenter.js's honest framing; do not reintroduce
-    // "In Progress"/dated certification claims without a named third-party
-    // engagement as evidence.
+    // GA-O4). Sourced from trustCenter.js's COMPLIANCE_FRAMEWORKS (single
+    // canonical list, see complianceFrameworksForDisplay() above) rather than
+    // a second, independent copy — this file's own list previously drifted
+    // to disagree with that one on GDPR specifically (claimed "Aligned —
+    // data minimization, consent, deletion rights implemented" here, while
+    // trustCenter.js said "not yet formally assessed"). Do not reintroduce a
+    // second hand-written copy; add new frameworks to COMPLIANCE_FRAMEWORKS
+    // and FRAMEWORK_DISPLAY_NAMES instead.
     compliance_status: {
-      frameworks: [
-        { framework: 'OWASP Top 10',        status: 'Implemented',    evidence: 'Input validation, parameterized queries, auth hardening' },
-        { framework: 'OWASP LLM Top 10',    status: 'Implemented',    evidence: 'AI SPM product suite — full assessment available' },
-        { framework: 'NIST CSF 2.0',        status: 'Aligned',        evidence: 'Identify/Protect/Detect/Respond/Recover controls active' },
-        { framework: 'SOC 2 Type II',        status: 'Planning',      evidence: 'Security controls implemented; no third-party SOC 2 audit engaged yet' },
-        { framework: 'ISO 27001',            status: 'Planning',      evidence: 'ISO 27001 controls referenced in security architecture; formal certification not yet started' },
-        { framework: 'GDPR',                 status: 'Aligned',        evidence: 'Data minimization, consent, deletion rights implemented' },
-        { framework: 'CCPA',                 status: 'Aligned',        evidence: 'Privacy policy + data deletion rights available' },
-      ],
+      frameworks: complianceFrameworksForDisplay(),
     },
 
     vulnerability_disclosure: {
