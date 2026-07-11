@@ -14,6 +14,8 @@
 //   GET  /api/ai-governance/pdf/observability → health metrics
 // =============================================================================
 
+import { isRealUser } from '../auth/middleware.js';
+
 const PDF_TOKEN_TTL      = 86400 * 7;   // 7-day download window
 const PDF_KV_PREFIX      = 'agpdf:';
 const REPORT_LIST_PREFIX = 'agpdf:list:';
@@ -34,9 +36,16 @@ const FRAMEWORK_META = {
 // Body: { org_id, report_type, frameworks[], classification, requestor_name, requestor_title }
 // ─────────────────────────────────────────────────────────────────────────────
 export async function handlePdfGenerate(request, env, authCtx) {
+  if (!isRealUser(authCtx)) {
+    return jsonResponse({ error: 'Authentication required' }, 401);
+  }
   try {
     const body = await request.json();
-    const orgId           = (body.org_id || 'default').slice(0, 64);
+    // org_id is always the caller's own tenant (authCtx.org_id, uniquely
+    // namespaced per user) — never trusted from the client body, which
+    // previously let anyone request another org's confidential report by
+    // guessing/knowing its org_id.
+    const orgId           = authCtx.org_id || `u:${authCtx.user_id ?? authCtx.userId}`;
     const reportType      = body.report_type || 'FULL_GOVERNANCE';
     const frameworks      = Array.isArray(body.frameworks) && body.frameworks.length
                             ? body.frameworks : Object.keys(FRAMEWORK_META);
@@ -154,12 +163,17 @@ export async function handlePdfStatus(request, env, token) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET /api/ai-governance/pdf/list?org_id=
+// GET /api/ai-governance/pdf/list
 // ─────────────────────────────────────────────────────────────────────────────
-export async function handlePdfList(request, env) {
+export async function handlePdfList(request, env, authCtx) {
+  if (!isRealUser(authCtx)) {
+    return jsonResponse({ error: 'Authentication required' }, 401);
+  }
   try {
-    const url   = new URL(request.url);
-    const orgId = (url.searchParams.get('org_id') || 'default').slice(0, 64);
+    // org_id is always the caller's own tenant — never the client-supplied
+    // ?org_id= query param, which previously let anyone list (and pull the
+    // download link for) any other org's generated reports.
+    const orgId = authCtx.org_id || `u:${authCtx.user_id ?? authCtx.userId}`;
     const list  = await env.KV.get(`${REPORT_LIST_PREFIX}${orgId}`, 'json') || [];
     return jsonResponse({ reports: list, count: list.length });
   } catch (e) {

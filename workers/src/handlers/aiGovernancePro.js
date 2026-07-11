@@ -5,6 +5,8 @@
 // Implements: EU AI Act, NIST AI RMF, ISO 42001, AI ASPM, Shadow AI Detection
 // =============================================================================
 
+import { isRealUser } from '../auth/middleware.js';
+
 const EU_AI_ACT = {
   PROHIBITED: {
     code: 'EU-PROHIBITED', label: 'Prohibited AI',
@@ -203,31 +205,41 @@ const KNOWN_SHADOW_AI_TOOLS = [
   { name:'Notion AI', domains:['notion.so','notion-api.workers.dev'], risk:'LOW', category:'Productivity AI', dataEgressRisk:'LOW', gdprConcerns:false }
 ];
 
-export async function handleAIGovernancePro(request, env) {
+// Every route below manages an org's confidential AI model/risk inventory —
+// requires a real logged-in principal, and org_id is always derived from the
+// authenticated session (authCtx.org_id, already uniquely namespaced per user
+// by withAuthAliases), never trusted from client body/query params. Previously
+// every route here accepted an arbitrary client-supplied org_id with zero auth
+// at all, letting anyone read/write/delete any other org's AI governance data.
+export async function handleAIGovernancePro(request, env, authCtx) {
+  if (!isRealUser(authCtx)) {
+    return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+  const orgId = authCtx.org_id || `u:${authCtx.user_id ?? authCtx.userId}`;
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method;
-  if (path === '/api/ai-governance/models' && method === 'POST') return registerModel(request, env);
-  if (path === '/api/ai-governance/models' && method === 'GET') return listModels(request, env);
-  if (path.match(/^\/api\/ai-governance\/models\/[\w-]+$/) && method === 'GET') return getModel(request, env);
-  if (path.match(/^\/api\/ai-governance\/models\/[\w-]+$/) && method === 'PUT') return updateModel(request, env);
-  if (path.match(/^\/api\/ai-governance\/models\/[\w-]+$/) && method === 'DELETE') return deleteModel(request, env);
+  if (path === '/api/ai-governance/models' && method === 'POST') return registerModel(request, env, orgId);
+  if (path === '/api/ai-governance/models' && method === 'GET') return listModels(request, env, orgId);
+  if (path.match(/^\/api\/ai-governance\/models\/[\w-]+$/) && method === 'GET') return getModel(request, env, orgId);
+  if (path.match(/^\/api\/ai-governance\/models\/[\w-]+$/) && method === 'PUT') return updateModel(request, env, orgId);
+  if (path.match(/^\/api\/ai-governance\/models\/[\w-]+$/) && method === 'DELETE') return deleteModel(request, env, orgId);
   if (path === '/api/ai-governance/risk-score' && method === 'POST') return calculateRiskScore(request, env);
-  if (path.match(/^\/api\/ai-governance\/risk-score\/[\w-]+$/) && method === 'GET') return getModelRiskScore(request, env);
-  if (path === '/api/ai-governance/policies' && method === 'POST') return createPolicy(request, env);
-  if (path === '/api/ai-governance/policies' && method === 'GET') return listPolicies(request, env);
-  if (path.match(/^\/api\/ai-governance\/policies\/[\w-]+\/evaluate$/) && method === 'POST') return evaluatePolicy(request, env);
+  if (path.match(/^\/api\/ai-governance\/risk-score\/[\w-]+$/) && method === 'GET') return getModelRiskScore(request, env, orgId);
+  if (path === '/api/ai-governance/policies' && method === 'POST') return createPolicy(request, env, orgId);
+  if (path === '/api/ai-governance/policies' && method === 'GET') return listPolicies(request, env, orgId);
+  if (path.match(/^\/api\/ai-governance\/policies\/[\w-]+\/evaluate$/) && method === 'POST') return evaluatePolicy(request, env, orgId);
   if (path === '/api/ai-governance/compliance/eu-ai-act' && method === 'POST') return euAiActCheck(request, env);
   if (path === '/api/ai-governance/compliance/nist-ai-rmf' && method === 'POST') return nistAiRmfAssessment(request, env);
   if (path === '/api/ai-governance/compliance/iso-42001' && method === 'POST') return iso42001GapAnalysis(request, env);
-  if (path === '/api/ai-governance/shadow-ai/detect' && method === 'POST') return detectShadowAI(request, env);
-  if (path === '/api/ai-governance/shadow-ai/inventory' && method === 'GET') return shadowAIInventory(request, env);
-  if (path === '/api/ai-governance/dashboard' && method === 'GET') return governanceDashboard(request, env);
-  if (path === '/api/ai-governance/reports/generate' && method === 'POST') return generateGovernanceReport(request, env);
+  if (path === '/api/ai-governance/shadow-ai/detect' && method === 'POST') return detectShadowAI(request, env, orgId);
+  if (path === '/api/ai-governance/shadow-ai/inventory' && method === 'GET') return shadowAIInventory(request, env, orgId);
+  if (path === '/api/ai-governance/dashboard' && method === 'GET') return governanceDashboard(request, env, orgId);
+  if (path === '/api/ai-governance/reports/generate' && method === 'POST') return generateGovernanceReport(request, env, orgId);
   return new Response(JSON.stringify({ error:'Not found' }), { status:404, headers:{ 'Content-Type':'application/json' } });
 }
 
-async function registerModel(request, env) {
+async function registerModel(request, env, orgId) {
   try {
     const body = await request.json();
     const id = crypto.randomUUID();
@@ -238,7 +250,7 @@ async function registerModel(request, env) {
        impact_domain,explainability,bias_tested,risk_score,risk_level,eu_ai_act_category,
        owner_email,status,metadata,created_at,updated_at)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-      .bind(id, body.org_id||'default', body.name, body.version||'1.0', body.model_type,
+      .bind(id, orgId, body.name, body.version||'1.0', body.model_type,
         body.data_classification, body.deployment_context, body.autonomy_level,
         body.impact_domain, body.explainability, body.bias_tested ? 1 : 0,
         riskScore.score, riskScore.riskLevel, riskScore.euAiActCategory,
@@ -250,10 +262,9 @@ async function registerModel(request, env) {
   } catch(e) { return new Response(JSON.stringify({ error:e.message }), { status:500, headers:{ 'Content-Type':'application/json' } }); }
 }
 
-async function listModels(request, env) {
+async function listModels(request, env, orgId) {
   try {
     const url = new URL(request.url);
-    const orgId = url.searchParams.get('org_id')||'default';
     const riskLevel = url.searchParams.get('risk_level');
     const limit = parseInt(url.searchParams.get('limit')||'50');
     const offset = parseInt(url.searchParams.get('offset')||'0');
@@ -273,35 +284,39 @@ async function listModels(request, env) {
   } catch(e) { return new Response(JSON.stringify({ error:e.message }), { status:500, headers:{ 'Content-Type':'application/json' } }); }
 }
 
-async function getModel(request, env) {
+async function getModel(request, env, orgId) {
   const id = new URL(request.url).pathname.split('/').pop();
   try {
-    const model = await env.DB.prepare('SELECT * FROM ai_model_registry WHERE id = ?').bind(id).first();
+    const model = await env.DB.prepare('SELECT * FROM ai_model_registry WHERE id = ? AND org_id = ?').bind(id, orgId).first();
     if (!model) return new Response(JSON.stringify({ error:'Model not found' }), { status:404, headers:{ 'Content-Type':'application/json' } });
     return new Response(JSON.stringify({ model, euAiActDetails:EU_AI_ACT[model.eu_ai_act_category]||{} }), { headers:{ 'Content-Type':'application/json' } });
   } catch(e) { return new Response(JSON.stringify({ error:e.message }), { status:500, headers:{ 'Content-Type':'application/json' } }); }
 }
 
-async function updateModel(request, env) {
+async function updateModel(request, env, orgId) {
   const id = new URL(request.url).pathname.split('/').pop();
   try {
+    const existing = await env.DB.prepare('SELECT id FROM ai_model_registry WHERE id = ? AND org_id = ?').bind(id, orgId).first();
+    if (!existing) return new Response(JSON.stringify({ error:'Model not found' }), { status:404, headers:{ 'Content-Type':'application/json' } });
     const body = await request.json();
     const riskScore = scoreAIModelRisk(body);
     const now = new Date().toISOString();
     await env.DB.prepare(`UPDATE ai_model_registry SET name=?,version=?,model_type=?,data_classification=?,
       deployment_context=?,autonomy_level=?,impact_domain=?,explainability=?,bias_tested=?,
-      risk_score=?,risk_level=?,eu_ai_act_category=?,updated_at=? WHERE id=?`)
+      risk_score=?,risk_level=?,eu_ai_act_category=?,updated_at=? WHERE id=? AND org_id=?`)
       .bind(body.name,body.version,body.model_type,body.data_classification,body.deployment_context,
         body.autonomy_level,body.impact_domain,body.explainability,body.bias_tested?1:0,
-        riskScore.score,riskScore.riskLevel,riskScore.euAiActCategory,now,id).run();
+        riskScore.score,riskScore.riskLevel,riskScore.euAiActCategory,now,id,orgId).run();
     return new Response(JSON.stringify({ success:true, riskAssessment:riskScore }), { headers:{ 'Content-Type':'application/json' } });
   } catch(e) { return new Response(JSON.stringify({ error:e.message }), { status:500, headers:{ 'Content-Type':'application/json' } }); }
 }
 
-async function deleteModel(request, env) {
+async function deleteModel(request, env, orgId) {
   const id = new URL(request.url).pathname.split('/').pop();
   try {
-    await env.DB.prepare('UPDATE ai_model_registry SET status=? WHERE id=?').bind('deleted',id).run();
+    const existing = await env.DB.prepare('SELECT id FROM ai_model_registry WHERE id = ? AND org_id = ?').bind(id, orgId).first();
+    if (!existing) return new Response(JSON.stringify({ error:'Model not found' }), { status:404, headers:{ 'Content-Type':'application/json' } });
+    await env.DB.prepare('UPDATE ai_model_registry SET status=? WHERE id=? AND org_id=?').bind('deleted',id,orgId).run();
     return new Response(JSON.stringify({ success:true, message:'Model deregistered' }), { headers:{ 'Content-Type':'application/json' } });
   } catch(e) { return new Response(JSON.stringify({ error:e.message }), { status:500, headers:{ 'Content-Type':'application/json' } }); }
 }
@@ -314,41 +329,40 @@ async function calculateRiskScore(request, env) {
   } catch(e) { return new Response(JSON.stringify({ error:e.message }), { status:500, headers:{ 'Content-Type':'application/json' } }); }
 }
 
-async function getModelRiskScore(request, env) {
+async function getModelRiskScore(request, env, orgId) {
   const id = new URL(request.url).pathname.split('/').pop();
   try {
-    const model = await env.DB.prepare('SELECT * FROM ai_model_registry WHERE id = ?').bind(id).first();
+    const model = await env.DB.prepare('SELECT * FROM ai_model_registry WHERE id = ? AND org_id = ?').bind(id, orgId).first();
     if (!model) return new Response(JSON.stringify({ error:'Not found' }), { status:404, headers:{ 'Content-Type':'application/json' } });
     const score = scoreAIModelRisk(model);
     return new Response(JSON.stringify({ modelId:id, modelName:model.name, ...score }), { headers:{ 'Content-Type':'application/json' } });
   } catch(e) { return new Response(JSON.stringify({ error:e.message }), { status:500, headers:{ 'Content-Type':'application/json' } }); }
 }
 
-async function createPolicy(request, env) {
+async function createPolicy(request, env, orgId) {
   try {
     const body = await request.json();
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     await env.DB.prepare(`INSERT INTO ai_governance_policies (id,org_id,name,description,rules,enforcement_level,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)`)
-      .bind(id, body.org_id||'default', body.name, body.description||'', JSON.stringify(body.rules||[]), body.enforcement_level||'WARN', now, now).run();
+      .bind(id, orgId, body.name, body.description||'', JSON.stringify(body.rules||[]), body.enforcement_level||'WARN', now, now).run();
     return new Response(JSON.stringify({ success:true, id, message:`Policy "${body.name}" created` }), { status:201, headers:{ 'Content-Type':'application/json' } });
   } catch(e) { return new Response(JSON.stringify({ error:e.message }), { status:500, headers:{ 'Content-Type':'application/json' } }); }
 }
 
-async function listPolicies(request, env) {
+async function listPolicies(request, env, orgId) {
   try {
-    const orgId = new URL(request.url).searchParams.get('org_id')||'default';
     const { results } = await env.DB.prepare('SELECT * FROM ai_governance_policies WHERE org_id = ? ORDER BY created_at DESC').bind(orgId).all();
     return new Response(JSON.stringify({ policies:results, total:results.length }), { headers:{ 'Content-Type':'application/json' } });
   } catch(e) { return new Response(JSON.stringify({ error:e.message }), { status:500, headers:{ 'Content-Type':'application/json' } }); }
 }
 
-async function evaluatePolicy(request, env) {
+async function evaluatePolicy(request, env, orgId) {
   const parts = new URL(request.url).pathname.split('/');
   const policyId = parts[parts.length - 2];
   try {
     const body = await request.json();
-    const policy = await env.DB.prepare('SELECT * FROM ai_governance_policies WHERE id = ?').bind(policyId).first();
+    const policy = await env.DB.prepare('SELECT * FROM ai_governance_policies WHERE id = ? AND org_id = ?').bind(policyId, orgId).first();
     if (!policy) return new Response(JSON.stringify({ error:'Policy not found' }), { status:404, headers:{ 'Content-Type':'application/json' } });
     const rules = JSON.parse(policy.rules||'[]');
     const riskScore = scoreAIModelRisk(body.model);
@@ -445,10 +459,9 @@ async function iso42001GapAnalysis(request, env) {
   } catch(e) { return new Response(JSON.stringify({ error:e.message }), { status:500, headers:{ 'Content-Type':'application/json' } }); }
 }
 
-async function detectShadowAI(request, env) {
+async function detectShadowAI(request, env, orgId) {
   try {
     const body = await request.json();
-    const orgId = body.org_id||'default';
     const dnsLogs = body.dns_logs||[];
     const networkLogs = body.network_logs||[];
     const detected = [];
@@ -471,9 +484,8 @@ async function detectShadowAI(request, env) {
   } catch(e) { return new Response(JSON.stringify({ error:e.message }), { status:500, headers:{ 'Content-Type':'application/json' } }); }
 }
 
-async function shadowAIInventory(request, env) {
+async function shadowAIInventory(request, env, orgId) {
   try {
-    const orgId = new URL(request.url).searchParams.get('org_id')||'default';
     const cached = await env.KV.get(`shadow_ai:${orgId}`,'json');
     return new Response(JSON.stringify(cached||{ orgId, detected:[],
       message:'No scan results found. Run POST /api/ai-governance/shadow-ai/detect first.',
@@ -482,9 +494,8 @@ async function shadowAIInventory(request, env) {
   } catch(e) { return new Response(JSON.stringify({ error:e.message }), { status:500, headers:{ 'Content-Type':'application/json' } }); }
 }
 
-async function governanceDashboard(request, env) {
+async function governanceDashboard(request, env, orgId) {
   try {
-    const orgId = new URL(request.url).searchParams.get('org_id')||'default';
     const { results:models } = await env.DB.prepare(
       'SELECT risk_level,eu_ai_act_category,COUNT(*) as cnt FROM ai_model_registry WHERE org_id=? AND status!=? GROUP BY risk_level,eu_ai_act_category'
     ).bind(orgId,'deleted').all();
@@ -511,10 +522,8 @@ async function governanceDashboard(request, env) {
   } catch(e) { return new Response(JSON.stringify({ error:e.message }), { status:500, headers:{ 'Content-Type':'application/json' } }); }
 }
 
-async function generateGovernanceReport(request, env) {
+async function generateGovernanceReport(request, env, orgId) {
   try {
-    const body = await request.json();
-    const orgId = body.org_id||'default';
     const { results:models } = await env.DB.prepare(
       'SELECT * FROM ai_model_registry WHERE org_id=? AND status!=? ORDER BY risk_score DESC'
     ).bind(orgId,'deleted').all();

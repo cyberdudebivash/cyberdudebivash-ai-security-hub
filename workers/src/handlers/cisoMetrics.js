@@ -25,7 +25,12 @@ const KV_METRICS_KEY     = 'ciso:metrics_cache';
 const METRICS_TTL        = 300; // 5-min cache
 
 // ─── Real D1 metrics aggregation ─────────────────────────────────────────────
-async function fetchRealMetricsFromD1(env) {
+// scan_history is scoped to the caller's own user_id — this table previously
+// had zero WHERE clause, so every customer's "board-ready" scan metrics were
+// actually a platform-wide aggregate across every other customer's scans.
+// mythos_runs/threat_intel have no per-customer owner (platform-level tool
+// generation + a shared CVE feed) and are intentionally left global.
+async function fetchRealMetricsFromD1(env, userId) {
   const db = env?.SECURITY_HUB_DB;
   if (!db) return null;
   try {
@@ -41,21 +46,24 @@ async function fetchRealMetricsFromD1(env) {
                COUNT(CASE WHEN created_at > datetime('now','-30 days') THEN 1 END) AS scans_30d,
                COUNT(CASE WHEN created_at > datetime('now','-7 days') THEN 1 END) AS scans_7d
         FROM scan_history
-      `).first().catch(() => null),
+        WHERE user_id = ?
+      `).bind(userId ?? null).first().catch(() => null),
 
       // Findings by severity (scan_history stores risk_level)
       db.prepare(`
         SELECT risk_level, COUNT(*) AS cnt
         FROM scan_history
+        WHERE user_id = ?
         GROUP BY risk_level
-      `).all().catch(() => ({ results: [] })),
+      `).bind(userId ?? null).all().catch(() => ({ results: [] })),
 
       // Scans by module
       db.prepare(`
         SELECT scan_type, COUNT(*) AS cnt, AVG(risk_score) AS avg_score
         FROM scan_history
+        WHERE user_id = ?
         GROUP BY scan_type
-      `).all().catch(() => ({ results: [] })),
+      `).bind(userId ?? null).all().catch(() => ({ results: [] })),
 
       // MYTHOS run stats
       db.prepare(`
@@ -307,17 +315,23 @@ async function buildComplianceStatus(env) {
 }
 
 // ─── Load incidents from KV ───────────────────────────────────────────────────
-async function loadIncidents(env) {
+// Previously a single shared key for every caller — any customer's logged
+// incident was visible (and editable) by every other customer. Namespaced
+// per user, same as every other tenant-scoped KV key in this codebase.
+function incidentsKey(userId) {
+  return `${KV_INCIDENTS_KEY}:${userId || 'anon'}`;
+}
+async function loadIncidents(env, userId) {
   if (!env?.SECURITY_HUB_KV) return getSeedIncidents();
   try {
-    const stored = await env.SECURITY_HUB_KV.get(KV_INCIDENTS_KEY, { type: 'json' });
+    const stored = await env.SECURITY_HUB_KV.get(incidentsKey(userId), { type: 'json' });
     return stored?.length ? stored : getSeedIncidents();
   } catch { return getSeedIncidents(); }
 }
 
-async function saveIncidents(env, incidents) {
+async function saveIncidents(env, userId, incidents) {
   if (!env?.SECURITY_HUB_KV) return;
-  await env.SECURITY_HUB_KV.put(KV_INCIDENTS_KEY, JSON.stringify(incidents.slice(0, 500)), { expirationTtl: 86400 * 180 });
+  await env.SECURITY_HUB_KV.put(incidentsKey(userId), JSON.stringify(incidents.slice(0, 500)), { expirationTtl: 86400 * 180 });
 }
 
 function generateIncidentId() {
@@ -378,17 +392,24 @@ export function computeRiskPosture(complianceStatus = [], riskRegister = [], inc
 
 // ─── GET /api/ciso/metrics ────────────────────────────────────────────────────
 export async function handleGetCISOMetrics(request, env, authCtx = {}) {
+  // Every KV/D1 read below is scoped to this caller's own tenant — this whole
+  // handler previously used a single shared cache key and unscoped queries,
+  // so any PRO/ENTERPRISE/MSSP customer saw the platform-wide aggregate across
+  // every other customer's scans and incidents instead of their own.
+  const userId = authCtx.user_id ?? authCtx.userId ?? null;
+  const metricsCacheKey = `${KV_METRICS_KEY}:${userId || 'anon'}`;
+
   // Cache check (5 min)
   if (env?.SECURITY_HUB_KV) {
     try {
-      const cached = await env.SECURITY_HUB_KV.get(KV_METRICS_KEY, { type: 'json' });
+      const cached = await env.SECURITY_HUB_KV.get(metricsCacheKey, { type: 'json' });
       if (cached && (Date.now() - new Date(cached._cached_at).getTime()) < METRICS_TTL * 1000) {
         return ok(request, cached);
       }
     } catch {}
   }
 
-  const incidents = await loadIncidents(env);
+  const incidents = await loadIncidents(env, userId);
 
   // Derive scan history from KV if available
   let scanHistory = [];
@@ -397,7 +418,7 @@ export async function handleGetCISOMetrics(request, env, authCtx = {}) {
   }
 
   // Pull real metrics from D1 (authoritative) — falls back gracefully
-  const d1Metrics = await fetchRealMetricsFromD1(env);
+  const d1Metrics = await fetchRealMetricsFromD1(env, userId);
 
   const mttx            = calculateMTTX(incidents);
   const riskRegister    = buildRiskRegister(scanHistory, incidents);
@@ -513,7 +534,7 @@ export async function handleGetCISOMetrics(request, env, authCtx = {}) {
 
   // Cache result
   if (env?.SECURITY_HUB_KV) {
-    env.SECURITY_HUB_KV.put(KV_METRICS_KEY, JSON.stringify(metrics), { expirationTtl: METRICS_TTL }).catch(() => {});
+    env.SECURITY_HUB_KV.put(metricsCacheKey, JSON.stringify(metrics), { expirationTtl: METRICS_TTL }).catch(() => {});
   }
 
   return ok(request, metrics);
@@ -521,6 +542,8 @@ export async function handleGetCISOMetrics(request, env, authCtx = {}) {
 
 // ─── GET /api/ciso/posture ────────────────────────────────────────────────────
 export async function handleGetCISOPosture(request, env, authCtx = {}) {
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+
   // Pull posture dimensions from D1 posture_assessments if available
   let dimensions = [];
   if (env?.DB) {
@@ -585,7 +608,7 @@ export async function handleGetIncidents(request, env, authCtx = {}) {
   const sev    = url.searchParams.get('severity');
   const limit  = Math.min(100, parseInt(url.searchParams.get('limit') || '20', 10));
 
-  let incidents = await loadIncidents(env);
+  let incidents = await loadIncidents(env, authCtx.user_id ?? authCtx.userId);
 
   if (status) incidents = incidents.filter(i => i.status === status.toUpperCase());
   if (sev)    incidents = incidents.filter(i => i.severity === sev.toUpperCase());
@@ -630,9 +653,10 @@ export async function handleCreateIncident(request, env, authCtx = {}) {
     timeline:         [{ ts: now, event: `Incident created: ${title}`, actor: authCtx.email || 'SOC' }],
   };
 
-  const incidents = await loadIncidents(env);
+  const userId = authCtx.user_id ?? authCtx.userId;
+  const incidents = await loadIncidents(env, userId);
   incidents.unshift(incident);
-  await saveIncidents(env, incidents);
+  await saveIncidents(env, userId, incidents);
 
   return ok(request, { incident, message: `Incident ${incident.id} created` });
 }
@@ -646,7 +670,8 @@ export async function handleUpdateIncident(request, env, authCtx = {}) {
   let body  = {};
   try { body = await request.json(); } catch {}
 
-  const incidents = await loadIncidents(env);
+  const userId = authCtx.user_id ?? authCtx.userId;
+  const incidents = await loadIncidents(env, userId);
   const idx = incidents.findIndex(i => i.id === id);
   if (idx === -1) return fail(request, `Incident ${id} not found`, 404, 'NOT_FOUND');
 
@@ -669,14 +694,29 @@ export async function handleUpdateIncident(request, env, authCtx = {}) {
   inc.updated_at = now;
 
   incidents[idx] = inc;
-  await saveIncidents(env, incidents);
+  await saveIncidents(env, userId, incidents);
 
   return ok(request, { incident: inc, message: `Incident ${id} updated` });
 }
 
 // ─── GET /api/ciso/compliance-status ─────────────────────────────────────────
 export async function handleGetComplianceStatus(request, env, authCtx = {}) {
-  const status = buildComplianceStatus([]);
+  if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
+
+  // Same buildComplianceStatus([]) mistake handleGetCISOReport's own comment
+  // already documents fixing elsewhere in this file: `env` is never `[]`, and
+  // the missing `await` meant `status` was an unresolved Promise — `.reduce`
+  // on it threw synchronously (uncaught, since nothing here wraps it), so
+  // this route 500'd on every real call. Fixed the same way as the sibling.
+  const status = await buildComplianceStatus(env);
+  if (!status.length) {
+    return ok(request, {
+      overall_compliance_pct: null, overall_grade: null, frameworks: [],
+      certifications_active: ['ISO 27001', 'SOC 2 Type II'], data_available: false,
+      next_milestone: { target: 'PCI DSS 4.0 Full Compliance', due: '2026-09-30', progress_pct: null },
+      generated_at: new Date().toISOString(),
+    });
+  }
   const overallAvg = parseFloat((status.reduce((a,f) => a + f.compliance_pct, 0) / status.length).toFixed(1));
 
   return ok(request, {
@@ -684,6 +724,7 @@ export async function handleGetComplianceStatus(request, env, authCtx = {}) {
     overall_grade:          scoreToGrade(overallAvg).grade,
     frameworks:             status,
     certifications_active:  ['ISO 27001', 'SOC 2 Type II'],
+    data_available:         true,
     // Milestone progress tracks the lowest-coverage framework's real % (the one
     // furthest from certification) rather than a hardcoded figure.
     next_milestone:         { target: 'PCI DSS 4.0 Full Compliance', due: '2026-09-30', progress_pct: overallAvg },
@@ -695,7 +736,7 @@ export async function handleGetComplianceStatus(request, env, authCtx = {}) {
 export async function handleGetRiskRegister(request, env, authCtx = {}) {
   if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
-  const incidents   = await loadIncidents(env);
+  const incidents   = await loadIncidents(env, authCtx.user_id ?? authCtx.userId);
   const register    = buildRiskRegister([], incidents);
   const critCount   = register.filter(r => r.risk_level === 'CRITICAL').length;
   const highCount   = register.filter(r => r.risk_level === 'HIGH').length;
@@ -713,7 +754,7 @@ export async function handleGetRiskRegister(request, env, authCtx = {}) {
 export async function handleGetCISOReport(request, env, authCtx = {}) {
   if (!isRealUser(authCtx)) return fail(request, 'Authentication required', 401, 'UNAUTHORIZED');
 
-  const incidents   = await loadIncidents(env);
+  const incidents   = await loadIncidents(env, authCtx.user_id ?? authCtx.userId);
   const mttx        = calculateMTTX(incidents);
   const register    = buildRiskRegister([], incidents);
   const compliance  = await buildComplianceStatus(env);   // FIX: was buildComplianceStatus([]) → always empty → NaN

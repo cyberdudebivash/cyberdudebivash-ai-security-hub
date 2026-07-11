@@ -7799,7 +7799,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     return withSecurityHeaders(withCors(await handlePdfObservability(request, env), request));
   }
   if (path === '/api/ai-governance/pdf/list' && method === 'GET') {
-    return withSecurityHeaders(withCors(await handlePdfList(request, env), request));
+    return withSecurityHeaders(withCors(await handlePdfList(request, env, authCtx), request));
   }
   if (path.startsWith('/api/ai-governance/pdf/status/') && method === 'GET') {
     const pdfStatusToken = path.replace('/api/ai-governance/pdf/status/', '');
@@ -7813,7 +7813,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   // ── v27: CEO EXECUTIVE DASHBOARD ──────────────────────────────────────────
     // v20.0 GOD MODE: AI GOVERNANCE PRO (EU AI Act, NIST AI RMF, ISO 42001)
   if (path.startsWith('/api/ai-governance/')) {
-    return handleAIGovernancePro(request, env);
+    return handleAIGovernancePro(request, env, authCtx);
   }
 
   // v20.0 GOD MODE: AI RED TEAM PRO (MITRE ATLAS v2.1)
