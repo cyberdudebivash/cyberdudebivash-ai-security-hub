@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-11T12:45:41.961Z
+Generated: 2026-07-11T13:33:18.459Z
 Capabilities catalogued: 95
 
 ## Overall Completion
@@ -18,8 +18,8 @@ Capabilities catalogued: 95
 | Dimension | % |
 |---|---|
 | Backend | 89.5% |
-| Frontend | 64.7% |
-| Parity (backend **and** frontend both exist) | 58.9% |
+| Frontend | 65.3% |
+| Parity (backend **and** frontend both exist) | 60% |
 | Customer Journeys complete (dynamic_browser-verified) | 3.2% |
 
 ## Gaps by Priority
@@ -175,7 +175,7 @@ complete", "bug free", or "guaranteed".
 
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
-| CAP-ORG-001 | Organization Management | ✓ | ◐ | ✓ | PILOT ONLY | P2 |
+| CAP-ORG-001 | Organization Management | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
 | CAP-ORG-002 | Organization Activity Log (Audit Trail) | ✓ | ✓ | ✓ | PILOT ONLY | P4 |
 
 ### production-readiness (4 capabilities)

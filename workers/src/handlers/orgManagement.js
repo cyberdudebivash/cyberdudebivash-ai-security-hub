@@ -434,19 +434,24 @@ export async function handleOrgScans(request, env, authCtx, orgId) {
   const module = url.searchParams.get('module');
 
   const placeholders = memberIds.map(() => '?').join(',');
-  let query  = `SELECT sh.id, sh.module, sh.target AS target_summary, sh.risk_score, sh.risk_level,
-                       u.full_name as scanned_by, sh.scanned_at
-                FROM scan_history sh LEFT JOIN users u ON u.id = sh.user_id
-                WHERE sh.user_id IN (${placeholders})`;
-  const params = [...memberIds];
+  let whereClause = `sh.user_id IN (${placeholders})`;
+  const whereParams = [...memberIds];
+  if (module) { whereClause += ' AND sh.module = ?'; whereParams.push(module); }
 
-  if (module) { query += ' AND sh.module = ?'; params.push(module); }
-  query += ' ORDER BY sh.scanned_at DESC LIMIT ? OFFSET ?';
-  params.push(limit, offset);
+  let query = `SELECT sh.id, sh.module, sh.target AS target_summary, sh.risk_score, sh.risk_level,
+                      u.full_name as scanned_by, sh.scanned_at
+               FROM scan_history sh LEFT JOIN users u ON u.id = sh.user_id
+               WHERE ${whereClause}
+               ORDER BY sh.scanned_at DESC LIMIT ? OFFSET ?`;
+  const { results } = await env.DB.prepare(query).bind(...whereParams, limit, offset).all();
 
-  const { results } = await env.DB.prepare(query).bind(...params).all();
+  // Previously `total` was just results.length (i.e. capped at `limit`, never
+  // the real row count) — made any pager built on it lie past the first page.
+  const countRow = await env.DB.prepare(
+    `SELECT COUNT(*) as c FROM scan_history sh WHERE ${whereClause}`
+  ).bind(...whereParams).first();
 
-  return Response.json({ scans: results || [], total: results?.length || 0, limit, offset });
+  return Response.json({ scans: results || [], total: countRow?.c || 0, limit, offset });
 }
 
 // ─── Org audit trail ──────────────────────────────────────────────────────────
