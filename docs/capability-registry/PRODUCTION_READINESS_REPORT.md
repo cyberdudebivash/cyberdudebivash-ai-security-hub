@@ -10,17 +10,17 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-11T17:28:09.424Z
-Capabilities catalogued: 95
+Generated: 2026-07-11T18:31:15.805Z
+Capabilities catalogued: 97
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 89.5% |
-| Frontend | 66.3% |
-| Parity (backend **and** frontend both exist) | 61.1% |
-| Customer Journeys complete (dynamic_browser-verified) | 3.2% |
+| Backend | 89.7% |
+| Frontend | 66.5% |
+| Parity (backend **and** frontend both exist) | 60.8% |
+| Customer Journeys complete (dynamic_browser-verified) | 3.1% |
 
 ## Gaps by Priority
 
@@ -29,12 +29,12 @@ Capabilities catalogued: 95
 | Critical | P1 | 9 | Broken customer journey |
 | High | P2 | 24 | Backend exists, frontend missing |
 | Medium | P3 | 7 | Backend+frontend exist, navigation missing |
-| Medium | P4 | 5 | RBAC not enforced |
+| Medium | P4 | 6 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
-| Low | P6 | 36 | No test coverage |
+| Low | P6 | 37 | No test coverage |
 | Low | P7 | 14 | Documentation missing |
 
-**Rollup:** Critical 9 · High 24 · Medium 12 · Low 50
+**Rollup:** Critical 9 · High 24 · Medium 13 · Low 51
 
 ## Structural Findings
 
@@ -130,13 +130,14 @@ complete", "bug free", or "guaranteed".
 | CAP-IDN-002 | Sign-Up / Account Creation Entry Point | ✓ | ✓ | ✓ | PILOT ONLY | P1 |
 | CAP-IDN-003 | MFA Second-Factor Login Completion | ✓ | ✓ | ✓ | PILOT ONLY | P1 |
 
-### masoc (1 capability)
+### masoc (2 capabilities)
 
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
 | CAP-MASOC-001 | Multi-Agent SOC — 9 Parallel AI Security Agents | ✓ | ✓ | ✓ | NOT READY | P4 |
+| CAP-MASOC-002 | Autonomous Defense Engine (SAFE / ASSISTED / AGGRESSIVE auto-response) | ✓ | ✓ | ✓ | PILOT ONLY | P4 |
 
-### mssp (4 capabilities)
+### mssp (5 capabilities)
 
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
@@ -144,6 +145,7 @@ complete", "bug free", or "guaranteed".
 | CAP-MSSP-002 | Partner Revenue, Client Roster & White-Label Branding | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 | CAP-MSSP-003 | Multi-Tenant Sub-Account Drill-Down (Per-Client Dashboard, Billing, Usage, API Keys) | ✓ | ◐ | ✓ | PILOT ONLY | P2 |
 | CAP-MSSP-004 | Delegated Admin Permissions (MSSP Staff Sub-Accounts) | ✗ | ✗ | ✗ | NOT READY | P2 |
+| CAP-MSSP-005 | MSSP Client Portfolio + White-Label Panel (embedded in Executive Hub) | ✓ | ◐ | ✓ | PILOT ONLY | P6 |
 
 ### mythos-godmode (6 capabilities)
 
