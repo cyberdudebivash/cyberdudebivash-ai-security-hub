@@ -297,6 +297,15 @@ see session log below.
   API has no data) was exercised live and is already correct given what
   `scan_history` currently stores — it will automatically pick up richer
   CVE-level detail too once/if the findings column lands.
+- **Production verification (post-merge addendum):** PR #157 merged
+  (squash `8f8698d`). All 32 checks individually inspected green pre-merge.
+  `Deploy to Cloudflare` run `29143807090` succeeded. Re-ran the full flow
+  directly against `https://cyberdudebivash.in` with zero local-file
+  substitution: signed up, ran a real live scan of `example.com`, opened
+  the Scans page, clicked Download — it opened a genuine generated report
+  (`/api/report/<uuid>`, titled "Domain Security Assessment —
+  example.com") in a new tab. Test account cleaned up (200). Closes the
+  loop for this finding on the live production site.
 
 ### 2026-07-11 — P0: dashboard-authenticated customers silently ran homepage scans as anonymous visitors
 
