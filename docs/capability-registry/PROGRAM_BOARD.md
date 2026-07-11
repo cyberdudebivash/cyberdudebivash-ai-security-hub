@@ -300,6 +300,95 @@ see session log below.
   Cloudflare production deploy with no separate approval step — PR opened
   and CI watched, but not auto-merged without an explicit go-ahead this
   session (see PR for current status).
+- **Production verification (post-merge addendum):** customer authorized
+  auto-merge + continued autonomous backlog work for this session. PR #168
+  merged (squash `f8bfdb47`), all 32 checks individually green pre-merge, no
+  review comments. Deploy confirmed live via content match (corrected field
+  names present, old buggy ones absent). Direct live calls against the real
+  production backend (`https://cyberdudebivash-security-hub.iambivash-bn.
+  workers.dev`, zero mocking, synthetic self-expiring KV data only — no
+  permanent CRM/D1 rows created, matching this registry's established
+  discipline of not leaving untracked fake records in production) confirmed
+  `POST /api/conversion/event`, `GET /api/conversion/paywall`, and
+  `POST /api/conversion/dismiss` all now work end-to-end with the corrected
+  field names. **`GET /api/conversion/triggers?session_id=...` — this fix's
+  own corrected query param — instead returned a raw `{"error":"Bad
+  request"}` 400**, not the field-name bug just fixed but a *second, separate,
+  pre-existing* WAF false-positive (see the new session-log entry directly
+  below this one for the full finding and fix). `customer_journey_complete`
+  correctly stays `false` for CAP-CRM-007 pending a follow-up live check
+  once that second fix is also deployed.
+
+### 2026-07-11 — WAF false positive: `/on\w{2,20}\s*=/i` blocked real query params (session_id, context, component, min_confidence, month) sitewide, discovered during PR #168's post-merge production verification
+
+- **Trigger:** live-verifying CAP-CRM-007's just-merged fix against real
+  production (not local mocks, per this session's "production grade
+  precision" mandate) surfaced `GET /api/conversion/triggers?session_id=...`
+  — the exact corrected call CAP-CRM-007 now makes — returning a raw
+  `{"error":"Bad request"}` 400, 0ms response time (rejected before routing).
+  Confirmed not a regression from PR #168 by testing `GET
+  /api/conversion/cta?context=general`, a route/param this session never
+  touched, which 400'd identically.
+- **Root cause:** `workers/src/middleware/security.js`'s `BLOCKED_PATTERNS`
+  (checked against `url.pathname + url.search` on every request, before
+  routing) included the bare regex `/on\w{2,20}\s*=/i`, intended to catch
+  inline HTML event-handler XSS (`onerror=`, `onload=`, `onclick=`). With no
+  word-boundary anchor, it also matches "on" appearing *inside* any
+  legitimate identifier followed by 2-20 word characters and "=" —
+  `"sessi`**`on`**`_id="` and `"c`**`on`**`text="` both satisfy it. A
+  repo-wide scan of every `searchParams.get(...)` call across `workers/src`
+  (130 distinct param names) found exactly 5 real, live, currently-used
+  params that false-positive trip it: `session_id`, `context`, `component`,
+  `min_confidence`, `month` — read by `conversionTriggers.js` (both
+  `handleGetTriggers` and `handleGetUrgency`), `revenue.js`,
+  `aiSecurityCopilot.js` (session continuity), `eop/uptime.js`, and
+  `threatFusionEngine.js`/`enterpriseTransformHandler.js`. Any real request
+  to any of those routes with that query param has been silently 400ing,
+  for every caller, sitewide, since this pattern shipped — a second,
+  previously-undiscovered production defect, unrelated to and not
+  introduced by PR #168, but directly blocking that fix from working
+  end-to-end in production.
+- **Fix:** anchored the pattern to a real word boundary:
+  `/\bon\w{2,20}\s*=/i`. A genuine inline-event-handler injection is always
+  preceded by whitespace, a quote, or a tag boundary — never by a word
+  character (`"xonerror="` is not a browser-recognized attribute name
+  regardless) — so this loses no real attack coverage while eliminating the
+  false positive. One-character change (`\b` added); no other
+  `BLOCKED_PATTERNS` entries touched.
+- **Verified:** new `workers/test/wafOnAttributeFalsePositive.test.mjs` (7
+  tests, zero prior test coverage existed for `inspectForAttacks()` at all):
+  direct unit tests confirming all 5 real param names no longer trip it
+  while real `onerror=`/`onload=`/`onclick=` payloads (in the realistic
+  contexts an attacker actually uses — preceded by a quote, tag, or
+  whitespace) still do; full-pipeline integration tests through the real
+  router (`worker.fetch()`) confirming `GET /api/conversion/triggers?
+  session_id=...` and `GET /api/conversion/cta?context=...` now return real
+  200s instead of the raw WAF 400, while a genuine attack query string
+  through the same pipeline is still correctly rejected with the WAF 400.
+  Full backend suite: 209 files / 2176 tests passing (up from 208/2169 — the
+  1 new file). `node scripts/registry/validate.mjs`: 0 failures, 0 warnings
+  (unaffected — no registry JSON touched; this is cross-cutting
+  infrastructure, not itself a customer-facing capability in this
+  registry's schema sense, so no new `CAP-*` id was minted for it).
+  `scripts/seo-structure-lock.mjs`: 22/22 pages green (unaffected — no
+  frontend HTML touched).
+- **Commits this session:** `workers/src/middleware/security.js` (1-line
+  regex fix + explanatory comment), new test
+  `workers/test/wafOnAttributeFalsePositive.test.mjs`.
+- **Scope decision, stated explicitly:** fixed within the same session as
+  CAP-CRM-007 (rather than deferred) because it was found live-verifying
+  that exact fix and directly blocks it from working end-to-end in
+  production; shipped as its own separate PR, not bundled into #168 (already
+  merged) — matching this repo's "one wave, one PR" discipline. Not
+  pre-cleared with the customer before implementing (unlike CAP-DEVPORTAL-004's
+  `sap_`-key question, this had one objectively correct, low-risk,
+  fully-tested fix with no product/business judgment call involved) — flagged
+  here in full for visibility, per "state scope decisions out loud."
+- **Risks / follow-ups:** worth a dedicated pass confirming no *other*
+  `BLOCKED_PATTERNS` entry has the same unanchored-substring problem against
+  the real 130-param surface (this pass only investigated the one pattern
+  that live-blocked an actual request) — flagged, not done here, to keep
+  this fix bounded and reviewable.
 
 ### 2026-07-11 — Backlog sweep, wave 2 addendum: CAP-COMP-001 post-deploy live verification + CI axe catch
 
