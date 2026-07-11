@@ -22,10 +22,10 @@
 
 import { TIER_LIMITS } from '../auth/apiKeys.js';
 import { isRealUser } from '../auth/middleware.js';
+import { isPlatformAdmin } from '../auth/rbac.js';
 
 // ── Auth helpers (reused pattern from P15) ───────────────────────────────────
 
-const ADMIN_TIERS  = new Set(['OWNER', 'ADMIN']);
 const PLAN_ORDER   = { FREE: 0, STARTER: 1, PRO: 2, ENTERPRISE: 3, MSSP: 4 };
 
 function authGuard(authCtx) {
@@ -38,10 +38,16 @@ function authGuard(authCtx) {
   return null;
 }
 
-function adminGuard(authCtx) {
+// Real platform-admin check (auth/rbac.js isPlatformAdmin: SUPERADMIN role,
+// ADMIN role, ADMIN_KEY bypass, or legacy owner-email — all inherited from
+// isSuperAdmin()). Previously checked authCtx.tier against {OWNER,ADMIN},
+// values no auth path ever sets (tier is the customer subscription plan —
+// staff sessions hardcode tier:'ENTERPRISE', see handlers/staffAuth.js) — so
+// this 403'd every caller including the real platform owner.
+async function adminGuard(authCtx, env) {
   const g = authGuard(authCtx);
   if (g) return g;
-  if (!ADMIN_TIERS.has((authCtx.tier || '').toUpperCase())) {
+  if (!(await isPlatformAdmin(authCtx, env))) {
     return Response.json(
       { success: false, error: 'Admin access required', service: 'CDB-P16' },
       { status: 403 }
@@ -65,7 +71,7 @@ function resolveUserId(authCtx) {
 // ── P16.1 — Platform KPI Command Center ──────────────────────────────────────
 
 export async function handlePlatformKPI(request, env, authCtx) {
-  const gate = adminGuard(authCtx);
+  const gate = await adminGuard(authCtx, env);
   if (gate) return gate;
 
   const cacheKey = 'platform:kpi:v1';
@@ -446,7 +452,7 @@ export async function handleLiveUsage(request, env, authCtx) {
 const OVERAGE_RATE = { PRO: 0.001, STARTER: 0.002 }; // $/req above limit
 
 export async function handleOverageReport(request, env, authCtx) {
-  const gate = adminGuard(authCtx);
+  const gate = await adminGuard(authCtx, env);
   if (gate) return gate;
 
   const url   = new URL(request.url);
@@ -493,7 +499,7 @@ export async function handleOverageReport(request, env, authCtx) {
 }
 
 export async function handleOverageCharge(request, env, authCtx) {
-  const gate = adminGuard(authCtx);
+  const gate = await adminGuard(authCtx, env);
   if (gate) return gate;
 
   const body   = await request.json().catch(() => ({}));
@@ -530,7 +536,7 @@ export async function handleOverageCharge(request, env, authCtx) {
 // ── P16.4 — Executive KPI Summary ────────────────────────────────────────────
 
 export async function handleExecutiveKPI(request, env, authCtx) {
-  const gate = adminGuard(authCtx);
+  const gate = await adminGuard(authCtx, env);
   if (gate) return gate;
 
   // Reuse the KPI cache from P16.1
@@ -591,7 +597,7 @@ export async function handleExecutiveKPI(request, env, authCtx) {
 // ── P16.5 — Observability Gate ───────────────────────────────────────────────
 
 export async function handleTransformObservability(request, env, authCtx) {
-  const gate = adminGuard(authCtx);
+  const gate = await adminGuard(authCtx, env);
   if (gate) return gate;
 
   return Response.json({

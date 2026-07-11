@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11 — latest wave is a full 80-page frontend API-wiring audit: overwhelmingly the platform is genuinely live-wired, but 26 concrete bugs were found and ranked by severity; the 2 most severe — an unauthenticated cross-tenant AI-governance report exposure and a CISO dashboard that leaked every customer's scan/incident data to every other customer — are fixed in the top session-log entry below, remaining 24 queued as follow-up. See the two entries below that for the prior wave's PRs #174–#179 and CAP-DEVPORTAL-004's sap_-key fix.)
+## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry two below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This wave fixed Tier-1 item #1: `enterprise-kpi-dashboard.html`'s only data route 403'd every caller, including the real platform owner/admins, because its guard checked an impossible `authCtx.tier` value. See the top session-log entry below. 23 of the 24 backlog items remain, queued in the same stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 221 files / 2299 tests passing | `npx vitest run`, run 2026-07-11 — +2 files / +14 tests this wave (`aiGovernanceOrgScoping.test.mjs` 8 new, `cisoMetricsTenantIsolation.test.mjs` 6 new). Verified pre-fix baseline is actually 219 files / 2285 tests (the PR #182 entry below already noted "2281 + net 4 = 2285"; this row's prior "2281" had simply never been rolled forward to include that same-day rewrite — corrected here, not a new discrepancy introduced by this wave) |
+| Worker test suite | 222 files / 2310 tests passing | `npx vitest run`, run 2026-07-11 — +1 file / +11 tests this wave (`enterpriseTransformAdminGuard.test.mjs`, 11 new; also corrected one pre-existing test in `phase2ContractDrift.test.mjs` that unknowingly relied on the same bug this wave fixed — see session log). Baseline going into this wave was 221 files / 2299 tests (PR #183, the AI-governance/CISO cross-tenant fix) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,77 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Tier-1 backlog item #1: enterprise-kpi-dashboard.html tier-gate bug (P16 admin routes)
+
+- **Trigger:** resumed this session after a prior one hit a hard usage-limit
+  cutoff mid-task (see `EXECUTION_PROCEDURE.md` §3 — recovery checklist run
+  first: `git ls-remote origin` confirmed PR #183 was already merged to
+  `main` and CI/deploy were green, so that work was not redone). Continuing
+  the 24-item Tier 1–3 backlog documented in the audit entry below, in the
+  stated priority order, one bounded fix at a time per this file's own
+  pacing discipline.
+- **Re-verified against actual code before touching anything** (per this
+  file's repeated lesson about false positives): the audit's claim held up.
+  `workers/src/handlers/enterpriseTransformHandler.js`'s `adminGuard()`
+  checked `authCtx.tier` against `{OWNER, ADMIN}` — values no auth path in
+  the system ever produces. Real subscription tiers are
+  FREE/STARTER/PRO/ENTERPRISE/MSSP (confirmed via `PLAN_ORDER` two lines
+  above the bug itself); staff-console sessions
+  (`handlers/staffAuth.js`'s `resolveStaffSession()`) hardcode
+  `tier: 'ENTERPRISE'` regardless of role, and the real "is this an admin"
+  signal lives in `platformRoles`/`isAdmin`. This 403'd every caller
+  including the real platform owner and real platform admins, on all 5
+  routes the shared `adminGuard()` protects: `GET /api/platform/kpi` (the
+  one `enterprise-kpi-dashboard.html` actually calls, via
+  `CDB_STAFF_AUTH.authFetch`), `GET /api/platform/overage/report`,
+  `POST /api/platform/overage/charge`, `GET /api/platform/kpi/executive`,
+  `GET /api/platform/transform/observability`.
+- **Frontend needed no change:** `frontend/assets/staff-auth.js` already
+  correctly sends the staff-session bearer token, and its own header comment
+  already documented the intended design ("the actual data is still
+  protected server-side by each API route's own authorization check
+  (isOwner()/isPlatformAdmin() — see auth/rbac.js)"). The backend handler
+  simply never got wired to that already-established RBAC helper — this was
+  a backend-only fix.
+- **Fix:** `adminGuard()` is now async, takes `env`, and delegates to
+  `auth/rbac.js`'s `isPlatformAdmin(authCtx, env)` — the same predicate
+  already used correctly elsewhere in the codebase (role inheritance:
+  SUPERADMIN implies ADMIN; recognizes the ADMIN_KEY bypass, the legacy
+  owner-email path, and real `user_roles` grants). Removed the now-dead
+  `ADMIN_TIERS` constant (its sibling `PLAN_ORDER` is unrelated and still
+  used elsewhere in the file for customer tier-upgrade logic — left
+  untouched). All 5 call sites updated to `await adminGuard(authCtx, env)`.
+- **Pre-existing test corrected, not worked around:** `test/phase2ContractDrift.test.mjs`
+  (a response-field-name contract guard, unrelated in purpose to this bug)
+  asserted `handlePlatformKPI`'s field names using an authCtx of
+  `{ tier: 'OWNER' }` — the exact same impossible value the bug itself
+  depended on to have ever been written without failing. Corrected to
+  `{ isAdmin: true }` (the real ADMIN_KEY-bypass path) without touching what
+  the test actually guards (KPI field-name drift).
+- **Tests:** new `test/enterpriseTransformAdminGuard.test.mjs` (11 tests) —
+  asserts anonymous callers get 401; an ordinary authenticated customer of
+  *any* tier still gets 403 (confirming the fix doesn't overcorrect into an
+  open door); and a real platform admin is admitted via each of: a
+  `user_roles`-granted ADMIN, the ADMIN_KEY bypass (`isAdmin: true`), the
+  legacy owner-email path, and — the exact real-world path — a
+  `resolveStaffSession()`-shaped ADMIN and SUPERADMIN staff session
+  (`tier: 'ENTERPRISE'`, real signal in `platformRoles`). Also covers the
+  other 4 routes sharing the same gate (403 for an ordinary user, 200 for a
+  platform admin, on each). Full suite green: 222 files / 2310 tests
+  (baseline 221/2299 from PR #183; +1 file / +11 tests this wave).
+- **Validator:** 0 failures, 0 warnings, 97 capabilities (unchanged — this
+  bug was found by the general frontend audit, not previously catalogued as
+  its own registry capability; documented here rather than forced into a
+  new registry entry, same handling as the audit's other non-catalogued
+  findings). `PRODUCTION_READINESS_REPORT.md` regenerated (timestamp-only
+  diff, no capability-count change).
+- **Remaining in the Tier 1–3 backlog (23 of 24):** see the audit entry
+  below for the complete original list. Next up, in stated order:
+  `index.html` Autonomous SOC/SIEM Deploy/Org Memory auth gaps,
+  `revenue-command-center.html` response-shape mismatches,
+  `mssp-command-center.html` Add Partner field mismatch, and the rest of
+  Tier 1 before Tier 2/3.
 
 ### 2026-07-11 — Full-frontend API-wiring audit (80 pages) + first 2 critical fixes (cross-tenant data exposure)
 
