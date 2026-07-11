@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-11T10:33:02.417Z
+Generated: 2026-07-11T10:48:11.370Z
 Capabilities catalogued: 95
 
 ## Overall Completion
@@ -40,7 +40,7 @@ Capabilities catalogued: 95
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 27 | Backend exists, but not discoverable via navigation |
+| Hidden features | 26 | Backend exists, but not discoverable via navigation |
 | Backend-only features | 19 | Backend exists, zero frontend surface |
 | Duplicate systems | 5 | Backend marked `duplicate` (two implementations of one capability) |
 | Broken journeys | 10 | Priority P1 |
@@ -90,7 +90,7 @@ complete", "bug free", or "guaranteed".
 
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
-| CAP-COMP-001 | Global Compliance Packs Store | ✓ | ✓ | ✗ | NOT READY | P1 |
+| CAP-COMP-001 | Global Compliance Packs Store | ✓ | ✓ | ✓ | PILOT ONLY | P1 |
 | CAP-COMP-002 | Compliance Assessment / Readiness Engine (CDB-COMP-001) | ✓ | ✗ | ✗ | NOT READY | P2 |
 | CAP-COMP-003 | Tools Marketplace Compliance Toolkits | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-COMP-004 | DPDP Act 2023 Compliance Management Engine | ✓ | ✗ | ✗ | NOT READY | P2 |

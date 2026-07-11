@@ -19,33 +19,33 @@
       "surface_type": "embedded_widget",
       "pages": ["frontend/index.html"],
       "status": "exists",
-      "evidence": "frontend/index.html:6534 renders <section data-auth-gate=\"true\" id=\"compliance-global\"> (\"Global Compliance\" grid, #compliance-grid at line 6556); window.purchaseCompliancePack() (~line 6787) calls POST /api/global/compliance-packs/purchase (line 6811) then /verify (line 6839) on Razorpay success."
+      "evidence": "FIXED 2026-07-11. frontend/index.html:6534 renders <section id=\"compliance-global\"> (\"Global Compliance\" grid, #compliance-grid at line 6556) — the data-auth-gate=\"true\" attribute and its display:none default have been removed, so the section now renders for every visitor. window.purchaseCompliancePack() (~line 6787) calls POST /api/global/compliance-packs/purchase (line 6811) then /verify (line 6839) on Razorpay success, unchanged."
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "Primary nav link exists and is visible to every visitor (frontend/index.html:1232, '🌐 Global Compliance'), but its target section carries data-auth-gate=\"true\" and stays display:none until the visitor is authenticated (frontend/index.html's own code comment at lines 406-407: member sections reveal for any authed user). The backend purchase/verify handlers enforce no auth at all (handlePurchaseCompliancePack never reads its authCtx parameter; handleVerifyCompliancePack isn't even passed one at its call site, workers/src/index.js:6563) — so the one class of visitor most likely to buy a compliance pack (a prospect with no account yet) can see the nav link but cannot reach the section that lets them buy."
+      "discoverable": true,
+      "evidence": "FIXED 2026-07-11. Primary nav link (frontend/index.html:1232, '🌐 Global Compliance') is visible to every visitor and now reaches a genuinely visible section — confirmed via cdbNavigate()'s own auth-gate check (frontend/index.html:14714-14722): with no data-auth-gate attribute present, that function no longer redirects the visitor back to hero/home, matching the backend's own no-auth-required purchase flow (handlePurchaseCompliancePack never reads its authCtx parameter; handleVerifyCompliancePack isn't even passed one at its call site, workers/src/index.js:6563)."
     },
     "auth_enforced": false,
     "rbac": { "enforced": false, "permissions": [] },
     "subscription_gated": false,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "grep -rn \"COMPLIANCE_PACKS|handleGetCompliancePacks|handlePurchaseCompliancePack|handleVerifyCompliancePack\" workers/test/*.mjs returns 0 matches. The only tests importing anything from workers/src/services/globalScale.js (workers/test/msspOnboardingHandler.test.mjs, workers/test/msspPartnerIdentityLink.test.mjs) import MSSP_TIERS only, confirmed unrelated by direct grep."
+      "has_tests": true,
+      "evidence": "workers/test/complianceGlobalPublicAccess.test.mjs (new, 2026-07-11, 5 tests): the section carries no data-auth-gate attribute, carries no display:none default, the nav link and purchase flow are unchanged, and sibling gated sections (executive-hub, growth-analytics) are untouched by this fix. Full backend suite green: 207 files / 2149 tests. scripts/seo-structure-lock.mjs: all 22 pages green (unaffected, change is inside <body>)."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "PILOT ONLY",
     "priority": "P1",
     "verification": {
       "method": "static",
       "last_verified": "2026-07-11",
-      "evidence": "First audit of this domain (previously an unpopulated [] stub, flagged in docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md as never-audited). Discovered via background Explore agent, cross-checked directly: workers/src/services/globalScale.js (COMPLIANCE_PACKS catalog, 3 handlers) and workers/src/index.js:6549-6567 read directly; frontend/index.html read directly for both the nav entry (line 1232) and the gated section (line 6534) and the auth-gate comment (lines 406-407); workers/test/*.mjs grepped with 0 relevant hits."
+      "evidence": "First audit of this domain (previously an unpopulated [] stub, flagged in docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md as never-audited). Discovered via background Explore agent, cross-checked directly: workers/src/services/globalScale.js (COMPLIANCE_PACKS catalog, 3 handlers) and workers/src/index.js:6549-6567 read directly; frontend/index.html read directly for both the nav entry (line 1232) and the gated section (line 6534) and the auth-gate comment (lines 406-407); workers/test/*.mjs grepped with 0 relevant hits. FIXED 2026-07-11 (same-day fix): removed the data-auth-gate=\"true\" attribute and display:none default from the section; verified via the new test file above plus a static re-read of cdbNavigate()'s gate-check logic. A dynamic_browser pass against live production (after deploy) is the natural next verification step before flipping customer_journey_complete to true."
     },
     "contradicts_doc": [],
-    "notes": "Real, live, revenue-integrated Razorpay flow — not a stub. The same conceptual product (an ISO 27001 pack) is sold at three different prices through three separate, non-cross-referencing backend code paths: ₹4,999 here, ₹3,499 via workers/src/handlers/marketplaceCheckoutHandler.js's Sentinel APEX 'cp-iso27001-2022' line item (see CAP-COMP-002's notes), and ₹999 via toolsMarketplace.js's 'compliance_starter_pack' (CAP-COMP-003). No deliverable is ever generated automatically — fulfillment is a manual, human, within-24-hours process (workers/src/services/globalScale.js:408,462,475). Recommended fix, once this reaches an active wave: gate the section's visibility on nothing (since purchase itself requires no auth), not on data-auth-gate, since the backend and the nav link both already treat this as a public flow."
+    "notes": "Real, live, revenue-integrated Razorpay flow — not a stub. The same conceptual product (an ISO 27001 pack) is sold at three different prices through three separate, non-cross-referencing backend code paths: ₹4,999 here, ₹3,499 via workers/src/handlers/marketplaceCheckoutHandler.js's Sentinel APEX 'cp-iso27001-2022' line item (see CAP-COMP-002's notes), and ₹999 via toolsMarketplace.js's 'compliance_starter_pack' (CAP-COMP-003). No deliverable is ever generated automatically — fulfillment is a manual, human, within-24-hours process (workers/src/services/globalScale.js:408,462,475). Priority kept at P1 despite being fixed in this same pass — the registry records what was found and corrected, not just the end state, matching this session's established convention (e.g. CAP-MSSP-001, CAP-IDN-001/002/003)."
   },
   {
     "id": "CAP-COMP-002",
