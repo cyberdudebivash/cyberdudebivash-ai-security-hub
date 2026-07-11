@@ -69,7 +69,10 @@ describe('Contract: GET /api/v1/decisions (soc.js handleGetDecisions)', () => {
 
 describe('Contract: GET /api/platform/kpi (enterpriseTransformHandler.js handlePlatformKPI)', () => {
   it('exposes the real field names the Executive KPI Dashboard reads', async () => {
-    const res = await handlePlatformKPI(req('https://x/api/platform/kpi'), makeEnv(), { authenticated: true, user_id: 'u_owner', tier: 'OWNER' });
+    // isAdmin:true (ADMIN_KEY-bypass-equivalent) is the real way to reach this
+    // route as an admin — tier:'OWNER' (used here previously) is not a value
+    // any auth path ever produces; see enterpriseTransformAdminGuard.test.mjs.
+    const res = await handlePlatformKPI(req('https://x/api/platform/kpi'), makeEnv(), { authenticated: true, user_id: 'u_owner', isAdmin: true });
     const body = await res.json();
     expect(body.success).toBe(true);
     const kpi = body.kpi;
