@@ -19488,6 +19488,19 @@ function renderPipeline(stages) {
   background: linear-gradient(135deg,rgba(5,5,18,.97),rgba(8,8,25,.98)) !important;
 }
 
+/* ── FREEMIUM nav badge — permanently hidden, never removed from the DOM ──
+   It's inert branding text (no click target, no functionality), but several
+   scripts (renderPlanBadge, fixFreeBadge, patchBranding) kept re-showing it,
+   and it was one of the widest items in the non-wrapping #nav-links-desktop
+   row — crowded enough on real desktop widths (1280-1440px) that "Sign In"
+   was pushed to the very edge of the viewport or off-screen entirely, while
+   mobile (which hides this whole row for a hamburger drawer) was unaffected.
+   Kept as a display:none element rather than deleted outright — a separate
+   script anchors the "API Keys" button injection to this exact node
+   (insertBefore(keyBtn, navBadge.nextSibling)); removing the element would
+   have silently broken that button for logged-in users too. */
+#nav-plan-badge { display: none !important; }
+
 /* ══════════════════════════════════════════════════════════════════════════
    PHASE 4 CSS — Enterprise Sales + Proposal + Affiliate + Growth Analytics
    ══════════════════════════════════════════════════════════════════════════ */

@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11, P0: 2FA enrollment completely broken for every customer — fixed, plus 3 more real gaps from the Organizations/API-Keys/MFA/CISO-export mutation audit)
+## Current status (2026-07-11, P1: homepage "Sign In" crowded off-screen on desktop by the inert FREEMIUM nav badge — fixed)
 
 **Scope note (2026-07-10):** starting this date, sessions on this branch
 follow the customer's "production readiness lifecycle" priority (visitor →
@@ -28,7 +28,7 @@ parallel tracking document.
 | Domains empty (stubs) | 3 | see Remaining Work Register |
 | Capabilities registered | 66 | `node scripts/registry/validate.mjs` |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 |
-| Worker test suite | 204 files / 2107 tests passing (2 files pre-existing import-time gap, unrelated — see session log) | `npx vitest run`, run 2026-07-11 (includes 11 new tests: `apiKeysActiveFilterFix.test.mjs` (3), `dashboardMfaAndGraphExportFix.test.mjs` (7), +1 case in `orgRbacIsolation.test.mjs`) |
+| Worker test suite | 205 files / 2110 tests passing (2 files pre-existing import-time gap, unrelated — see session log) | `npx vitest run`, run 2026-07-11 (includes 3 new tests: `homepageNavPlanBadgeOverflow.test.mjs`) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-10 (unchanged this wave — CAP-IDN-001's evidence was updated in place, its backend/frontend/nav booleans didn't change, see session log) |
 | Backend / Frontend / Parity | 83.3% / 67.4% / 62.1% | `PRODUCTION_READINESS_REPORT.md` (unchanged — this wave fixed a regression within an already-`exists` capability; see session log) |
 | Customer journeys browser-verified | 1/66 capabilities now carry `verification.method: dynamic_browser` (CAP-IDN-001) | Continues the live-production headless-Chromium pattern from the prior UAT wave. This wave additionally measured real bounding-rects at 6 phone widths against `cyberdudebivash.in` and prototyped the fix live via `page.addStyleTag()` before committing it — see session log. Every other capability's `verification.method` is still unchanged (`static`) |
@@ -201,6 +201,63 @@ see session log below.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — P1: homepage "Sign In" crowded off-screen on desktop by the inert FREEMIUM nav badge
+
+- **Trigger:** customer report: the homepage's "Sign In" entry point lists
+  clearly on mobile but not on desktop, and asked specifically whether the
+  "FREEMIUM" badge (correctly identified as "not a button, it's just a text
+  field") could be removed from the header to fix it.
+- **Method:** live Playwright against production at real desktop widths
+  (1280px, 1440px, 1920px) before touching anything, screenshotting the
+  actual `#main-nav` bar (not just reading the CSS) to see what the customer
+  was describing.
+- **Root cause:** `frontend/index.html`'s `#nav-links-desktop` is a
+  non-wrapping flex row: logo, Free Scan, Pricing, API, AI Security, AI
+  Threat Intel, Threat Intel, Trust, MASOC, GOD MODE, the FREEMIUM plan
+  badge (`#nav-plan-badge`), Book Demo — followed by `#cdb-nav-actions`
+  (API Keys, Defense, Data Intel, CISO Hub, Sign In, search, notifications).
+  Confirmed live: at 1280px "Sign In" was pushed fully off-screen (not
+  visible at all without horizontal scroll); at 1440px it was clipped right
+  at the edge of the viewport. Mobile hides this entire row for a hamburger
+  drawer, which is why the customer saw no problem there. The FREEMIUM badge
+  — inert branding text with no click target — was one of the widest single
+  items in the row, and three separate scripts (`renderPlanBadge`,
+  `fixFreeBadge`, `patchBranding`) kept re-showing/re-populating it.
+- **Complication found while fixing:** a separate script injects the
+  dashboard's "API Keys" quick-access nav button by anchoring off this exact
+  element (`insertBefore(keyBtn, navBadge.nextSibling)`). Deleting
+  `#nav-plan-badge` from the DOM outright — the obvious first approach —
+  would have silently broken that button for logged-in users, a regression
+  with no visible symptom in a quick before/after screenshot.
+- **Fix:** a CSS override (`#nav-plan-badge { display: none !important; }`)
+  forces the badge to permanently render nothing and take zero layout
+  space, while leaving the DOM node in place as the anchor. Zero JS changed
+  — the various scripts can still set the badge's own inline
+  `style.display`/text (used elsewhere as a "does this session have plan
+  info" signal) without it ever visually appearing, since the stylesheet
+  `!important` wins over inline styles for rendering.
+- **Verified live** (Playwright, route-intercepted to serve the locally
+  fixed `index.html` against the real backend): badge computed
+  `display: none` and still present in the DOM at both 1280px and 1440px;
+  "Sign In" now fully inside the viewport at both widths (previously
+  off-screen / clipped); manually reproduced the anchor-based "API Keys"
+  button injection against the hidden badge and confirmed it still creates
+  a visible button in the right place.
+- **Commits this session:** `frontend/index.html` (CSS-only),
+  `workers/test/homepageNavPlanBadgeOverflow.test.mjs` (new, 3 tests).
+- **Validator:** 21 domain files, 66 capability ids, 0 failures, 0 warnings
+  (no registry entry cleanly matched this fix — same precedent as recent
+  waves — logged here instead).
+- **Tests:** 205 files / 2110 tests passing (full suite, up from 204/2107).
+  `scripts/seo-structure-lock.mjs`: 22/22 pages green.
+- **Risks / follow-ups:** the desktop nav row is still visually dense (MASOC
+  and GOD MODE remain as decorative pills alongside real functional links)
+  — removing the one item the customer specifically flagged as non-functional
+  resolved the reported symptom at the widths tested, but a narrower desktop
+  window (below ~1280px, still above the mobile breakpoint) could still be
+  tight. Worth a follow-up pass if a customer reports the same symptom on a
+  smaller laptop screen.
 
 ### 2026-07-11 — P0: 2FA enrollment permanently broken for every customer; org-invite email case-sensitivity; revoked API keys never left the list; Threat Graph export mislabeled
 
