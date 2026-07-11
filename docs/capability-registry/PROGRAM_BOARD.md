@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry thirteen below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed all 10 Tier-1 items (see prior entries) and has now completed Tier-2 items #1–#2: `threat-intel-workbench.html`'s AI Analyst chat / AI CVE-brief / AI sector-brief routes (real unmetered LLM calls reachable with zero authentication and zero rate limiting — fixed by wiring the existing shared `checkRateLimitCost()` into all 3 routes), and `sentinel-apex-marketplace.html`'s Threat Actor and Malware intel cards (100% hardcoded fabricated data — fake risk scores, an invented "AI-Enhanced RAT" — presented as "Live... intelligence... powered by SENTINEL APEX™"; fixed by wiring both card renderers to the platform's real APT actor database and malware-family preview API, following the honest-fallback pattern this same file's `loadCVECards()` already established) (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 12 session-log entries below. 12 of the 24 backlog items remain (6 more Tier 2, all 6 of Tier 3), queued in the same stated priority order.)
+## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry fourteen below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed all 10 Tier-1 items (see prior entries) and has now completed Tier-2 items #1–#3: `threat-intel-workbench.html`'s AI Analyst/CVE-brief/sector-brief routes (real unmetered LLM calls, zero auth/rate-limiting — fixed via the existing shared `checkRateLimitCost()`); `sentinel-apex-marketplace.html`'s Threat Actor and Malware intel cards (100% hardcoded fabricated data presented as live SENTINEL APEX™ intelligence — fixed by wiring both renderers to the platform's real APT actor database and malware-family preview API); and `index.html`'s fabricated "PATCHED" KPI (an invented `confirmed_exploited/10` formula with no real backing field — now an honest dash), its "Platform: Operational" badge (100% static HTML never touched by any script — now wired into the page's own already-real `/api/platform/health` poller), and 3 false "CYBERBRAIN V2" claims on the MYTHOS AI Analyst / Autonomous SOC Mode panels (a real, differently-versioned v20.0 engine the chat backend never actually calls — corrected to accurate MYTHOS-only branding) (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 13 session-log entries below. 11 of the 24 backlog items remain (5 more Tier 2, all 6 of Tier 3), queued in the same stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 232 files / 2413 tests passing | `npx vitest run`, run 2026-07-11 — +10 tests this wave, new file `sentinelApexMarketplaceRealIntel.test.mjs` (Tier-2 item #2: sentinel-apex-marketplace.html's Threat Actor/Malware cards now fetch real data instead of a fabricated static list). Baseline going into this wave was 231 files / 2403 tests (Tier-2 item #1) |
+| Worker test suite | 233 files / 2422 tests passing | `npx vitest run`, run 2026-07-11 — +9 tests this wave, new file `indexFabricatedStatsAndStatusFix.test.mjs` (Tier-2 item #3: index.html's fake PATCHED KPI, hardcoded Platform-status badge, and 3 false CyberBrain V2 claims). Baseline going into this wave was 232 files / 2413 tests (Tier-2 item #2) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,102 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Tier-2 backlog item #3 (of 8): index.html — fabricated "PATCHED" KPI, hardcoded "Platform: Operational" badge, and 3 false "CyberBrain V2" claims
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-2 item #2.
+- **Re-verified against actual code, found each of the 3 named sub-bugs had
+  a distinct root cause requiring its own fix:**
+  1. **Fake PATCHED counter:** the Vulnerability Management section's
+     "PATCHED" KPI tile (`#vm-patched`) computed
+     `Math.floor(s.confirmed_exploited/10)` from the real
+     `/api/threat-intel/stats` response — an invented formula with *zero*
+     factual relationship to remediation. Traced the full stack looking for
+     a real "patched count" field: `handleThreatIntelStats`
+     (`workers/src/handlers/threatIntel.js`) only returns
+     `total_advisories/critical/high/medium/low/confirmed_exploited/
+     ransomware_linked` — no patch-status field exists. A genuine vuln
+     lifecycle *does* exist (`workers/src/handlers/vulnManagement.js`'s
+     `open→in_progress→testing→patched→...` stage machine, real
+     `POST /api/vulns/:id/remediate`), but `handleListVulns` hardcodes
+     `stage:'open'` for every CVE sourced from the platform-wide
+     `threat_intel` table (the vast majority) — only a small, per-org,
+     authenticated-user-created KV subset can ever have a different stage.
+     There is no real "how many CVEs has this platform patched" number
+     anywhere. Fixed to `statOrDash('vm-patched', null)` (both the success
+     and pre-existing catch paths) — the same honest "—" dash this exact
+     file's `statOrDash()` helper already shows for every other KPI when
+     real data isn't available, with a comment explaining why.
+  2. **Hardcoded "Platform: Operational" live dot:** the Command Centers
+     mega-widget's header badge (`#cdb-platform-status`, plus its
+     `.cdb-live-dot` pulsing green dot) was static HTML — grep-confirmed
+     `#cdb-platform-status` appears exactly once in the whole file, never
+     assigned to by any script. It always read "Operational" in green
+     regardless of real backend health. Found this page *already* runs a
+     genuinely real, working health poller two sections earlier — a
+     "V21.0 PRODUCTION ENGINE — Real API data only. Zero hardcoded/fake
+     metrics" IIFE that fetches `/api/platform/health` every 90s and
+     correctly branches on real `OK`/`DEGRADED`/`DOWN` status for a warning
+     banner and the SOC live-log feed — it simply never updated this badge.
+     Fixed by extending that existing poller (both its success and its
+     `.catch` failure path) to also set the badge's text/CSS class and the
+     dot's color from the same real `st` value, rather than adding a second,
+     redundant poller. Added the one missing CSS variant needed
+     (`.cdb-status-red`, for `DOWN` — only green/amber existed).
+  3. **3 false "CyberBrain V2" claims:** the MYTHOS AI Analyst chat panel's
+     header badge ("POWERED BY CYBERBRAIN V2") and status line ("ONLINE ·
+     CyberBrain V2 active"), plus a third, separate "AUTONOMOUS SOC MODE ·
+     CYBERBRAIN V2" badge — all claim a "CyberBrain V2" engine powers these
+     features. Traced the real call chain: this chat panel's
+     `cdbAnalystSend()` calls `POST /api/ai/chat` →
+     `handleAIChat` (`workers/src/handlers/aiAnalysis.js`) → a
+     template-based intent-detection/response-builder (grounded in real CVE
+     data via `lookupCveIntel()`, but not an LLM call and not CyberBrain).
+     The platform's *real* CyberBrain engine
+     (`workers/src/core/cyberBrain.js` / `services/cyberBrainEngine.js`) is
+     a completely separate, genuinely-versioned-v20.0 module used for
+     scan-result enrichment (`enrichScanWithBrain`) — never imported by
+     `handleAIChat` or anywhere near this UI. "V2" corresponds to no real
+     version of anything; the domain's own `CAP-MYTHOS-001` registry entry
+     already documented a closely-related naming collision ("'MYTHOS' is
+     also the customer-facing AI-chat-widget brand name... UI branding
+     only") without yet catching this third, CyberBrain-specific
+     mislabeling. Fixed all 3 occurrences to plain, accurate "MYTHOS"
+     branding — matching what the real backend actually is, and matching
+     the correct "MYTHOS AI ENGINE"/"MYTHOS AI Analyst" labels already used
+     one line above each fix site.
+- **Verification:** `node --check` on both extracted inline `<script>`
+  blocks containing the JS edits (the `vm-patched` fix and the extended
+  health poller); new `workers/test/indexFabricatedStatsAndStatusFix.test.mjs`
+  (9 tests, static parse) asserting: the fabricated `Math.floor(.../10)`
+  formula is gone and both `vm-patched` call sites pass `null`; the platform
+  dot has a targetable id and a red status class now exists; the real
+  health poller's body now references both the badge and dot ids in both
+  its success and failure paths, with each real status value driving a
+  distinct real label (`OK`→"Operational", `DEGRADED`→"Degraded",
+  `DOWN`→"Down"); zero case-insensitive occurrences of "CYBERBRAIN V2"
+  remain anywhere in the file; all 3 corrected badges read the accurate
+  MYTHOS branding. Searched `workers/test/` for any pre-existing test
+  referencing these strings/ids — none existed, so no bug-reinforcing
+  assertion needed correcting. Full suite: 233 files / 2422 tests passing
+  (was 232/2413 before this item — +1 file, +9 tests).
+  `node scripts/registry/validate.mjs`: 0 failures, 0 warnings (after fixing
+  one JSON syntax error of my own making — a stray trailing period after a
+  closing quote in `CAP-MYTHOS-001`'s `notes` field, caught immediately by
+  `python3 -c "import json; json.load(...)"` before the validator run).
+  Updated `CAP-MYTHOS-001`'s `notes` in
+  `docs/capability-registry/domains/mythos-godmode.json` to record this
+  third naming-collision fix alongside the two the entry already documented.
+  `node scripts/registry/generate-report.mjs` regenerated (only the
+  timestamp changed).
+- **5 Tier-2 items remain** (of 8), plus all 6 Tier-3 items, queued next in
+  the audit's stated priority order.
+- **Also fixed in this entry's commit:** my own `old_string`/`new_string`
+  Edit for inserting this entry initially dropped the `## Session log (most
+  recent first)` heading above it — the same mistake documented earlier in
+  this session's item #5/#6 entries. Caught immediately via
+  `grep -c "^## Session log"` returning 0 right after the edit; restored
+  before this commit.
 
 ### 2026-07-11 — Tier-2 backlog item #2 (of 8): sentinel-apex-marketplace.html — Threat Actor and Malware intel cards were 100% fabricated static data
 
