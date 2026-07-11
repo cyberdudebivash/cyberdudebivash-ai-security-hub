@@ -397,6 +397,14 @@ see session log below.
   next decision point for this capability — surfaced to the customer
   directly (not just logged here) per this session's practice of not
   unilaterally deciding real product/architecture questions.
+- **Production verification (post-merge addendum):** PR #171 merged (squash
+  `453b8cd`), all 32 checks green pre-merge, no review comments. Deploy
+  confirmed live within minutes: `GET /api/marketplace/catalog` against
+  `https://cyberdudebivash-security-hub.iambivash-bn.workers.dev` returns
+  `currency: "INR"` and a real `total_products` count, with none of the
+  removed dead code's shape (`currency: "USD"`, a `total` field) present —
+  confirming the live handler is genuinely the one answering, not just that
+  *a* 200 came back.
 
 ### 2026-07-11 — WAF false positive: `/on\w{2,20}\s*=/i` blocked real query params (session_id, context, component, min_confidence, month) sitewide, discovered during PR #168's post-merge production verification
 
