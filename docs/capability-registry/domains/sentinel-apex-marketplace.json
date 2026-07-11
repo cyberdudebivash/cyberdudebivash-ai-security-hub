@@ -188,21 +188,21 @@
     "id": "CAP-MKT-005",
     "domain": "sentinel-apex-marketplace",
     "name": "Sentinel APEX Marketplace Mega-Dispatcher (Subscriptions, Entitlements, ROI Calculator)",
-    "description": "A single internal mega-handler covering marketplace subscriptions, entitlements, order history, trials, an ROI calculator, and plan comparison — plus three routes (catalog, product, checkout) that duplicate CAP-MKT-002 and are structurally unreachable.",
+    "description": "A single internal mega-handler covering marketplace purchase/subscription/entitlement/order-history/trial/ROI-calculator/plan-comparison actions. Previously also carried three dead, shadowed catalog/product/checkout routes (removed 2026-07-11); now known to resolve products from a catalog with zero ID overlap with the one customers actually browse (see notes).",
     "backend": {
       "handlers": ["workers/src/handlers/sentinelApexMarketplace.js"],
       "entry_points": ["handleMarketplace"],
       "routes_sampled": [
-        { "path": "/api/marketplace/orders", "method": "GET", "evidence": "workers/src/index.js:7453" }
+        { "path": "/api/marketplace/orders", "method": "GET", "evidence": "workers/src/index.js:7549" }
       ],
       "routes_fully_enumerated": false,
-      "status": "duplicate"
+      "status": "exists"
     },
     "frontend": {
       "surface_type": "dedicated_page",
       "pages": ["frontend/user-dashboard.html"],
       "status": "partial",
-      "evidence": "workers/src/handlers/sentinelApexMarketplace.js exports one dispatcher function, handleMarketplace, containing 15 internal sub-routes reached via workers/src/index.js:7453-7457's prefix dispatch (if (path.startsWith('/api/marketplace/'))). Critical structural defect: this prefix dispatcher sits AFTER workers/src/handlers/marketplaceCheckoutHandler.js's exact-match routes for the same three paths (workers/src/index.js:5530-5556, catalog/catalog-by-id/checkout) — since the router returns on first match, this file's internal handleGetCatalog/handleGetProduct/handleCheckout implementations for those exact paths are permanently unreachable in production. The other, non-shadowed sub-routes (purchase, webhook, subscribe, subscriptions, cancel, orders, entitlements, trial, roi-calculator, compare) do execute. Of those, frontend/user-dashboard.html calls /api/marketplace/orders (:4270), /api/marketplace/entitlements (:4271,4391), /api/marketplace/subscriptions (:4339), and /api/marketplace/cancel (:4379). No frontend caller found for /api/marketplace/purchase, /webhook, /subscribe, /subscriptions/{id}/upgrade, /trial, /roi-calculator, or /compare. Verified 2026-07-08 by reading both route-registration blocks directly and confirming the sequential if-chain's return-on-first-match behavior in workers/src/index.js."
+      "evidence": "FIXED 2026-07-11 (dead-code half only): workers/src/handlers/sentinelApexMarketplace.js's handleGetCatalog/handleGetProduct/handleCheckout — permanently unreachable since workers/src/index.js:5617-5624 registers exact-match routes for the same 3 paths earlier via workers/src/handlers/marketplaceCheckoutHandler.js (CAP-MKT-002, the real live implementation, confirmed by frontend/marketplace-checkout.html), and the router returns on first match — deleted, along with their 3 dispatch-table entries and their 2 stale references in the 404 hint list. Diagnosed 2026-07-08, left unfixed 3 days; removed now rather than left as silently-diverging duplicate implementations of a payment-adjacent path. The other 12 sub-actions (purchase, webhook, subscribe, subscriptions list, subscriptions/:id/cancel, /cancel alias, subscriptions/:id/upgrade, orders, entitlements, trial, roi-calculator, compare) were never shadowed and are unchanged by this fix. Of those, frontend/user-dashboard.html calls orders, entitlements, subscriptions (list), and cancel. No frontend caller found for purchase, webhook (server-to-server by design), subscribe, subscriptions/:id/upgrade, trial, roi-calculator, or compare — unchanged from the 2026-07-08 finding, NOT fixed in this pass (see notes for why this may be structural, not just unbuilt UI)."
     },
     "navigation": {
       "discoverable": true,
@@ -214,7 +214,7 @@
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "workers/test/marketplaceWebhook.test.mjs imports handleMarketplace directly from workers/src/handlers/sentinelApexMarketplace.js — but since it imports the function directly rather than going through the real router, it would not detect the route-shadowing defect described above (that defect only manifests via workers/src/index.js's actual dispatch order)."
+      "evidence": "workers/test/marketplaceWebhook.test.mjs imports handleMarketplace directly (pre-existing). New workers/test/marketplaceDeadCodeRemoval.test.mjs (4 tests) exercises the REAL ROUTER (worker.fetch()) for GET /api/marketplace/catalog and /catalog/:productId, confirming they now return workers/src/handlers/marketplaceCheckoutHandler.js's real response shape (INR pricing, total_products — the removed dead code returned USD/total, so this also positively distinguishes which implementation answered); confirms a direct call to handleMarketplace() for the 3 removed paths now falls through to its own 404 rather than a shadowed handler; spot-checks 3 of the 12 untouched live sub-actions still work. This is the router-level test the 2026-07-08 finding flagged as missing (a direct-import-only test would not have caught the original shadowing bug)."
     },
     "docs": [],
     "customer_journey_complete": false,
@@ -222,11 +222,11 @@
     "priority": "P1",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-08",
-      "evidence": "workers/src/index.js read directly at both the shadowing block (5530-5556) and the shadowed block (7453-7457) to confirm dispatch order and return-on-first-match semantics; workers/src/handlers/sentinelApexMarketplace.js's internal dispatch (:1060-1137) read directly to enumerate all 15 sub-actions."
+      "last_verified": "2026-07-11",
+      "evidence": "workers/src/index.js re-read to confirm current route-registration order and line numbers (both had shifted since 2026-07-08). workers/src/handlers/sentinelApexMarketplace.js's full internal dispatch re-read to confirm exactly which 3 sub-actions were shadowed vs. which 12 were not, and that PRODUCT_CATALOG (used by the 12 live ones) is distinct from and not shared with MARKETPLACE_CATALOG (workers/src/handlers/marketplaceCheckoutHandler.js, the catalog customers actually browse) — confirmed by diffing both catalogs' product-id sets programmatically: 12 ids in MARKETPLACE_CATALOG, 18 in PRODUCT_CATALOG, zero overlap. workers/test/marketplaceDeadCodeRemoval.test.mjs's 4 tests run against the real in-process router (worker.fetch()), not just handleMarketplace() in isolation. Full backend suite 210 files/2180 tests green (up from 209/2176 — the 1 new test file); node scripts/registry/validate.mjs 0 failures/0 warnings; scripts/seo-structure-lock.mjs 22/22 pages green. NOT YET verified against live deployed production."
     },
     "contradicts_doc": [],
-    "notes": "backend.status is \"duplicate\" specifically for the shadowed catalog/product/checkout trio — CAP-MKT-002 (marketplaceCheckoutHandler.js) is the implementation that actually runs for those three paths; this file's versions are dead code. Priority P1 reflects that dead, unreachable production code for a payment-adjacent path is a correctness risk (e.g. future maintainers editing the wrong copy, believing it's live) even though no customer-visible journey is currently broken by it — the live paths happen to be served correctly by the other handler. Recommend either deleting the shadowed branches from this file or reordering the router, as a deliberate decision rather than leaving two silently-diverging implementations in place."
+    "notes": "Two distinct findings, only the first fixed this pass. (1) FIXED: the shadowed catalog/product/checkout trio was dead code (CAP-MKT-002 is the real implementation for those 3 paths) — removed rather than left as a maintainer trap. (2) NOT FIXED, discovered while verifying (1), flagged for an explicit owner/product decision rather than guessed at: PRODUCT_CATALOG (18 products: api-free/pro/team/enterprise, kev-detection-pack, apt-yara-pack, soc-starter-kit, ai-spm-kit, apex-ultimate-bundle, etc. — used by this file's live purchase/subscribe/subscriptions-upgrade/compare/trial actions) shares ZERO product ids with MARKETPLACE_CATALOG (12 products: dp-ransomware-2025, dp-apt-north-korea, pb-ransomware-ir, cp-nist-csf-2, aa-threat-hunter, etc. — marketplaceCheckoutHandler.js, what a customer actually sees via GET /api/marketplace/catalog). A product_id a customer discovers by browsing the real, live catalog can never successfully resolve on subscribe/purchase/upgrade/compare/trial (each does `PRODUCT_CATALOG[product_id]`, which would be undefined for every id from the other catalog) — those 5 sub-actions are only reachable at all with a hardcoded PRODUCT_CATALOG-native id a caller already knows out-of-band. This may be exactly why the 2026-07-08 finding could not find any frontend caller for purchase/subscribe/subscriptions-upgrade/trial/roi-calculator/compare: wiring a UI to them from the browsable catalog would not have worked. Whether these represent two genuinely different product lines (e.g. one-time content downloads vs. recurring API/kit subscriptions) that were never meant to share an id space, or a real reconciliation is overdue, is a product decision this pass deliberately did not make — flagged per this registry's established convention for duplicate-system findings (see CAP-CRM-004/CAP-CRM-006) rather than guessing which catalog is canonical or merging them unilaterally."
   },
   {
     "id": "CAP-MKT-006",

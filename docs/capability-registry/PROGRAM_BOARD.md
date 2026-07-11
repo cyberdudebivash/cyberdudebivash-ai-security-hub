@@ -28,9 +28,9 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 95 | `node scripts/registry/validate.mjs` |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 |
-| Worker test suite | 208 files / 2169 tests passing | `npx vitest run`, run 2026-07-11 (+1 file / +20 tests this wave: `workers/test/conversionTriggersFieldNameFix.test.mjs`, CAP-CRM-007's fix) |
-| Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: 9 other Critical (P1) items are untouched by this wave, and CAP-CRM-007 itself still counts toward the 10 per this file's own historical-priority convention (see below) |
-| Backend / Frontend / Parity | 88.4% / 64.7% / 58.9% | `PRODUCTION_READINESS_REPORT.md` — up from 64.2%/57.9%; CAP-CRM-007's frontend.status flipped partial→exists this wave, the only change |
+| Worker test suite | 210 files / 2180 tests passing | `npx vitest run`, run 2026-07-11 (+2 files / +11 tests since the CAP-CRM-007 entry above: `workers/test/wafOnAttributeFalsePositive.test.mjs` +7, `workers/test/marketplaceDeadCodeRemoval.test.mjs` +4) |
+| Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
+| Backend / Frontend / Parity | 89.5% / 64.7% / 58.9% | `PRODUCTION_READINESS_REPORT.md` — backend up from 88.4%; CAP-MKT-005's backend.status flipped duplicate→exists this session (dead shadowed code removed) |
 | Customer journeys browser-verified | 3/95 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — all three flipped to `true` this wave) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
 | Gaps by severity | Critical 10 · High 23 · Medium 12 · Low 50 | `PRODUCTION_READINESS_REPORT.md` — up from Critical 9 · High 15 · Medium 4 · Low 38 before this wave. The increase is the 3-domain audit doing its job: CAP-COMP-001 is 1 new Critical; CAP-COMP-002/004/005, CAP-MYTHOS-003, CAP-TIH-002/004/009/014 are 8 new High. None of the original 9 Critical/15 High items got worse — see session log |
 
@@ -318,6 +318,85 @@ see session log below.
   below this one for the full finding and fix). `customer_journey_complete`
   correctly stays `false` for CAP-CRM-007 pending a follow-up live check
   once that second fix is also deployed.
+
+### 2026-07-11 — CAP-MKT-005: removed dead shadowed marketplace routes; discovered and flagged (not fixed) a deeper catalog product-id mismatch
+
+- **Trigger:** continuing the backlog per the customer's "auto-merge +
+  continue" authorization, after closing out CAP-CRM-007 and the WAF fix it
+  surfaced. Picked CAP-MKT-005 as the most substantial genuinely-unaddressed
+  Critical (P1) item — `PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md` §3.1 lists
+  it among the original 9; unlike most of the others (already fixed,
+  carrying `PILOT ONLY` as a historical label, not an active defect), this
+  one's `NOT READY` reflected a real, still-open issue.
+- **Re-confirmed the 2026-07-08 diagnosis still held** (line numbers had
+  shifted, substance hadn't): `workers/src/index.js` registers exact-match
+  routes for `GET /api/marketplace/catalog`, `GET /api/marketplace/catalog/
+  :productId`, and `POST /api/marketplace/checkout` earlier in its if-chain
+  (`workers/src/handlers/marketplaceCheckoutHandler.js`, CAP-MKT-002, the
+  real live implementation — confirmed via `frontend/marketplace-checkout.
+  html`) than the generic `/api/marketplace/*` prefix dispatch that reaches
+  `handleMarketplace()`. Since the router returns on first match,
+  `handleMarketplace()`'s own internal `handleGetCatalog`/`handleGetProduct`/
+  `handleCheckout` were dead code — reachable only via a direct unit-test
+  import bypassing the router, never by a real request.
+- **Fixed:** deleted the 3 dead functions, their 3 dispatch-table entries,
+  and their 2 now-inaccurate mentions in the dispatcher's own 404 hint list
+  (`workers/src/handlers/sentinelApexMarketplace.js`). `PRODUCT_CATALOG`
+  (shared by this file's other, live sub-actions) was confirmed still used
+  elsewhere in the file before touching anything near it, so it was left
+  alone. The other 12 sub-actions in the same dispatcher (purchase, webhook,
+  subscribe, subscriptions list/cancel/upgrade, orders, entitlements, trial,
+  roi-calculator, compare) were never shadowed and are unchanged.
+- **Discovered while verifying the fix — NOT fixed, flagged for an owner/
+  product decision:** `PRODUCT_CATALOG` (18 products — API subscriptions,
+  kits, bundles — used by this file's live purchase/subscribe/subscriptions-
+  upgrade/compare/trial actions) and `MARKETPLACE_CATALOG` (12 products —
+  detection packs, playbooks, intel reports — `marketplaceCheckoutHandler.js`,
+  what a customer actually sees via the real, live `GET /api/marketplace/
+  catalog`) share **zero product ids**, confirmed by diffing both sets
+  programmatically. A product a customer discovers by browsing the real
+  catalog can never successfully resolve on subscribe/purchase/upgrade/
+  compare/trial — each does a `PRODUCT_CATALOG[product_id]` lookup that's
+  `undefined` for every id the customer could actually have. This is likely
+  *why* the 2026-07-08 finding could never find a frontend caller for those
+  5 sub-actions (plus roi-calculator) in the first place — wiring a UI to
+  them from the browsable catalog would not have worked. Whether these are
+  two genuinely different product lines that were never meant to share an
+  id space, or a real reconciliation is overdue, is a product decision this
+  pass deliberately did not make unilaterally — matching this registry's
+  established convention for duplicate-system findings (CAP-CRM-004,
+  CAP-CRM-006): flag for an explicit decision, don't guess which side is
+  canonical or merge them without one.
+- **Verified:** new `workers/test/marketplaceDeadCodeRemoval.test.mjs` (4
+  tests) — critically, run against the **real router** (`worker.fetch()`),
+  not `handleMarketplace()` in isolation, since the registry's own prior
+  note flagged that a direct-import test would not have caught the original
+  shadowing bug: confirms `GET /api/marketplace/catalog` and `/catalog/
+  :productId` now return `marketplaceCheckoutHandler.js`'s real response
+  shape (INR pricing, `total_products` — the removed dead code answered in
+  USD with a `total` field, so this also positively distinguishes which
+  implementation is answering, not just that *a* 200 came back); confirms a
+  direct call to `handleMarketplace()` for the 3 removed paths now falls
+  through to its own 404 instead of a shadowed handler, with the 404 hint
+  list no longer claiming to serve them; spot-checks 3 of the 12 untouched
+  live sub-actions still work. Full backend suite: 210 files / 2180 tests
+  (up from 209/2176 — the 1 new file). `node scripts/registry/validate.mjs`:
+  0 failures, 0 warnings. `scripts/seo-structure-lock.mjs`: 22/22 pages
+  green (unaffected — no frontend HTML touched). `operational_status` stays
+  `NOT READY` — the dead-code risk is closed, but the catalog-mismatch
+  finding is arguably an equally real "broken customer journey" the moment
+  anyone wires a UI to it naively, so this capability is not being marked
+  done.
+- **Commits this session:** `workers/src/handlers/sentinelApexMarketplace.js`
+  (dead-code removal), new test
+  `workers/test/marketplaceDeadCodeRemoval.test.mjs`,
+  `docs/capability-registry/domains/sentinel-apex-marketplace.json`
+  (CAP-MKT-005 entry), `docs/capability-registry/PRODUCTION_READINESS_REPORT.md`
+  (regenerated), `docs/capability-registry/PROGRAM_BOARD.md` (this entry).
+- **Risks / follow-ups:** the catalog-mismatch finding above is the clear
+  next decision point for this capability — surfaced to the customer
+  directly (not just logged here) per this session's practice of not
+  unilaterally deciding real product/architecture questions.
 
 ### 2026-07-11 — WAF false positive: `/on\w{2,20}\s*=/i` blocked real query params (session_id, context, component, min_confidence, month) sitewide, discovered during PR #168's post-merge production verification
 

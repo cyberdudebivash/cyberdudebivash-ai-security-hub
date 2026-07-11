@@ -10,14 +10,14 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-11T12:36:08.172Z
+Generated: 2026-07-11T12:45:41.961Z
 Capabilities catalogued: 95
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 88.4% |
+| Backend | 89.5% |
 | Frontend | 64.7% |
 | Parity (backend **and** frontend both exist) | 58.9% |
 | Customer Journeys complete (dynamic_browser-verified) | 3.2% |
@@ -42,7 +42,7 @@ Capabilities catalogued: 95
 |---|---|---|
 | Hidden features | 26 | Backend exists, but not discoverable via navigation |
 | Backend-only features | 19 | Backend exists, zero frontend surface |
-| Duplicate systems | 5 | Backend marked `duplicate` (two implementations of one capability) |
+| Duplicate systems | 4 | Backend marked `duplicate` (two implementations of one capability) |
 | Broken journeys | 10 | Priority P1 |
 
 ## Production Readiness Verdict: **NOT READY**
@@ -230,7 +230,7 @@ complete", "bug free", or "guaranteed".
 | CAP-MKT-002 | Marketplace Catalog & Checkout (Generic) | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P3 |
 | CAP-MKT-003 | Sentinel-Specific Purchase Flow | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 | CAP-MKT-004 | Security Tools Marketplace | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
-| CAP-MKT-005 | Sentinel APEX Marketplace Mega-Dispatcher (Subscriptions, Entitlements, ROI Calculator) | ✗ | ◐ | ✓ | NOT READY | P1 |
+| CAP-MKT-005 | Sentinel APEX Marketplace Mega-Dispatcher (Subscriptions, Entitlements, ROI Calculator) | ✓ | ◐ | ✓ | NOT READY | P1 |
 | CAP-MKT-006 | Threat Intel Programmatic API (IOC/CVE/Actor/TTP/Risk) | ✗ | ✗ | ✗ | NOT READY | P2 |
 
 ### threat-hunting-intel (17 capabilities)
