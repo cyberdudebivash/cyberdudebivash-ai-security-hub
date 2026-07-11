@@ -1051,7 +1051,10 @@ function openEnterprise() {
   if (typeof window.openPayment === 'function') {
     window.openPayment('ENTERPRISE_PLAN', 4999, 'Enterprise Plan — ₹4,999/month');
   } else {
-    window.location.href = '/upgrade.html#enterprise';
+    // upgrade.html has no id="enterprise" anchor (confirmed dead fragment) —
+    // matches openPayment()'s own fallback below for the same "no payment
+    // modal available" case.
+    window.location.href = '/upgrade.html';
   }
 }
 
