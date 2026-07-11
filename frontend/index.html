@@ -489,7 +489,8 @@ window.cdbTriggerReportPurchase = async function(module, target) {
         signInLink.href = '/user-dashboard.html';
         signInLink.setAttribute('data-auth-section', 'signin');
         signInLink.textContent = 'Sign In';
-        signInLink.style.cssText = 'font-size:13px;font-weight:700;color:var(--text-muted);padding:8px 14px;border-radius:8px;border:1px solid rgba(0,212,255,.2);white-space:nowrap;text-decoration:none';
+        signInLink.className = 'nav-signin-cta';
+        signInLink.style.cssText = 'font-size:13px;font-weight:700;padding:8px 14px;border-radius:8px;border:1px solid rgba(0,212,255,.2);white-space:nowrap;text-decoration:none';
         navActions.insertBefore(signInLink, navActions.firstChild);
       }
       var mobileDrawer = document.getElementById('nav-mobile-drawer');

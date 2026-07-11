@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11, P1: homepage "Sign In" crowded off-screen on desktop by the inert FREEMIUM nav badge — fixed)
+## Current status (2026-07-11, enhancement: homepage header/nav visual polish — glowing Sign In CTA + SOC-2-style compliance badge ticker)
 
 **Scope note (2026-07-10):** starting this date, sessions on this branch
 follow the customer's "production readiness lifecycle" priority (visitor →
@@ -28,7 +28,7 @@ parallel tracking document.
 | Domains empty (stubs) | 3 | see Remaining Work Register |
 | Capabilities registered | 66 | `node scripts/registry/validate.mjs` |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 |
-| Worker test suite | 205 files / 2110 tests passing (2 files pre-existing import-time gap, unrelated — see session log) | `npx vitest run`, run 2026-07-11 (includes 3 new tests: `homepageNavPlanBadgeOverflow.test.mjs`) |
+| Worker test suite | 206 files / 2116 tests passing (2 files pre-existing import-time gap, unrelated — see session log) | `npx vitest run`, run 2026-07-11 (includes 6 new tests: `homepageHeaderPremiumEnhancement.test.mjs`) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-10 (unchanged this wave — CAP-IDN-001's evidence was updated in place, its backend/frontend/nav booleans didn't change, see session log) |
 | Backend / Frontend / Parity | 83.3% / 67.4% / 62.1% | `PRODUCTION_READINESS_REPORT.md` (unchanged — this wave fixed a regression within an already-`exists` capability; see session log) |
 | Customer journeys browser-verified | 1/66 capabilities now carry `verification.method: dynamic_browser` (CAP-IDN-001) | Continues the live-production headless-Chromium pattern from the prior UAT wave. This wave additionally measured real bounding-rects at 6 phone widths against `cyberdudebivash.in` and prototyped the fix live via `page.addStyleTag()` before committing it — see session log. Every other capability's `verification.method` is still unchanged (`static`) |
@@ -201,6 +201,74 @@ see session log below.
   dependency.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Enhancement: homepage header/nav visual polish (premium glow treatment)
+
+- **Trigger:** customer, continuing directly from the "Sign In crowded
+  off-screen" fix in the same session, asked to enhance the header
+  section's links/buttons/page-links to "premium commercial production
+  grade quality" — clearly visible, colourful, with an "impactful LED
+  glowing indicator, SOC-II style" look, to make the best first impression
+  on prospective customers.
+- **Scope decision:** interpreted "header section" as the homepage
+  (`frontend/index.html`) nav bar and its adjacent compliance-badge ticker
+  — the same area just fixed — not a sitewide redesign across every page;
+  stated this scoping explicitly rather than guessing silently. Confirmed
+  `frontend/assets/main.v10.css` (the stylesheet touched) is used
+  exclusively by `index.html`, so the change cannot ripple to other pages.
+- **What was genuinely under-styled (verified by reading the actual CSS,
+  not assumed):**
+  - `.nav-links a` (Free Scan, Pricing, API, AI Security, AI Threat Intel,
+    Threat Intel, Trust, Defense, Data Intel, CISO Hub) rendered at
+    `color:var(--text-muted)` with a flat color swap on hover — no glow,
+    no visual weight.
+  - The desktop "Sign In" CTA (injected by `cdbApplyGates()`) was styled
+    far more plainly than its own mobile-drawer counterpart: flat gray
+    text (`var(--text-muted)`) and a near-invisible `rgba(0,212,255,.2)`
+    border, vs. the mobile version's bright gradient + bold cyan text —
+    despite being the primary return-customer entry point.
+  - `.ticker-item` (the "SOC 2 Type II Ready / GDPR / PCI-DSS / DPDP Act /
+    HIPAA…" compliance row) was plain uppercase scrolling text in a single
+    flat color (`var(--accent3)`) with no badge/pill treatment at all —
+    the literal element the customer meant by "SOC-II style indicators".
+- **Fix (CSS-only, zero JS behavior changes):**
+  - Brightened nav links to `var(--text)` at .82 opacity, with a glowing
+    cyan `text-shadow` on hover instead of a flat color swap.
+  - New `.nav-signin-cta` class (gradient background, bold cyan text,
+    glowing border, hover lift+glow) applied via `signInLink.className`,
+    giving the desktop Sign In CTA the same polish as its mobile
+    counterpart.
+  - Turned each `.ticker-item` into a glowing pill badge (colored border +
+    soft background + box-shadow glow, hover intensifies), with a 4-color
+    rotation via `:nth-child` — pure CSS, no HTML edits, so both halves of
+    the duplicated seamless-loop marquee track get identical colors
+    automatically.
+- **Verified live** (Playwright, route-intercepted to serve the locally
+  enhanced `index.html` + `main.v10.css` against the real backend):
+  screenshotted the actual rendered nav bar and ticker at 1280/1440px
+  desktop and 390px mobile. Confirmed: Sign In renders with the new glow
+  and remains **fully inside the viewport** at both desktop widths (the
+  prior wave's overflow fix still holds); ticker badges render as distinct
+  colored glowing pills; the marquee scroll animation (`getComputedStyle
+  (track).animationName === 'tick'`) is untouched; the mobile drawer's
+  already-good Sign In styling is unaffected; zero new console errors.
+- **Commits this session:** `frontend/assets/main.v10.css`,
+  `frontend/index.html` (one-line `className` addition),
+  `workers/test/homepageHeaderPremiumEnhancement.test.mjs` (new, 6 tests).
+- **Validator:** 21 domain files, 66 capability ids, 0 failures, 0 warnings
+  (no registry entry cleanly matched this fix — same precedent as recent
+  waves — logged here instead).
+- **Tests:** 206 files / 2116 tests passing (full suite, up from
+  205/2110). `scripts/seo-structure-lock.mjs`: 22/22 pages green.
+- **Risks / follow-ups:** "premium," "colourful," and "impactful" are
+  inherently subjective — this wave made a concrete, tasteful,
+  live-verified improvement consistent with the site's existing dark/glow
+  aesthetic, but is not a claim that every visual preference is now
+  satisfied. MASOC/GOD MODE nav pills and the Book Demo CTA were already
+  well-styled and were left untouched to keep this wave bounded. If the
+  customer wants the same treatment extended to other pages' headers, that
+  would need its own explicitly-scoped follow-up (`main.v10.css` is
+  homepage-only; other pages use different stylesheets).
 
 ### 2026-07-11 — P1: homepage "Sign In" crowded off-screen on desktop by the inert FREEMIUM nav badge
 
