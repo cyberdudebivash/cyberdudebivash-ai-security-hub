@@ -8,6 +8,7 @@
  */
 
 import { resolveApiKeyFromDB } from '../auth/apiKeys.js';
+import { resolveApiKey as resolveGrowthApiKey } from '../services/apiRevenueEngine.js';
 
 // ─── Tier Definitions ────────────────────────────────────────────────────────
 export const TIERS = {
@@ -46,6 +47,30 @@ async function resolveApiKey(key, env) {
           active:      true,
           label:       row.label || `${row.tier || 'FREE'} API Key`,
           source:      'd1',
+        };
+      }
+    } catch { /* invalid/unavailable → null below */ }
+  }
+
+  // 3. Growth/Plan API keys (sap_* format) — provisioned by POST
+  //    /api/growth/api-key (services/apiRevenueEngine.js) for verified paid
+  //    leads. Previously unrecognized here: the key would provision
+  //    successfully but could never authenticate anything (KV was cached
+  //    under a hashed name this function never looks up, and this file's D1
+  //    branch only matched cdb_). Delegates to that module's own resolver
+  //    (hash-then-match against its D1 rows) instead of duplicating the
+  //    lookup, so rotation/revocation there is honored here for free — a
+  //    rotated-away key hashes to a value no active row matches.
+  if (env?.DB && typeof key === 'string' && key.startsWith('sap_')) {
+    try {
+      const row = await resolveGrowthApiKey(env, key);
+      if (row?.email && row?.plan) {
+        return {
+          tier:        String(row.plan).toUpperCase(),
+          owner_email: row.email,
+          active:      true,
+          label:       `${String(row.plan).toUpperCase()} API Key`,
+          source:      'growth',
         };
       }
     } catch { /* invalid/unavailable → null below */ }
