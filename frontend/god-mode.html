@@ -299,7 +299,14 @@ function timeAgo(iso) {
 }
 
 async function fetchJson(path) {
-  const res = await fetch(API_BASE + path, { headers: { 'Accept': 'application/json' } });
+  // The Agentic AI Command Center panels (Anomaly/Predictive/Agent Bus) call
+  // routes that hard-require a real authenticated user (isRealUser() gate,
+  // workers/src/index.js) — with no Authorization header attached, every one
+  // of them always 401'd, for every visitor regardless of login state.
+  const token = getUserToken();
+  const headers = { 'Accept': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const res = await fetch(API_BASE + path, { headers });
   let body = null;
   try { body = await res.json(); } catch { /* non-JSON */ }
   return { ok: res.ok, status: res.status, body };
@@ -648,7 +655,14 @@ function getUserTier() {
   try { return (localStorage.getItem('cdb_tier') || 'FREE').toUpperCase(); } catch(e) { return 'FREE'; }
 }
 function getUserToken() {
-  try { return localStorage.getItem('cdb_token') || ''; } catch(e) { return ''; }
+  // frontend/user-dashboard.html's real login/signup flow (saveTokens())
+  // writes the current session token to sessionStorage['cdb_access'] only —
+  // 'cdb_token' is a legacy key nothing in the current login flow populates.
+  // Reading only 'cdb_token' here meant every authenticated call this page
+  // makes (the Agentic AI panels below, and the ENTERPRISE run-trigger)
+  // always ran as if signed out, regardless of the visitor's real login
+  // state or paid tier.
+  try { return sessionStorage.getItem('cdb_access') || localStorage.getItem('cdb_token') || sessionStorage.getItem('cdb_token') || ''; } catch(e) { return ''; }
 }
 function getAdminKey() {
   let key = localStorage.getItem('cdb_admin_key') || '';
