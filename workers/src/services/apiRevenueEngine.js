@@ -328,13 +328,19 @@ export async function provisionApiKey(env, email, plan) {
     // `key_hash`/`key_prefix` are NOT NULL with no default — every INSERT
     // must supply them or the row throws.
     const existing = await env.DB.prepare(
-      `SELECT id FROM api_keys WHERE email = ? AND active = 1 LIMIT 1`
+      `SELECT id, key_hash FROM api_keys WHERE email = ? AND active = 1 LIMIT 1`
     ).bind(email).first();
 
     if (existing) {
       await env.DB.prepare(
         `UPDATE api_keys SET tier = ?, api_key = ?, key_hash = ?, key_prefix = ? WHERE id = ?`
       ).bind(tier, keyHash, keyHash, prefix, existing.id).run();
+      // Invalidate the rotated-away key's own KV cache entry. Without this,
+      // the OLD key keeps authenticating (via KV, bypassing the D1 row this
+      // UPDATE just repointed to the NEW hash) for up to its 1-year TTL.
+      if (existing.key_hash && existing.key_hash !== keyHash) {
+        try { await env.SECURITY_HUB_KV?.delete(`apikey:${existing.key_hash}`); } catch { /* best-effort cache invalidation */ }
+      }
     } else {
       await env.DB.prepare(`
         INSERT INTO api_keys (id, email, tier, api_key, key_hash, key_prefix, active, created_at)
