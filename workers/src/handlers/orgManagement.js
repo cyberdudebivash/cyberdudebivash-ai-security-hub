@@ -266,11 +266,19 @@ export async function handleInviteMember(request, env, authCtx, orgId) {
     return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { email, role = 'MEMBER' } = body;
-  if (!email) return Response.json({ error: 'email is required' }, { status: 400 });
+  const { email: rawEmail, role = 'MEMBER' } = body;
+  if (!rawEmail) return Response.json({ error: 'email is required' }, { status: 400 });
   if (!['ADMIN','ANALYST','MEMBER','VIEWER'].includes(role)) {
     return Response.json({ error: 'role must be: ADMIN, ANALYST, MEMBER, or VIEWER' }, { status: 400 });
   }
+  // handleSignup stores email as validateEmail(rawEmail).value — trim().toLowerCase()
+  // — so every real account's email column is already normalized. This lookup
+  // did a raw case-sensitive match on whatever casing the inviter happened to
+  // type, so inviting a genuinely-existing teammate by an email copied from
+  // anywhere with different casing (a directory export, an email client, a
+  // business card) always 404'd with "No account found" — confirmed live
+  // against a real, freshly-created, re-logged-in-and-verified account.
+  const email = rawEmail.trim().toLowerCase();
 
   // Check member limit
   const currentCount = await env.DB.prepare(
