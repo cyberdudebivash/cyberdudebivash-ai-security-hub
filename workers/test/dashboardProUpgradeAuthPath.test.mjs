@@ -89,8 +89,16 @@ describe('Dashboard "Upgrade to Pro" uses the canonical subscription path (post 
   });
 
   it('handlePaymentSuccess() stores the returned JWT and refresh token after a successful subscription verify', () => {
+    // Regression (2026-07-11 full-frontend audit): this test previously
+    // asserted localStorage.setItem('cdb_token', d.token) — the exact bug
+    // it should have been guarding against. apiFetch() and every other read
+    // site on this page only ever look at sessionStorage['cdb_access'] (via
+    // _token/saveTokens(), the same path doLogin()'s own success handler
+    // uses) — the old assertion locked in a storage key/type nothing reads,
+    // so the customer's UI kept enforcing their pre-upgrade tier.
     const body = fnBody('handlePaymentSuccess', 3000);
-    expect(body).toContain("localStorage.setItem('cdb_token', d.token)");
-    expect(body).toContain('cdb_refresh_token');
+    expect(body).toContain('_token = d.token');
+    expect(body).toContain('saveTokens(_token, d.refresh_token)');
+    expect(body).not.toContain("localStorage.setItem('cdb_token'");
   });
 });

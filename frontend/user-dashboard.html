@@ -5041,9 +5041,14 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
       // new tier baked in) plus a refresh token — without storing these, the
       // rest of the platform (resolveAuthV5, every tier-gated feature) would
       // still see the customer's old tier despite a successful charge.
+      // Must go through the same _token/saveTokens() path doLogin() uses
+      // (sessionStorage['cdb_access']) — writing to localStorage['cdb_token']
+      // (as this did previously) is a key/storage-type this page's own
+      // apiFetch() never reads, so the UI kept enforcing the pre-upgrade
+      // tier until the session naturally expired and forced a fresh login.
       if (type === 'subscription' && d.token) {
-        localStorage.setItem('cdb_token', d.token);
-        if (d.refresh_token) localStorage.setItem('cdb_refresh_token', d.refresh_token);
+        _token = d.token;
+        saveTokens(_token, d.refresh_token);
       }
 
       // Get MCP training recommendation — GOD MODE v16: use /mcp/control first
@@ -5095,10 +5100,15 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
         mcp_training: mcpTraining,
       });
 
-      // Refresh dashboard state
+      // Refresh dashboard state. loadDashboard() does not exist anywhere in
+      // this file — it threw a ReferenceError right after the "Access
+      // Unlocked" modal, caught by this function's own catch block below,
+      // surfacing a confusing "Something went wrong" toast immediately after
+      // a successful upgrade. initDashboard() is this page's real
+      // full-refresh function (already used by doLogin()'s own success
+      // path) and already calls syncPlanCards() itself once its data loads.
       if (type === 'subscription') {
-        await loadDashboard();
-        syncPlanCards && syncPlanCards();
+        await initDashboard();
       }
     } catch (err) {
       showToast(err.message || 'Something went wrong. Check My Reports tab.', 'err');

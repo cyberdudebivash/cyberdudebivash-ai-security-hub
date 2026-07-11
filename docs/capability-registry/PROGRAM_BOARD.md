@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry seven below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed Tier-1 items #1–#6 (of 10): `enterprise-kpi-dashboard.html`'s impossible-tier admin gate and `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory auth gaps (PR #184, merged); `revenue-command-center.html`'s 6-of-8 broken panels, `mssp-command-center.html`'s Add Partner 400 bug, `automation-dashboard.html`'s 5 dead/wrong endpoints, and `soc-dashboard.html`'s AI Decision Engine field/scaling bugs (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 6 session-log entries below. 18 of the 24 backlog items remain (4 more Tier 1, all of Tier 2 and Tier 3), queued in the same stated priority order.)
+## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry eight below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed Tier-1 items #1–#7 (of 10): `enterprise-kpi-dashboard.html`'s impossible-tier admin gate and `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory auth gaps (PR #184, merged); `revenue-command-center.html`'s 6-of-8 broken panels, `mssp-command-center.html`'s Add Partner 400 bug, `automation-dashboard.html`'s 5 dead/wrong endpoints, `soc-dashboard.html`'s AI Decision Engine field/scaling bugs, and `user-dashboard.html`'s post-upgrade billing token-storage + `loadDashboard()` bug (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 7 session-log entries below. 17 of the 24 backlog items remain (3 more Tier 1, all of Tier 2 and Tier 3), queued in the same stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 227 files / 2365 tests passing | `npx vitest run`, run 2026-07-11 — +1 file / +7 tests this wave (`socDashboardDecisionEngineFieldFix.test.mjs`, 7 new). Baseline going into this wave was 226 files / 2358 tests (Tier-1 item #5) |
+| Worker test suite | 228 files / 2370 tests passing | `npx vitest run`, run 2026-07-11 — +1 file / +5 tests this wave (`userDashboardBillingTokenAndRefresh.test.mjs`, 5 new; also corrected one pre-existing test in `dashboardProUpgradeAuthPath.test.mjs` that asserted the exact `localStorage` bug this wave fixed — see session log). Baseline going into this wave was 227 files / 2365 tests (Tier-1 item #6) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,64 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Tier-1 backlog item #7: user-dashboard.html — post-upgrade billing token-storage + loadDashboard() bug
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-1 item #6.
+- **Re-verified against actual code, two independent bugs in the same
+  post-payment success handler (`handlePaymentSuccess`)**:
+  1. `handleVerifyPayment`'s subscription branch (`workers/src/handlers/payments.js`)
+     issues a real JWT with the new tier baked in, returned as
+     `token`/`refresh_token` — confirmed by reading the actual return
+     statement, not assuming the audit's paraphrase. The frontend read
+     these correctly but stored them via
+     `localStorage.setItem('cdb_token', d.token)` — a key and storage type
+     this page's own `apiFetch()` (and 6 other read sites) never look at;
+     the real, established pattern (already used by `doLogin()`'s own
+     success path) is `_token = ...; saveTokens(_token, refresh)`, which
+     writes to `sessionStorage['cdb_access']`. The customer's UI kept
+     enforcing their pre-upgrade tier until the session token naturally
+     expired and forced a fresh login.
+  2. The same success path then called `await loadDashboard()` —
+     confirmed via exhaustive grep that no such function exists anywhere
+     in this file. This threw a `ReferenceError` immediately after the
+     "Access Unlocked" success modal was already shown, caught by the
+     surrounding `catch`, surfacing a confusing "Something went wrong"
+     toast to a customer who had just successfully paid.
+     `initDashboard()` — the same full-refresh function `doLogin()`'s own
+     success path already calls — is the real, existing equivalent; it
+     already calls `syncPlanCards()` internally once its data loads, so no
+     separate call was needed.
+- **Fix:** replaced both the `localStorage` writes with `_token = d.token;
+  saveTokens(_token, d.refresh_token);`, and `await loadDashboard()` with
+  `await initDashboard()`.
+- **Pre-existing test corrected, not worked around:**
+  `test/dashboardProUpgradeAuthPath.test.mjs` (written 2026-07-10 for a
+  different, already-fixed bug in this same handler) had its own final
+  assertion locking in `localStorage.setItem('cdb_token', d.token)` as
+  correct behavior — the exact bug this wave fixed. Corrected to assert
+  the real `_token`/`saveTokens()` path, preserving the test's original
+  intent (confirm the JWT is actually captured) without re-encoding the
+  storage bug as a requirement.
+- **Also fixed in this entry's commit:** restored the `## Session log
+  (most recent first)` heading, accidentally dropped 2 entries ago (item
+  #5's own edit) — already corrected in the item #6 entry below; noted
+  here for completeness of this session's housekeeping trail.
+- **Tests:** new `test/userDashboardBillingTokenAndRefresh.test.mjs` (5
+  tests, static source-parse) — confirms the success handler uses
+  `_token`/`saveTokens()` (not `localStorage`), that `saveTokens()` itself
+  writes to `sessionStorage`, that `initDashboard()` (not the nonexistent
+  `loadDashboard()`) is called, and that `initDashboard` already syncs
+  plan cards itself. Full suite green: 228 files / 2370 tests (baseline
+  227/2365 from Tier-1 item #6).
+- **Validator:** 0 failures, 0 warnings, 97 capabilities (unchanged — same
+  reasoning as items #1–#6). `PRODUCTION_READINESS_REPORT.md` regenerated
+  (timestamp-only diff).
+- **Remaining in the Tier 1–3 backlog (17 of 24):** next up, in stated
+  order: `user-dashboard.html` My Trainings/My Purchases field mismatch
+  (Tier-1 #8), then developer-onboarding.html and tools.html (Tier-1
+  #9–#10) before Tier 2/3 (full original list in the audit entry eight
+  below).
 
 ### 2026-07-11 — Tier-1 backlog item #6: soc-dashboard.html — AI Decision Engine field/scaling bugs
 
