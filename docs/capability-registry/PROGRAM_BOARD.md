@@ -203,6 +203,98 @@ see session log below.
 
 ## Session log (most recent first)
 
+### 2026-07-11 — CAP-MKT-005 catalog question resolved with the owner; corrected diagnosis: the "broken browse-to-purchase journey" premise was wrong; real fix: removed 14 genuinely dead PRODUCT_CATALOG products
+
+- **Trigger:** the owner responded to this session's carried-over CAP-MKT-005
+  question (open since the prior session) with real product data from both
+  catalogs presented alongside the question: reconcile PRODUCT_CATALOG's
+  non-API-subscription products against MARKETPLACE_CATALOG's real,
+  browsable ones. Also confirmed the auto-merge-once-green cadence for the
+  rest of this session (see the CAP-COMP-005 entry below for that question).
+- **The premise turned out to be wrong, caught before writing a reconciling
+  data-merge — full account, same discipline as the CAP-COMP-005 catch
+  earlier this session:** before touching PRODUCT_CATALOG, read
+  `handleRecordPurchase`/`handleCreateSubscription`/`handleUpgradeSubscription`/
+  `handleStartTrial`/`handleComparePlans`/`handleROICalculator` in full for
+  the first time (the original 2026-07-11 finding had asserted these 5
+  sub-actions do a `PRODUCT_CATALOG[product_id]` lookup that would fail for
+  any browsed id, without having read what each one actually requires).
+  Found: `subscribe`/`upgrade` hard-reject any `product.type !==
+  'subscription'` (400); `trial` requires `product.trial_days`, set only on
+  2 of 18 products; `compare`/`roi-calculator` never look up a product by id
+  at all — both are hardcoded FREE/PRO/TEAM/ENTERPRISE tier tools. Then
+  checked whether `marketplaceCheckoutHandler.js` already provides a
+  complete, separate purchase path for `MARKETPLACE_CATALOG`'s real
+  products: `frontend/sentinel-apex-marketplace.html` (the real browse page)
+  fetches the live `GET /api/marketplace/catalog` and links every product to
+  `frontend/marketplace-checkout.html?product=<id>`, which reads that param
+  and calls the real `POST /api/marketplace/checkout` (a complete Razorpay
+  order-creation flow, confirmed by direct read) followed by `/verify`. This
+  chain is complete, live, and has never touched `PRODUCT_CATALOG`. The
+  "customer can browse a product but can never buy it" framing was
+  therefore wrong — that journey already works, on a different code path
+  than the one the original finding was looking at.
+- **The real, narrower fix:** `PRODUCT_CATALOG`'s 14 non-API-subscription
+  products (detection packs, intel reports, defense kits, AI-security packs,
+  a bundle) had no coherent purchase path of their own under any
+  interpretation — no working self-serve checkout, most `cta_url` fields
+  were `mailto:` manual-inquiry links rather than any endpoint in this file,
+  and the one structurally-compatible endpoint (`subscribe`, for the 2 of
+  the 14 that happened to have `type:'subscription'`) would have returned
+  hardcoded `intel.cyberdudebivash.com` API-key/dashboard access info
+  regardless of which product was "subscribed" to — nonsensical for e.g. a
+  monthly PDF report. Removed as genuinely dead, superseded inventory.
+  `PRODUCT_CATALOG` now contains exactly the 4 API-subscription tiers
+  (`api-free`/`api-pro`/`api-team`/`api-enterprise`) these 5 sub-actions
+  were actually built for; none of their own logic changed.
+- **Confirmed safe to remove:** repo-wide grep for each of the 14 ids found
+  zero references outside `sentinelApexMarketplace.js` itself and the
+  registry entry being corrected, except one already-broken, pre-existing,
+  unrelated reference: `workers/src/handlers/intelligencePreview.js`'s
+  `yara_signatures.download_url` hardcodes `apt-yara-pack` as a
+  `/api/marketplace/download/:accessToken` path parameter —
+  `handleMarketplaceDownload` has always rejected this outright (real access
+  tokens are 16+ hex characters; `"apt-yara-pack"` never was one). Not fixed
+  here — flagged in the registry as its own small, separate finding,
+  unaffected by and not affecting this change either way.
+- **What remains a real, accurately-scoped gap (not fixed, correctly a
+  different kind of task):** none of `purchase`/`subscribe`/`subscriptions-
+  upgrade`/`trial`/`roi-calculator`/`compare` has a frontend caller — every
+  one of the 4 API-subscription products' own `cta_url` sends customers to
+  the external `intel.cyberdudebivash.com` instead. Building a self-serve,
+  on-platform signup UI for that line is a real, separate, unscoped
+  greenfield feature (the owner explicitly deferred this option this
+  session, choosing the smaller cleanup instead) — not a bug fix, a
+  different category of work from everything else in this session.
+- **Verified:** new `workers/test/marketplaceCatalogCleanup.test.mjs` (20
+  tests): confirms all 14 removed ids now 404 on `/api/marketplace/purchase`
+  (`it.each`); confirms all 4 real API-subscription products are completely
+  unaffected — `purchase`/`subscribe`/`trial` still work end-to-end for
+  them; confirms `compare`/`roi-calculator` are untouched; confirms
+  `MARKETPLACE_CATALOG` (a different module, `marketplaceCheckoutHandler.js`)
+  still has all 12 real products and never contained any of the 14 removed
+  ids in the first place (nothing to reconcile there). Full backend suite:
+  216 files / 2223 tests passing (up from 213/2203 — CAP-COMP-005's session
+  entry below plus this one's 1 new file). `node scripts/registry/validate.mjs`:
+  0 failures, 0 warnings (after fixing 2 more bare-path evidence citations —
+  the same class of mistake as CAP-COMP-005's, and the original 2026-07-11
+  wave-1 lesson — caught a third time this session). `scripts/seo-structure-
+  lock.mjs`: 22/22 pages green (unaffected — no frontend HTML changed).
+- **Commits this session:** `workers/src/handlers/sentinelApexMarketplace.js`
+  (PRODUCT_CATALOG cleanup + corrected comments), new test
+  `workers/test/marketplaceCatalogCleanup.test.mjs`,
+  `docs/capability-registry/domains/sentinel-apex-marketplace.json`
+  (CAP-MKT-005 entry corrected: priority P1→P2, operational_status NOT
+  READY→PILOT ONLY, reflecting that there is no broken customer journey
+  here), `docs/capability-registry/PRODUCTION_READINESS_REPORT.md`
+  (regenerated), `docs/capability-registry/PROGRAM_BOARD.md` (this entry).
+- **Risks / follow-ups:** the self-serve API-subscription signup UI
+  opportunity above, if ever prioritized, is real greenfield work — should
+  be scoped and estimated as its own initiative, not assumed to be a small
+  follow-on to this cleanup. `customer_journey_complete` stays `false` and
+  `verification.method` is `dynamic_api` — this pass verified real handler
+  behavior with real stubs, not a live production browser pass.
+
 ### 2026-07-11 — Second recovery; PR #173 deploy verified live; CAP-COMP-005 misdiagnosis caught before shipping; real fix: platform-metrics mislabeling on 2 customer/prospect-facing surfaces
 
 - **Trigger:** the prior session hit a second hard usage-limit cutoff — this

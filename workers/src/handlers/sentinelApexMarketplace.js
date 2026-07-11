@@ -3,7 +3,7 @@
  * Full commerce engine: product catalog, purchases, subscriptions, entitlements
  *
  * Routes:
- *   GET  /api/marketplace/catalog               - Full 19-product catalog
+ *   GET  /api/marketplace/catalog               - Full 4-product catalog (API subscription tiers)
  *   GET  /api/marketplace/catalog/:productId    - Single product detail
  *   POST /api/marketplace/checkout              - Create checkout session
  *   POST /api/marketplace/purchase              - Record one-time purchase
@@ -91,244 +91,31 @@ const PRODUCT_CATALOG = {
     featured: false, bestseller: false, new: false,
     delivery: 'custom_onboarding',
   },
-  // Detection Packs
-  'kev-detection-pack': {
-    id: 'kev-detection-pack', sku: 'DET-KEV-199',
-    name: 'CVE/KEV Critical Detection Pack',
-    category: 'detection_pack',
-    type: 'one_time',
-    tier: 'PRO',
-    price: 199, currency: 'USD', billing_period: null,
-    description: '200+ Sigma rules, 150+ YARA, KQL/SPL/EQL for all CISA KEV vulnerabilities. Auto-updated weekly.',
-    features: ['200+ Sigma detection rules', '150+ YARA malware signatures', 'KQL for Microsoft Sentinel', 'SPL for Splunk SIEM', 'EQL for Elastic Security', 'LEEF for IBM QRadar', 'MITRE ATT&CK mapping', '3-month weekly update subscription'],
-    locked_features: [],
-    cta: 'Buy Detection Pack',
-    cta_url: 'https://cyberdudebivash.gumroad.com/l/pwynns',
-    gumroad_url: 'https://cyberdudebivash.gumroad.com/l/pwynns',
-    featured: true, bestseller: true, new: false,
-    delivery: 'instant_download',
-    badge: 'BESTSELLER',
-  },
-  'apt-yara-pack': {
-    id: 'apt-yara-pack', sku: 'DET-YARA-249',
-    name: 'APT Malware YARA Intelligence Pack',
-    category: 'detection_pack',
-    type: 'one_time',
-    tier: 'PRO',
-    price: 249, currency: 'USD', billing_period: null,
-    description: '300+ YARA rules for 30+ APT groups — memory, network, file signatures with campaign IDs',
-    features: ['300+ YARA rules (memory + file + network)', '30+ APT fingerprints', 'Campaign ID cross-reference', 'Kill chain phase mapping', 'Actor attribution per rule', 'STIX 2.1 indicator bundle', 'Bi-weekly threat actor updates'],
-    locked_features: [],
-    cta: 'Buy YARA Pack',
-    cta_url: 'https://cyberdudebivash.gumroad.com/l/ytqra',
-    gumroad_url: 'https://cyberdudebivash.gumroad.com/l/ytqra',
-    featured: true, bestseller: false, new: false,
-    delivery: 'instant_download',
-    badge: 'HOT',
-  },
-  'ir-detection-pack': {
-    id: 'ir-detection-pack', sku: 'DET-IR-179',
-    name: 'Breach & IR Detection Pack',
-    category: 'detection_pack',
-    type: 'one_time',
-    tier: 'PRO',
-    price: 179, currency: 'USD', billing_period: null,
-    description: 'IR detection suite: lateral movement, credential dumping, ransomware, exfil — MITRE mapped',
-    features: ['150+ IR-focused Sigma rules', 'Credential dumping YARA', 'Ransomware pre-execution behavioral rules', 'Data exfiltration KQL/SPL', 'Playbook links per detection', 'Triage priority (P1-P4)', 'SOC analyst runbook'],
-    locked_features: [],
-    cta: 'Buy IR Detection Pack',
-    cta_url: 'https://cyberdudebivash.gumroad.com/l/yrjznw',
-    gumroad_url: 'https://cyberdudebivash.gumroad.com/l/yrjznw',
-    featured: false, bestseller: false, new: true,
-    delivery: 'instant_download',
-  },
-  'apt-bundle': {
-    id: 'apt-bundle', sku: 'DET-BUNDLE-499',
-    name: 'APT Intelligence Full Bundle',
-    category: 'detection_pack',
-    type: 'one_time',
-    tier: 'PRO',
-    price: 499, currency: 'USD', billing_period: null,
-    description: 'All 3 detection packs + actor attribution dataset + 6-month updates + analyst briefing',
-    features: ['Everything in all 3 detection packs', '6-month update subscription', 'Actor attribution dataset', '1-hour analyst briefing', 'Priority email support (48h SLA)', 'STIX 2.1 bundle', 'Custom rule tuning guide'],
-    locked_features: [],
-    cta: 'Get Full Bundle',
-    cta_url: 'mailto:enterprise@cyberdudebivash.com?subject=APT_BUNDLE_ORDER',
-    gumroad_url: null,
-    featured: false, bestseller: false, new: false,
-    delivery: 'instant_download_plus_call',
-    badge: 'BUNDLE',
-    savings: 128,
-  },
-  // Intelligence Reports
-  'tactical-dossier': {
-    id: 'tactical-dossier', sku: 'RPT-TAC-049',
-    name: 'Tactical Threat Dossier',
-    category: 'intel_report',
-    type: 'one_time',
-    tier: 'PRO',
-    price: 49, currency: 'USD', billing_period: null,
-    description: '20-section tactical dossier: CVSS/EPSS, IOC list, kill chain, detection rules, FAIR impact',
-    features: ['Executive summary + BLUF', 'CVSS 3.1 + EPSS analysis', 'Full IOC list with confidence', 'MITRE ATT&CK kill chain', 'Sigma/YARA/KQL rules (deploy-ready)', 'FAIR financial impact ($M)', 'Regulatory compliance risk', 'Remediation playbook'],
-    locked_features: [],
-    cta: 'View Live Reports',
-    cta_url: 'https://intel.cyberdudebivash.com/index.html',
-    gumroad_url: null,
-    featured: false, bestseller: false, new: false,
-    delivery: 'instant_pdf_json',
-  },
-  'executive-risk-report': {
-    id: 'executive-risk-report', sku: 'RPT-EXEC-299',
-    name: 'Executive Risk Intelligence Report',
-    category: 'intel_report',
-    type: 'subscription',
-    tier: 'ENTERPRISE',
-    price: 299, currency: 'USD', billing_period: 'monthly',
-    description: 'Board-ready monthly threat intelligence for CISOs and executives with branding',
-    features: ['Monthly threat landscape', 'Top 10 risks by financial impact', 'Sector-specific threat analysis', 'Risk posture score', 'Strategic recommendations', '30/60/90 day trends', 'Branded PDF + PowerPoint', 'Analyst Q&A'],
-    locked_features: [],
-    cta: 'Subscribe to Reports',
-    cta_url: 'mailto:enterprise@cyberdudebivash.com?subject=EXEC_REPORT_SUBSCRIPTION',
-    gumroad_url: null,
-    featured: false, bestseller: false, new: false,
-    delivery: 'monthly_email_pdf',
-  },
-  'weekly-soc-brief': {
-    id: 'weekly-soc-brief', sku: 'RPT-SOC-099',
-    name: 'Weekly SOC Intelligence Brief',
-    category: 'intel_report',
-    type: 'subscription',
-    tier: 'PRO',
-    price: 99, currency: 'USD', billing_period: 'monthly',
-    description: 'Top critical threats, new CVEs with EPSS, KEV updates, actor attribution — every Monday',
-    features: ['Weekly top 10 critical threats', 'New CISA KEV additions', 'EPSS highlights (>20%)', 'Active actor campaign tracking', 'SOC action checklist', 'PDF + Slack webhook delivery'],
-    locked_features: [],
-    cta: 'Subscribe to Weekly Brief',
-    cta_url: 'mailto:enterprise@cyberdudebivash.com?subject=WEEKLY_BRIEF_SUBSCRIPTION',
-    gumroad_url: null,
-    featured: false, bestseller: false, new: true,
-    delivery: 'weekly_email_pdf',
-  },
-  // Defense Kits
-  'soc-starter-kit': {
-    id: 'soc-starter-kit', sku: 'KIT-SOC-399',
-    name: 'SOC Starter Defense Kit',
-    category: 'defense_kit',
-    type: 'one_time',
-    tier: 'PRO',
-    price: 399, currency: 'USD', billing_period: null,
-    description: 'Everything a new SOC needs in 48 hours: 100+ SIEM rules, playbooks, runbooks, templates',
-    features: ['100+ essential SIEM detection rules', '15 incident response playbooks', 'SOC runbook library', 'Alert classification framework (P1-P4)', 'Threat feed config guide (10 free feeds)', 'SOC KPI dashboard template', 'MITRE ATT&CK coverage heatmap', 'On-call rotation policy'],
-    locked_features: [],
-    cta: 'Get SOC Starter Kit',
-    cta_url: 'mailto:enterprise@cyberdudebivash.com?subject=SOC_KIT_ORDER',
-    gumroad_url: null,
-    featured: false, bestseller: false, new: false,
-    delivery: 'instant_download',
-  },
-  'ir-kit': {
-    id: 'ir-kit', sku: 'KIT-IR-499',
-    name: 'Incident Response Defense Kit',
-    category: 'defense_kit',
-    type: 'one_time',
-    tier: 'PRO',
-    price: 499, currency: 'USD', billing_period: null,
-    description: 'Complete IR capability: ransomware, breach, APT, insider threat — with forensics scripts',
-    features: ['Ransomware IR playbook (end-to-end)', 'Data breach notification workflow', 'APT containment playbook', 'Evidence collection + chain of custody', 'Forensics artifact scripts', 'Crisis communication templates', 'Post-incident review framework'],
-    locked_features: [],
-    cta: 'Get IR Defense Kit',
-    cta_url: 'mailto:enterprise@cyberdudebivash.com?subject=IR_KIT_ORDER',
-    gumroad_url: null,
-    featured: false, bestseller: false, new: false,
-    delivery: 'instant_download',
-    badge: 'CRITICAL',
-  },
-  'enterprise-kit': {
-    id: 'enterprise-kit', sku: 'KIT-ENT-799',
-    name: 'Enterprise Security Program Kit',
-    category: 'defense_kit',
-    type: 'one_time',
-    tier: 'ENTERPRISE',
-    price: 799, currency: 'USD', billing_period: null,
-    description: '25+ security policies, GRC framework, vendor risk, SOC 2 evidence, board reporting',
-    features: ['25+ security policy templates (ISO 27001)', 'GRC framework implementation guide', 'Vendor risk questionnaire (100+ questions)', 'SOC 2 evidence package template', 'Board-level risk reporting template', 'Security awareness training outline', 'Annual pen test request template'],
-    locked_features: [],
-    cta: 'Get Enterprise Kit',
-    cta_url: 'mailto:enterprise@cyberdudebivash.com?subject=ENT_KIT_ORDER',
-    gumroad_url: null,
-    featured: false, bestseller: false, new: false,
-    delivery: 'instant_download',
-  },
-  // AI/LLM Security
-  'ai-spm-kit': {
-    id: 'ai-spm-kit', sku: 'AI-SPM-299',
-    name: 'AI Security Posture Management Kit',
-    category: 'ai_security',
-    type: 'one_time',
-    tier: 'PRO',
-    price: 299, currency: 'USD', billing_period: null,
-    description: 'Complete AI-SPM: OWASP LLM Top 10, prompt injection, model poisoning, MITRE ATLAS',
-    features: ['OWASP LLM Top 10 detection rules', 'Prompt injection Sigma', 'Model poisoning YARA', 'AI pipeline threat model (STRIDE)', 'LLM access control checklist', 'MITRE ATLAS mappings', 'Quarterly updates'],
-    locked_features: [],
-    cta: 'Get AI-SPM Kit',
-    cta_url: 'https://cyberdudebivash.gumroad.com/l/ai-spm-kit',
-    gumroad_url: 'https://cyberdudebivash.gumroad.com/l/ai-spm-kit',
-    featured: true, bestseller: false, new: false,
-    delivery: 'instant_download',
-    badge: 'TRENDING',
-  },
-  'llm-redteam-pack': {
-    id: 'llm-redteam-pack', sku: 'AI-RT-249',
-    name: 'LLM Red Team Intelligence Pack',
-    category: 'ai_security',
-    type: 'one_time',
-    tier: 'PRO',
-    price: 249, currency: 'USD', billing_period: null,
-    description: '50+ jailbreak techniques, adversarial prompt library, model extraction signatures, MITRE ATLAS',
-    features: ['50+ documented jailbreak techniques', 'Adversarial prompt test library', 'Model extraction attack patterns', 'Data poisoning detection rules', 'Defensive countermeasure playbooks', 'MITRE ATLAS cross-reference'],
-    locked_features: [],
-    cta: 'Get Red Team Pack',
-    cta_url: 'https://cyberdudebivash.gumroad.com/l/llm-redteam-pack',
-    gumroad_url: 'https://cyberdudebivash.gumroad.com/l/llm-redteam-pack',
-    featured: false, bestseller: false, new: false,
-    delivery: 'instant_download',
-    badge: 'HOT',
-  },
-  'ai-intel-feed': {
-    id: 'ai-intel-feed', sku: 'AI-FEED-149',
-    name: 'AI/LLM Threat Intel Feed',
-    category: 'ai_security',
-    type: 'subscription',
-    tier: 'PRO',
-    price: 149, currency: 'USD', billing_period: 'monthly',
-    description: 'Monthly AI/LLM threat intel: new jailbreak techniques, LLM CVEs, adversarial ML research',
-    features: ['Monthly AI threat landscape', 'New jailbreak disclosures', 'LLM CVE tracking', 'Adversarial ML research digest', 'Detection rule updates', 'Slack/webhook delivery'],
-    locked_features: [],
-    cta: 'Subscribe to AI Intel Feed',
-    cta_url: 'mailto:enterprise@cyberdudebivash.com?subject=AI_FEED_SUBSCRIPTION',
-    gumroad_url: null,
-    featured: false, bestseller: false, new: true,
-    delivery: 'monthly_webhook',
-  },
-  // Ultimate Bundle
-  'apex-ultimate-bundle': {
-    id: 'apex-ultimate-bundle', sku: 'BUNDLE-APEX-2499',
-    name: 'APEX Ultimate Defense Bundle',
-    category: 'bundle',
-    type: 'subscription',
-    tier: 'ENTERPRISE',
-    price: 2499, currency: 'USD', billing_period: 'annual',
-    description: 'Everything: all packs + all kits + 1-year API + 12 executive reports + 4 analyst briefings',
-    features: ['All 3 Detection Engineering Packs', 'SOC Starter + IR + Enterprise Kits', 'AI-SPM + LLM Red Team + AI Defense', '1-year Pro API subscription', '12x Monthly Executive Risk Reports', '4x Analyst briefing calls (1hr)', 'Priority support (24h SLA)', 'Custom rule tuning'],
-    locked_features: [],
-    cta: 'Get Ultimate Bundle',
-    cta_url: 'mailto:enterprise@cyberdudebivash.com?subject=APEX_ULTIMATE_BUNDLE',
-    gumroad_url: null,
-    featured: true, bestseller: false, new: false,
-    delivery: 'custom_onboarding',
-    badge: 'ULTIMATE',
-    savings: 1500,
-  },
+  // CAP-MKT-005 (2026-07-11): this catalog previously also carried 14
+  // detection-pack/intel-report/defense-kit/ai-security/bundle products
+  // (categories distinct from api_subscription) with no coherent purchase
+  // path of their own: none had a working self-serve checkout (the real,
+  // live, already-working Razorpay checkout for that class of product is
+  // marketplaceCheckoutHandler.js's separate MARKETPLACE_CATALOG, reached via
+  // frontend/sentinel-apex-marketplace.html -> frontend/marketplace-
+  // checkout.html -> POST /api/marketplace/checkout, confirmed end-to-end
+  // and unaffected by this catalog); most of their own cta_url fields were
+  // mailto: manual-inquiry links, not any endpoint in this file; and the one
+  // structurally-compatible endpoint here (POST /api/marketplace/subscribe,
+  // for the 2 of the 14 that had type:'subscription') would have returned
+  // hardcoded intel.cyberdudebivash.com API-key/dashboard access info
+  // regardless of which product was "subscribed" to — nonsensical for e.g. a
+  // monthly PDF report. Confirmed zero external references (grep across
+  // frontend/, workers/test/, docs/) before removal, aside from one
+  // already-broken, pre-existing, unrelated reference (workers/src/handlers/
+  // intelligencePreview.js's yara_signatures.download_url hardcodes a
+  // product id as a /api/marketplace/download/:accessToken path parameter,
+  // which handleMarketplaceDownload has always rejected outright — that
+  // token format requires 16+ hex characters; not fixed here, flagged in the
+  // registry). Removed as genuinely dead, superseded inventory rather than
+  // reshaped into a working state neither the code nor any real catalog
+  // planning ever gave them. See docs/capability-registry/PROGRAM_BOARD.md
+  // for the full writeup.
 };
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
@@ -354,12 +141,30 @@ function requireAuth(authCtx) {
 // unreachable code, permanently shadowed. Diagnosed 2026-07-08, removed
 // 2026-07-11 rather than left as silently-diverging duplicate
 // implementations of a payment-adjacent path. See
-// docs/capability-registry/PROGRAM_BOARD.md for the full writeup, including
-// a related, separately-flagged finding (not fixed here): the live
-// purchase/subscribe/upgrade/compare/trial sub-actions below still resolve
+// docs/capability-registry/PROGRAM_BOARD.md for the full writeup.
+//
+// CORRECTED 2026-07-11: an earlier pass here flagged that the live
+// purchase/subscribe/upgrade/compare/trial sub-actions below resolve
 // products from this file's own PRODUCT_CATALOG, which shares zero product
 // IDs with marketplaceCheckoutHandler.js's MARKETPLACE_CATALOG that
-// customers actually browse.
+// customers actually browse — read at the time as a broken "customer can
+// browse a product but can't buy it" journey. On closer investigation that
+// framing was imprecise: the real browse -> buy journey for MARKETPLACE_CATALOG
+// products is a separate, complete, already-working path (frontend/sentinel-
+// apex-marketplace.html -> frontend/marketplace-checkout.html -> POST /api/
+// marketplace/checkout -> POST /api/marketplace/verify, confirmed end-to-end)
+// that never touches this file's PRODUCT_CATALOG at all. PRODUCT_CATALOG below
+// now contains only the 4 API-subscription tiers these 5 sub-actions were
+// actually built for (subscribe/upgrade hard-require product.type ===
+// 'subscription'; compare/roi-calculator don't do a product-id lookup at all —
+// both are hardcoded FREE/PRO/TEAM/ENTERPRISE tier tools; trial requires
+// product.trial_days, only ever set on the API tiers). The 14 removed
+// products had no coherent purchase path of their own — see the comment
+// above PRODUCT_CATALOG's closing brace for the full removal rationale.
+// None of these 5 sub-actions have a frontend caller today; building
+// self-serve UI for API-subscription signup (rather than the current
+// external-redirect model via intel.cyberdudebivash.com) is a real, separate,
+// unscoped greenfield opportunity, not a bug fix.
 
 // ─── POST /api/marketplace/purchase ───────────────────────────────────────────
 async function handleRecordPurchase(request, env, authCtx) {
