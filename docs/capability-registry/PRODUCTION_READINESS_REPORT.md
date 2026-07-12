@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-12T12:18:33.261Z
+Generated: 2026-07-12T12:31:10.826Z
 Capabilities catalogued: 97
 
 ## Overall Completion
@@ -18,8 +18,8 @@ Capabilities catalogued: 97
 | Dimension | % |
 |---|---|
 | Backend | 89.7% |
-| Frontend | 71.1% |
-| Parity (backend **and** frontend both exist) | 66% |
+| Frontend | 71.6% |
+| Parity (backend **and** frontend both exist) | 67% |
 | Customer Journeys complete (dynamic_browser-verified) | 3.1% |
 
 ## Gaps by Priority
@@ -251,7 +251,7 @@ complete", "bug free", or "guaranteed".
 | CAP-TIH-010 | Production IOC Enrichment | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-TIH-011 | Threat Confidence & Exploitability Engine | ✓ | ✓ | ✗ | NOT READY | P6 |
 | CAP-TIH-012 | Customer/MSSP Personalized Intelligence | ✓ | ✓ | ✗ | NOT READY | P3 |
-| CAP-TIH-013 | Enterprise Premium Intelligence API | ✓ | ◐ | ✓ | NOT READY | P3 |
+| CAP-TIH-013 | Enterprise Premium Intelligence API | ✓ | ✓ | ✓ | PILOT ONLY | P3 |
 | CAP-TIH-014 | Intelligence Preview (freemium teaser cards) | ✓ | ✓ | ✓ | NOT READY | P2 |
 | CAP-TIH-015 | Public Threat-Intel Feeds & Monetization Tier Matrix | ✓ | ◐ | ✗ | PILOT ONLY | P3 |
 | CAP-TIH-016 | Attack Graph from Scan Results | ✓ | ◐ | ✓ | NOT READY | P6 |

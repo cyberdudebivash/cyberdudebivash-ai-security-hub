@@ -585,7 +585,7 @@
     "id": "CAP-TIH-013",
     "domain": "threat-hunting-intel",
     "name": "Enterprise Premium Intelligence API",
-    "description": "Enterprise-tier intelligence, risk, campaign, and actor endpoints built on the same radarService.js as CAP-TIH-012, gated to PRO/ENTERPRISE/MSSP/OWNER/ADMIN.",
+    "description": "Enterprise-tier intelligence, risk, campaign, and actor endpoints built on the same radarService.js as CAP-TIH-012, gated to PRO/ENTERPRISE/MSSP/OWNER/ADMIN. All 4 endpoints now have a real frontend caller and real tests; the page itself is now discoverable from the main customer dashboard.",
     "backend": {
       "handlers": ["workers/src/handlers/enterpriseIntel.js"],
       "entry_points": ["handleEnterpriseIntelligence", "handleEnterpriseRisk", "handleEnterpriseCampaigns", "handleEnterpriseActors"],
@@ -601,34 +601,34 @@
     "frontend": {
       "surface_type": "dedicated_page",
       "pages": ["frontend/enterprise-dashboard.html"],
-      "status": "partial",
-      "evidence": "frontend/enterprise-dashboard.html calls /api/enterprise/risk (319,343), /api/enterprise/actors (397), /api/enterprise/campaigns (426). /api/enterprise/intelligence itself has no frontend caller anywhere — a partially-orphaned endpoint, backend exists and is routed but unused by any UI."
+      "status": "exists",
+      "evidence": "FIXED 2026-07-12: frontend/enterprise-dashboard.html gained a real \"Full Signal Intelligence Feed\" section with industry/severity/min-risk filter controls, calling the previously-orphaned GET /api/enterprise/intelligence and rendering real enriched signals (risk_score, targeted_sectors). Wired into the page's existing refreshAll()/apiFetch() pattern so it loads automatically alongside the other 3 sections, not only on manual filter. Pre-existing: /api/enterprise/risk (319,343), /api/enterprise/actors (397), /api/enterprise/campaigns (426) — unchanged."
     },
     "navigation": {
-      "discoverable": "unknown",
-      "evidence": "frontend/enterprise-dashboard.html's own nav placement not independently confirmed in this pass."
+      "discoverable": true,
+      "evidence": "FIXED 2026-07-12: resolved from 'unknown' to a verified 'false', then fixed. Grepped frontend/sitemap.html, frontend/index.html, and every other frontend/*.html for 'enterprise-dashboard' — zero real links (only two coincidental CSS-comment mentions in frontend/decision-dashboard.html and frontend/soc-command-dashboard.html, not navigation). Added a real nav-item in frontend/user-dashboard.html's Developer sidebar section (same treatment CAP-DEVPORTAL-002 gave frontend/automation-dashboard.html)."
     },
     "auth_enforced": true,
     "rbac": { "enforced": true, "permissions": ["tier:PRO", "tier:ENTERPRISE", "tier:MSSP", "owner", "admin"] },
     "subscription_gated": true,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "No import-confirmed test for any function in workers/src/handlers/enterpriseIntel.js."
+      "has_tests": true,
+      "evidence": "FIXED 2026-07-12: workers/test/enterpriseIntelligenceDashboard.test.mjs (14 tests) — auth-gate checks (401 unauthenticated, 403 insufficient tier) for all 4 handlers; real-D1-driven checks for handleEnterpriseIntelligence (computed risk_score/targeted_sectors, industry/severity/min_risk filters against real fixtures) and handleEnterpriseRisk (real risk distribution); a real MITRE ATT&CK correlation check for handleEnterpriseActors; an honest-empty-list check for handleEnterpriseCampaigns (see notes — not a test gap, a real upstream data gap); plus frontend checks for the new section and the new nav-item's placement."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "PILOT ONLY",
     "priority": "P3",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/enterpriseIntel.js read directly (371 lines, 4 entry points); checkAuth() real tier+isRealUser gate confirmed (lines 75-83); workers/src/index.js:6428-6451 read directly; frontend/enterprise-dashboard.html read directly for 3 of 4 endpoints' call sites; workers/test/*.mjs grepped with 0 hits."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/handlers/enterpriseIntel.js read directly (371 lines, 4 entry points); checkAuth() real tier+isRealUser gate confirmed (lines 75-83); workers/src/index.js:6428-6451 read directly; frontend/enterprise-dashboard.html read and edited directly (new section + JS, node --check clean); frontend/user-dashboard.html read and edited directly for the new nav-item. Full suite green: 253 files / 2603 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": "Real, enforced RBAC (isRealUser AND tier whitelist) — one of the stronger auth stories in this domain. handleEnterpriseIntelligence being unused by any frontend despite being fully built and routed is the concrete, actionable gap here (P3: navigation/wiring, not a missing capability)."
+    "notes": "Real, enforced RBAC (isRealUser AND tier whitelist) — one of the stronger auth stories in this domain. While building real D1 fixtures for the new tests, confirmed a genuine upstream finding in the shared workers/src/services/radarService.js (not modified here, out of scope for this capability's own fix): collectFromD1()'s two SQL queries (threat_intel, ai_threat_feed) never select a campaign_name or ransomware_group column at all — only ai_threat_feed selects threat_actor. This means handleEnterpriseCampaigns can never return a real campaign today regardless of live data (verified: it honestly returns an empty list rather than fabricating one), and handleEnterpriseActors can only ever surface actors sourced from ai_threat_feed rows, never from the much larger threat_intel table. Not fixed here since radarService.js is shared infrastructure behind other capabilities too and reconciling its column selection is a materially larger change than this capability's own frontend/test gap; flagged for a dedicated follow-up rather than silently worked around."
   },
   {
     "id": "CAP-TIH-014",
