@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-12 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry twenty-four below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session has fixed all 10 Tier-1 items and all 8 Tier-2 items — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable — and is now 5 items into Tier 3 (minor/cosmetic class). Item #5, just completed: `soc-agents.html`'s per-agent token-count pill read `result.tokens?.total_tokens` — a field that has never existed on any of the 3 routes' real responses (the real, only shape is `tokens: { input, output }`), so it silently never rendered for any agent, on any successful run, ever. Fixed to sum the real fields; also corrected an identically-wrong mock shape in the backend's own test suite found while tracing the bug (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 23 session-log entries below. 1 of the 24 backlog items remains — the last Tier-3 item — queued next in the audit's stated priority order.)
+## Current status (2026-07-12 — the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit is now **fully closed** (see the entry twenty-five below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed all 10 Tier-1 items, all 8 Tier-2 items, and all 6 Tier-3 items — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable. Final item, just completed: `threat-intel-workbench.html`'s APT Actor Profiles panel rendered a raw semantic keyword (`'bear'`, `'dragon'`, `'typhoon'`, …) instead of an icon glyph, for every actor, in both the grid card and the detail modal — `aptActorProfiles.js`'s `icon` field was never actually a display-ready glyph, so the frontend's `|| '🎭'` fallback was dead code. Added a keyword→emoji map plus a real-data contract test asserting every actor's real icon keyword is covered (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 24 session-log entries below for this backlog's full closure account, item by item. 0 of the 24 backlog items remain.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 243 files / 2484 tests passing | `npx vitest run`, run 2026-07-12 — +3 tests this wave, new file `socAgentsTokenCountFix.test.mjs` (Tier-3 item #5: soc-agents.html's token-count pill read a nonexistent tokens.total_tokens field; also corrected an identically-wrong mock shape in multiAgentSOC.test.mjs). Baseline going into this wave was 242 files / 2481 tests (Tier-3 item #4) |
+| Worker test suite | 244 files / 2489 tests passing | `npx vitest run`, run 2026-07-12 — +5 tests this wave, new file `threatIntelWorkbenchActorIconFix.test.mjs` (Tier-3 item #6, last of 6: APT actor cards rendered a raw keyword instead of an icon glyph; real-data contract test against APT_ACTORS plus static parse). Baseline going into this wave was 243 files / 2484 tests (Tier-3 item #5). **This closes the 24-item backlog** — see the "Current status" line above and the session log for the full item-by-item account |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,73 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — Tier-3 backlog item #6 (last of 6): threat-intel-workbench.html — APT actor cards rendered raw keyword text instead of an icon glyph — closes the entire 24-item backlog
+
+- **Trigger:** continuing the Tier 1–3 backlog, final item after Tier-3
+  item #5.
+- **Root cause confirmed against actual code:** the APT Actor Profiles
+  panel's `renderActorGrid()` and `showActorDetail()` both rendered
+  `${a.icon || '🎭'}` into a small (36px grid / 40px modal) icon box.
+  `workers/src/services/aptActorProfiles.js`'s `icon` field turned out to
+  be a semantic keyword (`'bear'`, `'dragon'`, `'typhoon'`, `'skull'`,
+  `'panda'`, `'worm'`, `'ghost'`, `'lock'`, `'cat'`, `'spider'`,
+  `'snake'`), not a display-ready glyph — and every one of the 15 actors
+  in `APT_ACTORS` has this field set to a non-empty string. That means
+  the `|| '🎭'` fallback was dead code: it never triggered for any real
+  actor. Every single APT actor card, for every actor, always rendered
+  the literal keyword text crammed into a box sized for one emoji glyph
+  — a real, if purely cosmetic, bug matching the audit's description
+  once the actual mechanism was found.
+- **Fix (`frontend/threat-intel-workbench.html`, frontend-only, no
+  backend change needed):** added an `ACTOR_ICON_EMOJI` keyword→glyph
+  map (covering all 11 keywords actually used across the dataset) and an
+  `actorIconEmoji(a)` helper — falling back to the original 🎭 mask for
+  any future unmapped keyword, preserving the original
+  degrade-gracefully intent instead of ever printing raw text again.
+  Wired into both the grid card and the detail modal, the only two
+  actor-icon render sites on the page (a third `relevant_actors` render
+  site in the sector-brief panel renders `a.id` text tags, not icons —
+  confirmed out of scope).
+- **Verification:** `node --check` on the extracted inline `<script>`
+  block. New
+  `workers/test/threatIntelWorkbenchActorIconFix.test.mjs` (5 tests):
+  imports the real `APT_ACTORS` dataset directly and asserts every
+  actor's real `icon` keyword is covered by the frontend's map — the
+  general form of this bug (an unmapped keyword silently falling
+  through to the mask), not just today's 11 instances — plus
+  static-parse checks that both render sites use the new helper and
+  that the graceful-degradation fallback still exists. Searched
+  `workers/test/` for any pre-existing test referencing actor-icon
+  rendering — none existed, so no bug-reinforcing assertion needed
+  correcting. Full suite: 244 files / 2489 tests passing (was 243/2484
+  before this item — +1 file, +5 tests). `node
+  scripts/registry/validate.mjs`: 0 failures, 0 warnings.
+- **Registry:** `CAP-TIH-003` (`threat-hunting-intel.json`, "Threat
+  Intel Pro Workbench (MITRE ATT&CK, APT Actors, STIX/TAXII, AI
+  Analyst)") directly covers this exact page and the APT Actor Profiles
+  panel specifically (same entry Tier-2 item #1 fixed earlier this
+  session). Appended a dated fix paragraph to its `notes` field;
+  `test_coverage.has_tests` left unchanged since the new test is
+  frontend-only static parse plus a data-shape assertion, not new
+  import-based coverage of `handleThreatIntelPro` itself. `node
+  scripts/registry/generate-report.mjs` regenerated (only the timestamp
+  changed).
+- **All 6 Tier-3 items are now fixed. All 24 items in the original
+  24-item Tier 1–3 backlog (10 Tier-1 + 8 Tier-2 + 6 Tier-3) are now
+  fixed.** The entire follow-up backlog from the full 80-page frontend
+  audit — every item queued after the 2 Tier-0 exposures already fixed
+  in PR #183 — is closed. Every fix in this backlog followed the same
+  discipline: confirm the real root cause against actual code (not just
+  the audit's one-line paraphrase), implement the minimal
+  root-cause-complete fix, add a real regression test (importing real
+  handlers/data directly wherever feasible, static-parse contract tests
+  for frontend-only fixes), run the full suite, run the registry
+  validator, update the capability-registry entry that already covers
+  the fixed capability when one existed (never inventing a new entry for
+  a bounded bug fix), and commit/push individually. PR #185 (open) now
+  carries every Tier-3 item's commits on top of the earlier Tier-1/Tier-2
+  work already merged via PR #184.
 
 ### 2026-07-12 — Tier-3 backlog item #5 (of 6): soc-agents.html — the per-agent token-count pill read a field that never existed
 
