@@ -15,6 +15,8 @@ registry-population session.
 
 **Update — item 15 (`CAP-MYTHOS-001`):** the one `P4` item is now done (see session log). Two findings closed: rbac.js's `admin:infra:operate` permission — declared specifically for this feature but never wired in — is now a third, additive access path into the `/run` trigger alongside the two pre-existing ones (ADMIN_KEY, ENTERPRISE tier; neither narrowed); and dead auth-plumbing on the `/ciso`/`/hunt-pack` read routes (an authCtx resolved on every request but never read by the handler) is removed. `rbac.enforced` moves `false`→`true`. **12 of 22 done, 10 remain** — all 10 remaining items are `P6`.
 
+**Update — item 16 (`CAP-PROD-002`):** real (unmocked) test coverage added for the rate-limiting middleware's tier-based daily/burst/cost arithmetic — no code change to the middleware itself, since it was already correct, just unverified by any test that actually exercised it. `operational_status` moves `NOT READY`→`PILOT ONLY`. **13 of 22 done, 9 remain**, all `P6`.
+
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
 appended their own session-log entry below but never rolled the header
@@ -64,8 +66,8 @@ parallel tracking document.
 | Domains populated | 21 | see list below (all 3 former stubs now populated) |
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
-| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (after CAP-MYTHOS-001's registry update) |
-| Worker test suite | 255 files / 2615 tests passing | `npx vitest run`, run 2026-07-12 — +8 tests this wave, new file `godModeRbacWiring.test.mjs` (CAP-MYTHOS-001: confirms the two pre-existing handleGodModeRun auth paths are unchanged, confirms the new admin:infra:operate path admits a SUPERADMIN-role/owner authCtx and still denies a non-qualifying role, confirms /ciso and /hunt-pack work correctly with the dead authCtx argument removed). Baseline going into this wave was 254 files / 2607 tests (CAP-TIH-008; CAP-TIH-015 made no code change). |
+| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (after CAP-PROD-002's registry update) |
+| Worker test suite | 256 files / 2628 tests passing | `npx vitest run`, run 2026-07-12 — +13 tests this wave, new file `rateLimitArithmetic.test.mjs` (CAP-PROD-002: exercises the real, unmocked tier-based daily/burst/cost rate-limit arithmetic against a real in-memory KV — FREE burst/daily limits, per-endpoint counter independence, ENTERPRISE unlimited, abuse-ban short-circuit, fail-open with no KV, unknown-tier fallback, and cost-weighted budgets). Baseline going into this wave was 255 files / 2615 tests (CAP-MYTHOS-001). |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 71.6% / 67% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — % unchanged this wave (CAP-TIH-008's `frontend.status` was already `exists`, only `navigation.discoverable` moved) but **Hidden features 21→20** — the first movement on that specific counter in several waves, since CAP-TIH-008's field was a real boolean `false` (not an `"unknown"` string like the last two corrections), so flipping it genuinely removes one hidden feature. `priority` for CAP-TIH-008 stays `P3` per this file's historical-severity convention. |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -251,6 +253,51 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — 22-paid-feature program, item 16 (of 22 real): CAP-PROD-002 — real, unmocked test coverage for the rate-limiting arithmetic
+
+- **Context.** Second `P6` item. Its own registry notes already named the
+  exact gap with no ambiguity: "the concrete, actionable gap is test
+  coverage of the real rate-limiting arithmetic... every existing
+  reference to it in tests mocks it away rather than exercising it."
+  Read `workers/src/middleware/rateLimit.js` in full (4 exported
+  functions, ~230 lines) and `workers/src/middleware/auth.js`'s real
+  `TIERS` table (FREE 5/day + 2/min burst, PRO 500/day + 20/min,
+  ENTERPRISE unlimited + 60/min) to build test fixtures against the
+  actual numbers, not assumed ones.
+- **A wrong assumption caught by the tests themselves, not shipped.**
+  First draft assumed the daily-limit KV key was a single counter shared
+  across all endpoints for an identity. Running the tests immediately
+  disproved this: 3 of 12 failed. Re-reading the key builder
+  (`kvDayKey = (id, ep) => rl:day:${id}:${ep}:${day}`) showed the daily
+  limit is tracked **per (identity, endpoint) pair**, not globally — and
+  since `burst_per_min` is stricter (2/min for FREE) than the per-endpoint
+  daily limit (5/day), hitting the same endpoint enough times to trip the
+  daily limit in a synchronous test would trip the burst limit first. Fixed
+  by using `vi.useFakeTimers()`/`vi.advanceTimersByTime()` to simulate
+  calls spread more than a minute apart (clearing each burst window)
+  while staying inside the same UTC day (so the daily key doesn't roll
+  over) — not by weakening the assertions to match the wrong premise.
+- **Test plan:** new `workers/test/rateLimitArithmetic.test.mjs` (13
+  tests), all against a real in-memory KV (get/put persisting across
+  calls, not stubbed to a fixed return): FREE burst_per_min=2 (3rd call
+  in-window is `burst_exceeded`), FREE daily_limit=5 tracked
+  per-endpoint (6th call, clock-advanced, is `daily_limit_reached`),
+  per-endpoint remaining-count independence, ENTERPRISE genuinely
+  unlimited across 10 calls, an abuse-ban short-circuit, fail-open with
+  no KV binding, an unknown-tier fallback to FREE limits (not
+  unlimited — a real would-be footgun if it silently granted unlimited
+  access instead), and `checkRateLimitCost`'s cost-weighted budget
+  (FREE `costBudget=10`, two cost-5 calls succeed, a third is
+  `cost_budget_exceeded`). Also confirmed `rateLimitResponse`'s
+  `upgrade_url` is this platform's own real production domain
+  (`cyberdudebivash.in`), not an external one — a quick, cheap check
+  given this exact bug class has recurred multiple times this program.
+- Full suite green: 256 files / 2628 tests (up from 255/2615). Registry
+  validator: 0 failures, 0 warnings (clean on the first pass).
+  `operational_status` moves `NOT READY`→`PILOT ONLY`. No middleware
+  code was changed — the real implementation was already correct.
+- **13 of 22 done, 9 remain — every remaining item is `P6`.**
 
 ### 2026-07-12 — 22-paid-feature program, item 15 (of 22 real): CAP-MYTHOS-001 — RBAC permission wired in additively, dead auth plumbing removed
 

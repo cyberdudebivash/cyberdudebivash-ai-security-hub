@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-12T13:21:29.303Z
+Generated: 2026-07-12T13:27:00.414Z
 Capabilities catalogued: 97
 
 ## Overall Completion
@@ -185,7 +185,7 @@ complete", "bug free", or "guaranteed".
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
 | CAP-PROD-001 | CI Quality & Security Gates (Headers, Accessibility, Performance, Dependencies, Secrets, E2E) | ✓ | ✗ | ✗ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
-| CAP-PROD-002 | Rate Limiting & Structured Request-ID Correlation | ✓ | ✗ | ✗ | NOT READY | P6 |
+| CAP-PROD-002 | Rate Limiting & Structured Request-ID Correlation | ✓ | ✗ | ✗ | PILOT ONLY | P6 |
 | CAP-PROD-003 | Distributed Tracing / APM | ✗ | ✗ | ✗ | NOT READY | P2 |
 | CAP-PROD-004 | Consolidated OWASP ASVS / API Security Top-10 Checklist | ✗ | ✗ | ✗ | NOT READY | P7 |
 
