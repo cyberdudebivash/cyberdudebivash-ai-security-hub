@@ -637,7 +637,7 @@ Provide: key risk drivers, top 3 immediate actions, business impact if breached.
       risk_level:       riskLevel,
       confidence:       'HIGH',
       components,
-      trend:            'STABLE',
+      trend:            null,   // no historical risk-assessment snapshots on file for this target — cannot compute a real trend
     },
     threat_context: {
       active_actors_targeting_sector: actorTargets,
