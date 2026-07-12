@@ -78,6 +78,12 @@ describe('Threat Intel API backend — real responses for all 5 endpoints (test-
     expect(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).toContain(data.risk_assessment.risk_level);
   });
 
+  it('handleIntelRisk reports trend honestly as null — no historical snapshot exists to compute a real one (was hardcoded "STABLE")', async () => {
+    const res = await handleIntelRisk(req('https://x/api/intel/risk?target=example.com&sector=Technology'), fakeEnv(), { tier: 'PRO', userId: 'u1' });
+    const data = await res.json();
+    expect(data.risk_assessment.trend).toBeNull();
+  });
+
   it('endpoints correctly 429 with an upgrade URL for a FREE-tier caller past the entitlement table (legacy tier gate)', async () => {
     const res = await handleIntelActor(req('https://x/api/intel/actor?actor_id=APT29'), fakeEnv(), { tier: 'FREE' });
     expect(res.status).toBe(429);
