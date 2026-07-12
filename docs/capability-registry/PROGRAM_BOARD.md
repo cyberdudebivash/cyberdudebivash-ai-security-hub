@@ -21,6 +21,8 @@ registry-population session.
 
 **Update — item 20 (`CAP-TIH-001`):** closed the real test-coverage gap (the only prior "coverage" was a copy-pasted reimplementation of one small helper in a different file, not real handler tests) and fixed a genuine finding made while writing those tests: `handleMITREMatrix` returned hardcoded `covered_techniques: 47, coverage_pct: 25.4` that didn't match the ~10 techniques actually listed in the same response's `hunt_coverage` object — now computed for real. Confirmed via grep this endpoint isn't rendered by any frontend page today, so not a live customer-facing issue, but fixed at the source. Also resolved `auth_enforced` from `"unknown"` to `false`, with the one real exception (`handleHuntSessions` requires a real user) documented explicitly rather than lost in a single boolean. **20 of 22 done, 2 remain**: `CAP-MSSP-005`, `CAP-TIH-003`.
 
+**Update — item 21 (`CAP-TIH-003`):** closed the last two open items on the single-highest-surface-area capability in this domain. `rbac.enforced` resolved from `"unknown"` to `true` via a full, line-by-line trace of all ~17 sub-routes in the 581-line router — the real shape is exactly 2 hard 403 gates (TAXII `ioc-feed` PRO+, `actor-feed` ENTERPRISE+), 1 soft content-tiering gate (STIX bundle, access never blocked), and ~14 intentionally-public sub-routes (the 3 costly ones already rate-limited instead, fixed 2026-07-11). Real test coverage added for the ~14 previously-untested sub-routes and all 5 backing services, exercised through the router rather than mocked away. `operational_status` moves `NOT READY`→`PILOT ONLY` — no fabrication found. **21 of 22 done, 1 remains**: `CAP-MSSP-005`.
+
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
 appended their own session-log entry below but never rolled the header
@@ -70,8 +72,8 @@ parallel tracking document.
 | Domains populated | 21 | see list below (all 3 former stubs now populated) |
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
-| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (after CAP-TIH-001's registry update) |
-| Worker test suite | 258 files / 2665 tests passing | `npx vitest run`, run 2026-07-12 — +20 tests this wave, new file `threatHuntingEngine.test.mjs` (CAP-TIH-001: real coverage for all 5 entry points — handleRunHunt's real D1-driven CVE findings and honest no-findings fallback, handleHuntTemplates' decoded-template content check, handleIOCLookup's honest 'clean'-from-internal-signals behavior, handleHuntSessions' auth gate, and a regression guard on the newly-fixed handleMITREMatrix coverage math). Baseline going into this wave was 257 files / 2645 tests (CAP-SCAN cluster). |
+| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (after CAP-TIH-003's registry update) |
+| Worker test suite | 259 files / 2691 tests passing | `npx vitest run`, run 2026-07-12 — +26 tests this wave, new file `threatIntelProWorkbench.test.mjs` (CAP-TIH-003: real coverage for ~14 previously-untested sub-routes across a 581-line router — real MITRE/actor/risk-scoring/STIX data checks, honest 404s, cache hit/miss, and explicit proof of the 2 real hard tier gates (TAXII ioc-feed/actor-feed) found while tracing rbac.enforced from "unknown"). Baseline going into this wave was 258 files / 2665 tests (CAP-TIH-001). |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 71.6% / 67% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — % unchanged this wave (CAP-TIH-008's `frontend.status` was already `exists`, only `navigation.discoverable` moved) but **Hidden features 21→20** — the first movement on that specific counter in several waves, since CAP-TIH-008's field was a real boolean `false` (not an `"unknown"` string like the last two corrections), so flipping it genuinely removes one hidden feature. `priority` for CAP-TIH-008 stays `P3` per this file's historical-severity convention. |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -257,6 +259,62 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — 22-paid-feature program, item 21 (of 22 real): CAP-TIH-003 — full per-sub-route RBAC trace across a 581-line router, real coverage for ~14 previously-untested sub-routes
+
+- **Context.** Last-but-one item. This capability's own entry was already
+  unusually well-documented (a prior 2026-07-11 pass had already closed a
+  real cost-abuse vulnerability on its 3 LLM-calling routes) but left two
+  things open: `rbac.enforced: "unknown"` ("pending a full per-sub-route
+  trace") and a test-coverage note explicitly naming this "the single
+  highest-value test-writing target in this domain by surface area" — 12+
+  of ~15 sub-routes and all 5 backing services untested.
+- **The trace, done properly.** Read the entire 581-line router
+  (`handleThreatIntelPro`) top to bottom rather than sampling a few
+  routes and extrapolating. The real shape turned out to be much more
+  specific than "tier-gated": of ~17 sub-routes, exactly **2** return a
+  hard 403 — `GET /api/taxii/collections/ioc-feed/objects` (PRO+) and
+  `GET /api/taxii/collections/actor-feed/objects` (ENTERPRISE+). **1**
+  soft-gates its response *content* by tier without ever blocking access
+  — `GET /api/intel/stix` conditionally includes actor/IOC objects based
+  on `tierAtLeast()`, a deliberately different pattern from a hard gate.
+  The remaining **~14** sub-routes (actors, tactics, techniques,
+  attack-map, heatmap, risk-score, risk-queue, epss, taxii discovery/
+  collections, cve-feed, kev-feed, attribute) carry no tier check
+  whatsoever — intentionally public, consistent with the already-fixed
+  design for the 3 LLM-calling routes (rate-limited instead of gated,
+  since public MITRE/CVE data isn't paid-tier-differentiated the way
+  IOC/actor STIX feeds are). `rbac.enforced` resolved to `true` with
+  this exact breakdown recorded in `notes`, not just the boolean.
+- **Test plan:** new `workers/test/threatIntelProWorkbench.test.mjs` (26
+  tests) exercises the ~14 previously-untested sub-routes through the
+  real router (not mocking the 5 backing services away): real MITRE
+  tactic/technique catalogs, real APT actor profiles with sector
+  filtering and 404 on unknown IDs, real CVE-to-ATT&CK mapping, a real
+  heatmap with both cache-miss (computed + cached) and cache-hit (served
+  without recompute) paths, real composite risk scoring against a
+  D1-backed CVE with an honest 404 for an unknown one, an honest empty
+  risk-queue when D1 has nothing, real TAXII discovery/collections
+  documents, and — the centerpiece — explicit proof of both real hard
+  gates (403 below the tier, 200 at/above it).
+- **A wrong assumption caught immediately, not shipped:** assumed this
+  engine's MITRE tactics catalog would have 12 entries (matching the
+  smaller, separate hardcoded table already documented in
+  `CAP-TIH-013`'s `enterpriseIntel.js`). It has 14 — this real catalog
+  additionally includes Reconnaissance and Resource Development. Verified
+  directly (`grep` on the real `TACTICS` export) rather than assume
+  either number was right, then fixed the test and recorded the
+  cross-reference in `notes` as one more entry in this domain's
+  already-tracked list of unreconciled parallel MITRE representations —
+  not fixed, per this program's standing instruction to flag duplication
+  rather than merge engines outside a fix's actual scope.
+- Full suite green: 259 files / 2691 tests (up from 258/2665). Registry
+  validator: 0 failures, 0 warnings on the first pass. `operational_status`
+  moves `NOT READY`→`PILOT ONLY` — no fabrication found anywhere in this
+  pass; the MITRE/actor/STIX data this engine serves is genuinely real.
+- **21 of 22 done, 1 remains: `CAP-MSSP-005`** — the last item in the
+  22-feature program (not counting `CAP-TIH-014`'s deliberately-deferred
+  fabrication issue, which stays open by explicit owner instruction).
 
 ### 2026-07-12 — 22-paid-feature program, item 20 (of 22 real): CAP-TIH-001 — real test coverage for all 5 hunt endpoints, a hardcoded/mismatched stat fixed at the source
 
