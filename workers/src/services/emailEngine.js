@@ -920,7 +920,7 @@ function templateWinbackDay30(lead, meta) {
   const subject = `Complimentary quarterly security assessment — for ${firstName}`;
   const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1e293b">
 <p>Hi ${firstName},</p>
-<p>It's been about a month since we last connected. The threat landscape has shifted — CISA issued 47 new KEV advisories this quarter, and AI-driven attacks on SaaS infrastructure are up 340% YoY.</p>
+<p>It's been about a month since we last connected. The threat landscape keeps shifting, with new CISA KEV advisories and AI-driven attack techniques targeting SaaS infrastructure appearing regularly.</p>
 <p>We'd like to offer you a <strong>complimentary 30-minute security posture review</strong> — no pitch, no obligation. Just an honest look at where your current exposure stands vs. industry peers.</p>
 <p>If anything's changed on your end — new products, new team members, new cloud infra — this is a fast way to understand your current risk profile.</p>
 <a href="https://calendly.com/bivash-cyberdudebivash?utm_source=email&utm_medium=winback&utm_campaign=day30" style="display:inline-block;background:#1e293b;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600">Book 30-Min Security Review (Free) →</a>

@@ -507,7 +507,7 @@ async function generateBoardReport(request, env, orgId) {
       keyDifferentiators:['EU AI Act Compliance Engine','MITRE ATLAS AI Red Team','API Self-Serve Economy','Edge-native Cloudflare deployment (300+ PoPs, zero servers)'],
       boardRecommendations:[
         { priority:1, recommendation:'Approve AI governance policy mandate across all business units', rationale:'EU AI Act compliance required — penalties up to 7% global turnover' },
-        { priority:2, recommendation:'Fund quarterly AI red team exercises using MITRE ATLAS framework', rationale:'LLM jailbreak and prompt injection risk increasing 340% YoY' },
+        { priority:2, recommendation:'Fund quarterly AI red team exercises using MITRE ATLAS framework', rationale:'Prompt injection and jailbreak techniques are the top-ranked AI-specific attack pattern in the MITRE ATLAS matrix — no historical incident trend is tracked yet to cite a real year-over-year figure' },
         { priority:3, recommendation:'Review and update cyber insurance coverage based on FAIR risk quantification', rationale:`Estimated $${(totalALE/1000000).toFixed(1)}M ALE warrants insurance review` },
         { priority:4, recommendation:'Approve API economy program for developer self-serve access', rationale:'Reduces procurement cycle from 90 days to same-day — revenue accelerator' }
       ]

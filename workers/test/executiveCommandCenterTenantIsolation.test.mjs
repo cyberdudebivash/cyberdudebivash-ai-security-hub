@@ -137,4 +137,13 @@ describe('handleExecutiveCommandCenter — requires real auth, org_id server-der
     const res = await handleExecutiveCommandCenter(req(`https://x/api/executive/reports/${board.reportId}`), env, userA);
     expect(res.status).toBe(200);
   });
+
+  it('board report recommendations no longer cite the fabricated "340% YoY" statistic (AI-integrity sweep)', async () => {
+    const boardRes = await handleExecutiveCommandCenter(req('https://x/api/executive/reports/board', {
+      method: 'POST', body: {},
+    }), env, userA);
+    const board = await boardRes.json();
+    const rationales = JSON.stringify(board.boardRecommendations);
+    expect(rationales).not.toContain('340%');
+  });
 });
