@@ -2556,7 +2556,7 @@
         <td style="color:var(--muted);font-size:.8rem">${fmtDate(k.created_at)}</td>
         <td style="color:var(--muted);font-size:.8rem">${k.last_used ? fmtDate(k.last_used) : 'Never'}</td>
         <td>
-          <button class="btn btn-outline btn-sm" onclick="viewKeyUsage('${k.id}', '${(k.name || k.key_prefix || k.id).replace(/'/g, "\\'")}')">Usage</button>
+          <button class="btn btn-outline btn-sm" onclick="viewKeyUsage('${k.id}', '${jsAttrEsc(k.name || k.key_prefix || k.id)}')">Usage</button>
           <button class="btn btn-danger btn-sm" onclick="openRevokeKey('${k.id}', '${k.key_prefix || k.id}')">Revoke</button>
         </td>
       </tr>
@@ -2760,14 +2760,18 @@
     const members = org.members || [];
     document.getElementById('org-members-table').innerHTML = members.map(m => {
       const isSelf = _user && m.user_id === _user.id;
-      const memberLabel = orgEsc(m.full_name || m.email || m.user_id);
+      // aria-label is a double-quoted HTML attribute — orgEsc() only escapes
+      // &<> (safe for text content, where it's used everywhere else in this
+      // function) and leaves a raw " free to break out of an attribute value.
+      // mfaEsc() escapes " too, which is what this specific use needs.
+      const memberLabel = mfaEsc(m.full_name || m.email || m.user_id);
       const roleControl = (isOwner && m.role !== 'OWNER')
         ? `<select class="form-input" style="width:auto;display:inline-block;padding:4px 8px;font-size:.78rem;margin-right:6px" aria-label="Change role for ${memberLabel}" onchange="updateMemberRole('${org.id}','${m.user_id}',this.value)">
              ${['ADMIN','ANALYST','MEMBER','VIEWER'].map(r => `<option value="${r}" ${r === m.role ? 'selected' : ''}>${r}</option>`).join('')}
            </select>`
         : '';
       const removeControl = ((canManage || isSelf) && m.role !== 'OWNER')
-        ? `<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:rgba(239,68,68,.4)" onclick="confirmRemoveMember('${org.id}','${m.user_id}','${orgEsc(m.full_name || m.email || m.user_id).replace(/'/g, "\\'")}')">${isSelf ? 'Leave' : 'Remove'}</button>`
+        ? `<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:rgba(239,68,68,.4)" onclick="confirmRemoveMember('${org.id}','${m.user_id}','${jsAttrEsc(m.full_name || m.email || m.user_id)}')">${isSelf ? 'Leave' : 'Remove'}</button>`
         : '';
       return `
         <tr>
@@ -3744,6 +3748,15 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     const el = kind === 'ok' ? o : e; el.textContent = text; el.style.display = 'block';
   }
   function mfaEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  // Safe for embedding inside a single-quoted JS string literal that itself sits
+  // inside a double-quoted HTML attribute (e.g. onclick="fn('${...}')"): escapes
+  // HTML metacharacters first, then backslashes, then quotes — backslashes must
+  // be escaped before quotes, otherwise the backslash a quote-escape introduces
+  // gets doubled by a later backslash pass and desyncs the string. Escaping only
+  // the quote (not the backslash) is an incomplete-escaping bug: a label ending
+  // in a raw backslash lets an attacker's next character escape out of the JS
+  // string and inject arbitrary onclick-handler code.
+  function jsAttrEsc(s){return mfaEsc(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");}
 
   async function loadMFAStatus() {
     const badge = document.getElementById('mfa-badge'); const body = document.getElementById('mfa-body');

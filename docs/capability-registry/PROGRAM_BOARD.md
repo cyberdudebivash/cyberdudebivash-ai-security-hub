@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-12 — the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit is now **fully closed** (see the entry twenty-five below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed all 10 Tier-1 items, all 8 Tier-2 items, and all 6 Tier-3 items — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable. Final item, just completed: `threat-intel-workbench.html`'s APT Actor Profiles panel rendered a raw semantic keyword (`'bear'`, `'dragon'`, `'typhoon'`, …) instead of an icon glyph, for every actor, in both the grid card and the detail modal — `aptActorProfiles.js`'s `icon` field was never actually a display-ready glyph, so the frontend's `|| '🎭'` fallback was dead code. Added a keyword→emoji map plus a real-data contract test asserting every actor's real icon keyword is covered (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 24 session-log entries below for this backlog's full closure account, item by item. 0 of the 24 backlog items remain.)
+## Current status (2026-07-12 — the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit is now **fully closed** (see the entry twenty-six below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed all 10 Tier-1 items, all 8 Tier-2 items, and all 6 Tier-3 items — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable. Immediately after closing the backlog, the owner asked to verify/validate/audit and merge PR #185 into `main`. That audit caught a real thing: GitHub's native CodeQL code-scanning check (distinct from the SARIF-generation jobs, which were green) failed with 1 new High-severity "incomplete string escaping" alert on this backlog's own Tier-3 item #4 code. Fixed with a new `jsAttrEsc()` helper, and — found in the same pass — a worse, pre-existing sibling bug in unrelated Organization-member code got fixed alongside it (see the top session-log entry for full detail). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 25 session-log entries below for this backlog's full closure account plus the pre-merge security fix, item by item. 0 of the 24 backlog items remain; PR #185 is being merged to `main` now that CI is green.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 244 files / 2489 tests passing | `npx vitest run`, run 2026-07-12 — +5 tests this wave, new file `threatIntelWorkbenchActorIconFix.test.mjs` (Tier-3 item #6, last of 6: APT actor cards rendered a raw keyword instead of an icon glyph; real-data contract test against APT_ACTORS plus static parse). Baseline going into this wave was 243 files / 2484 tests (Tier-3 item #5). **This closes the 24-item backlog** — see the "Current status" line above and the session log for the full item-by-item account |
+| Worker test suite | 245 files / 2495 tests passing | `npx vitest run`, run 2026-07-12 — +6 tests this wave, new file `userDashboardOnclickEscapingFix.test.mjs` (pre-merge security fix: CodeQL High-severity incomplete-escaping bug in this backlog's own Tier-3 item #4 code, plus a worse pre-existing sibling found in Organization-member code). Baseline going into this wave was 244 files / 2489 tests (Tier-3 item #6, which closed the 24-item backlog). **The 24-item backlog is closed and this pre-merge security fix is the last thing gating PR #185's merge to `main`** |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,94 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — Pre-merge security gate: CodeQL caught a real High-severity incomplete-escaping bug in this backlog's own PR before it reached `main`
+
+- **Trigger:** owner asked to verify/validate/audit and merge PR #185 (the
+  entire 24-item Tier 1–3 backlog) into `main`. Before merging, checked the
+  PR's live CI status rather than assuming green — `total_count: 32` check
+  runs, all green except one: a native GitHub code-scanning check named
+  `CodeQL` (distinct from the `Analyze (javascript-typescript)`/`Analyze
+  (python)` SARIF-generation jobs, both of which had already passed)
+  reported `conclusion: failure`, 1 new High-severity alert, rule
+  "Incomplete string escaping or encoding", `frontend/user-dashboard.html`
+  line 2559.
+- **Confirmed real, not a false gate:** line 2559 is this backlog's own
+  Tier-3 item #4 code (the API Keys "Usage" button, task #22 earlier this
+  session): `onclick="viewKeyUsage('${k.id}', '${label.replace(/'/g,
+  "\\'")}')"`. This only escapes a literal `'`, never a literal `\` — a key
+  name ending in a raw backslash (fully user-controlled: the key owner
+  names their own key at creation) collapses the escaper's own inserted `\`
+  together with the label's trailing `\`, which the browser's JS parser
+  then reads as a single escaped quote — terminating the string one
+  character early and letting the remainder of the label execute as
+  trailing script inside the onclick handler. A real, if narrow (self-only
+  — the caller can only inject into their own session), DOM XSS.
+- **Found a worse sibling while fixing it:** grepped the same file for the
+  identical `.replace(/'/g, "\\'")` pattern and found a second, pre-existing
+  (not part of this PR's diff — confirmed via `git diff origin/main..HEAD
+  -- frontend/user-dashboard.html`'s hunk list, nowhere near this line)
+  instance in the Organization "Remove member" button: `onclick=
+  "confirmRemoveMember('${org.id}','${m.user_id}','${orgEsc(m.full_name ||
+  m.email || m.user_id).replace(/'/g, "\\'")}')"`. This one is strictly
+  worse: `orgEsc()` (a `textContent`-round-trip HTML escaper meant for text
+  *content*, safe everywhere else it's used in this file) never escapes a
+  literal `"` either, so a member's `full_name`/`email` containing a `"`
+  breaks straight out of the double-quoted `onclick="..."` attribute with
+  no JS-string layer needed at all — and because organization member names
+  are set by *other* members, not just the viewer, this is genuine stored
+  XSS across users (e.g. any member could plant a payload that fires in the
+  org owner's browser when they view the member list), not merely
+  self-inflicted like the first one. A third, related instance: the same
+  member-role `<select>`'s `aria-label="Change role for
+  ${memberLabel}"` used the same under-escaping `orgEsc()` result in an
+  attribute context.
+- **Fix (`frontend/user-dashboard.html`):** added one new helper,
+  `jsAttrEsc(s)`, immediately after the existing `mfaEsc()`: HTML-escapes
+  `&<>"` first (delegating to `mfaEsc`, unchanged), then escapes `\` before
+  `'` (order matters — escaping the quote first would double the
+  backslash the quote-escape itself introduces on a second pass). Used at
+  all 3 sites: the Usage button, the Remove-member button, and
+  `memberLabel`'s definition (this last one only needed the `mfaEsc()` half
+  — no JS-string layer, since `aria-label` isn't parsed as JS — so it was
+  switched from `orgEsc()` straight to `mfaEsc()`, not `jsAttrEsc()`).
+  `orgEsc()` itself is untouched and remains correct for its ~13 other,
+  genuinely text-content-only call sites in this file.
+- **Also found, deliberately left alone (out of scope for this PR):** the
+  identical `.replace(/'/g, "\\'")` pattern also appears 5× in
+  `frontend/index.html` (`dsPurchase`/`initiatePayment`/`CDB_PAYMENT.open`
+  buttons, e.g. `:3210,3307,3520,10149,14413`) — confirmed via `git diff`
+  that none of those lines are anywhere near this PR's actual `index.html`
+  changes (Tier-2 item #3's fake-KPI/badge fix, entirely different section
+  of the file). Those use catalog/product data the site owner controls
+  (`s.title`/`course.label`), a materially different risk profile than
+  free-text user/member names — flagged here as a follow-up worth its own
+  dedicated pass, not fixed opportunistically inside an unrelated merge.
+- **Verification:** `node --check` on the extracted inline `<script>`
+  block. New `workers/test/userDashboardOnclickEscapingFix.test.mjs` (6
+  tests): confirms `jsAttrEsc()`'s exact escape order, confirms all 3 call
+  sites were updated, and — the real proof — 2 end-to-end tests that
+  simulate the actual 2-stage browser parse (HTML-entity-decode the
+  escaped output, then hand it to a real JS engine via `new Function` to
+  parse as a single-quoted string literal) for a trailing-backslash label
+  and a label containing embedded quotes plus an injection attempt,
+  asserting both reconstruct to *exactly* the original label with no
+  early termination or breakout — the precise mechanism CodeQL flagged.
+  Re-ran the 2 pre-existing tests referencing the touched code
+  (`userDashboardApiKeysUsageClickFix.test.mjs`,
+  `orgAuditLog.test.mjs`) — both still pass unchanged. Full suite: 245
+  files / 2495 tests passing (was 244/2489 before this fix — +1 file, +6
+  tests). `node scripts/registry/validate.mjs`: 0 failures, 0 warnings.
+- **No capability-registry domain JSON edited** — this is a security
+  hardening fix to existing rendering code, not a capability-completeness
+  change; no domain entry's `description`/`entry_points` scope covers
+  "onclick-attribute escaping correctness" as a capability in its own
+  right.
+- Pushed as an additional commit on top of the 24-item backlog on
+  `claude/production-tasks-resume-akvl95` (PR #185) before merging to
+  `main`, per the owner's explicit instruction to verify/validate/audit
+  first. This is exactly what that gate is for: caught before production,
+  not after.
 
 ### 2026-07-12 — Tier-3 backlog item #6 (last of 6): threat-intel-workbench.html — APT actor cards rendered raw keyword text instead of an icon glyph — closes the entire 24-item backlog
 
