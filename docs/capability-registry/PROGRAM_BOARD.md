@@ -74,8 +74,8 @@ parallel tracking document.
 | Domains populated | 21 | see list below (all 3 former stubs now populated) |
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (unchanged this wave) |
-| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (Enterprise Production Certification Program pass) |
-| Worker test suite | 264 files / 2755 tests passing | `npx vitest run`, run 2026-07-12 — +4 files / +36 tests this wave (new files: `aiRedTeamProTenantIsolation.test.mjs`, `aiSecurityASPMTenantIsolation.test.mjs`, `executiveCommandCenterTenantIsolation.test.mjs`, `developerPortalWebhookSecurity.test.mjs`). Baseline going into this wave was 260 files / 2719 tests (CAP-MSSP-005). |
+| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (AI-fabrication follow-up + CI/CD pass — unchanged, this wave touched no registry domain files) |
+| Worker test suite | 267 files / 2768 tests passing | `npx vitest run`, run 2026-07-12 — +3 files / +13 tests this wave (new files: `executiveRiskDriversHonesty.test.mjs`, `cisoReportEngineHonesty.test.mjs`, `secureDownloadLandscapeHonesty.test.mjs`). Baseline going into this wave was 264 files / 2755 tests (Enterprise Production Certification Program). |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — still NOT READY: parity (68%) is below the 80% threshold, which alone forces this verdict regardless of the Critical/P1 count |
 | Backend / Frontend / Parity | 89.7% / 72.2% / 68% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — unchanged this wave (this session's fixes were security/correctness/registry-hygiene, not new frontend surfaces) |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, no new dynamic_browser session run) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -261,6 +261,153 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — AI-fabrication follow-up pass (3 findings from the Enterprise Production Certification Program) + 2 CI/CD gaps closed
+
+- **Context.** Direct continuation of the Enterprise Production Certification
+  Program session below, resumed after a usage-limit cutoff mid-investigation
+  (was reading `cisoMetrics.js` to confirm `compliance_results` is queried by
+  it but created by no schema file in this codebase — confirmed: no
+  `CREATE TABLE compliance_results` exists anywhere; the query already
+  degrades honestly to `[]` there, per that file's own established pattern).
+  Owner instruction: proceed with production-grade precision, fabrication
+  findings first (most severe: paying customers receiving fabricated data),
+  then the CI/CD gaps.
+- **`workers/src/handlers/executiveRiskHandlers.js`'s `handleExecutiveRiskBrief()`**
+  (fabrication finding, smallest/clearest — fixed first): `compliance_posture: 45`
+  and `ai_security: 65` were undisclosed hardcoded constants folded into the
+  averaged composite risk score shown to ENTERPRISE customers, identical for
+  every org. Fixed: `compliance_posture` now derives from
+  `queryComplianceResults()` (newly exported from `cisoMetrics.js` — see
+  below) using the same coverage-percentage formula
+  `computeRiskPosture()` already uses there; `ai_security` now derives from
+  this org's own `ai_assets.security_score` average (same table
+  `aiSecurityASPM.js`'s dashboard already aggregates, scoped by
+  `authCtx.orgId||authCtx.userId`, the same derivation used throughout that
+  file post-PR#188). Either driver is `null` — excluded from the composite
+  average, not defaulted to a fabricated number — when the org has no
+  compliance assessment or no registered AI assets yet; the HTML report
+  renders "No data yet" for a null driver instead of a fake `NN/100`. Same-file
+  twin issue fixed alongside it: `risk_snapshot.trend` and
+  `handleExecutiveDashboard`'s `risk_trend` were always the literal string
+  `'STABLE'` with no historical snapshot behind that claim — now `null`,
+  matching `cisoMetrics.js`'s own "no historical snapshots → cannot fabricate
+  a trend" convention. New `workers/test/executiveRiskDriversHonesty.test.mjs`
+  (4 tests).
+- **`workers/src/services/revos/cisoReportEngine.js`'s `generateCISOReport()`**
+  (fabrication finding — the platform's own board-report generator duplicated
+  the exact bug already fixed in `cisoMetrics.js`): `compliance_status` was 5
+  hardcoded framework scores (SOC2/GDPR/DPDP always
+  `ALIGNED`/`COMPLIANT`/90+, ISO/PCI similarly fixed) shown identically on
+  every report, never querying `compliance_results`. Fixed by exporting the
+  query logic cisoMetrics.js already had as `queryComplianceResults(db)` and
+  a thin `buildComplianceStatus(env)` wrapper calling it (single source of
+  truth for both files now); `cisoReportEngine.js` maps real rows onto the
+  same 5 keys by framework-name match, honest `{status:'NO_DATA',score:null,
+  gaps:null}` per unmatched framework. `mttd_hours`/`mttr_hours` were
+  hardcoded `2.3`/`18.5`; `sla_compliance_pct` was hardcoded `98.5` with no
+  underlying data source. Fixed: MTTD/MTTR now come from
+  `calculateMTTX()` (also newly exported from `cisoMetrics.js`) over this
+  user's real incident log (`loadIncidents()`, also exported — same
+  `ciso:incidents:${userId}` KV key that file already uses), `null` when
+  there's no incident history or this is an MSSP `clientId`-only report
+  (no incident log is keyed by `clientId` anywhere in this codebase, so that
+  case honestly gets no MTTD/MTTR rather than a guess); `sla_compliance_pct`
+  is `null` — no SLA-tracking data source exists yet. Also removed an
+  unconditional invented recommendation ("61% of scanned targets lack
+  DNSSEC") shown on every report regardless of any real DNSSEC-gap
+  computation. **Separately found and fixed while rewiring this same
+  function (not part of the original 3-finding list, same class of bug,
+  directly adjacent):** a variable-aliasing bug where `latestMRR` was
+  assigned from the MRR *trend* query result (`{results:[...]}` shape)
+  instead of the *latest-snapshot* query result — `revenue_metrics.mrr_inr`/
+  `arr_inr`/`churn_rate`/`nrr` silently read `undefined`→defaulted to 0/100
+  on every single executive report. New
+  `workers/test/cisoReportEngineHonesty.test.mjs` (5 tests, including one
+  proving the MRR fix with a real non-zero snapshot).
+- **`workers/src/handlers/secureDownload.js`'s `generateReportHTML()`**
+  (fabrication finding, most severe — paid/payment-gated "SENTINEL APEX™"
+  intelligence reports): the "Threat Landscape Overview" table baked in
+  fully invented trend deltas (`"AI-Weaponized Attacks ↑ +187% YoY"`, etc.)
+  never derived from any data; "Threat Actor Intelligence" rendered 3
+  hardcoded APT29/Lazarus/APT41 write-ups stamped with `${now}` as "Last
+  Observed" on every report regardless of date, while the real `actors` D1
+  query result was fetched and silently discarded; the cover page claimed
+  "live intelligence… dark web monitoring… APEX AI correlation engine"
+  sourcing not evidenced anywhere in this codebase; the geographic section
+  had an invented "78% year-over-year" India stat. Fixed: the actor query
+  now reads the dedicated `cti_actors` table (name/nation_state/motivation/
+  sophistication/target_sectors/description/threat_level/confidence_score) —
+  the actual intended data source, not `threat_intel` keyword-matched by
+  title — and section 4 renders real actor profiles, or an honest "no
+  threat-actor profiles currently cataloged" empty state (same convention as
+  the IOC section's existing honest-empty-state, from the earlier
+  `secureDownloadRealIOCs.test.mjs` fix). Section 2's landscape table now
+  shows real current-dataset counts (ransomware-linked / APT-attributed /
+  KEV, from real `is_ransomware`/`apt_groups`/`is_exploited` columns on
+  `threat_intel`) with an explicit note that these are snapshot counts, not
+  a fabricated period-over-period delta (this platform retains no historical
+  snapshots to compute a real QoQ/YoY change from). Cover-page sourcing
+  claim narrowed to what's actually evidenced (NVD/CISA KEV + the platform's
+  own actor/IOC database). **Separately found and fixed in the same
+  function:** `threat_intel`'s real KEV column is `is_exploited`, but the
+  template read `is_kev` (only the static fallback CVE list had that field)
+  — real D1-sourced CVEs always showed `kevCount:0` and no KEV badge
+  regardless of actual exploitation status; now mapped at fetch time. MITRE
+  mapping, detection rules (SIGMA/YARA/KQL), sector-impact, and remediation
+  sections are unchanged — general security reference content, not claimed
+  as live per-report data, out of scope for this fix. New
+  `workers/test/secureDownloadLandscapeHonesty.test.mjs` (4 tests).
+- **Minor, flagged but not fixed this pass:** a recycled, uncited "340% YoY"
+  jailbreak/prompt-injection stat recurs as boilerplate copy in
+  `executiveCommandCenter.js`, `emailEngine.js`, `v24/salesOS.js`, and (found
+  in this pass, not in the original finding) `frontend/index.html` (2
+  instances). Cosmetic marketing copy, not a data claim sold as computed —
+  lower severity than the 3 fixed above; left for a dedicated sweep.
+  `intelligencePreview.js`'s separate, previously-catalogued fabrication
+  (`CAP-TIH-014`) remains open by standing owner instruction, untouched.
+- **CI/CD gap 1 — no automated rollback.** `deploy.yml` gained a `rollback`
+  job (`needs: [deploy-workers, deploy-frontend, smoke-test]`,
+  `if: needs.smoke-test.result == 'failure'`) that runs `wrangler rollback`
+  (no explicit version-id — verified directly against the pinned wrangler
+  4.109.0 CLI source that this auto-resolves to the most recent 100%-stable
+  prior deployment and auto-confirms its normally-interactive prompts when
+  `isNonInteractiveOrCI2()` is true, the same mechanism `wrangler deploy`
+  already relies on elsewhere in this workflow), then verifies `/api/health`
+  returns 200 before reporting success. smoke-test's *only* hard-fail
+  condition is the Workers API being unreachable on every endpoint, so this
+  directly addresses the actual failure condition the job fires on.
+  Cloudflare Pages has no equivalent single-command CLI rollback in this
+  wrangler version (`wrangler pages deployment` only supports
+  list/create/tail/delete) — left as the existing manual dashboard step
+  (`hardening/DR_ROLLBACK_RUNBOOK.md` § 2.1) rather than scripted against an
+  unverified custom API integration. `deploy-summary` now reports the
+  rollback outcome. `DR_ROLLBACK_RUNBOOK.md` § 2.2 and § 5 updated to match.
+- **CI/CD gap 2 — weaker second D1 schema-migration path.** `automation.yml`'s
+  `schema-migrate` job (idempotent `ALTER TABLE ADD COLUMN` drift patches)
+  had no typed confirmation and no pre-migration backup, unlike
+  `db-migrate.yml`'s gated path. Fixed by adding the same two gates:
+  a `confirm_schema_migrate: APPLY` typed-confirmation `workflow_dispatch`
+  input, and a pre-migration `wrangler d1 export` backup (aborts if empty,
+  uploaded as a 90-day artifact) before the ALTER statements run — mirrors
+  `db-migrate.yml`'s pattern exactly rather than inventing a second
+  convention. Not merged into one path: the two jobs serve genuinely
+  different purposes (apply-any-schema-file vs. patch-known-drift) and
+  reconciling them is a larger, separate decision. `DR_ROLLBACK_RUNBOOK.md`
+  new § 6 documents both paths.
+- **Verification:** full suite from scratch, **267 files / 2768 tests, all
+  green** (+3 files / +13 tests this pass). Registry validator: 0 failures,
+  0 warnings (unchanged — no capability registry entries exist yet for these
+  3 routes; this was a data-honesty fix within already-registered
+  capabilities, not a new capability). Both workflow YAML files parsed
+  valid. `node --check` clean on all 4 edited handler/service files.
+- **What remains, sized honestly:** the "340% YoY" boilerplate copy above,
+  and `CAP-TIH-014`'s already-catalogued fabrication (open by standing
+  instruction) — neither fixed this pass, both flagged. Cloudflare Pages
+  auto-rollback remains manual (see CI/CD gap 1). The `rollback` job's
+  wrangler invocation was verified against CLI source, not a live fire
+  against production — recommend a controlled validation run before fully
+  relying on it in a real incident.
 
 ### 2026-07-12 — Enterprise Production Certification Program: whole-platform audit, 4 new critical/high security fixes, 9 P1 registry entries independently re-verified
 

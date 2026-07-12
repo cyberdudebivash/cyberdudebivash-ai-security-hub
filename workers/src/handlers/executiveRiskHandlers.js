@@ -16,6 +16,7 @@ import { callClaude } from '../core/mythosAIProvider.js';
 import { buildReportShell } from './reportingEngine.js';
 import { generateAdaptiveRecommendations } from '../core/adaptiveCyberBrain.js';
 import { RadarService } from '../services/radarService.js';
+import { queryComplianceResults } from './cisoMetrics.js';
 
 function ok(data, status = 200) { return Response.json(data, { status }); }
 
@@ -98,6 +99,36 @@ async function fetchCVEKPIs(env) {
   } catch { return {}; }
 }
 
+// ─── Real per-org compliance & AI-security risk drivers ───────────────────────
+// compliance_posture and ai_security were previously undisclosed hardcoded
+// constants (45 and 65, identical for every org) folded into the composite
+// risk score below. Now real D1-derived values — queryComplianceResults() is
+// the same D1-authoritative compliance_results query cisoMetrics.js uses, and
+// the AI-security figure is this org's own registered-asset average from
+// aiSecurityASPM.js's ai_assets table — or `null` (excluded from the average,
+// not defaulted to a fabricated number) when the org has no compliance
+// assessment or no registered AI assets on file yet.
+async function fetchComplianceRiskDriver(env) {
+  const rows = await queryComplianceResults(env.DB);
+  if (!rows.length) return null;
+  let met = 0, tot = 0;
+  for (const f of rows) { met += (f.controls_met || 0); tot += (f.controls_total || 0); }
+  if (tot === 0) return null;
+  const coverage = (met / tot) * 100;
+  return Math.round(100 - coverage);
+}
+
+async function fetchAISecurityRiskDriver(env, orgId) {
+  if (!env.DB || !orgId) return null;
+  try {
+    const row = await env.DB.prepare(
+      'SELECT AVG(security_score) as avg_score, COUNT(*) as cnt FROM ai_assets WHERE org_id=?'
+    ).bind(orgId).first();
+    if (!row || !row.cnt || row.avg_score == null) return null;
+    return Math.round(100 - row.avg_score);
+  } catch { return null; }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // ENDPOINT 1: POST /api/executive/risk-brief — Board-Level Risk Brief
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -112,7 +143,11 @@ export async function handleExecutiveRiskBrief(request, env, authCtx) {
   const period  = body.period || 'Q2 2026';
 
   // Gather platform intelligence
-  const [kpis, cveKpis] = await Promise.all([fetchPlatformKPIs(env), fetchCVEKPIs(env)]);
+  const orgId = authCtx?.orgId || authCtx?.userId || null;
+  const [kpis, cveKpis, complianceRisk, aiSecurityRisk] = await Promise.all([
+    fetchPlatformKPIs(env), fetchCVEKPIs(env),
+    fetchComplianceRiskDriver(env), fetchAISecurityRiskDriver(env, orgId),
+  ]);
 
   // Pull recent scan findings from KV
   let sslRisk = 35, threatLevel = 'MEDIUM';
@@ -127,16 +162,21 @@ export async function handleExecutiveRiskBrief(request, env, authCtx) {
     }
   } catch {}
 
-  // Composite enterprise risk score
+  // Composite enterprise risk score — averaged only over drivers with real
+  // data (compliance_posture/ai_security are `null`, not a fabricated
+  // number, when this org has no compliance assessment or no registered AI
+  // assets yet; null drivers are excluded from the average below).
   const riskDrivers = {
     external_exposure:  sslRisk,
     threat_landscape:   kpis.active_actors > 10 ? 75 : kpis.active_actors > 5 ? 55 : 35,
     vulnerability_debt: cveKpis.critical > 50 ? 80 : cveKpis.critical > 20 ? 60 : 40,
-    compliance_posture: 45,
-    ai_security:        65,
+    compliance_posture: complianceRisk,
+    ai_security:        aiSecurityRisk,
   };
-  const compositeRisk = Math.round(Object.values(riskDrivers).reduce((s, v) => s + v, 0) / Object.keys(riskDrivers).length);
+  const driverValues = Object.values(riskDrivers).filter(v => v !== null);
+  const compositeRisk = Math.round(driverValues.reduce((s, v) => s + v, 0) / driverValues.length);
   const riskRating = compositeRisk >= 70 ? 'HIGH' : compositeRisk >= 50 ? 'MEDIUM' : 'LOW';
+  const driverCoverageNote = `${driverValues.length}/${Object.keys(riskDrivers).length} risk signals have real assessment data on file`;
 
   // AI executive narrative
   let executiveSummary = null;
@@ -175,8 +215,9 @@ Write 3-4 paragraphs covering: (1) Current risk posture and trending, (2) Top 3 
 <div class="section">
   <h2>Risk Drivers</h2>
   <table><thead><tr><th>Driver</th><th>Score</th></tr></thead><tbody>
-    ${Object.entries(riskDrivers).map(([k, v]) => `<tr><td>${escHTML(k.replace(/_/g, ' '))}</td><td>${v}/100</td></tr>`).join('')}
+    ${Object.entries(riskDrivers).map(([k, v]) => `<tr><td>${escHTML(k.replace(/_/g, ' '))}</td><td>${v !== null ? v + '/100' : 'No data yet'}</td></tr>`).join('')}
   </tbody></table>
+  <p style="font-size:12px;color:#64748b">${escHTML(driverCoverageNote)}</p>
 </div>
 <div class="section">
   <h2>Recommended Board Actions</h2>
@@ -208,9 +249,10 @@ Write 3-4 paragraphs covering: (1) Current risk posture and trending, (2) Top 3 
     risk_snapshot: {
       composite_risk_score: compositeRisk,
       risk_rating:          riskRating,
-      trend:                'STABLE',
+      trend:                null,   // no historical risk-brief snapshots on file yet — cannot compute a real trend
       last_assessment:      new Date().toISOString().slice(0, 10),
       drivers:              riskDrivers,
+      driver_data_coverage: driverCoverageNote,
     },
     threat_landscape: {
       active_apt_actors:     kpis.active_actors || 0,
@@ -272,7 +314,7 @@ export async function handleExecutiveDashboard(request, env, authCtx) {
     as_of:      new Date().toISOString(),
     security_kpis: {
       composite_risk_score:  compositeRisk,
-      risk_trend:            'STABLE',
+      risk_trend:            null,  // no historical dashboard snapshots on file yet — cannot compute a real trend
       active_threat_actors:  kpis.active_actors  || 0,
       critical_cves:         cveKpis.critical    || 0,
       kev_vulnerabilities:   cveKpis.kev         || 0,

@@ -888,13 +888,118 @@ jobs:
           echo "**Time:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
 
 # =============================================================================
-# JOB 5 · Final Deployment Report + Validation Checklist
+# JOB 5 · Automated Rollback on Failed Smoke Test
+#
+# Previously a failed post-deploy smoke test only marked deploy-summary as
+# failed (a report, not a fix) — recovery required a human to manually run
+# `wrangler rollback` per hardening/DR_ROLLBACK_RUNBOOK.md. smoke-test only
+# hard-fails when the Workers API is unreachable on every endpoint (its "API
+# health check" step is the only `exit 1` in that job — the version.json,
+# route-header and version-sync checks are all non-fatal warnings), so an
+# automatic Worker rollback directly addresses the actual failure condition
+# this job fires on.
+#
+# `wrangler rollback` (no explicit version-id) auto-resolves to the most
+# recent 100%-stable prior deployment and auto-confirms its normally-
+# interactive prompts when run in CI — verified directly against the pinned
+# wrangler 4.109.0 CLI source (`confirm2`/`prompt2` both check
+# `isNonInteractiveOrCI2()` and fall back to their default/confirm value
+# instead of blocking), the same mechanism that already lets `wrangler
+# deploy` run unattended elsewhere in this workflow.
+#
+# Cloudflare Pages (frontend) has no equivalent single-command CLI rollback
+# in this wrangler version (`wrangler pages deployment` only supports
+# list/create/tail/delete) — that side of the DR runbook's manual dashboard
+# step still applies. Left manual rather than scripted against an unverified
+# API integration.
+# =============================================================================
+  rollback:
+    name: Auto-Rollback Workers API (smoke test failed)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [deploy-workers, deploy-frontend, smoke-test]
+    if: always() && needs.smoke-test.result == 'failure'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: workers/package-lock.json
+
+      - name: Install Workers dependencies
+        working-directory: workers
+        run: npm ci --prefer-offline
+
+      - name: Patch wrangler.toml (KV + account_id)
+        env:
+          KV_NAMESPACE_ID: ${{ secrets.WORKERS_KV_NAMESPACE_ID }}
+        run: |
+          # Same patch deploy-workers applies — wrangler parses/validates the
+          # full config (including binding IDs) before dispatching any
+          # subcommand, rollback included, so this placeholder must be
+          # resolved even though rollback itself doesn't redeploy bindings.
+          if [ -n "$KV_NAMESPACE_ID" ]; then
+            sed -i "s/REPLACE_WITH_YOUR_KV_NAMESPACE_ID/${KV_NAMESPACE_ID}/g" workers/wrangler.toml
+          fi
+          if grep -q '^account_id' workers/wrangler.toml; then
+            sed -i '/^account_id/d' workers/wrangler.toml
+          fi
+
+      - name: Roll back Worker to previous stable version
+        working-directory: workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "━━━ Smoke test failed on ${{ env.DEPLOY_SHA }} — rolling back Worker ━━━"
+          npx wrangler rollback --message "Auto-rollback: post-deploy smoke test failed on commit ${{ env.DEPLOY_SHA }}"
+          echo "✅ Worker rolled back to previous stable version"
+
+      - name: Verify API healthy after rollback
+        run: |
+          echo "━━━ Post-rollback health check ━━━"
+          for attempt in 1 2 3 4 5; do
+            HTTP=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 --connect-timeout 5 "${{ env.PRIMARY_URL }}${{ env.HEALTH_PATH }}" 2>/dev/null || echo "000")
+            echo "Attempt ${attempt}/5: HTTP ${HTTP}"
+            if [ "$HTTP" = "200" ]; then
+              echo "✅ API healthy post-rollback"
+              echo "rollback_verified=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "❌ API still not healthy after rollback — this needs immediate human attention."
+          echo "   Follow hardening/DR_ROLLBACK_RUNBOOK.md Section 3 (P0 incident response)."
+          echo "rollback_verified=false" >> "$GITHUB_OUTPUT"
+          exit 1
+        id: verify_rollback
+
+      - name: Rollback step summary
+        if: always()
+        run: |
+          echo "## ⏪ Automated Rollback" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Smoke test failed on commit \`${{ env.DEPLOY_SHA }}\` — Worker was automatically rolled back via \`wrangler rollback\` to the previous stable version." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Cloudflare Pages (frontend) was NOT auto-rolled-back** — no single-command CLI rollback exists for Pages in this wrangler version. If the frontend also needs reverting, follow \`hardening/DR_ROLLBACK_RUNBOOK.md\` Section 2.1 (dashboard rollback, ~1 minute)." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Verify manually: \`curl -s ${{ env.PRIMARY_URL }}${{ env.HEALTH_PATH }}\`" >> "$GITHUB_STEP_SUMMARY"
+
+# =============================================================================
+# JOB 6 · Final Deployment Report + Validation Checklist
 # =============================================================================
   deploy-summary:
     name: Deployment Complete
     runs-on: ubuntu-latest
     timeout-minutes: 3
-    needs: [deploy-workers, deploy-frontend, smoke-test]
+    needs: [deploy-workers, deploy-frontend, smoke-test, rollback]
     if: always()
 
     steps:
@@ -903,8 +1008,17 @@ jobs:
           W="${{ needs.deploy-workers.result }}"
           F="${{ needs.deploy-frontend.result }}"
           S="${{ needs.smoke-test.result }}"
+          R="${{ needs.rollback.result }}"
 
           icon() { case "$1" in success) echo "✅";; skipped) echo "⏭️ ";; failure) echo "❌";; *) echo "⚠️ ";; esac; }
+
+          if [ "$S" = "failure" ]; then
+            case "$R" in
+              success) echo "⏪ Auto-rollback: Worker restored to previous stable version (verified healthy)." ;;
+              failure) echo "⏪ Auto-rollback: attempted but FAILED to verify healthy — manual response required NOW (hardening/DR_ROLLBACK_RUNBOOK.md § 3, P0)." ;;
+              *)       echo "⏪ Auto-rollback: did not run (${R}) — manual response required (hardening/DR_ROLLBACK_RUNBOOK.md)." ;;
+            esac
+          fi
 
           echo "╔══════════════════════════════════════════════════════════════════╗"
           echo "║    CYBERDUDEBIVASH AI Security Hub v${{ env.PLATFORM_VERSION }} -- DEPLOYMENT REPORT   ║"

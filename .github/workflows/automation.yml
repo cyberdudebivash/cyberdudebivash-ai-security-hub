@@ -80,6 +80,10 @@ on:
         required: false
         default: 'false'
         type: boolean
+      confirm_schema_migrate:
+        description: 'Only used when job=schema_migrate: type APPLY to confirm this run against PRODUCTION'
+        required: false
+        default: ''
 
 # Least-privilege: automation only reads repo contents; secrets are injected via env
 permissions:
@@ -1130,6 +1134,42 @@ jobs:
 
       - name: Install Wrangler
         run: npm install -g wrangler@latest --quiet
+
+      # ── Safety gates added to match db-migrate.yml (the repo's other D1
+      # migration path) — this job previously had neither: no typed
+      # confirmation and no pre-migration backup before mutating production,
+      # only the workflow_dispatch job-selector and continue-on-error on the
+      # statements themselves. ─────────────────────────────────────────────
+      - name: Confirmation gate
+        run: |
+          if [ "${{ github.event.inputs.confirm_schema_migrate }}" != "APPLY" ]; then
+            echo "❌ Confirmation gate: you must set confirm_schema_migrate=APPLY to run this job."
+            echo "   This job modifies the PRODUCTION database schema."
+            exit 1
+          fi
+          echo "✅ Confirmed by ${{ github.actor }}"
+
+      - name: Pre-migration backup (rollback point)
+        env:
+          CLOUDFLARE_API_TOKEN:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          DB="cyberdudebivash-security-hub"
+          STAMP="$(date -u '+%Y%m%d-%H%M%S')"
+          echo "MIGRATION_STAMP=${STAMP}" >> "$GITHUB_ENV"
+          echo "━━━ Taking pre-migration backup ━━━"
+          npx wrangler d1 export "$DB" --remote --output "/tmp/pre-schema-migrate-${STAMP}.sql"
+          [ -s "/tmp/pre-schema-migrate-${STAMP}.sql" ] || { echo "❌ Pre-migration backup is empty — ABORTING migration"; exit 1; }
+          gzip -9 "/tmp/pre-schema-migrate-${STAMP}.sql"
+          echo "✅ Pre-migration backup captured"
+
+      - name: Upload pre-migration backup (90-day retention)
+        uses: actions/upload-artifact@v7
+        with:
+          name: pre-schema-migrate-${{ env.MIGRATION_STAMP }}
+          path: /tmp/pre-schema-migrate-${{ env.MIGRATION_STAMP }}.sql.gz
+          retention-days: 90
+          if-no-files-found: error
 
       - name: Add missing columns to existing tables (idempotent — safe on any DB state)
         continue-on-error: true
