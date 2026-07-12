@@ -23,6 +23,8 @@ registry-population session.
 
 **Update — item 21 (`CAP-TIH-003`):** closed the last two open items on the single-highest-surface-area capability in this domain. `rbac.enforced` resolved from `"unknown"` to `true` via a full, line-by-line trace of all ~17 sub-routes in the 581-line router — the real shape is exactly 2 hard 403 gates (TAXII `ioc-feed` PRO+, `actor-feed` ENTERPRISE+), 1 soft content-tiering gate (STIX bundle, access never blocked), and ~14 intentionally-public sub-routes (the 3 costly ones already rate-limited instead, fixed 2026-07-11). Real test coverage added for the ~14 previously-untested sub-routes and all 5 backing services, exercised through the router rather than mocked away. `operational_status` moves `NOT READY`→`PILOT ONLY` — no fabrication found. **21 of 22 done, 1 remains**: `CAP-MSSP-005`.
 
+**Update — item 22 (`CAP-MSSP-005`), final item:** the one remaining item turned out to be the highest-severity real finding of this entire 22-item program. Its own entry had already *speculated* a shared-bucket tenant-collision risk on 2026-07-11 but explicitly logged it as "not confirmed to be reachable in practice." Tracing the full chain — `workers/src/handlers/msspPanel.js`'s `mssp_id` fallback → `workers/src/auth/middleware.js`'s `withAuthAliases` → `workers/src/handlers/partnerAuth.js`'s `resolvePartnerSession` → both partner-onboarding handlers → `workers/schema_master.sql`'s unconstrained `mssp_partners.tier` column — confirmed it **is** reachable: `msspPanel.js` checked a camelCase `authCtx.orgId` that the auth layer never populates (only the snake_case `authCtx.org_id`, built for exactly this purpose after an earlier "confirmed on SOC cases" leak in ~15 other handlers), so every real MSSP/ENTERPRISE-tier reseller-partner session (always `user_id: null`) silently collapsed onto the one shared KV bucket `'default_mssp'` — any two such partners could read and overwrite each other's entire client roster and white-label branding. Fixed additively (matching item 15's discipline): `userId` stays first-priority, `authCtx.org_id` (correct spelling) added as the real second fallback ahead of the shared default. Also closed the pre-existing zero-test-coverage gap: new `workers/test/msspPanelTenantIsolation.test.mjs` (28 tests) proves the isolation fix directly (disjoint KV keys for two different partners' rosters and white-label configs, 404 instead of a cross-tenant leak on a guessed client id, real ENTERPRISE/JWT customers unaffected) plus full behavioral coverage of all 9 entry points. `test_coverage.has_tests` moves `false`→`true`; `operational_status` stays `PILOT ONLY` (the security gap is closed, but a genuine, separate completeness gap — per-client update/offboard and the alerts feed are still backend-only with no UI — keeps this below GA on its own). Flagged, not silently handled: any real partner account already onboarded before this fix may have live data sitting under the old shared `'default_mssp'` key that this code change does not itself migrate or audit. **22 of 22 done — every item in the 22-feature program has now been investigated.** This is not the same as "all 22 are production-ready": live re-query at close shows 20 `PILOT ONLY`, 1 `GA APPROVED WITH DOCUMENTED LIMITATIONS`, 1 still `NOT READY` (`CAP-TIH-014`, whose data-fabrication issue remains open by explicit, standing owner instruction — see item 9). That is the one known gap left before any global-launch claim.
+
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
 appended their own session-log entry below but never rolled the header
@@ -71,11 +73,11 @@ parallel tracking document.
 | Domain files | 21 | `docs/capability-registry/domains/*.json` |
 | Domains populated | 21 | see list below (all 3 former stubs now populated) |
 | Domains empty (stubs) | 0 | none remain |
-| Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
-| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (after CAP-TIH-003's registry update) |
-| Worker test suite | 259 files / 2691 tests passing | `npx vitest run`, run 2026-07-12 — +26 tests this wave, new file `threatIntelProWorkbench.test.mjs` (CAP-TIH-003: real coverage for ~14 previously-untested sub-routes across a 581-line router — real MITRE/actor/risk-scoring/STIX data checks, honest 404s, cache hit/miss, and explicit proof of the 2 real hard tier gates (TAXII ioc-feed/actor-feed) found while tracing rbac.enforced from "unknown"). Baseline going into this wave was 258 files / 2665 tests (CAP-TIH-001). |
+| Capabilities registered | 97 | `node scripts/registry/validate.mjs` (unchanged this wave — CAP-MSSP-005 already existed; this pass corrected its fields, not the count) |
+| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (after CAP-MSSP-005's registry update; 2 hard failures caught and fixed first — an invalid `verification.method` enum value and a bare-filename false-match on the citation regex, both self-inflicted in this same pass, neither a pre-existing issue) |
+| Worker test suite | 260 files / 2719 tests passing | `npx vitest run`, run 2026-07-12 — +28 tests this wave, new file `msspPanelTenantIsolation.test.mjs` (CAP-MSSP-005: the tenant-isolation fix proven directly, plus full behavioral coverage of all 9 entry points). Baseline going into this wave was 259 files / 2691 tests (CAP-TIH-003). |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
-| Backend / Frontend / Parity | 89.7% / 71.6% / 67% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — % unchanged this wave (CAP-TIH-008's `frontend.status` was already `exists`, only `navigation.discoverable` moved) but **Hidden features 21→20** — the first movement on that specific counter in several waves, since CAP-TIH-008's field was a real boolean `false` (not an `"unknown"` string like the last two corrections), so flipping it genuinely removes one hidden feature. `priority` for CAP-TIH-008 stays `P3` per this file's historical-severity convention. |
+| Backend / Frontend / Parity | 89.7% / 72.2% / 68% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — unchanged by CAP-MSSP-005 itself (its `frontend.status` stayed `partial`, nothing moved); **this row is also corrected here** — it had drifted stale at the 71.6%/67% snapshot from the CAP-TIH-008 pass (item 13) and was never rolled forward after CAP-TIH-015 (item 14) explicitly bumped these to 72.2%/68%, three items before this one. Hidden features stays 19, Backend-only stays 14 (unaffected by this item). |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
 | Gaps by severity | Critical 9 · High 24 · Medium 13 · Low 51 | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — unchanged this wave: `priority` fields are preserved historically rather than recomputed live (see row above), so correcting CAP-TIH-008's navigation field does not move this table. Do not hand-diff against older rows in this table — each was already flagged non-comparable; treat this run as the current baseline |
 
@@ -259,6 +261,106 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — 22-paid-feature program, item 22 (of 22 real, final item): CAP-MSSP-005 — a real, currently-reachable cross-tenant data collision found and closed, not just the pre-flagged test/UI gaps
+
+- **Context.** The last item in the 22-feature program. This capability's own
+  entry already documented 3 residual gaps from a 2026-07-11 cataloging pass:
+  (1) zero test coverage, (2) a *speculated, explicitly "not confirmed to be
+  reachable in practice"* shared-bucket tenant-collision risk, and (3) a
+  backend-only per-client management UI. Investigated the tenant-collision
+  concern first, as the security-relevant one, rather than defaulting to the
+  already-flagged "not reachable" verdict.
+- **The trace, done properly, not re-asserted from the prior note.** Read
+  `workers/src/handlers/msspPanel.js` in full: 8 of its 9 entry points scope
+  all KV reads/writes on `const mssp_id = authCtx?.userId || authCtx?.orgId
+  || 'default_mssp'`. Then read `workers/src/auth/middleware.js`'s
+  `withAuthAliases` line by line — its own "Tenant isolation (root fix)"
+  comment block confirms this exact class of bug was already fixed for ~15
+  *other* handlers after a "confirmed on SOC cases" cross-tenant leak, by
+  populating `authCtx.org_id` (snake_case). It never populates the
+  camelCase `authCtx.orgId` that `msspPanel.js` actually reads — that half
+  of the fallback chain was dead on arrival. Then read
+  `workers/src/handlers/partnerAuth.js`'s `resolvePartnerSession`: every
+  MSSP reseller-partner session unconditionally gets `user_id: null`. Then
+  read both partner-onboarding paths (`workers/src/handlers/msspOps.js`'s
+  `handleAddMsspPartner`, `workers/src/handlers/msspOnboardingHandler.js`)
+  and `workers/schema_master.sql`'s `mssp_partners` table: the caller-
+  supplied partner tier is written `tier.toUpperCase()` straight into the DB
+  with **no allow-list validation and no CHECK constraint**, so a partner
+  can legitimately be onboarded today at tier `MSSP` or `ENTERPRISE`, not
+  just the schema default `RESELLER`.
+- **Net effect, confirmed rather than assumed:** every real reseller-partner
+  session's `mssp_id` resolved to the literal shared string `'default_mssp'`
+  — any two such partners shared, and could silently overwrite, the exact
+  same client roster and white-label branding config. What the 2026-07-11
+  entry logged as an unconfirmed theoretical risk is a real, currently-
+  reachable defect via an already-live onboarding path.
+- **Fix, kept additive per this program's established discipline (see item
+  15/`CAP-MYTHOS-001`):** changed all 8 call sites in `msspPanel.js` from
+  `authCtx?.userId || authCtx?.orgId || 'default_mssp'` to `authCtx?.userId
+  || authCtx?.org_id || 'default_mssp'` — reading the field the auth layer
+  actually populates. `userId` deliberately stays first-priority (not
+  replaced), so any already-stored real ENTERPRISE JWT customer's data keeps
+  resolving under its existing key; only the previously-dead second fallback
+  changed.
+- **Test plan:** new `workers/test/msspPanelTenantIsolation.test.mjs` (28
+  tests, all passing on the first real run after fixing two envelope-shape
+  mistakes caught before running — see below) — the first dedicated
+  regression suite for any of this handler's 9 entry points. Covers the
+  `requireMSSP` tier guard; 6 dedicated tenant-isolation regression tests
+  proving two differently-`partnerId`'d MSSP sessions now get disjoint KV
+  keys for both client roster and white-label config, that a partner gets a
+  404 (not a leaked record) guessing another partner's client id, that real
+  `userId`-keyed ENTERPRISE customers are provably unaffected by the change,
+  and documenting the one remaining (unreachable-in-practice) edge case
+  where an authCtx with neither field still falls back to the shared
+  default; plus full behavioral coverage of onboarding validation
+  (duplicate-domain check is real and per-tenant, not global), get/update/
+  offboard (404s, field allow-listing, index sync), summary aggregation
+  math against real fixtures, the alerts feed's intentionally-global (not
+  tenant-scoped) behavior, and white-label config's allow-listed round-trip.
+- **Two of my own mistakes caught before the suite was ever run, same
+  pattern as item 10/`CAP-TIH-002` earlier this program:** first draft
+  asserted directly on `body.total`/`body.client`/`body.code` — wrong, since
+  `lib/response.js`'s `ok()`/`fail()` wrap all payloads under `body.data` and
+  put the machine error code at top-level `body.code` (`body.error` is the
+  human message string, not an object). Read the actual response helper
+  source before re-writing every assertion, rather than guessing the shape
+  from memory of a different handler's tests.
+- Full suite green: 260 files / 2719 tests (up from 259/2691 — this item
+  added exactly 1 file / 28 tests, no other regressions). Registry
+  validator: 2 hard failures caught and fixed before this log entry was
+  written (`verification.method: "static+test"` is not a valid enum value —
+  changed to the same `"static"` this program has used for every other
+  code-read-plus-test-writing pass; a bare `msspPanel.js` citation with no
+  path prefix false-matched the validator's file-citation regex — added the
+  `workers/src/handlers/` prefix), then 0 failures / 0 warnings.
+  `test_coverage.has_tests` moves `false`→`true`. `operational_status` stays
+  `PILOT ONLY` — the now-fixed isolation defect was a security gap, not a
+  frontend-completeness one, but residual gap (3) (per-client update/
+  offboard and the alerts feed still have no UI consumer) is a genuine,
+  still-open completeness gap that keeps this below GA on its own.
+- **Live-data caution flagged in the registry entry's own notes, not just
+  here:** this fix changes where *new* reads/writes land for any reseller
+  partner going forward. It does not migrate or split any data that may
+  already be sitting in production under the literal shared `'default_mssp'`
+  key from before this fix shipped. If any real (non-test) MSSP/ENTERPRISE-
+  tier partner accounts were onboarded before today, that existing KV data
+  should be audited before being trusted as single-tenant — a live-
+  production-data question for whoever owns operations, deliberately not
+  guessed at or silently "fixed" by this code change alone.
+- **22 of 22 done — every `subscription_gated: true` item in this program
+  has now been investigated and brought to its evidenced state.** This is
+  *not* the same claim as "all 22 are production-ready": re-querying live
+  registry data at the close of this item shows 20 `PILOT ONLY`, 1 `GA
+  APPROVED WITH DOCUMENTED LIMITATIONS`, and 1 still `NOT READY` —
+  `CAP-TIH-014`, whose data-fabrication issue (fake vendor-attributed
+  zero-day headline, invented catalog counts, hardcoded fake IOC-lock
+  counts shown to paying premium users) remains deliberately unfixed by
+  explicit, standing owner instruction (see item 9 above). That single item
+  is the one known, clearly-flagged gap standing between this program's
+  work and any "ready for global launch" claim.
 
 ### 2026-07-12 — 22-paid-feature program, item 21 (of 22 real): CAP-TIH-003 — full per-sub-route RBAC trace across a 581-line router, real coverage for ~14 previously-untested sub-routes
 

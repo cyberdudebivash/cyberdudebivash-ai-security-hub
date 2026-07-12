@@ -83,7 +83,7 @@ export async function handleListClients(request, env, authCtx = {}) {
   const guard = requireMSSP(authCtx);
   if (guard?.error) return fail(request, guard.msg, 403, guard.code);
 
-  const mssp_id = authCtx?.userId || authCtx?.orgId || 'default_mssp';
+  const mssp_id = authCtx?.userId || authCtx?.org_id || 'default_mssp';
   const clients = await loadClients(env, mssp_id);
   const url     = new URL(request.url);
   const limit   = Math.min(100, parseInt(url.searchParams.get('limit') || '50', 10));
@@ -124,7 +124,7 @@ export async function handleOnboardClient(request, env, authCtx = {}) {
   const { name, domain, sector, contact_email, tier = 'PRO', notes = '' } = body;
   if (!name || !domain) return fail(request, 'name and domain are required', 400, 'MISSING_FIELDS');
 
-  const mssp_id   = authCtx?.userId || authCtx?.orgId || 'default_mssp';
+  const mssp_id   = authCtx?.userId || authCtx?.org_id || 'default_mssp';
   const clients   = await loadClients(env, mssp_id);
   const client_id = generateClientId();
   const now       = new Date().toISOString();
@@ -183,7 +183,7 @@ export async function handleGetClient(request, env, authCtx = {}) {
   const guard = requireMSSP(authCtx);
   if (guard?.error) return fail(request, guard.msg, 403, guard.code);
 
-  const mssp_id   = authCtx?.userId || authCtx?.orgId || 'default_mssp';
+  const mssp_id   = authCtx?.userId || authCtx?.org_id || 'default_mssp';
   const url       = new URL(request.url);
   const client_id = url.pathname.split('/').pop();
 
@@ -199,7 +199,7 @@ export async function handleUpdateClient(request, env, authCtx = {}) {
   const guard = requireMSSP(authCtx);
   if (guard?.error) return fail(request, guard.msg, 403, guard.code);
 
-  const mssp_id   = authCtx?.userId || authCtx?.orgId || 'default_mssp';
+  const mssp_id   = authCtx?.userId || authCtx?.org_id || 'default_mssp';
   const url       = new URL(request.url);
   const client_id = url.pathname.split('/').pop();
 
@@ -245,7 +245,7 @@ export async function handleOffboardClient(request, env, authCtx = {}) {
     return fail(request, 'Client offboarding requires MSSP plan', 403, 'MSSP_REQUIRED');
   }
 
-  const mssp_id   = authCtx?.userId || authCtx?.orgId || 'default_mssp';
+  const mssp_id   = authCtx?.userId || authCtx?.org_id || 'default_mssp';
   const url       = new URL(request.url);
   const client_id = url.pathname.split('/').pop();
 
@@ -265,7 +265,7 @@ export async function handleGetSummary(request, env, authCtx = {}) {
   const guard = requireMSSP(authCtx);
   if (guard?.error) return fail(request, guard.msg, 403, guard.code);
 
-  const mssp_id = authCtx?.userId || authCtx?.orgId || 'default_mssp';
+  const mssp_id = authCtx?.userId || authCtx?.org_id || 'default_mssp';
   const clients = await loadClients(env, mssp_id);
 
   const active   = clients.filter(c => c.status === 'ACTIVE');
@@ -314,7 +314,7 @@ export async function handleSetWhitelabel(request, env, authCtx = {}) {
   const guard = requireMSSP(authCtx);
   if (guard?.error) return fail(request, guard.msg, 403, guard.code);
 
-  const mssp_id = authCtx?.userId || authCtx?.orgId || 'default_mssp';
+  const mssp_id = authCtx?.userId || authCtx?.org_id || 'default_mssp';
   let body = {};
   try { body = await request.json(); } catch {}
 
@@ -335,7 +335,7 @@ export async function handleGetWhitelabel(request, env, authCtx = {}) {
   const guard = requireMSSP(authCtx);
   if (guard?.error) return fail(request, guard.msg, 403, guard.code);
 
-  const mssp_id = authCtx?.userId || authCtx?.orgId || 'default_mssp';
+  const mssp_id = authCtx?.userId || authCtx?.org_id || 'default_mssp';
   let config = {};
   if (env?.SECURITY_HUB_KV) {
     try { config = (await env.SECURITY_HUB_KV.get(`${KV_WHITELABEL_KEY}:${mssp_id}`, { type: 'json' })) || {}; } catch {}
