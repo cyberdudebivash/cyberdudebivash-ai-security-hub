@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-12 — the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit is now **fully closed** (see the entry twenty-six below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed all 10 Tier-1 items, all 8 Tier-2 items, and all 6 Tier-3 items — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable. Immediately after closing the backlog, the owner asked to verify/validate/audit and merge PR #185 into `main`. That audit caught a real thing: GitHub's native CodeQL code-scanning check (distinct from the SARIF-generation jobs, which were green) failed with 1 new High-severity "incomplete string escaping" alert on this backlog's own Tier-3 item #4 code. Fixed with a new `jsAttrEsc()` helper, and — found in the same pass — a worse, pre-existing sibling bug in unrelated Organization-member code got fixed alongside it (see the top session-log entry for full detail). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 25 session-log entries below for this backlog's full closure account plus the pre-merge security fix, item by item. 0 of the 24 backlog items remain; PR #185 is being merged to `main` now that CI is green.)
+## Current status (2026-07-12 — the prior 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit is **fully closed, merged, and live in production** (PR #185 squash-merged to `main` as commit `9819fed7`, `Deploy to Cloudflare` ran and passed its post-deploy smoke tests; see the entry twenty-seven below for the original 24-item list and the two entries above it for the closure + pre-merge security-fix account). **A new program has now started**, at the owner's explicit direction: bring all 22 `subscription_gated: true` (paid) capabilities in the registry to genuine, evidenced production grade — frontend, backend, RBAC, security, tests, docs, the works — not a subset. Every one of the 22 currently sits below GA; 5 have no working frontend at all. Tracked as tasks #25–#46. Item 1 (`CAP-RBAC-002`, chosen first since 8 other items share its "RBAC not enforced" gap) turned out to need **zero code changes** — the registry's own record was stale, predating the Organizations feature that had already closed the gap; corrected the record instead of inventing busywork. 21 of 22 remain, continuing in chosen order (see the top session-log entry for the full account, including 2 of my own mistakes caught by the validator before commit).
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -247,6 +247,81 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — New program launched: bring all 22 paid/subscription-gated capabilities to genuine production grade — item 1 (of 22): CAP-RBAC-002 re-verified, registry corrected, zero code changes needed
+
+- **Trigger:** with the 24-item Tier 1–3 backlog closed and merged to `main`,
+  owner asked for every flagship *paid* feature on the platform to be
+  brought to real, complete, customer-usable, production-grade status —
+  explicitly not a subset, all 22, across every dimension (frontend,
+  backend, APIs, AI workflows, auth, RBAC, security, validation, error
+  handling, loading states, performance, testing at every level,
+  monitoring, logging, analytics, docs, deployment automation,
+  accessibility, responsive UI, onboarding).
+- **Scoping:** queried the registry directly rather than guessing —
+  `subscription_gated: true` across all 21 domain files returns exactly
+  22 capabilities, and **every one** is currently below GA (9 `NOT
+  READY`, 13 `PILOT ONLY`; 0 clean `GA APPROVED`), none with
+  `customer_journey_complete: true`. 5 of the 6 P2-priority items have no
+  working frontend at all. Logged all 22 as tracked tasks (#25–#46).
+  Chose to start with `CAP-RBAC-002` (Role/Plan-Based Frontend Feature
+  Gating) first, ahead of registry priority order: 8 of the other 21
+  capabilities are independently flagged `rbac.enforced: false`, and
+  fixing the shared gating mechanism once is better leverage than
+  patching that gap ad-hoc in 8 different places later.
+- **Investigation found the registry itself was stale, not the code:**
+  this entry's own notes said org-role-based gating (OWNER/ADMIN/
+  ANALYST/MEMBER/VIEWER) was "entirely unwired… correctly out of scope
+  until organization membership itself has a customer-facing UI." That
+  UI (CAP-ORG-001, `#page-orgs` in `frontend/user-dashboard.html`) has
+  since shipped — confirmed directly in this pass, since this session's
+  own earlier work (the onclick-escaping security fix) touched that
+  exact code. Read `workers/src/handlers/orgManagement.js` end to end:
+  `handleUpdateMemberRole`/`handleRemoveMember`/`handleInviteMember` all
+  scope the caller's membership lookup to `WHERE org_id = ? AND user_id =
+  <their own id>` — real, correct, per-org isolation with no BOLA/IDOR (a
+  user who is OWNER of a *different* org gets no membership row here, not
+  cross-org authority). `frontend/user-dashboard.html:2745-2751` computes
+  `canManage`/`isOwner` from the real `org.your_role` and hides (not just
+  disables) the Invite button, Settings/Audit/Danger-Zone cards, and
+  per-member role-change/remove controls to match — line-for-line
+  consistent with the server-side rule. `workers/test/orgRbacIsolation
+  .test.mjs` (11 tests) already carries its own verdict: "org member
+  management is production-grade." Ran it plus 4 sibling test files (69
+  tests total) — all pass, unchanged.
+- **Conclusion: no code fix needed.** The capability genuinely works,
+  correctly and securely, today. The gap was the registry's own record
+  never being updated after CAP-ORG-001 shipped. Updated
+  `docs/capability-registry/domains/rbac.json`'s `CAP-RBAC-002`: `rbac.
+  enforced` → `true` with real permission strings (`org:invite`,
+  `org:member:role:change`, `org:member:remove`, `org:audit:read`,
+  `org:settings:update`); `operational_status` → `GA APPROVED WITH
+  DOCUMENTED LIMITATIONS`; `frontend`/`test_coverage`/`verification`
+  evidence extended with the citations above; `last_verified` →
+  2026-07-12. **`customer_journey_complete` deliberately left `false`**
+  — the validator hard-fails `true` without `verification.method:
+  "dynamic_browser"`, and this pass used static code-reading plus the
+  existing automated test suite, not a fresh live-browser session against
+  this specific UI. Documented that honestly in `notes` as the one real
+  limitation, rather than overclaiming. `priority` (P4) left unchanged
+  per this file's historical-severity convention.
+- **Caught and fixed 2 of my own mistakes before finishing:** first pass
+  cited 4 evidence filenames without their full relative path (the exact,
+  previously-documented failure mode — `orgManagement.js` instead of
+  `workers/src/handlers/orgManagement.js`, etc.) and set
+  `customer_journey_complete: true` before checking the validator's
+  dynamic_browser requirement. Both caught by `node
+  scripts/registry/validate.mjs` (5 hard failures) before commit, not
+  after.
+- **Verification:** `node scripts/registry/validate.mjs`: 0 failures, 0
+  warnings after fixes. Full suite re-run: 245 files / 2495 tests passing
+  (unchanged — no source code was touched this item).
+  `PRODUCTION_READINESS_REPORT.md` regenerated (operational_status/rbac
+  changes affect the aggregate completion numbers, unlike a notes-only
+  edit).
+- **21 of 22 paid capabilities remain**, continuing in the chosen order
+  (high-leverage/foundational items next, then the 5 P2 no-frontend items,
+  then the rest).
 
 ### 2026-07-12 — Pre-merge security gate: CodeQL caught a real High-severity incomplete-escaping bug in this backlog's own PR before it reached `main`
 
