@@ -58,7 +58,7 @@ describe('Cloud Security Audit engine — real CIS-aligned scoring, not fabricat
 
   it('detects a real, live-shaped public S3 bucket exposure and surfaces it as a CRITICAL finding', async () => {
     global.fetch.mockImplementation((url) => {
-      if (String(url).includes('.s3.amazonaws.com')) {
+      if (new URL(String(url)).hostname.endsWith('.s3.amazonaws.com')) {
         return Promise.resolve({ status: 200, headers: new Headers() });
       }
       return Promise.resolve({ ok: false, status: 404, headers: new Headers() });
@@ -71,7 +71,7 @@ describe('Cloud Security Audit engine — real CIS-aligned scoring, not fabricat
 
   it('detects real cloud provider from a live-shaped DNS CNAME lookup', async () => {
     global.fetch.mockImplementation((url) => {
-      if (String(url).includes('cloudflare-dns.com')) {
+      if (new URL(String(url)).hostname === 'cloudflare-dns.com') {
         return Promise.resolve({ ok: true, json: async () => ({ Answer: [{ type: 5, data: 'd123.cloudfront.amazonaws.com' }] }) });
       }
       return Promise.resolve({ ok: false, status: 404, headers: new Headers() });
