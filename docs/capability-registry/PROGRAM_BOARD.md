@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-12 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry twenty-three below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session has fixed all 10 Tier-1 items and all 8 Tier-2 items — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable — and is now 4 items into Tier 3 (minor/cosmetic class). Item #4, just completed: `user-dashboard.html`'s API Keys "Usage" card permanently read "Select a key to view usage" because no key row had a click handler, link, or button that could ever select one — the backend it needed (`GET /api/keys/:id/usage`) was already correct and already tested. Added a per-row "Usage" button calling a new `viewKeyUsage()` that renders the existing endpoint's response into the table; no backend change needed (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 22 session-log entries below. 2 of the 24 backlog items remain — both Tier 3 — queued next in the audit's stated priority order.)
+## Current status (2026-07-12 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry twenty-four below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session has fixed all 10 Tier-1 items and all 8 Tier-2 items — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable — and is now 5 items into Tier 3 (minor/cosmetic class). Item #5, just completed: `soc-agents.html`'s per-agent token-count pill read `result.tokens?.total_tokens` — a field that has never existed on any of the 3 routes' real responses (the real, only shape is `tokens: { input, output }`), so it silently never rendered for any agent, on any successful run, ever. Fixed to sum the real fields; also corrected an identically-wrong mock shape in the backend's own test suite found while tracing the bug (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 23 session-log entries below. 1 of the 24 backlog items remains — the last Tier-3 item — queued next in the audit's stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 242 files / 2481 tests passing | `npx vitest run`, run 2026-07-12 — +6 tests this wave, new file `userDashboardApiKeysUsageClickFix.test.mjs` (Tier-3 item #4: user-dashboard.html's API Keys Usage card had no way to select a key; static parse checks on the new viewKeyUsage() wiring). Baseline going into this wave was 241 files / 2475 tests (Tier-3 item #3) |
+| Worker test suite | 243 files / 2484 tests passing | `npx vitest run`, run 2026-07-12 — +3 tests this wave, new file `socAgentsTokenCountFix.test.mjs` (Tier-3 item #5: soc-agents.html's token-count pill read a nonexistent tokens.total_tokens field; also corrected an identically-wrong mock shape in multiAgentSOC.test.mjs). Baseline going into this wave was 242 files / 2481 tests (Tier-3 item #4) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,57 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — Tier-3 backlog item #5 (of 6): soc-agents.html — the per-agent token-count pill read a field that never existed
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-3
+  item #4.
+- **Root cause confirmed against actual code:** `updateAgentCard()`'s meta
+  row (model · provider · latency · tokens) read
+  `result.tokens?.total_tokens`. Traced every route that feeds it
+  (`/api/agents/run`, `/api/agents/stream`, `/api/agents/dispatch/:id` —
+  all three call the same `runAgent()`, `workers/src/handlers/multiAgentSOC.js`)
+  and its underlying `routeAICall()`/`dispatchToProvider()`
+  (`workers/src/core/aiProviderRouter.js`): the real, only-ever-produced
+  shape is `tokens: { input, output }` — there is no `total_tokens` field
+  anywhere in the real response, on any of the three routes. The token
+  pill accordingly never rendered, for any agent, on any successful run,
+  regardless of real usage — a pure field-path mismatch, not a missing
+  backend capability (the backend already correctly tracks and returns
+  real usage).
+- **Also found while tracing this:** `workers/test/multiAgentSOC.test.mjs`'s
+  own `routeAICall` mock used the identical wrong shape
+  (`tokens: { total_tokens: 42 }`) — harmless to that file's own
+  assertions (which only check property presence via `toHaveProperty
+  ('tokens')`, never the inner shape), but a misleading model of the real
+  contract sitting right next to the code this fix touches. Corrected to
+  the real `{ input, output }` shape in the same change.
+- **Fix (`frontend/soc-agents.html`):** `updateAgentCard()` now sums
+  `(result.tokens?.input || 0) + (result.tokens?.output || 0)` and only
+  renders the pill when that total is truthy — preserving the original
+  no-pill-when-no-real-data behavior while actually letting a nonzero
+  total render for the first time.
+- **Verification:** `node --check` on the extracted inline `<script>`
+  block. New `workers/test/socAgentsTokenCountFix.test.mjs` (3 tests,
+  static parse): confirms the dead `tokens?.total_tokens` read is gone,
+  confirms the real `tokens.input`/`tokens.output` fields are read
+  instead, and confirms the pill still degrades cleanly to nothing when
+  there's no real usage data. Re-ran the corrected
+  `workers/test/multiAgentSOC.test.mjs` in full (42 tests, all still
+  passing — the mock-shape correction changed no assertion's outcome).
+  Full suite: 243 files / 2484 tests passing (was 242/2481 before this
+  item — +1 file, +3 tests). `node scripts/registry/validate.mjs`: 0
+  failures, 0 warnings.
+- **Registry:** `CAP-MASOC-001` (`masoc.json`, "Multi-Agent SOC — 9
+  Parallel AI Security Agents") directly covers this capability — exact
+  page and exact entry_points match. Appended a dated fix paragraph to
+  its `notes` field; `test_coverage.has_tests` left unchanged since the
+  new test is frontend-only static parse, not new import-based coverage
+  of any backend `entry_point`. `node
+  scripts/registry/generate-report.mjs` regenerated (only the timestamp
+  changed).
+- **1 Tier-3 item remains** (of 6, the last one), queued next in the
+  audit's stated priority order.
 
 ### 2026-07-12 — Tier-3 backlog item #4 (of 6): user-dashboard.html — API Keys "Usage" card had no way to ever select a key
 

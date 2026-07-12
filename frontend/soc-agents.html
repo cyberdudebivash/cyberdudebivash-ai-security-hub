@@ -361,7 +361,11 @@ function updateAgentCard(result) {
     if (result.model && result.model !== 'none')       parts.push(`<span class="agent-meta-item">🤖 ${result.model}</span>`);
     if (result.provider && result.provider !== 'none') parts.push(`<span class="agent-meta-item">⚡ ${result.provider}</span>`);
     if (result.latency_ms)                             parts.push(`<span class="agent-meta-item">⏱ ${result.latency_ms}ms</span>`);
-    if (result.tokens?.total_tokens)                   parts.push(`<span class="agent-meta-item">🔢 ${result.tokens.total_tokens} tokens</span>`);
+    // runAgent() (workers/src/handlers/multiAgentSOC.js) returns tokens as
+    // { input, output } — there is no total_tokens field, so this pill
+    // never rendered for any agent, ever, regardless of real usage.
+    const totalTokens = (result.tokens?.input || 0) + (result.tokens?.output || 0);
+    if (totalTokens)                                    parts.push(`<span class="agent-meta-item">🔢 ${totalTokens} tokens</span>`);
     metaEl.innerHTML = parts.join('');
   }
 

@@ -19,11 +19,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // We must mock routeAICall BEFORE importing the handler so the dynamic import
 // resolves the mock. Use vi.mock() with a factory.
 vi.mock('../src/core/aiProviderRouter.js', () => ({
+  // { input, output } matches routeAICall's real return shape (see
+  // dispatchToProvider in src/core/aiProviderRouter.js) — there is no
+  // total_tokens field. A prior version of this mock used total_tokens,
+  // which doesn't exist on the real response; that mismatch is what let
+  // frontend/soc-agents.html's token-count pill (reading
+  // result.tokens.total_tokens) silently never render, for any agent,
+  // ever — fixed in soc-agents.html to read tokens.input + tokens.output.
   routeAICall: vi.fn().mockResolvedValue({
     content:  'Mocked AI response — CVE analysis complete.',
     model:    'mock-model',
     provider: 'mock-provider',
-    tokens:   { total_tokens: 42 },
+    tokens:   { input: 30, output: 12 },
     latency_ms: 100,
   }),
 }));
