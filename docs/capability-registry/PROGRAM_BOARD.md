@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry sixteen below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed all 10 Tier-1 items and has now completed Tier-2 items #1–#5 (of 8) — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable: #1 `threat-intel-workbench.html`'s unauthenticated/unrate-limited AI-analyst LLM routes; #2 `sentinel-apex-marketplace.html`'s 100%-fabricated Threat Actor/Malware cards; #3 `index.html`'s fabricated "PATCHED" KPI, hardcoded platform-status badge, and false "CyberBrain V2" claims; #4 `cyber-defense.html`'s EPSS/KEV fields (missing from the live-NVD response entirely) and IOC-lookup nested-field mismatch; #5 `god-mode.html`'s Agentic AI Command Center panels (Anomaly/Predictive/Agent Bus) always 401'ing because their shared fetch helper never sent an Authorization header, plus the identical dead-token-key bug in the page's own ENTERPRISE run-trigger helper (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 15 session-log entries below. 9 of the 24 backlog items remain (3 more Tier 2, all 6 of Tier 3), queued in the same stated priority order.)
+## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry seventeen below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed all 10 Tier-1 items and has now completed Tier-2 items #1–#6 (of 8) — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable: #1 `threat-intel-workbench.html`'s unauthenticated/unrate-limited AI-analyst LLM routes; #2 `sentinel-apex-marketplace.html`'s 100%-fabricated Threat Actor/Malware cards; #3 `index.html`'s fabricated "PATCHED" KPI, hardcoded platform-status badge, and false "CyberBrain V2" claims; #4 `cyber-defense.html`'s EPSS/KEV fields (missing from the live-NVD response entirely) and IOC-lookup nested-field mismatch; #5 `god-mode.html`'s Agentic AI Command Center panels always 401'ing (no Authorization header ever sent) plus the identical dead-token-key bug in the run-trigger helper; #6 `ai-security-assessment.html`'s free "Live MITRE ATLAS Probe" demo always failing because it called a POST-only route with the default GET method (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 16 session-log entries below. 8 of the 24 backlog items remain (2 more Tier 2, all 6 of Tier 3), queued in the same stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 235 files / 2434 tests passing | `npx vitest run`, run 2026-07-11 — +5 tests this wave, new file `godModeAgenticPanelAuthFix.test.mjs` (Tier-2 item #5: god-mode.html's Agentic AI panels + run-trigger now read the real session token). Baseline going into this wave was 234 files / 2429 tests (Tier-2 item #4) |
+| Worker test suite | 236 files / 2440 tests passing | `npx vitest run`, run 2026-07-11 — +6 tests this wave, new file `aiRedTeamDemoPostFix.test.mjs` (Tier-2 item #6: ai-security-assessment.html's free Red Team demo now sends a real POST with a JSON body to the POST-only probe/jailbreak route). Baseline going into this wave was 235 files / 2434 tests (Tier-2 item #5) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,69 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-11 — Tier-2 backlog item #6 (of 8): ai-security-assessment.html — free "Live MITRE ATLAS Probe" demo called a POST-only route with GET, always failed
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-2 item #5.
+- **Re-verified against actual code:** `openRedTeamDemo()` — the handler
+  behind the page's "🔍 See a Live MITRE ATLAS Probe — Free, No Payment"
+  button, whose own inline code comment says these probes are "genuinely
+  backed by /api/ai-redteam/*, not fabricated demo data" — fetches two
+  endpoints in parallel and does
+  `if (!techRes.ok || !promptRes.ok) throw new Error('API unavailable')`.
+  One of the two, `fetch(API_BASE + '/api/ai-redteam/probe/jailbreak', {
+  signal: ... })`, sent no `method`, defaulting to GET. Traced the backend's
+  internal router (`handleAIRedTeamPro`,
+  `workers/src/handlers/aiRedTeamPro.js:146`): this exact path is registered
+  **POST-only** (`path === '/api/ai-redteam/probe/jailbreak' && method ===
+  'POST'`); every other method falls through to the router's final
+  `404 {error:'Not found'}`. Because `Promise.all` always resolved
+  `promptRes.ok` to `false`, the `throw` fired on **every single visit**,
+  meaning this entire free demo modal — explicit bait to prove "this is the
+  real engine, not a mockup" before asking for ₹99,999 — always showed the
+  generic "⚠️ Live demo temporarily unavailable" fallback and never once
+  rendered real MITRE ATLAS data to any visitor.
+- **Confirmed a bare method fix alone would not be enough:** `probeJailbreak`
+  (the real handler behind this route) does `const body = await
+  request.json();` unconditionally — a POST with no body at all throws
+  (invalid JSON), caught and turned into a 500. The frontend fix needed a
+  real JSON body, not just the right verb.
+- **Fix (`frontend/ai-security-assessment.html`):** the `/probe/jailbreak`
+  fetch now sends `method: 'POST'`, `'Content-Type': 'application/json'`,
+  and `body: JSON.stringify({})` — an empty object is sufficient since
+  `probeJailbreak` treats both of its read fields
+  (`body.technique`/`body.target_model`) as optional. The sibling
+  `/api/ai-redteam/techniques` fetch (already correctly GET, matching its
+  own GET-only registration) and the page's third `/api/ai-redteam/prompts`
+  call (also already correctly GET) were both verified unaffected/correct
+  and left untouched.
+- **Verification:** `node --check` on the extracted inline `<script>` block;
+  new `workers/test/aiRedTeamDemoPostFix.test.mjs` (6 tests) — 3 real
+  behavioral tests importing `handleAIRedTeamPro` directly (GET really 404s,
+  confirming the root cause; POST with a valid empty-object body really
+  returns 200 with real `probeType`/`probes`/`probeCount`; POST with no body
+  at all really 500s, confirming the body was a necessary part of the fix)
+  plus 3 static-parse tests confirming the frontend's fetch call now
+  specifies `method:'POST'`, the JSON headers/body, and that the sibling
+  GET-only `/api/ai-redteam/techniques` call was left untouched. One
+  self-inflicted false-anchor bug caught and fixed while writing the test:
+  an initial `body.indexOf('/api/ai-redteam/probe/jailbreak')` matched this
+  fix's own explanatory code comment (placed just above the real fetch
+  call, and mentioning the same path) instead of the call site itself;
+  corrected to anchor on the fuller `fetch(API_BASE + '/api/ai-redteam/
+  probe/jailbreak'` substring, which only the real call contains. Searched
+  `workers/test/` for any pre-existing test referencing `openRedTeamDemo`/
+  `probe/jailbreak` — none existed, so no bug-reinforcing assertion needed
+  correcting. Full suite: 236 files / 2440 tests passing (was 235/2434
+  before this item — +1 file, +6 tests). `node scripts/registry/
+  validate.mjs`: 0 failures, 0 warnings. No capability registry domain file
+  covers `aiRedTeamPro.js`/`ai-security-assessment.html` at all (a
+  pre-existing cataloguing gap) — consistent with this session's practice,
+  no new capability entry was added for a bounded bug fix;
+  `PRODUCTION_READINESS_REPORT.md` was not regenerated this item since no
+  registry domain JSON was touched.
+- **2 Tier-2 items remain** (of 8), plus all 6 Tier-3 items, queued next in
+  the audit's stated priority order.
 
 ### 2026-07-11 — Tier-2 backlog item #5 (of 8): god-mode.html — Agentic AI Command Center panels always 401'd, no Authorization header ever sent
 
