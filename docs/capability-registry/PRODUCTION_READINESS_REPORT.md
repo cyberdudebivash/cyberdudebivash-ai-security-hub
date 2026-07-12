@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-12T14:00:17.398Z
+Generated: 2026-07-12T16:19:29.852Z
 Capabilities catalogued: 97
 
 ## Overall Completion
@@ -26,15 +26,15 @@ Capabilities catalogued: 97
 
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
-| Critical | P1 | 9 | Broken customer journey |
-| High | P2 | 24 | Backend exists, frontend missing |
+| Critical | P1 | 3 | Broken customer journey |
+| High | P2 | 25 | Backend exists, frontend missing |
 | Medium | P3 | 7 | Backend+frontend exist, navigation missing |
 | Medium | P4 | 6 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
-| Low | P6 | 37 | No test coverage |
+| Low | P6 | 42 | No test coverage |
 | Low | P7 | 14 | Documentation missing |
 
-**Rollup:** Critical 9 · High 24 · Medium 13 · Low 51
+**Rollup:** Critical 3 · High 25 · Medium 13 · Low 56
 
 ## Structural Findings
 
@@ -43,7 +43,7 @@ Capabilities catalogued: 97
 | Hidden features | 19 | Backend exists, but not discoverable via navigation |
 | Backend-only features | 14 | Backend exists, zero frontend surface |
 | Duplicate systems | 4 | Backend marked `duplicate` (two implementations of one capability) |
-| Broken journeys | 9 | Priority P1 |
+| Broken journeys | 3 | Priority P1 |
 
 ## Production Readiness Verdict: **NOT READY**
 
@@ -90,7 +90,7 @@ complete", "bug free", or "guaranteed".
 
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
-| CAP-COMP-001 | Global Compliance Packs Store | ✓ | ✓ | ✓ | PILOT ONLY | P1 |
+| CAP-COMP-001 | Global Compliance Packs Store | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P1 |
 | CAP-COMP-002 | Compliance Assessment / Readiness Engine (CDB-COMP-001) | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
 | CAP-COMP-003 | Tools Marketplace Compliance Toolkits | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-COMP-004 | DPDP Act 2023 Compliance Management Engine | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
@@ -118,17 +118,17 @@ complete", "bug free", or "guaranteed".
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
 | CAP-DEVPORTAL-001 | API Key Management (canonical) | ✓ | ✓ | ✓ | PILOT ONLY | P7 |
-| CAP-DEVPORTAL-002 | Self-Service Automation API Keys | ✓ | ✓ | ✓ | PILOT ONLY | P1 |
-| CAP-DEVPORTAL-003 | Developer Portal — API Explorer, SDK Generation, OpenAPI/Postman Docs, and Key Self-Serve | ✓ | ◐ | ✗ | PILOT ONLY | P1 |
+| CAP-DEVPORTAL-002 | Self-Service Automation API Keys | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
+| CAP-DEVPORTAL-003 | Developer Portal — API Explorer, SDK Generation, OpenAPI/Postman Docs, and Key Self-Serve | ✓ | ◐ | ✗ | PILOT ONLY | P2 |
 | CAP-DEVPORTAL-004 | Growth/Plan API Key Provisioning | ✓ | ✗ | ✗ | PILOT ONLY | P1 |
 
 ### identity (3 capabilities)
 
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
-| CAP-IDN-001 | Login / Sign-in Entry Point | ✓ | ✓ | ✓ | PILOT ONLY | P1 |
-| CAP-IDN-002 | Sign-Up / Account Creation Entry Point | ✓ | ✓ | ✓ | PILOT ONLY | P1 |
-| CAP-IDN-003 | MFA Second-Factor Login Completion | ✓ | ✓ | ✓ | PILOT ONLY | P1 |
+| CAP-IDN-001 | Login / Sign-in Entry Point | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
+| CAP-IDN-002 | Sign-Up / Account Creation Entry Point | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
+| CAP-IDN-003 | MFA Second-Factor Login Completion | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 
 ### masoc (2 capabilities)
 
@@ -206,7 +206,7 @@ complete", "bug free", or "guaranteed".
 | CAP-CRM-004 | Customer Success Health Scoring | ✗ | ✗ | ✗ | NOT READY | P2 |
 | CAP-CRM-005 | Proposal Generation | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 | CAP-CRM-006 | Security Assessment Booking | ✗ | ✗ | ✗ | NOT READY | P2 |
-| CAP-CRM-007 | Conversion Trigger & Funnel Tracking | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P1 |
+| CAP-CRM-007 | Conversion Trigger & Funnel Tracking | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 | CAP-CRM-008 | Growth & Revenue Automation Suite | ✓ | ✗ | ✗ | NOT READY | P2 |
 
 ### security-scanners (10 capabilities)

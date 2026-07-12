@@ -5,6 +5,7 @@
 // Implements: FAIR risk model, board report generator, breach cost calculator,
 //             ROI vs competitors, regulatory scorecard, KRI dashboard
 // =============================================================================
+import { isRealUser } from '../auth/middleware.js';
 
 // ─── FAIR Risk Model (Factor Analysis of Information Risk) ────────────────────
 // Loss Event Frequency (LEF) = Threat Event Frequency × Vulnerability
@@ -213,14 +214,31 @@ const KRI_DEFINITIONS = [
 ];
 
 // ─── Route Dispatcher ─────────────────────────────────────────────────────────
-export async function handleExecutiveCommandCenter(request, env) {
+// The router (workers/src/index.js's /api/executive/* catch-all) already
+// enforces a PRO/ENTERPRISE/MSSP-tier-or-platform-admin gate before calling
+// this function — but previously resolved that authCtx purely to decide
+// access, then called this handler with none of it, so every route below
+// independently trusted a client-supplied org_id (body.org_id / ?org_id=,
+// defaulting to the literal 'default'). That meant any caller who legitimately
+// cleared the tier gate — even the cheapest paying customer — could read or
+// write ANY OTHER org's FAIR risk models, board/CISO reports, and KRI
+// dashboards by supplying a different org_id, or reach the shared 'default'
+// bucket by omitting it. Fixed: org_id is now derived exclusively from the
+// authenticated session and passed down explicitly, mirroring the established
+// pattern in handlers/aiGovernancePro.js.
+export async function handleExecutiveCommandCenter(request, env, authCtx) {
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method;
 
+  if (!isRealUser(authCtx)) {
+    return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+  const orgId = authCtx.org_id || `u:${authCtx.user_id ?? authCtx.userId}`;
+
   // FAIR Risk
-  if (path === '/api/executive/risk/fair' && method === 'POST') return fairRiskAnalysis(request, env);
-  if (path === '/api/executive/risk/portfolio' && method === 'GET') return riskPortfolio(request, env);
+  if (path === '/api/executive/risk/fair' && method === 'POST') return fairRiskAnalysis(request, env, orgId);
+  if (path === '/api/executive/risk/portfolio' && method === 'GET') return riskPortfolio(request, env, orgId);
 
   // Breach Cost
   if (path === '/api/executive/breach-cost' && method === 'POST') return breachCostAnalysis(request, env);
@@ -235,16 +253,16 @@ export async function handleExecutiveCommandCenter(request, env) {
 
   // KRI Dashboard
   if (path === '/api/executive/kri/definitions' && method === 'GET') return listKRIs(request, env);
-  if (path === '/api/executive/kri/dashboard' && method === 'POST') return kriDashboard(request, env);
-  if (path === '/api/executive/kri/submit' && method === 'POST') return submitKRIValues(request, env);
+  if (path === '/api/executive/kri/dashboard' && method === 'POST') return kriDashboard(request, env, orgId);
+  if (path === '/api/executive/kri/submit' && method === 'POST') return submitKRIValues(request, env, orgId);
 
   // Board Reports
-  if (path === '/api/executive/reports/board' && method === 'POST') return generateBoardReport(request, env);
-  if (path === '/api/executive/reports/ciso' && method === 'POST') return generateCISOReport(request, env);
-  if (path.match(/^\/api\/executive\/reports\/[\w-]+$/) && method === 'GET') return getReport(request, env);
+  if (path === '/api/executive/reports/board' && method === 'POST') return generateBoardReport(request, env, orgId);
+  if (path === '/api/executive/reports/ciso' && method === 'POST') return generateCISOReport(request, env, orgId);
+  if (path.match(/^\/api\/executive\/reports\/[\w-]+$/) && method === 'GET') return getReport(request, env, orgId);
 
   // Executive Dashboard
-  if (path === '/api/executive/dashboard' && method === 'GET') return executiveDashboard(request, env);
+  if (path === '/api/executive/dashboard' && method === 'GET') return executiveDashboard(request, env, orgId);
 
   return new Response(JSON.stringify({ error:'Not found' }), { status:404, headers:{ 'Content-Type':'application/json' } });
 }
@@ -253,11 +271,10 @@ function jsonResp(data, status=200) {
   return new Response(JSON.stringify(data), { status, headers:{ 'Content-Type':'application/json' } });
 }
 
-async function fairRiskAnalysis(request, env) {
+async function fairRiskAnalysis(request, env, orgId) {
   try {
     const body = await request.json();
     const result = calculateFAIRRisk(body);
-    const orgId = body.org_id || 'default';
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     await env.DB.prepare(`INSERT INTO fair_risk_assessments (id,org_id,scenario_name,inputs,outputs,risk_level,ale,created_at)
@@ -272,9 +289,8 @@ async function fairRiskAnalysis(request, env) {
   } catch(e) { return jsonResp({ error:e.message }, 500); }
 }
 
-async function riskPortfolio(request, env) {
+async function riskPortfolio(request, env, orgId) {
   try {
-    const orgId = new URL(request.url).searchParams.get('org_id')||'default';
     const { results } = await env.DB.prepare(
       'SELECT * FROM fair_risk_assessments WHERE org_id=? ORDER BY ale DESC LIMIT 20'
     ).bind(orgId).all();
@@ -391,10 +407,9 @@ async function listKRIs(request, env) {
   return jsonResp({ kris, total:kris.length, categories:[...new Set(KRI_DEFINITIONS.map(k=>k.category))] });
 }
 
-async function submitKRIValues(request, env) {
+async function submitKRIValues(request, env, orgId) {
   try {
     const body = await request.json();
-    const orgId = body.org_id||'default';
     const period = body.period||new Date().toISOString().slice(0,7); // YYYY-MM
     const values = body.values||{};
     const now = new Date().toISOString();
@@ -404,10 +419,9 @@ async function submitKRIValues(request, env) {
   } catch(e) { return jsonResp({ error:e.message }, 500); }
 }
 
-async function kriDashboard(request, env) {
+async function kriDashboard(request, env, orgId) {
   try {
     const body = await request.json();
-    const orgId = body.org_id||'default';
     const period = body.period||new Date().toISOString().slice(0,7);
     const stored = await env.DB.prepare('SELECT kri_values FROM executive_kri_values WHERE org_id=? AND period=?').bind(orgId,period).first();
     const values = stored ? JSON.parse(stored.kri_values) : body.current_values||{};
@@ -439,10 +453,9 @@ async function kriDashboard(request, env) {
   } catch(e) { return jsonResp({ error:e.message }, 500); }
 }
 
-async function generateBoardReport(request, env) {
+async function generateBoardReport(request, env, orgId) {
   try {
     const body = await request.json();
-    const orgId = body.org_id||'default';
     const quarter = body.quarter||`Q${Math.ceil((new Date().getMonth()+1)/3)} ${new Date().getFullYear()}`;
     const reportId = crypto.randomUUID();
     const now = new Date().toISOString();
@@ -508,10 +521,9 @@ async function generateBoardReport(request, env) {
   } catch(e) { return jsonResp({ error:e.message }, 500); }
 }
 
-async function generateCISOReport(request, env) {
+async function generateCISOReport(request, env, orgId) {
   try {
     const body = await request.json();
-    const orgId = body.org_id||'default';
     const period = body.period||new Date().toISOString().slice(0,7);
     const reportId = crypto.randomUUID();
     const now = new Date().toISOString();
@@ -542,9 +554,8 @@ async function generateCISOReport(request, env) {
   } catch(e) { return jsonResp({ error:e.message }, 500); }
 }
 
-async function getReport(request, env) {
+async function getReport(request, env, orgId) {
   const id = new URL(request.url).pathname.split('/').pop();
-  const orgId = new URL(request.url).searchParams.get('org_id')||'default';
   try {
     const report = await env.KV.get(`exec_report:${orgId}:${id}`,'json');
     if (!report) return jsonResp({ error:'Report not found or expired' }, 404);
@@ -552,9 +563,8 @@ async function getReport(request, env) {
   } catch(e) { return jsonResp({ error:e.message }, 500); }
 }
 
-async function executiveDashboard(request, env) {
+async function executiveDashboard(request, env, orgId) {
   try {
-    const orgId = new URL(request.url).searchParams.get('org_id')||'default';
     const [fairRows, modelRows, kriStored, campaignRows] = await Promise.all([
       env.DB.prepare('SELECT SUM(ale) as total_ale, COUNT(*) as cnt, MAX(risk_level) as max_risk FROM fair_risk_assessments WHERE org_id=?').bind(orgId).first(),
       env.DB.prepare('SELECT risk_level, COUNT(*) as cnt FROM ai_model_registry WHERE org_id=? AND status!=? GROUP BY risk_level').bind(orgId,'deleted').all().then(r=>r.results),

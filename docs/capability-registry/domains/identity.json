@@ -38,8 +38,8 @@
       { "path": "GENERAL_AVAILABILITY_REPORT.md", "tag": "canonical" }
     ],
     "customer_journey_complete": true,
-    "operational_status": "PILOT ONLY",
-    "priority": "P1",
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P6",
     "verification": {
       "method": "dynamic_browser",
       "last_verified": "2026-07-11",
@@ -53,7 +53,7 @@
         "correction": "\"Live-verified\" here means the API endpoints were exercised directly (dynamic_api), not that a customer could find and use the login form from the production site — the dead-end-modal / buried-footer-link finding this correction described is now fixed (2026-07-09) and a full real dynamic_browser chain against live production (signup -> MFA enable -> logout -> login -> MFA challenge -> authenticated homepage) was completed 2026-07-11, so customer_journey_complete is now true."
       }
     ],
-    "notes": "Classified P1 rather than P2 because this is the single entry point every other authenticated capability depends on — a customer who cannot find sign-in cannot reach anything else, regardless of how complete the rest of the platform is. Fixed as a minimally-disruptive, additive change: the existing authenticated-user Dashboard-link mechanism and the in-page #dashboard section (both already working) were left completely untouched — only the missing logged-out case was added, following the codebase's own established idempotent-injection pattern rather than introducing a new one."
+    "notes": "Classified P1 rather than P2 because this is the single entry point every other authenticated capability depends on — a customer who cannot find sign-in cannot reach anything else, regardless of how complete the rest of the platform is. Fixed as a minimally-disruptive, additive change: the existing authenticated-user Dashboard-link mechanism and the in-page #dashboard section (both already working) were left completely untouched — only the missing logged-out case was added, following the codebase's own established idempotent-injection pattern rather than introducing a new one. CORRECTED 2026-07-12 (Enterprise Production Certification Program): re-verified from scratch — read auth.js/index.js/user-dashboard.html/index.html directly, ran the real (non-mocked) test suites covering this flow (homepageSignInPath, userDashboardSignupAndMfa, homepageMobileNavOverflow — 39 tests), confirmed via git pickaxe that the fix (commit c739ee3e) is an ancestor of HEAD and untouched by ~19 later commits to the same files, and confirmed customer_journey_complete/verification.method (dynamic_browser, 2026-07-11) already reflected the fix — only operational_status and priority had not been updated after it landed. No code changes were needed this pass. Moved off P1/PILOT ONLY to match the evidence already on file."
   },
   {
     "id": "CAP-IDN-002",
@@ -90,8 +90,8 @@
       { "path": "GENERAL_AVAILABILITY_REPORT.md", "tag": "canonical" }
     ],
     "customer_journey_complete": true,
-    "operational_status": "PILOT ONLY",
-    "priority": "P1",
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P6",
     "verification": {
       "method": "dynamic_browser",
       "last_verified": "2026-07-11",
@@ -105,7 +105,7 @@
         "correction": "\"Live-verified\" here means POST /api/auth/signup was exercised directly (dynamic_api) — it was never claiming a customer could reach a signup form from the production site, and none existed anywhere until this fix (2026-07-09). A real dynamic_browser verification pass against live production completed 2026-07-11 (real signup, HTTP 201, real token issuance), so customer_journey_complete is now true."
       }
     ],
-    "notes": "Classified P1 (the schema's highest tier) — arguably more severe than CAP-IDN-001's entry-point discoverability fix, because this wasn't a broken link to a working feature, it was the complete absence of any way for a net-new customer to become a customer at all, reported as a live Microsoft escalation. Fixed as a minimally-disruptive, additive change: zero modifications to the existing, working POST /api/auth/signup backend or to the login/forgot/reset views; only the missing signup surface was added, reusing the login overlay's exact established markup/CSS/JS conventions rather than introducing a new pattern or a separate page. Known, deliberately out-of-scope follow-up: a site-wide 'color-contrast' issue on the '--muted' design token (#64748b on #111827, 3.72:1 vs the 4.5:1 WCAG AA minimum) affects every .form-label and .login-sub across all five auth views (login/signup/forgot/reset/mfa) — confirmed pre-existing (identical on the untouched login-view baseline) and out of scope for an auth-flow bug fix; would need a deliberate design-token change reviewed against every page using --muted, not a point fix here."
+    "notes": "Classified P1 (the schema's highest tier) — arguably more severe than CAP-IDN-001's entry-point discoverability fix, because this wasn't a broken link to a working feature, it was the complete absence of any way for a net-new customer to become a customer at all, reported as a live Microsoft escalation. Fixed as a minimally-disruptive, additive change: zero modifications to the existing, working POST /api/auth/signup backend or to the login/forgot/reset views; only the missing signup surface was added, reusing the login overlay's exact established markup/CSS/JS conventions rather than introducing a new pattern or a separate page. Known, deliberately out-of-scope follow-up: a site-wide 'color-contrast' issue on the '--muted' design token (#64748b on #111827, 3.72:1 vs the 4.5:1 WCAG AA minimum) affects every .form-label and .login-sub across all five auth views (login/signup/forgot/reset/mfa) — confirmed pre-existing (identical on the untouched login-view baseline) and out of scope for an auth-flow bug fix; would need a deliberate design-token change reviewed against every page using --muted, not a point fix here. CORRECTED 2026-07-12 (Enterprise Production Certification Program): re-verified from scratch — same independent method as CAP-IDN-001 (direct source read, real test execution, git-pickaxe provenance check). Confirmed fixed and unreverted; the pre-existing --muted text-contrast issue noted above remains the one documented limitation (cosmetic, not a blocking defect). operational_status/priority had not been updated after the fix landed — corrected to match the evidence already on file. No code changes needed this pass."
   },
   {
     "id": "CAP-IDN-003",
@@ -142,14 +142,14 @@
       { "path": "GENERAL_AVAILABILITY_REPORT.md", "tag": "canonical" }
     ],
     "customer_journey_complete": true,
-    "operational_status": "PILOT ONLY",
-    "priority": "P1",
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P6",
     "verification": {
       "method": "dynamic_browser",
       "last_verified": "2026-07-11",
       "evidence": "FIXED 2026-07-09 (same commit/session as CAP-IDN-002). Static: frontend/user-dashboard.html, workers/src/index.js, workers/src/handlers/auth.js, workers/src/handlers/mfa.js read directly. Dynamic: real headless-Chromium Playwright session — mocked POST /api/auth/login returning mfa_required:true, confirmed the UI correctly switches to the code-entry view and stores no token; mocked POST /api/auth/mfa/authenticate returning real tokens, confirmed login completes; separately confirmed a plain non-MFA login response is handled identically to before the change. Zero uncaught JS exceptions. Full backend suite green: 181 files / 1916 tests, no changes to any backend handler (frontend-only fix consuming an already-correct, already-tested endpoint). RE-VERIFIED 2026-07-11 (Critical-9 sweep) against LIVE PRODUCTION (https://cyberdudebivash.in) with a REAL RFC 6238 TOTP secret and REAL codes (no mocking of any kind): signed up a fresh account, called POST /api/auth/mfa/setup for a real secret, computed a real 6-digit code locally and called POST /api/auth/mfa/enable with { totp_code } (confirmed this is the real expected field name by reading workers/src/handlers/mfa.js's handleMFAEnable directly — an earlier attempt using { token } correctly 400'd with 'totp_code must be 6 digits'), got real backup codes back, then logged out and logged back in through the real UI: #mfa-view appeared automatically after password acceptance with zero token stored mid-challenge, submitted a freshly-computed real TOTP code via the real #mfa-code field, and POST /api/auth/mfa/authenticate completed the login with a real access token. Confirmed the homepage then shows a Dashboard link instead of Sign In (CAP-IDN-001's authenticated symmetry). Zero uncaught JS errors across the full chain. Cleaned up via DELETE /api/auth/delete-account (200)."
     },
     "contradicts_doc": [],
-    "notes": "Classified P1 (not P0) because it only blocks the subset of customers who have opted into MFA — likely a small population pre-launch — versus CAP-IDN-002 which blocked every net-new customer. Zero backend changes: POST /api/auth/mfa/authenticate was already correct and already tested; this was purely a missing frontend consumer of an existing capability, the same bug class as CAP-IDN-001's three dead links. The request-body field name for both /api/auth/mfa/enable and /api/auth/mfa/authenticate is totp_code (confirmed by direct code read of workers/src/handlers/mfa.js), not token — worth remembering for any future direct-API test script against this endpoint."
+    "notes": "Classified P1 (not P0) because it only blocks the subset of customers who have opted into MFA — likely a small population pre-launch — versus CAP-IDN-002 which blocked every net-new customer. Zero backend changes: POST /api/auth/mfa/authenticate was already correct and already tested; this was purely a missing frontend consumer of an existing capability, the same bug class as CAP-IDN-001's three dead links. The request-body field name for both /api/auth/mfa/enable and /api/auth/mfa/authenticate is totp_code (confirmed by direct code read of workers/src/handlers/mfa.js), not token — worth remembering for any future direct-API test script against this endpoint. CORRECTED 2026-07-12 (Enterprise Production Certification Program): re-verified from scratch — same independent method as CAP-IDN-001/002. doLogin() checks mfa_required before token assignment (frontend/user-dashboard.html), routes correctly to the MFA view, and doMfaVerify() posts the exact fields workers/src/handlers/mfa.js expects; confirmed via git pickaxe the fix is an ancestor of HEAD, untouched since. operational_status/priority had not been updated after the fix landed — corrected to match the evidence already on file (customer_journey_complete:true, verification.method:dynamic_browser since 2026-07-11). No code changes needed this pass."
   }
 ]

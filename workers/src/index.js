@@ -5139,12 +5139,12 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handlePipelineHealth(request, env), request));
     }
     // ── MYTHOS ORCHESTRATOR CORE v1.0 ────────────────────────────────────────
-    // POST /api/mythos/run — trigger autonomous orchestration loop (admin)
+    // POST /api/mythos/run — trigger autonomous orchestration loop
+    // (admin key, or a real paying ENTERPRISE/MSSP-tier caller — both paths
+    // are enforced inside handleMythosRun itself via isValidAdminKey()/tier).
     if (path === '/api/mythos/run' && method === 'POST') {
-      const adminKey = request.headers.get('x-admin-key') || request.headers.get('X-Admin-Key');
-      const isAdmin  = adminKey && env.ADMIN_KEY && adminKey === env.ADMIN_KEY;
-      if (!isAdmin) return withSecurityHeaders(withCors(new Response(JSON.stringify({ success: false, error: 'Admin access required', hint: 'Provide x-admin-key header' }), { status: 403, headers: { 'Content-Type': 'application/json' } }), request));
-      return withSecurityHeaders(withCors(await handleMythosRun(request, env, { role: 'admin' }), request));
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      return withSecurityHeaders(withCors(await handleMythosRun(request, env, authCtx), request));
     }
     // GET /api/mythos/status — live pipeline status (public)
     if (path === '/api/mythos/status' && method === 'GET') {
@@ -7826,7 +7826,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
 
   // v20.0 GOD MODE: AI RED TEAM PRO (MITRE ATLAS v2.1)
   if (path.startsWith('/api/ai-redteam/')) {
-    return handleAIRedTeamPro(request, env);
+    return handleAIRedTeamPro(request, env, authCtx);
   }
 
   // v20.0 GOD MODE: DEVELOPER PORTAL / API ECONOMY
@@ -7853,7 +7853,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       const deny = await requireCan(_execCtx, env, 'admin:analytics:read', 'Executive Command Center requires a PRO/ENTERPRISE plan or platform admin access.');
       if (deny) return withSecurityHeaders(withCors(deny, request));
     }
-    return withSecurityHeaders(withCors(await handleExecutiveCommandCenter(request, env), request));
+    return withSecurityHeaders(withCors(await handleExecutiveCommandCenter(request, env, _execCtx), request));
   }
 
   if (path === '/api/ceo/dashboard' || path === '/api/ceo/dashboard/kpis') {

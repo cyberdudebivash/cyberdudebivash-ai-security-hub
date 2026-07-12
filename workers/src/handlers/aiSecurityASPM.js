@@ -80,8 +80,14 @@ export async function handleScanAIAsset(request, env, authCtx) {
   const url = new URL(request.url);
   const parts = url.pathname.split('/');
   const assetId = parts[parts.indexOf('assets') + 1];
+  const orgId = authCtx.orgId || authCtx.userId;
 
-  const asset = await env.DB.prepare('SELECT * FROM ai_assets WHERE id=?').bind(assetId).first();
+  // Scoped by org_id (same derivation as handleRegisterAIAsset/handleListAIAssets
+  // above) — previously any authenticated caller could scan, read full posture
+  // findings for, and overwrite the security_score/risk_score of ANY other
+  // tenant's asset just by supplying its id, since this lookup had no
+  // ownership check at all.
+  const asset = await env.DB.prepare('SELECT * FROM ai_assets WHERE id=? AND org_id=?').bind(assetId, orgId).first();
   if (!asset) return err('Asset not found', 404);
 
   const checks = OWASP_LLM_CHECKS[asset.asset_type] || OWASP_LLM_CHECKS['model'];
@@ -133,10 +139,10 @@ export async function handleScanAIAsset(request, env, authCtx) {
     } catch { /* non-blocking */ }
   }
 
-  // Update asset scores
+  // Update asset scores (org_id re-checked here too, defense in depth)
   await env.DB.prepare(
-    'UPDATE ai_assets SET security_score=?, risk_score=?, last_scanned=unixepoch(), updated_at=unixepoch() WHERE id=?'
-  ).bind(securityScore, riskScore, assetId).run();
+    'UPDATE ai_assets SET security_score=?, risk_score=?, last_scanned=unixepoch(), updated_at=unixepoch() WHERE id=? AND org_id=?'
+  ).bind(securityScore, riskScore, assetId, orgId).run();
 
   const grade = riskGrade(securityScore);
   return json({
