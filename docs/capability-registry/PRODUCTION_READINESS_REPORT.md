@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-12T12:39:47.380Z
+Generated: 2026-07-12T12:44:59.226Z
 Capabilities catalogued: 97
 
 ## Overall Completion
@@ -18,8 +18,8 @@ Capabilities catalogued: 97
 | Dimension | % |
 |---|---|
 | Backend | 89.7% |
-| Frontend | 71.6% |
-| Parity (backend **and** frontend both exist) | 67% |
+| Frontend | 72.2% |
+| Parity (backend **and** frontend both exist) | 68% |
 | Customer Journeys complete (dynamic_browser-verified) | 3.1% |
 
 ## Gaps by Priority
@@ -40,7 +40,7 @@ Capabilities catalogued: 97
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 20 | Backend exists, but not discoverable via navigation |
+| Hidden features | 19 | Backend exists, but not discoverable via navigation |
 | Backend-only features | 14 | Backend exists, zero frontend surface |
 | Duplicate systems | 4 | Backend marked `duplicate` (two implementations of one capability) |
 | Broken journeys | 9 | Priority P1 |
@@ -253,7 +253,7 @@ complete", "bug free", or "guaranteed".
 | CAP-TIH-012 | Customer/MSSP Personalized Intelligence | ✓ | ✓ | ✗ | NOT READY | P3 |
 | CAP-TIH-013 | Enterprise Premium Intelligence API | ✓ | ✓ | ✓ | PILOT ONLY | P3 |
 | CAP-TIH-014 | Intelligence Preview (freemium teaser cards) | ✓ | ✓ | ✓ | NOT READY | P2 |
-| CAP-TIH-015 | Public Threat-Intel Feeds & Monetization Tier Matrix | ✓ | ◐ | ✗ | PILOT ONLY | P3 |
+| CAP-TIH-015 | Public Threat-Intel Feeds & Monetization Tier Matrix | ✓ | ✓ | ✓ | PILOT ONLY | P3 |
 | CAP-TIH-016 | Attack Graph from Scan Results | ✓ | ◐ | ✓ | NOT READY | P6 |
 | CAP-TIH-017 | Scan-Finding to CVE Correlation (legacy) | ✓ | ✗ | ✗ | NOT READY | P7 |
 
