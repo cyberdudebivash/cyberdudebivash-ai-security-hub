@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-12 — the prior 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit is **fully closed, merged, and live in production** (PR #185 squash-merged to `main` as commit `9819fed7`, `Deploy to Cloudflare` ran and passed its post-deploy smoke tests; see the entry twenty-eight below for the original 24-item list and the two entries above it for the closure + pre-merge security-fix account). **A new program has now started**, at the owner's explicit direction: bring all 22 `subscription_gated: true` (paid) capabilities in the registry to genuine, evidenced production grade — frontend, backend, RBAC, security, tests, docs, the works — not a subset. Every one of the 22 currently sits below GA; 5 have no working frontend at all. Tracked as tasks #25–#46. Item 1 (`CAP-RBAC-002`, chosen first since 8 other items share its "RBAC not enforced" gap) turned out to need **zero code changes** — the registry's own record was stale, predating the Organizations feature that had already closed the gap; corrected the record instead of inventing busywork. Item 2 (`CAP-MYTHOS-003`) was the opposite case: investigation found a live, unauthenticated production endpoint fabricating security-scan and compliance results under the platform's brand name, plus a dangerous, untested, live-reachable duplicate payment/tier-grant mechanism sitting behind it — both fixed (scan/compliance redirected to this platform's real engines; the duplicate payment path removed outright with the owner's explicit sign-off). Item 3 (`CAP-DEVPORTAL-002`) resolved its two open "unknown" registry fields by direct verification: `subscription_gated` was confirmed `false` (correctly tier-scaled, not a paid-only gate — matches its canonical sibling), and `navigation.discoverable` was confirmed **false** and fixed — the page had zero links anywhere outside the sitemap, now has a real nav-item. Item 4 (`CAP-DEVPORTAL-004`) surfaced a second live, unauthenticated vulnerability this program has found: a sibling route (`POST /api/growth/upgrade`, not previously catalogued under this capability) let anyone mint a real, free ENTERPRISE-tier API key for any email with zero payment — closed with the same RBAC gate already used for 3 sibling routes in the same file, proven at the database-mutation level, not just an HTTP status code. Item 5 (`CAP-COMP-002`) was a genuine no-frontend gap, not a bug: a real, tier-gated, ₹24,999-value ISO27001/NIST-CSF/GDPR assessment engine had zero way for a paying PRO/ENTERPRISE customer to ever reach it — built a real dashboard tab for it, the first fix this wave to move the structural readiness numbers (Frontend 66.5%→67.5%, Parity 60.8%→61.9%, Hidden features 25→24, Backend-only 18→17). Item 6 (`CAP-COMP-004`) was the same shape of gap on a second, independent engine: a real DPDP Act 2023 (India) compliance assessment + RoPA generator, tier-gated PRO/ENTERPRISE/MSSP, zero frontend anywhere — built a second dashboard tab, moving the numbers again (Frontend 67.5%→68.6%, Parity 61.9%→62.9%, Hidden features 24→23, Backend-only 17→16). Item 7 (`CAP-ORG-001`) turned out already essentially complete from prior sessions (full backend, full RBAC-matched UI, real local Playwright + axe-core verification) — the one open field (`subscription_gated`) was resolved to `false` (tier-scaled org limits, not a paid-only gate), zero code change needed, same treatment as item 1. The one honest remaining gap — a real dynamic_browser verification pass against LIVE production — was deliberately not attempted in this pass (a materially riskier kind of action than local/mocked testing) and stays flagged rather than guessed at. See the top session-log entry for the full account. 15 of 22 remain, continuing in chosen order.
+## Current status (2026-07-12 — the prior 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit is **fully closed, merged, and live in production** (PR #185 squash-merged to `main` as commit `9819fed7`, `Deploy to Cloudflare` ran and passed its post-deploy smoke tests; see the entry twenty-eight below for the original 24-item list and the two entries above it for the closure + pre-merge security-fix account). **A new program has now started**, at the owner's explicit direction: bring all 22 `subscription_gated: true` (paid) capabilities in the registry to genuine, evidenced production grade — frontend, backend, RBAC, security, tests, docs, the works — not a subset. Every one of the 22 currently sits below GA; 5 have no working frontend at all. Tracked as tasks #25–#46. Item 1 (`CAP-RBAC-002`, chosen first since 8 other items share its "RBAC not enforced" gap) turned out to need **zero code changes** — the registry's own record was stale, predating the Organizations feature that had already closed the gap; corrected the record instead of inventing busywork. Item 2 (`CAP-MYTHOS-003`) was the opposite case: investigation found a live, unauthenticated production endpoint fabricating security-scan and compliance results under the platform's brand name, plus a dangerous, untested, live-reachable duplicate payment/tier-grant mechanism sitting behind it — both fixed (scan/compliance redirected to this platform's real engines; the duplicate payment path removed outright with the owner's explicit sign-off). Item 3 (`CAP-DEVPORTAL-002`) resolved its two open "unknown" registry fields by direct verification: `subscription_gated` was confirmed `false` (correctly tier-scaled, not a paid-only gate — matches its canonical sibling), and `navigation.discoverable` was confirmed **false** and fixed — the page had zero links anywhere outside the sitemap, now has a real nav-item. Item 4 (`CAP-DEVPORTAL-004`) surfaced a second live, unauthenticated vulnerability this program has found: a sibling route (`POST /api/growth/upgrade`, not previously catalogued under this capability) let anyone mint a real, free ENTERPRISE-tier API key for any email with zero payment — closed with the same RBAC gate already used for 3 sibling routes in the same file, proven at the database-mutation level, not just an HTTP status code. Item 5 (`CAP-COMP-002`) was a genuine no-frontend gap, not a bug: a real, tier-gated, ₹24,999-value ISO27001/NIST-CSF/GDPR assessment engine had zero way for a paying PRO/ENTERPRISE customer to ever reach it — built a real dashboard tab for it, the first fix this wave to move the structural readiness numbers (Frontend 66.5%→67.5%, Parity 60.8%→61.9%, Hidden features 25→24, Backend-only 18→17). Item 6 (`CAP-COMP-004`) was the same shape of gap on a second, independent engine: a real DPDP Act 2023 (India) compliance assessment + RoPA generator, tier-gated PRO/ENTERPRISE/MSSP, zero frontend anywhere — built a second dashboard tab, moving the numbers again (Frontend 67.5%→68.6%, Parity 61.9%→62.9%, Hidden features 24→23, Backend-only 17→16). Item 7 (`CAP-ORG-001`) turned out already essentially complete from prior sessions (full backend, full RBAC-matched UI, real local Playwright + axe-core verification) — the one open field (`subscription_gated`) was resolved to `false` (tier-scaled org limits, not a paid-only gate), zero code change needed, same treatment as item 1. The one honest remaining gap — a real dynamic_browser verification pass against LIVE production — was deliberately not attempted in this pass (a materially riskier kind of action than local/mocked testing) and stays flagged rather than guessed at. Item 8 (`CAP-TIH-009`) — owner explicitly directed building real dashboards for a cluster of API-only threat-intel products rather than leaving them API-only; built a "Threat Intel API" tab with 5 live lookup tools (IOC/CVE/actor/TTP/risk), also closing a real test-coverage gap for 4 previously-unconfirmed handlers (Frontend 68.6%→69.6%, Parity 62.9%→63.9%). Two more items in this owner-directed cluster (CAP-TIH-002's leftover v1 routes, CAP-TIH-014) remain. See the top session-log entry for the full account. 14 of 22 remain, continuing in chosen order.
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -60,10 +60,10 @@ parallel tracking document.
 | Domains populated | 21 | see list below (all 3 former stubs now populated) |
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
-| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (after CAP-ORG-001's registry update) |
-| Worker test suite | 249 files / 2538 tests passing | `npx vitest run`, run 2026-07-12 — unchanged this wave (CAP-ORG-001 was a docs-only registry correction, no code touched). |
+| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (after CAP-TIH-009's registry update) |
+| Worker test suite | 250 files / 2549 tests passing | `npx vitest run`, run 2026-07-12 — +11 tests this wave, new file `intelApiDashboard.test.mjs` (CAP-TIH-009: closes a real test-coverage gap for 4 previously-unconfirmed backend handlers, plus proves the new dashboard tab is real and calls the right endpoints). Baseline going into this wave was 249 files / 2538 tests (CAP-ORG-001). |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
-| Backend / Frontend / Parity | 89.7% / 68.6% / 62.9% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — Frontend and Parity moved again this wave (up from 67.5%/61.9%): CAP-COMP-004 gained a real frontend tab + nav discoverability, moving Hidden features 24→23 and Backend-only features 17→16. Two consecutive structural gains now (CAP-COMP-002, CAP-COMP-004) — both were genuine no-frontend gaps on otherwise-real backends, not bugs. |
+| Backend / Frontend / Parity | 89.7% / 69.6% / 63.9% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — moved again this wave (up from 68.6%/62.9%): CAP-TIH-009 gained a real frontend tab + nav discoverability, moving Hidden features 23→22 and Backend-only features 16→15. Third consecutive structural gain (CAP-COMP-002, CAP-COMP-004, CAP-TIH-009) — this one owner-directed rather than judgment-called. |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
 | Gaps by severity | Critical 9 · High 24 · Medium 13 · Low 51 | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — Medium +1 (P4, CAP-MSSP-005's rbac.enforced:true but frontend partial nudges its own bucket) and Low +1 (P6, CAP-MASOC-002/CAP-MSSP-005 both carry real but incomplete test coverage) from the 2 new entries; Critical/High unchanged. Do not hand-diff against older rows in this table — each was already flagged non-comparable; treat this run as the current baseline |
 
@@ -247,6 +247,71 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — 22-paid-feature program, item 8 (of 22): CAP-TIH-009 — owner-directed dashboard build for the Threat Intel API Economy product
+
+- **Context: a cluster decision, not a solo call.** Investigating CAP-TIH-002
+  (Threat Intel Feed & Versioned API) surfaced 5 of its 10 backend routes
+  with no frontend caller, which overlapped with two sibling capabilities
+  already carrying explicit prior-session cautions: CAP-TIH-009 (API
+  Economy — "worth a decision on whether [no dashboard] is acceptable for
+  an API-only SKU") and CAP-TIH-014 (Intelligence Preview — upgrade URLs
+  point to an external storefront, `intel.cyberdudebivash.com`, a concrete
+  signal it may have been built for a different property entirely — a
+  prior session explicitly wrote "do not build a UI here without
+  confirmation"). Presented this cluster to the owner rather than
+  guessing across three related but distinct judgment calls at once.
+  Recommended API-only-is-fine for TIH-002/009 (matching how
+  CAP-DEVPORTAL-004's growth API was treated) and holding TIH-014 for
+  explicit confirmation given its concrete red flag — **owner directed
+  the opposite: build real dashboards for all three.** Proceeding on
+  that explicit instruction.
+- **This entry: CAP-TIH-009 first**, since it has the cleanest, most
+  self-contained scope of the three (5 well-defined lookup endpoints, no
+  duplicate-engine entanglement). `workers/src/handlers/intelAPIHandlers.js`
+  is a real, substantial monetized API product: IOC enrichment (verdict +
+  risk score + AI context for PRO+), CVE lookup (CVSS/KEV/MITRE mapping,
+  with an explicit anti-hallucination guard — AI enrichment only runs on
+  CVEs actually found in the database), threat actor profiles, MITRE
+  ATT&CK TTP lookup (an embedded 30-technique catalog), and a composite
+  risk score (weighted across domain/IOC-history/SSL/sector/CVE-landscape
+  components). Tiered per-endpoint access: FREE/STARTER get IOC+CVE only,
+  PRO/ENTERPRISE get all 5, plus dual daily+per-minute rate limiting.
+- **The fix:** added a "Threat Intel API" tab to
+  `frontend/user-dashboard.html` with 5 live lookup tools, one per real
+  endpoint, each calling the real `GET /api/intel/*` route and rendering
+  the real response — verdict/risk badge for IOC, severity/CVSS/KEV for
+  CVE, actor profile or list, technique+mitigations for TTP, composite
+  score+narrative for risk. A tier/quota status line shows the
+  customer's plan and today's usage. Because access is genuinely tiered
+  per-endpoint rather than all-or-nothing, a 429 from any one tool
+  renders an inline upgrade notice for that tool specifically, instead of
+  blocking the whole page behind a single gate (the pattern used for the
+  Compliance/DPDP tabs, which really are binary-gated). No backend
+  change.
+- **Also closed a real, independent test-coverage gap** while building
+  this: the registry already flagged `handleIntelCVE`/`handleIntelActor`/
+  `handleIntelTTP`/`handleIntelRisk` as never import-confirmed by any
+  test (only `handleIntelIOC` was, via a rate-limit-focused test
+  elsewhere). New tests exercise all 5 directly, including a
+  specific anti-hallucination check (an unknown CVE ID honestly returns
+  `found_in_db: false`, never a fabricated result) and a 429/upgrade-url
+  check for a FREE-tier caller.
+- **Test plan:** new `workers/test/intelApiDashboard.test.mjs` (11
+  tests). Full suite green: 250 files / 2549 tests (`npx vitest run`, up
+  from 249/2538). Registry validator: 0 failures, 0 warnings (clean on
+  the first pass — no bare-filename citation slip this time).
+- **Third consecutive structural gain:**
+  `PRODUCTION_READINESS_REPORT.md` now shows Frontend 68.6%→69.6%, Parity
+  62.9%→63.9%, Hidden features 23→22, Backend-only features 16→15.
+- **Two more items remain in this owner-directed cluster**, continuing
+  next: CAP-TIH-002's leftover v1 routes (correlations/graph/hunting/IOCs
+  — some of which overlap with duplicate engines flagged elsewhere in
+  this domain, needing care to avoid building a second, confusing UI for
+  functionality CAP-TIH-001 may already expose) and CAP-TIH-014
+  (redirecting its upgrade URLs to this platform's own `/pricing`, per
+  explicit owner instruction, resolving the external-storefront
+  question).
 
 ### 2026-07-12 — 22-paid-feature program, item 7 (of 22): CAP-ORG-001 — already essentially complete; one stale registry field corrected
 

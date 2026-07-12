@@ -405,14 +405,14 @@
       "status": "exists"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "missing",
-      "evidence": "No frontend/*.html page calls any /api/intel/{ioc,cve,actor,ttp,risk} route — a pure API-economy product for external integrators, documented in frontend/api-docs.html text only."
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/user-dashboard.html"],
+      "status": "exists",
+      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html gained a real \"Threat Intel API\" tab (id=\"page-intel-api\") with 5 live lookup tools, one per real endpoint (IOC check, CVE lookup, threat actor search, MITRE ATT&CK TTP lookup, composite risk score) — each calls the real GET /api/intel/* route and renders the real response (verdict/risk_score for IOC, CVSS/KEV/severity for CVE, actor profile or list, technique+mitigations for TTP, composite score+level+narrative for risk). A tier/quota status line at the top shows the customer's plan and today's usage. Because access is tiered per-endpoint (FREE/STARTER: ioc+cve only; PRO/ENTERPRISE: all 5) rather than an all-or-nothing gate, a 429 from any individual tool renders an inline upgrade notice for that tool specifically rather than blocking the whole page. Before this fix: no frontend/*.html page called any /api/intel/{ioc,cve,actor,ttp,risk} route — documented in frontend/api-docs.html text only, no interactive UI."
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "None — API-only product."
+      "discoverable": true,
+      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html's sidebar (same section as DPDP/Compliance/CISO Metrics) now has a real nav-item (data-page=\"intel-api\") linking to the new tab."
     },
     "auth_enforced": true,
     "rbac": { "enforced": true, "permissions": ["tier:PRO", "tier:ENTERPRISE"] },
@@ -420,21 +420,21 @@
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "handleIntelIOC only <- workers/test/intelRateLimitEnforcement.test.mjs. handleIntelCVE/handleIntelActor/handleIntelTTP/handleIntelRisk not import-confirmed."
+      "evidence": "workers/test/intelApiDashboard.test.mjs (2026-07-12, 11 tests) — closes the test-coverage gap for all 4 previously-unconfirmed handlers: handleIntelCVE (honest found_in_db:false for an unknown CVE, no hallucination), handleIntelActor (honest empty result set, not fabricated), handleIntelTTP (real embedded MITRE catalog lookup), handleIntelRisk (real composite score from real component weights), plus handleIntelIOC and a 429/upgrade-url check for a FREE-tier caller. Frontend tests confirm the new tab's nav-item, 5 tool inputs, real endpoint calls per tool, and inline (not page-blocking) 429 handling."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "PILOT ONLY",
     "priority": "P2",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/intelAPIHandlers.js read directly (661 lines, 5 entry points with line numbers, handleIntelTTP's own embedded 30-technique MITRE catalog noted as a third parallel ATT&CK representation); workers/src/index.js:5229-5245 read directly; tierLimits()/checkEntitlement()/dual rate-limiting confirmed; frontend/*.html grepped with 0 hits."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/handlers/intelAPIHandlers.js read directly (661 lines, 5 entry points with line numbers, handleIntelTTP's own embedded 30-technique MITRE catalog noted as a third parallel ATT&CK representation); workers/src/index.js:5229-5245 read directly; tierLimits()/checkEntitlement()/dual rate-limiting confirmed. FIXED 2026-07-12 (22-paid-feature program, item 8 of 22, owner-directed build): frontend/user-dashboard.html read and edited directly to add the real Threat Intel API tab described in frontend.evidence above. All 3 inline <script> blocks re-parsed with node --check (syntax valid). No backend change. Full suite green: 250 files / 2549 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": "Frontend-missing is scored here even though this is meant to be an API-only product (surface_type: none is the schema's correct way to record backend-with-no-UI, per docs/capability-registry/SCHEMA.md §3), because unlike CAP-MYTHOS-004/005 (internal ops tooling), this is a customer-purchasable product with no dashboard for a paying customer to manage/monitor their own usage of it — worth a decision on whether that's acceptable for an API-only SKU or a real gap."
+    "notes": "The prior wave's open question — 'worth a decision on whether [no dashboard] is acceptable for an API-only SKU or a real gap' — is now resolved by explicit owner direction: build a real customer-facing dashboard. Done; see frontend.evidence. handleIntelTTP's embedded 30-technique MITRE catalog remains a noted third parallel ATT&CK representation on this platform (alongside at least two others catalogued elsewhere in this domain) — not reconciled by this fix, which only added a UI consumer for the existing handler, per this wave's standing discipline to flag duplication rather than silently merge engines outside the scope of the specific fix at hand."
   },
   {
     "id": "CAP-TIH-010",

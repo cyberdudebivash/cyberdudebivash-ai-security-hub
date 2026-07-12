@@ -908,6 +908,9 @@
       <div class="nav-item" data-page="dpdp" onclick="showPage('dpdp',this);loadDPDPOverview()">
         <span class="nav-icon">🇮🇳</span> DPDP Act 2023
       </div>
+      <div class="nav-item" data-page="intel-api" onclick="showPage('intel-api',this);loadIntelAPIStatus()">
+        <span class="nav-icon">🔎</span> Threat Intel API
+      </div>
       <div class="nav-item" data-page="ai-analysis" onclick="showPage('ai-analysis',this)">
         <span class="nav-icon">🤖</span> AI Analysis
       </div>
@@ -2233,6 +2236,75 @@
             <button class="btn btn-outline" onclick="generateDPDPRoPA()" style="margin-bottom:16px">📄 Generate RoPA</button>
             <div id="dpdp-ropa-output" style="color:var(--muted);font-size:.85rem">Generate a RoPA document to see your processing-activity record here.</div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-intel-api" class="page">
+      <div class="page-title">Threat Intelligence API</div>
+      <div class="page-subtitle">IOC enrichment, CVE lookup, threat actor profiles, MITRE ATT&CK TTPs, and composite risk scoring — live queries against the same API you can call programmatically</div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-body" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <div style="font-size:.85rem;color:var(--muted)">Your plan: <strong id="intel-api-tier" style="color:var(--fg)">—</strong></div>
+          <div style="font-size:.85rem;color:var(--muted)">Requests used today: <strong id="intel-api-quota" style="color:var(--fg)">—</strong></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🔎 IOC Lookup</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="intel-ioc-value" class="form-input" style="flex:1;min-width:220px" placeholder="Domain, IP, or file hash (e.g. evil-domain.test)" />
+            <button class="btn btn-primary" onclick="intelLookupIOC()">Check</button>
+          </div>
+          <div id="intel-ioc-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🛡️ CVE Lookup</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="intel-cve-value" class="form-input" style="flex:1;min-width:220px" placeholder="CVE ID (e.g. CVE-2024-1234) or keyword" />
+            <button class="btn btn-primary" onclick="intelLookupCVE()">Look up</button>
+          </div>
+          <div id="intel-cve-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🕵️ Threat Actor Lookup</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="intel-actor-value" class="form-input" style="flex:1;min-width:220px" placeholder="Actor name (e.g. APT29) or leave blank + set sector" />
+            <input id="intel-actor-sector" class="form-input" style="max-width:180px" placeholder="Sector (optional)" />
+            <button class="btn btn-primary" onclick="intelLookupActor()">Search</button>
+          </div>
+          <div id="intel-actor-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">⚔️ MITRE ATT&CK TTP Lookup</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="intel-ttp-value" class="form-input" style="flex:1;min-width:220px" placeholder="Technique ID (e.g. T1566) or keyword" />
+            <button class="btn btn-primary" onclick="intelLookupTTP()">Look up</button>
+          </div>
+          <div id="intel-ttp-result"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">📊 Composite Risk Score</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="intel-risk-target" class="form-input" style="flex:1;min-width:220px" placeholder="Target domain or organization" />
+            <input id="intel-risk-sector" class="form-input" style="max-width:180px" placeholder="Sector (optional)" />
+            <button class="btn btn-primary" onclick="intelLookupRisk()">Score</button>
+          </div>
+          <div id="intel-risk-result"></div>
         </div>
       </div>
     </div>
@@ -3709,6 +3781,151 @@
         <thead><tr><th>#</th><th>Activity</th><th>Purpose</th><th>Data Categories</th><th>Legal Basis</th><th>Retention</th><th>Cross-border</th></tr></thead>
         <tbody>${rows || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">No processing activities.</td></tr>'}</tbody>
       </table>`;
+  }
+
+  // ── Threat Intelligence API (CAP-TIH-009) ───────────────────────────────────
+  // Live customer-facing UI for the same /api/intel/* endpoints available for
+  // programmatic use. Tiered per-endpoint access (FREE/STARTER: ioc+cve only;
+  // PRO/ENTERPRISE: all 5) is enforced server-side — a 429 with an upgrade_url
+  // is rendered inline rather than blocking the whole page behind one gate.
+  function loadIntelAPIStatus() {
+    const plan = (_plan?.plan || 'free').toUpperCase();
+    document.getElementById('intel-api-tier').textContent = plan;
+  }
+
+  function intelQuotaLine(quota) {
+    if (!quota) return;
+    document.getElementById('intel-api-quota').textContent =
+      quota.remaining === 'unlimited' ? 'Unlimited' :
+      (quota.used != null && quota.limit != null) ? `${quota.used} / ${quota.limit}` : '—';
+  }
+
+  function intelUpgradeNotice(msg, upgradeUrl) {
+    return `<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:12px 14px;font-size:.85rem">
+      ⚠️ ${msg}${upgradeUrl ? ` <a href="${upgradeUrl}" target="_blank" style="color:var(--accent)">Upgrade →</a>` : ''}
+    </div>`;
+  }
+
+  async function intelApiGet(path, params) {
+    const qs = new URLSearchParams(params).toString();
+    const res = await apiFetch(`${path}?${qs}`);
+    const data = await res.json().catch(() => ({}));
+    return { res, data };
+  }
+
+  async function intelLookupIOC() {
+    const value = document.getElementById('intel-ioc-value').value.trim();
+    const out = document.getElementById('intel-ioc-result');
+    if (!value) { alert('Enter a domain, IP, or hash first.'); return; }
+    out.innerHTML = '<span class="spinner"></span> Checking…';
+    const { res, data } = await intelApiGet('/api/intel/ioc', { value });
+    if (res.status === 429) { out.innerHTML = intelUpgradeNotice(data.error, data.upgrade); return; }
+    if (!data.success) { out.innerHTML = `<div style="color:var(--muted)">${data.error || 'Lookup failed.'}</div>`; return; }
+    intelQuotaLine(data.quota);
+    const verdictColor = { MALICIOUS: '#ef4444', SUSPICIOUS: '#f59e0b', SAFE: '#10b981' }[data.analysis.verdict] || '#94a3b8';
+    out.innerHTML = `
+      <div style="display:flex;gap:16px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+        <span class="badge" style="background:${verdictColor}22;color:${verdictColor};border:1px solid ${verdictColor}55">${data.analysis.verdict}</span>
+        <span style="font-size:.82rem;color:var(--muted)">Risk score: <strong style="color:var(--fg)">${data.analysis.risk_score}</strong></span>
+        <span style="font-size:.82rem;color:var(--muted)">Type: ${data.query.type}</span>
+        <span style="font-size:.82rem;color:var(--muted)">Confidence: ${data.analysis.confidence}</span>
+      </div>
+      <div style="font-size:.85rem;color:var(--muted)">Recommended action: <strong style="color:var(--fg)">${data.context.recommended_action}</strong></div>
+      ${data.context.ai_assessment ? `<div style="margin-top:10px;font-size:.85rem;color:var(--muted);border-left:3px solid var(--accent);padding-left:10px">${data.context.ai_assessment}</div>` : ''}`;
+  }
+
+  async function intelLookupCVE() {
+    const value = document.getElementById('intel-cve-value').value.trim();
+    const out = document.getElementById('intel-cve-result');
+    if (!value) { alert('Enter a CVE ID or keyword first.'); return; }
+    out.innerHTML = '<span class="spinner"></span> Looking up…';
+    const isId = /^CVE-\d{4}-\d+$/i.test(value);
+    const { res, data } = await intelApiGet('/api/intel/cve', isId ? { cve_id: value } : { q: value });
+    if (res.status === 429) { out.innerHTML = intelUpgradeNotice(data.error, data.upgrade); return; }
+    if (!data.success) { out.innerHTML = `<div style="color:var(--muted)">${data.error || 'Lookup failed.'}</div>`; return; }
+    intelQuotaLine(data.quota);
+    const r = data.result;
+    if (!r.found_in_db) { out.innerHTML = `<div style="color:var(--muted)">${r.note}</div>`; return; }
+    const sevColor = { CRITICAL: '#ef4444', HIGH: '#f97316', MEDIUM: '#eab308', LOW: '#10b981' }[r.severity] || '#94a3b8';
+    out.innerHTML = `
+      <div style="font-weight:700;margin-bottom:6px">${r.title || r.cve_id}</div>
+      <div style="display:flex;gap:16px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+        <span class="badge" style="background:${sevColor}22;color:${sevColor};border:1px solid ${sevColor}55">${r.severity || data.result?.severity || '—'}</span>
+        <span style="font-size:.82rem;color:var(--muted)">CVSS: <strong style="color:var(--fg)">${r.cvss_score ?? '—'}</strong></span>
+        ${r.kev_listed ? '<span class="badge badge-red">CISA KEV</span>' : ''}
+      </div>
+      <div style="font-size:.85rem;color:var(--muted);margin-bottom:8px">${r.description || ''}</div>
+      ${data.ai_enrichment ? `<div style="font-size:.85rem;color:var(--muted);border-left:3px solid var(--accent);padding-left:10px;margin-bottom:8px">${data.ai_enrichment}</div>` : ''}
+      <div style="font-size:.8rem;color:var(--muted)">Recommended: ${(data.recommended_actions || []).join(', ')}</div>`;
+  }
+
+  async function intelLookupActor() {
+    const actorId = document.getElementById('intel-actor-value').value.trim();
+    const sector  = document.getElementById('intel-actor-sector').value.trim();
+    const out = document.getElementById('intel-actor-result');
+    if (!actorId && !sector) { alert('Enter an actor name or a sector.'); return; }
+    out.innerHTML = '<span class="spinner"></span> Searching…';
+    const { res, data } = await intelApiGet('/api/intel/actor', { actor_id: actorId, sector });
+    if (res.status === 429) { out.innerHTML = intelUpgradeNotice(data.error, data.upgrade); return; }
+    if (!data.success) { out.innerHTML = `<div style="color:var(--muted)">${data.error || 'Lookup failed.'}</div>`; return; }
+    intelQuotaLine(data.quota);
+    if (data.result) {
+      out.innerHTML = `
+        <div style="font-weight:700;margin-bottom:6px">${data.result.name} <span class="badge badge-red">${data.result.risk_rating}</span></div>
+        <div style="font-size:.82rem;color:var(--muted);margin-bottom:6px">Nation-state: ${data.result.nation_state || '—'} · Motivation: ${data.result.motivation || '—'}</div>
+        <div style="font-size:.82rem;color:var(--muted)">Targets: ${(data.result.target_sectors || []).join(', ') || '—'}</div>
+        ${data.ai_profile ? `<div style="margin-top:10px;font-size:.85rem;color:var(--muted);border-left:3px solid var(--accent);padding-left:10px">${data.ai_profile}</div>` : ''}`;
+    } else if (data.actors_list?.length) {
+      out.innerHTML = `<table><thead><tr><th>Name</th><th>Nation-state</th><th>Motivation</th></tr></thead><tbody>
+        ${data.actors_list.map(a => `<tr><td>${a.name}</td><td>${a.nation_state || '—'}</td><td>${a.motivation || '—'}</td></tr>`).join('')}
+      </tbody></table>`;
+    } else {
+      out.innerHTML = '<div style="color:var(--muted)">No matching threat actors found.</div>';
+    }
+  }
+
+  async function intelLookupTTP() {
+    const value = document.getElementById('intel-ttp-value').value.trim();
+    const out = document.getElementById('intel-ttp-result');
+    if (!value) { alert('Enter a technique ID or keyword first.'); return; }
+    out.innerHTML = '<span class="spinner"></span> Looking up…';
+    const isId = /^T\d{4}/i.test(value);
+    const { res, data } = await intelApiGet('/api/intel/ttp', isId ? { ttp_id: value } : { q: value });
+    if (res.status === 429) { out.innerHTML = intelUpgradeNotice(data.error, data.upgrade); return; }
+    if (!data.success) { out.innerHTML = `<div style="color:var(--muted)">${data.error || 'Lookup failed.'}</div>`; return; }
+    intelQuotaLine(data.quota);
+    const r = data.result || data.technique || data;
+    if (!r || (!r.name && !data.techniques)) { out.innerHTML = '<div style="color:var(--muted)">No matching technique found.</div>'; return; }
+    if (r.name) {
+      out.innerHTML = `
+        <div style="font-weight:700;margin-bottom:6px">${r.name}${r.tactic ? ` <span style="font-size:.75rem;color:var(--muted)">(${r.tactic})</span>` : ''}</div>
+        ${(r.mitigations || []).length ? `<div style="font-size:.82rem;color:var(--muted)">Mitigations: ${r.mitigations.join(', ')}</div>` : ''}`;
+    } else if (data.techniques?.length) {
+      out.innerHTML = `<ul style="margin:0 0 0 18px;font-size:.85rem;color:var(--muted)">${data.techniques.map(t => `<li>${t.id || ''} — ${t.name || ''}</li>`).join('')}</ul>`;
+    } else {
+      out.innerHTML = '<div style="color:var(--muted)">No matching technique found.</div>';
+    }
+  }
+
+  async function intelLookupRisk() {
+    const target = document.getElementById('intel-risk-target').value.trim();
+    const sector = document.getElementById('intel-risk-sector').value.trim();
+    const out = document.getElementById('intel-risk-result');
+    if (!target) { alert('Enter a target domain or organization first.'); return; }
+    out.innerHTML = '<span class="spinner"></span> Scoring…';
+    const { res, data } = await intelApiGet('/api/intel/risk', { target, sector });
+    if (res.status === 429) { out.innerHTML = intelUpgradeNotice(data.error, data.upgrade); return; }
+    if (!data.success) { out.innerHTML = `<div style="color:var(--muted)">${data.error || 'Lookup failed.'}</div>`; return; }
+    intelQuotaLine(data.quota);
+    const ra = data.risk_assessment;
+    const color = { CRITICAL: '#ef4444', HIGH: '#f97316', MEDIUM: '#eab308', LOW: '#10b981' }[ra.risk_level] || '#94a3b8';
+    out.innerHTML = `
+      <div style="display:flex;gap:16px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+        <span style="font-size:1.4rem;font-weight:800;font-family:var(--mono);color:${color}">${ra.composite_score}/100</span>
+        <span class="badge" style="background:${color}22;color:${color};border:1px solid ${color}55">${ra.risk_level}</span>
+      </div>
+      ${data.executive_narrative ? `<div style="font-size:.85rem;color:var(--muted);border-left:3px solid var(--accent);padding-left:10px;margin-bottom:8px">${data.executive_narrative}</div>` : ''}
+      <div style="font-size:.8rem;color:var(--muted)">Immediate actions: ${(data.recommendations?.immediate || []).join(', ')}</div>`;
   }
 
   function renderCisoTrend(trend) {

@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-12T10:43:39.534Z
+Generated: 2026-07-12T11:42:37.526Z
 Capabilities catalogued: 97
 
 ## Overall Completion
@@ -18,8 +18,8 @@ Capabilities catalogued: 97
 | Dimension | % |
 |---|---|
 | Backend | 89.7% |
-| Frontend | 68.6% |
-| Parity (backend **and** frontend both exist) | 62.9% |
+| Frontend | 69.6% |
+| Parity (backend **and** frontend both exist) | 63.9% |
 | Customer Journeys complete (dynamic_browser-verified) | 3.1% |
 
 ## Gaps by Priority
@@ -40,8 +40,8 @@ Capabilities catalogued: 97
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 23 | Backend exists, but not discoverable via navigation |
-| Backend-only features | 16 | Backend exists, zero frontend surface |
+| Hidden features | 22 | Backend exists, but not discoverable via navigation |
+| Backend-only features | 15 | Backend exists, zero frontend surface |
 | Duplicate systems | 4 | Backend marked `duplicate` (two implementations of one capability) |
 | Broken journeys | 9 | Priority P1 |
 
@@ -247,7 +247,7 @@ complete", "bug free", or "guaranteed".
 | CAP-TIH-006 | Agent Threat Advisories (AI agent framework CVEs/advisories) | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 | CAP-TIH-007 | AI Threat Intelligence Feed & Agent Security (Pillar 4/5) | ✓ | ✓ | ✓ | PILOT ONLY | P3 |
 | CAP-TIH-008 | Global Threat Intel Firehose (worldwide OSINT) | ✓ | ✓ | ✗ | PILOT ONLY | P3 |
-| CAP-TIH-009 | Threat Intelligence API Economy (monetized IOC/CVE/Actor/TTP/Risk) | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-TIH-009 | Threat Intelligence API Economy (monetized IOC/CVE/Actor/TTP/Risk) | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
 | CAP-TIH-010 | Production IOC Enrichment | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-TIH-011 | Threat Confidence & Exploitability Engine | ✓ | ✓ | ✗ | NOT READY | P6 |
 | CAP-TIH-012 | Customer/MSSP Personalized Intelligence | ✓ | ✓ | ✗ | NOT READY | P3 |
