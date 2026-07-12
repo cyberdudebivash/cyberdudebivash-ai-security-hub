@@ -902,6 +902,9 @@
       <div class="nav-item" data-page="ciso" onclick="showPage('ciso',this);loadCisoMetrics()">
         <span class="nav-icon">📈</span> CISO Metrics
       </div>
+      <div class="nav-item" data-page="compliance" onclick="showPage('compliance',this);loadComplianceAssessment()">
+        <span class="nav-icon">📋</span> Compliance
+      </div>
       <div class="nav-item" data-page="ai-analysis" onclick="showPage('ai-analysis',this)">
         <span class="nav-icon">🤖</span> AI Analysis
       </div>
@@ -2002,6 +2005,111 @@
         <button class="btn btn-outline" onclick="exportCisoCSV()">⬇ Export CSV</button>
         <button class="btn btn-outline" onclick="exportCisoPDF()">📄 Export Board Report PDF</button>
         <button class="btn btn-outline" onclick="loadCisoMetrics()">↺ Refresh</button>
+      </div>
+    </div>
+
+    <div id="page-compliance" class="page">
+      <div class="page-title">Compliance Readiness Assessment</div>
+      <div class="page-subtitle">ISO 27001:2022 · NIST CSF 2.0 · GDPR gap analysis with a prioritized remediation roadmap</div>
+
+      <div class="upsell-banner" id="compliance-upsell" style="display:none">
+        <div class="upsell-text">
+          <strong>Enterprise Feature</strong> — Compliance Readiness Assessment requires Pro or Enterprise plan
+          <p>Scores 93 ISO 27001:2022 controls, all 6 NIST CSF 2.0 functions, and GDPR readiness — with a phased certification roadmap.</p>
+        </div>
+        <button class="btn-upgrade" onclick="showPage('billing',null)">Upgrade to Pro →</button>
+      </div>
+
+      <div id="compliance-form-card" class="card" style="display:none;margin-bottom:20px">
+        <div class="card-header"><span class="card-title">Run an Assessment</span></div>
+        <div class="card-body" style="padding:20px">
+          <div class="form-group">
+            <label class="form-label">Organization / Domain</label>
+            <input id="compliance-target" class="form-input" placeholder="e.g. acme.com" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Industry</label>
+            <select id="compliance-industry" class="form-input">
+              <option>General</option>
+              <option>Technology</option>
+              <option>Financial Services</option>
+              <option>Healthcare</option>
+              <option>Retail</option>
+              <option>Government</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Controls currently in place</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.85rem">
+              <label><input type="checkbox" id="cc-has_policy" /> Documented security policy</label>
+              <label><input type="checkbox" id="cc-has_isms" /> Formal ISMS in place</label>
+              <label><input type="checkbox" id="cc-has_mfa" /> MFA enforced</label>
+              <label><input type="checkbox" id="cc-has_backups" /> Tested backups</label>
+              <label><input type="checkbox" id="cc-has_monitoring" /> Security monitoring / SIEM</label>
+              <label><input type="checkbox" id="cc-has_incident_plan" /> Incident response plan</label>
+              <label><input type="checkbox" id="cc-has_training" /> Security awareness training</label>
+              <label><input type="checkbox" id="cc-has_asset_inventory" /> Asset inventory maintained</label>
+              <label><input type="checkbox" id="cc-has_dlp" /> Data loss prevention (DLP) controls</label>
+              <label><input type="checkbox" id="cc-has_vuln_mgmt" /> Vulnerability management program</label>
+            </div>
+          </div>
+          <button class="btn btn-primary" id="compliance-run-btn" onclick="runComplianceAssessment()">Run Assessment</button>
+        </div>
+      </div>
+
+      <div id="compliance-results" style="display:none">
+        <div class="ciso-kpi-grid">
+          <div class="ciso-kpi">
+            <div class="ciso-kpi-val" id="compliance-grade" style="color:#7c3aed">—</div>
+            <div class="ciso-kpi-label">Compliance Status</div>
+          </div>
+          <div class="ciso-kpi">
+            <div class="ciso-kpi-val" id="compliance-overall-pct" style="color:#00d4ff">—%</div>
+            <div class="ciso-kpi-label">ISO 27001 Score</div>
+          </div>
+          <div class="ciso-kpi">
+            <div class="ciso-kpi-val" id="compliance-nist-pct" style="color:#10b981">—%</div>
+            <div class="ciso-kpi-label">NIST CSF 2.0 Score</div>
+          </div>
+          <div class="ciso-kpi">
+            <div class="ciso-kpi-val" id="compliance-gdpr-pct" style="color:#f59e0b">—%</div>
+            <div class="ciso-kpi-label">GDPR Readiness</div>
+          </div>
+          <div class="ciso-kpi">
+            <div class="ciso-kpi-val" id="compliance-critical-ct" style="color:#ef4444">—</div>
+            <div class="ciso-kpi-label">Critical Gaps</div>
+          </div>
+          <div class="ciso-kpi">
+            <div class="ciso-kpi-val" id="compliance-timeline" style="font-size:1rem">—</div>
+            <div class="ciso-kpi-label">Est. Certification Timeline</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
+          <div class="card">
+            <div class="card-header"><span class="card-title">ISO 27001:2022 Domain Scores</span></div>
+            <div class="card-body" style="padding:20px" id="compliance-iso-domains"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">NIST CSF 2.0 Functions</span></div>
+            <div class="card-body" style="padding:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px" id="compliance-nist-functions"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header"><span class="card-title">Findings</span></div>
+          <div class="card-body">
+            <table>
+              <thead><tr><th>Severity</th><th>Finding</th><th>Control</th></tr></thead>
+              <tbody id="compliance-findings"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Certification Roadmap</span></div>
+          <div class="card-body" style="padding:20px" id="compliance-roadmap"></div>
+        </div>
       </div>
     </div>
 
@@ -3223,6 +3331,120 @@
       : '<div style="grid-column:1/-1;color:var(--muted);text-align:center;padding:16px 0">Run a Compliance scan to see framework-level results.</div>';
 
     renderCisoTrend(data.trend);
+  }
+
+  // ── Compliance Readiness Assessment (CAP-COMP-002) ──────────────────────────
+  // Backend (POST /api/scan/compliance) requires PRO/ENTERPRISE tier or admin —
+  // see workers/src/handlers/serviceHandlers.js's handleComplianceScan. Free/
+  // Starter tiers get the honest upsell banner and never see the form, matching
+  // the same locked-state convention as loadCisoMetrics() above.
+  function loadComplianceAssessment() {
+    const plan = (_plan?.plan || 'free').toLowerCase();
+    const isPaid = plan === 'pro' || plan === 'enterprise';
+    document.getElementById('compliance-upsell').style.display = isPaid ? 'none' : 'flex';
+    document.getElementById('compliance-form-card').style.display = isPaid ? 'block' : 'none';
+    document.getElementById('compliance-results').style.display = 'none';
+  }
+
+  const COMPLIANCE_CONTROL_KEYS = [
+    'has_policy', 'has_isms', 'has_mfa', 'has_backups', 'has_monitoring',
+    'has_incident_plan', 'has_training', 'has_asset_inventory', 'has_dlp', 'has_vuln_mgmt',
+  ];
+
+  async function runComplianceAssessment() {
+    const target = document.getElementById('compliance-target').value.trim();
+    if (!target) { alert('Enter an organization name or domain first.'); return; }
+
+    const inputs = {
+      domain:   target,
+      industry: document.getElementById('compliance-industry').value,
+    };
+    COMPLIANCE_CONTROL_KEYS.forEach(k => {
+      inputs[k] = !!document.getElementById('cc-' + k).checked;
+    });
+
+    const btn = document.getElementById('compliance-run-btn');
+    btn.disabled = true; btn.textContent = 'Running…';
+    try {
+      const res = await apiFetch('/api/scan/compliance', { method: 'POST', body: JSON.stringify(inputs) });
+      if (res.status === 403) {
+        alert('Compliance assessments require a Pro or Enterprise plan.');
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        alert(data.error || 'Assessment failed. Please try again.');
+        return;
+      }
+      renderComplianceResults(data);
+    } catch (e) {
+      alert('Could not run the assessment. Please try again.');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Run Assessment';
+    }
+  }
+
+  function renderComplianceResults(data) {
+    const summary = data.executive_summary   || {};
+    const iso     = data.iso27001_assessment || {};
+    const nist    = data.nist_csf_assessment || {};
+
+    document.getElementById('compliance-results').style.display = 'block';
+
+    const gradeColor = { COMPLIANT:'#10b981', PARTIALLY_COMPLIANT:'#f59e0b', NON_COMPLIANT:'#ef4444', CRITICAL_GAPS:'#ef4444' };
+    const gradeEl = document.getElementById('compliance-grade');
+    gradeEl.textContent = (summary.compliance_status || '—').replace(/_/g, ' ');
+    gradeEl.style.color = gradeColor[summary.compliance_status] || '#7c3aed';
+
+    document.getElementById('compliance-overall-pct').textContent = (summary.overall_compliance ?? '—') + '%';
+    document.getElementById('compliance-nist-pct').textContent    = (summary.nist_csf_score ?? '—') + '%';
+    document.getElementById('compliance-gdpr-pct').textContent    = (summary.gdpr_readiness ?? '—') + '%';
+    document.getElementById('compliance-critical-ct').textContent = summary.critical_gaps ?? 0;
+    document.getElementById('compliance-timeline').textContent    = summary.estimated_certification_timeline || '—';
+
+    const isoBarColor = (score) => score >= 80 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
+    document.getElementById('compliance-iso-domains').innerHTML = (iso.domain_scores || []).length
+      ? iso.domain_scores.map(d => `
+        <div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px">
+            <span>${d.name} (${d.id})</span><span style="font-family:var(--mono);color:${isoBarColor(d.score)}">${d.score}%</span>
+          </div>
+          <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${d.score}%;background:${isoBarColor(d.score)};border-radius:3px"></div>
+          </div>
+        </div>`).join('')
+      : '<div style="color:var(--muted)">No domain data.</div>';
+
+    document.getElementById('compliance-nist-functions').innerHTML = (nist.functions || []).map(f => {
+      const color = f.score >= 75 ? '#10b981' : f.score >= 50 ? '#f59e0b' : '#ef4444';
+      return `<div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:1.2rem;font-weight:700;font-family:var(--mono);color:${color}">${f.score}%</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:4px">${f.name}</div>
+        <div style="font-size:.68rem;color:var(--muted)">${f.tier}</div>
+      </div>`;
+    }).join('');
+
+    const findingsEl = document.getElementById('compliance-findings');
+    findingsEl.innerHTML = (data.findings || []).length
+      ? data.findings.map(f => `
+        <tr>
+          <td><span class="badge badge-${f.severity==='CRITICAL'?'red':f.severity==='HIGH'?'warn':'blue'}">${f.severity}</span></td>
+          <td>${f.title}</td>
+          <td style="font-family:var(--mono);font-size:.78rem">${f.control}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">No gaps found ✓</td></tr>';
+
+    document.getElementById('compliance-roadmap').innerHTML = (data.certification_roadmap || []).length
+      ? data.certification_roadmap.map(phase => `
+        <div style="margin-bottom:14px">
+          <div style="font-weight:700;font-size:.85rem;color:var(--accent)">${phase.phase} — ${phase.description}</div>
+          <ul style="margin:6px 0 0 18px;font-size:.82rem;color:var(--muted)">
+            ${(phase.actions || []).map(a => `<li>${a.action} <span style="opacity:.7">(${a.impact} impact, ${a.effort} effort)</span></li>`).join('')}
+          </ul>
+        </div>`).join('')
+      : '<div style="color:var(--muted)">No remediation actions — fully compliant on assessed controls.</div>';
+
+    document.getElementById('compliance-results').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function renderCisoTrend(trend) {
