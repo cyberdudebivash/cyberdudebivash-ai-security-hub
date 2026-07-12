@@ -5,7 +5,13 @@
  * Proves: both engines produce real findings from live-shaped responses
  * (not fabricated), fail safely on unreachable targets, honestly disclose
  * unavailable data sources rather than faking them, and both handlers
- * enforce the advertised tier gate + input validation. */
+ * enforce the advertised tier gate + input validation.
+ *
+ * CAP-SCAN-007/008 (2026-07-12): the tier-gate coverage was previously
+ * partial (FREE-rejected was only tested for appsec, not darkweb; STARTER
+ * and the isAdmin bypass weren't tested for either) — extended to cover
+ * FREE/STARTER/anonymous rejection and ENTERPRISE/MSSP/isAdmin admission
+ * for both scanners explicitly. */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { runAppSecScan } from '../src/services/appsecScanEngine.js';
 import { runDarkWebScan } from '../src/services/darkWebScanEngine.js';
@@ -155,6 +161,39 @@ describe('handleAppSecScan / handleDarkWebScan — tier gate + validation', () =
   it('allows MSSP tier through for dark web scan (pricing table promises MSSP access)', async () => {
     const res = await handleDarkWebScan(reqWithBody({ target: 'example.com' }), {}, { tier: 'MSSP' });
     expect(res.status).toBe(200);
+  });
+
+  it('allows MSSP tier through for appsec scan too (same PRO-and-above gate)', async () => {
+    const res = await handleAppSecScan(reqWithBody({ url: 'https://example.com' }), {}, { tier: 'MSSP' });
+    expect(res.status).toBe(200);
+  });
+
+  it('rejects STARTER tier for both scanners — this is PRO-and-above, not STARTER-and-above', async () => {
+    const appsecRes = await handleAppSecScan(reqWithBody({ url: 'https://example.com' }), {}, { tier: 'STARTER' });
+    expect(appsecRes.status).toBe(403);
+    const darkwebRes = await handleDarkWebScan(reqWithBody({ target: 'example.com' }), {}, { tier: 'STARTER' });
+    expect(darkwebRes.status).toBe(403);
+  });
+
+  it('rejects FREE tier for dark web scan too (only appsec was covered before)', async () => {
+    const res = await handleDarkWebScan(reqWithBody({ target: 'example.com' }), {}, { tier: 'FREE' });
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.upgrade_url).toBeTruthy();
+  });
+
+  it('the isAdmin bypass admits a caller regardless of tier, for both scanners', async () => {
+    const appsecRes = await handleAppSecScan(reqWithBody({ url: 'https://example.com' }), {}, { isAdmin: true, tier: 'FREE' });
+    expect(appsecRes.status).toBe(200);
+    const darkwebRes = await handleDarkWebScan(reqWithBody({ target: 'example.com' }), {}, { isAdmin: true, tier: 'FREE' });
+    expect(darkwebRes.status).toBe(200);
+  });
+
+  it('rejects an anonymous caller (no authCtx tier at all) for both scanners', async () => {
+    const appsecRes = await handleAppSecScan(reqWithBody({ url: 'https://example.com' }), {}, {});
+    expect(appsecRes.status).toBe(403);
+    const darkwebRes = await handleDarkWebScan(reqWithBody({ target: 'example.com' }), {}, {});
+    expect(darkwebRes.status).toBe(403);
   });
 
   it('rejects an invalid url', async () => {

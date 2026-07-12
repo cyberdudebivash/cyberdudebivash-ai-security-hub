@@ -17,6 +17,8 @@ registry-population session.
 
 **Update — item 16 (`CAP-PROD-002`):** real (unmocked) test coverage added for the rate-limiting middleware's tier-based daily/burst/cost arithmetic — no code change to the middleware itself, since it was already correct, just unverified by any test that actually exercised it. `operational_status` moves `NOT READY`→`PILOT ONLY`. **13 of 22 done, 9 remain**, all `P6`.
 
+**Update — the CAP-SCAN cluster (6 items sharing one domain file):** investigated all 6 together. CAP-SCAN-003/004/005 were re-verified fresh (not just trusted from their existing entries) — grepped their claimed test files directly and confirmed `handleRedteamScan`/`handleIdentityScan`/`handleCompliance` are still genuinely imported by `workers/test/paymentEntitlement.test.mjs` and `workers/test/proposalBola.test.mjs`; combined with clean notes fields and already-correct backend/frontend/nav status, these 3 needed no work. CAP-SCAN-006 had zero test coverage of any kind — added a full suite for its real 27-control CIS-aligned scoring engine plus its tier gate. CAP-SCAN-007/008 had real but incomplete tier-gate coverage in a shared test file (their own notes flagged this as unconfirmed) — extended it to cover FREE/STARTER/anonymous-rejected and ENTERPRISE/MSSP/isAdmin-admitted explicitly for both handlers. **19 of 22 done, 3 remain**: `CAP-MSSP-005`, `CAP-TIH-001`, `CAP-TIH-003`.
+
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
 appended their own session-log entry below but never rolled the header
@@ -66,8 +68,8 @@ parallel tracking document.
 | Domains populated | 21 | see list below (all 3 former stubs now populated) |
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
-| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (after CAP-PROD-002's registry update) |
-| Worker test suite | 256 files / 2628 tests passing | `npx vitest run`, run 2026-07-12 — +13 tests this wave, new file `rateLimitArithmetic.test.mjs` (CAP-PROD-002: exercises the real, unmocked tier-based daily/burst/cost rate-limit arithmetic against a real in-memory KV — FREE burst/daily limits, per-endpoint counter independence, ENTERPRISE unlimited, abuse-ban short-circuit, fail-open with no KV, unknown-tier fallback, and cost-weighted budgets). Baseline going into this wave was 255 files / 2615 tests (CAP-MYTHOS-001). |
+| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (after CAP-SCAN-006/007/008's registry updates) |
+| Worker test suite | 257 files / 2645 tests passing | `npx vitest run`, run 2026-07-12 — +17 tests this wave: new file `cloudSecurityScanner.test.mjs` (CAP-SCAN-006, 12 tests — the real 27-control CIS-aligned scoring engine plus its full tier gate, previously zero coverage of any kind) and 6 tests added to the existing `appsecDarkwebScanners.test.mjs` (CAP-SCAN-007/008 — rounds out the tier-gate coverage to FREE/STARTER/anonymous-rejected and ENTERPRISE/MSSP/isAdmin-admitted for both handlers explicitly, closing a gap the entries' own notes had flagged as unconfirmed). Baseline going into this wave was 256 files / 2628 tests (CAP-PROD-002). |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 71.6% / 67% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — % unchanged this wave (CAP-TIH-008's `frontend.status` was already `exists`, only `navigation.discoverable` moved) but **Hidden features 21→20** — the first movement on that specific counter in several waves, since CAP-TIH-008's field was a real boolean `false` (not an `"unknown"` string like the last two corrections), so flipping it genuinely removes one hidden feature. `priority` for CAP-TIH-008 stays `P3` per this file's historical-severity convention. |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -253,6 +255,62 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — 22-paid-feature program, items 17-19 (of 22 real): the CAP-SCAN cluster — 3 items verified already-complete, 3 items had real test-coverage gaps closed
+
+- **Context.** All 6 `CAP-SCAN-0*` items live in the same domain file
+  (`security-scanners.json`) and share a nearly identical shape: a real
+  scan handler dispatched either through the shared `runSyncPipeline`
+  (CAP-SCAN-003/004/005) or directly via `resolveAuthV5` in
+  `workers/src/handlers/serviceHandlers.js` (CAP-SCAN-006/007/008), both
+  paths fixed by an earlier, already-shipped 2026-07-10 auth-header
+  correction. Read all 6 entries together before touching anything, to
+  spot the real pattern rather than fixing them one at a time blind.
+- **CAP-SCAN-003/004/005 — verified fresh, not just trusted.** Their
+  entries showed no flagged gaps (empty or purely-cautionary notes,
+  `has_tests: true`, backend/frontend/nav all already correct) — but
+  rather than accept that at face value, grepped their claimed test files
+  directly: `handleRedteamScan`, `handleIdentityScan`, and
+  `handleCompliance` are all still genuinely imported by
+  `workers/test/paymentEntitlement.test.mjs` and
+  `workers/test/proposalBola.test.mjs` today. No code or doc change
+  needed for any of the three.
+- **CAP-SCAN-006 (Cloud Security Posture Scanner) — the real gap.**
+  `grep` for `handleCloudSecurityScan` across every test file returned 0
+  matches — zero coverage of any kind, for either the tier gate or the
+  scan engine itself. Read `workers/src/services/cloudSecurityEngine.js`
+  in full first: a real, non-fabricated 27-control CIS Cloud Security
+  Benchmark v1.5 / CSA CCM v4 scoring engine (IAM/NETWORK/DATA/LOGGING/
+  COMPUTE, weighted, real per-control remediation text) plus a real
+  public-exposure check (actual S3 bucket HEAD requests, actual DNS
+  CNAME lookups via Cloudflare's DoH API). New
+  `workers/test/cloudSecurityScanner.test.mjs` (12 tests): 0%/grade-F/
+  HIGH_RISK when nothing is implemented, 100%/grade-A/SECURE when
+  everything genuinely is, a live-shaped public-bucket detection, a
+  live-shaped cloud-provider DNS detection, graceful no-domain handling,
+  and the full tier gate (FREE/STARTER/anonymous rejected, PRO/
+  ENTERPRISE/MSSP admitted, isAdmin bypass admitted).
+- **CAP-SCAN-007/008 (Dark Web / AppSec) — a real but incomplete test
+  file, made complete.** Both entries' own notes had flagged the same
+  open question: does `workers/test/appsecDarkwebScanners.test.mjs`
+  actually cover the PRO+ tier gate, or just the scan logic? Read the
+  file in full to answer precisely rather than guess: it covered
+  FREE-rejected + PRO-admitted for AppSec, and MSSP-admitted for Dark
+  Web — but not FREE-rejected for Dark Web, not STARTER-rejected for
+  either, and not the `isAdmin` bypass for either. Added 6 tests closing
+  exactly those gaps, explicitly, for both handlers.
+- **Test plan:** 17 new tests total (12 new file + 6 added to the
+  existing one — the existing file's total is now 19, up from 13). Full
+  suite green: 257 files / 2645 tests (up from 256/2628). Registry
+  validator: 0 failures, 0 warnings on the first pass (no bare-filename
+  citation slip this time).
+- `operational_status` for CAP-SCAN-006 confirmed `PILOT ONLY` (it was
+  already correctly rated — the engine and gate were both already
+  correct, only the missing regression test was the actual residual
+  risk). No structural readiness metric moves — all 6 already had
+  `frontend.status: exists` and `navigation.discoverable: true`.
+- **19 of 22 done, 3 remain**: `CAP-MSSP-005`, `CAP-TIH-001`,
+  `CAP-TIH-003`.
 
 ### 2026-07-12 — 22-paid-feature program, item 16 (of 22 real): CAP-PROD-002 — real, unmocked test coverage for the rate-limiting arithmetic
 

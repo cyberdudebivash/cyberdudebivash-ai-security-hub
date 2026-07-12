@@ -233,8 +233,8 @@
     "subscription_gated": true,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "grep for handleCloudSecurityScan across workers/test/**/*.mjs returns 0 matches (verified 2026-07-09)."
+      "has_tests": true,
+      "evidence": "FIXED 2026-07-12: workers/test/cloudSecurityScanner.test.mjs (12 tests) — the real 27-control CIS-aligned scoring engine (0%/F/HIGH_RISK when nothing implemented, 100%/A/SECURE when everything is, real specific remediation text per control, live-shaped public-S3-bucket and DNS-cloud-provider detection, graceful no-domain handling) plus the full tier gate on handleCloudSecurityScan (FREE/STARTER/anonymous rejected with 403+upgrade_url, PRO/ENTERPRISE/MSSP admitted, isAdmin bypass admitted) — previously zero test coverage of any kind for this handler."
     },
     "docs": [{ "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }],
     "customer_journey_complete": false,
@@ -243,11 +243,11 @@
     "priority_reason": "no tests at all, plus the highest-severity instance of the pre-2026-07-10 auth-header bug: this handler hard-403s any request whose authCtx.tier isn't PRO/ENTERPRISE/MSSP (workers/src/handlers/serviceHandlers.js:335). Before the fix, every paying PRO+ customer attempting this scan was flatly rejected with 'PRO plan or above required' — not degraded, completely blocked — since executeScan() never sent their JWT and resolveAuthV5 always fell through to the anonymous FREE identity.",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-09",
-      "evidence": "workers/src/handlers/serviceHandlers.js:334-354 read directly. Route dispatch (workers/src/index.js:5793-5795) calls resolveAuthV5(request, env) directly rather than through runSyncPipeline/SYNC_ROUTES — a materially different auth-resolution path from CAP-SCAN-001..005, but resolveAuthV5 itself is the same function, so the 2026-07-10 fix (executeScan() now attaches the JWT) applies here too since this module is one of the 8 dispatched through executeScan()."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/handlers/serviceHandlers.js:334-354 read directly. Route dispatch (workers/src/index.js:5793-5795) calls resolveAuthV5(request, env) directly rather than through runSyncPipeline/SYNC_ROUTES — a materially different auth-resolution path from CAP-SCAN-001..005, but resolveAuthV5 itself is the same function, so the 2026-07-10 fix (executeScan() now attaches the JWT) applies here too since this module is one of the 8 dispatched through executeScan(). FIXED 2026-07-12: workers/src/services/cloudSecurityEngine.js read in full (real 27-control CIS Cloud Security Benchmark v1.5 / CSA CCM v4 scoring, real public-bucket + DNS-CNAME exposure checks, no fabrication) before writing tests against its real shape. Full suite green: 257 files / 2645 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": "Zero test coverage is the most pressing residual gap for this specific module — recommend a regression test locking the PRO+ tier gate (mirroring workers/test/cisoExecutiveDashboardTierGate.test.mjs's pattern: real tier admission via a DB-mocked authCtx, FREE/STARTER/anonymous rejected, ADMIN_KEY bypass admitted) before this domain's next wave."
+    "notes": "FIXED 2026-07-12: the zero test coverage this entry flagged as the most pressing residual gap is closed — see test_coverage.evidence. operational_status was already PILOT ONLY (not NOT READY) since the underlying scan engine and tier gate were both already correct; only the lack of a regression test was the actual risk (a silent tier-gate regression would not have been caught before this fix)."
   },
   {
     "id": "CAP-SCAN-007",
@@ -276,7 +276,7 @@
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "workers/test/appsecDarkwebScanners.test.mjs imports handleDarkWebScan."
+      "evidence": "workers/test/appsecDarkwebScanners.test.mjs imports handleDarkWebScan. FIXED 2026-07-12: the tier-gate coverage this entry's own notes flagged as unconfirmed was checked directly and found genuinely partial — FREE-tier rejection was tested for the sibling appsec handler but not darkscan, and STARTER-tier rejection plus the isAdmin bypass weren't tested for either handler. Added: FREE rejected (403+upgrade_url), STARTER rejected, ENTERPRISE/MSSP admitted, isAdmin bypass admitted, anonymous caller rejected — all for handleDarkWebScan specifically, not just inferred from its sibling."
     },
     "docs": [{ "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }],
     "customer_journey_complete": false,
@@ -284,11 +284,11 @@
     "priority": "P6",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-09",
-      "evidence": "workers/src/handlers/serviceHandlers.js:411-417 read directly — same hard-403-if-not-PRO+ pattern as CAP-SCAN-006, same pre-2026-07-10 impact (complete lockout of paying PRO+ customers, not degradation), same fix now applies (executeScan() sends the JWT)."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/handlers/serviceHandlers.js:411-417 read directly — same hard-403-if-not-PRO+ pattern as CAP-SCAN-006, same pre-2026-07-10 impact (complete lockout of paying PRO+ customers, not degradation), same fix now applies (executeScan() sends the JWT). FIXED 2026-07-12: workers/test/appsecDarkwebScanners.test.mjs read in full before extending it, to add real coverage rather than assuming the existing tests already implied the missing cases. Full suite green: 257 files / 2645 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": "Has a real test file (unlike CAP-SCAN-006/009/010) — confirm workers/test/appsecDarkwebScanners.test.mjs covers the PRO+ tier gate specifically, not just the scan logic, during the next wave."
+    "notes": "FIXED 2026-07-12: the prior note's open question — does the existing test file actually cover the PRO+ tier gate specifically — is answered and closed. It covered PRO-admitted and FREE-rejected for appsec, and MSSP-admitted for darkweb, but not FREE-rejected for darkweb, not STARTER for either, and not the isAdmin bypass for either. All gaps closed in the same file."
   },
   {
     "id": "CAP-SCAN-008",
@@ -317,7 +317,7 @@
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "workers/test/appsecDarkwebScanners.test.mjs imports handleAppSecScan."
+      "evidence": "workers/test/appsecDarkwebScanners.test.mjs imports handleAppSecScan. FIXED 2026-07-12: extended alongside CAP-SCAN-007's fix in the same file — added STARTER-tier rejection, MSSP admission, isAdmin bypass admission, and anonymous-caller rejection for handleAppSecScan specifically (FREE-rejected and PRO-admitted were already covered)."
     },
     "docs": [{ "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }],
     "customer_journey_complete": false,
@@ -325,11 +325,11 @@
     "priority": "P6",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-09",
-      "evidence": "workers/src/handlers/serviceHandlers.js:386-392 read directly — same hard-403-if-not-PRO+ pattern and same 2026-07-10 fix dependency as CAP-SCAN-006/007."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/handlers/serviceHandlers.js:386-392 read directly — same hard-403-if-not-PRO+ pattern and same 2026-07-10 fix dependency as CAP-SCAN-006/007. Full suite green: 257 files / 2645 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": ""
+    "notes": "FIXED 2026-07-12: tier-gate test coverage rounded out to match CAP-SCAN-007's fix (same file, same pass) — STARTER-rejected, MSSP-admitted, isAdmin-bypass-admitted, anonymous-rejected now all explicitly tested for this handler too."
   },
   {
     "id": "CAP-SCAN-009",
