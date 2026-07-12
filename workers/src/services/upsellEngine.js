@@ -475,16 +475,12 @@ Here's what your security team needs to know RIGHT NOW:
 
 🎯 Who's at risk:
 → Any organization running ${vendor} infrastructure
-→ Estimated 50,000+ internet-exposed instances
-→ State-sponsored actors already scanning for targets
 
 🛡 Immediate actions:
 1. Scan your attack surface NOW
-2. Patch within 15 days (average time-to-exploit)
+2. Patch as soon as a fix is available
 3. Deploy WAF rules blocking known exploit patterns
 4. Monitor EPSS score for increases (signals active campaigns)
-
-We detected this in our Sentinel APEX threat feed 3 hours before it hit mainstream security news.
 
 🔗 Scan your infrastructure free: https://tools.cyberdudebivash.com
 
@@ -499,22 +495,6 @@ We detected this in our Sentinel APEX threat feed 3 hours before it hit mainstre
 
 ${critCount} CRITICAL CVEs published this week.
 ${kevCount} confirmed actively exploited.
-
-🔥 Top threat actors active this week:
-→ Volt Typhoon: Targeting US/Asia critical infrastructure
-→ APT41: Software supply chain attacks (3 new campaigns)
-→ LockBit affiliates: Financial sector ransomware surge
-
-📈 Key statistics:
-• 15-day average time-to-exploit for CRITICAL CVEs
-• 73% of breaches involved a known, patchable CVE
-• EPSS model showing 40% increase in RCE exploit attempts
-
-🎯 Industries at highest risk this week:
-1. Financial Services (BFSI)
-2. Healthcare / Hospitals
-3. Manufacturing / OT
-4. SaaS / Cloud Infrastructure
 
 🤖 Sentinel APEX detected and correlated all ${critCount} CRITICAL CVEs automatically — with IOC lists, threat actor attribution, and EPSS rankings.
 
