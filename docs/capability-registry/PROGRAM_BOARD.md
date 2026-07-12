@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-12 — the prior 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit is **fully closed, merged, and live in production** (PR #185 squash-merged to `main` as commit `9819fed7`, `Deploy to Cloudflare` ran and passed its post-deploy smoke tests; see the entry twenty-eight below for the original 24-item list and the two entries above it for the closure + pre-merge security-fix account). **A new program has now started**, at the owner's explicit direction: bring all 22 `subscription_gated: true` (paid) capabilities in the registry to genuine, evidenced production grade — frontend, backend, RBAC, security, tests, docs, the works — not a subset. Every one of the 22 currently sits below GA; 5 have no working frontend at all. Tracked as tasks #25–#46. Item 1 (`CAP-RBAC-002`, chosen first since 8 other items share its "RBAC not enforced" gap) turned out to need **zero code changes** — the registry's own record was stale, predating the Organizations feature that had already closed the gap; corrected the record instead of inventing busywork. Item 2 (`CAP-MYTHOS-003`) was the opposite case: investigation found a live, unauthenticated production endpoint fabricating security-scan and compliance results under the platform's brand name, plus a dangerous, untested, live-reachable duplicate payment/tier-grant mechanism sitting behind it — both fixed (scan/compliance redirected to this platform's real engines; the duplicate payment path removed outright with the owner's explicit sign-off). Item 3 (`CAP-DEVPORTAL-002`) resolved its two open "unknown" registry fields by direct verification: `subscription_gated` was confirmed `false` (correctly tier-scaled, not a paid-only gate — matches its canonical sibling), and `navigation.discoverable` was confirmed **false** and fixed — the page had zero links anywhere outside the sitemap, now has a real nav-item — see the top session-log entry for the full account. 19 of 22 remain, continuing in chosen order.
+## Current status (2026-07-12 — the prior 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit is **fully closed, merged, and live in production** (PR #185 squash-merged to `main` as commit `9819fed7`, `Deploy to Cloudflare` ran and passed its post-deploy smoke tests; see the entry twenty-eight below for the original 24-item list and the two entries above it for the closure + pre-merge security-fix account). **A new program has now started**, at the owner's explicit direction: bring all 22 `subscription_gated: true` (paid) capabilities in the registry to genuine, evidenced production grade — frontend, backend, RBAC, security, tests, docs, the works — not a subset. Every one of the 22 currently sits below GA; 5 have no working frontend at all. Tracked as tasks #25–#46. Item 1 (`CAP-RBAC-002`, chosen first since 8 other items share its "RBAC not enforced" gap) turned out to need **zero code changes** — the registry's own record was stale, predating the Organizations feature that had already closed the gap; corrected the record instead of inventing busywork. Item 2 (`CAP-MYTHOS-003`) was the opposite case: investigation found a live, unauthenticated production endpoint fabricating security-scan and compliance results under the platform's brand name, plus a dangerous, untested, live-reachable duplicate payment/tier-grant mechanism sitting behind it — both fixed (scan/compliance redirected to this platform's real engines; the duplicate payment path removed outright with the owner's explicit sign-off). Item 3 (`CAP-DEVPORTAL-002`) resolved its two open "unknown" registry fields by direct verification: `subscription_gated` was confirmed `false` (correctly tier-scaled, not a paid-only gate — matches its canonical sibling), and `navigation.discoverable` was confirmed **false** and fixed — the page had zero links anywhere outside the sitemap, now has a real nav-item. Item 4 (`CAP-DEVPORTAL-004`) surfaced a second live, unauthenticated vulnerability this program has found: a sibling route (`POST /api/growth/upgrade`, not previously catalogued under this capability) let anyone mint a real, free ENTERPRISE-tier API key for any email with zero payment — closed with the same RBAC gate already used for 3 sibling routes in the same file, proven at the database-mutation level, not just an HTTP status code. See the top session-log entry for the full account. 18 of 22 remain, continuing in chosen order.
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -60,8 +60,8 @@ parallel tracking document.
 | Domains populated | 21 | see list below (all 3 former stubs now populated) |
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
-| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (after CAP-DEVPORTAL-002's registry update) |
-| Worker test suite | 247 files / 2512 tests passing | `npx vitest run`, run 2026-07-12 — +4 tests this wave, new file `automationDashboardDiscoverability.test.mjs` (CAP-DEVPORTAL-002: proves the new nav-item exists and follows the established pattern). Baseline going into this wave was 246 files / 2508 tests (CAP-MYTHOS-003). |
+| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (after CAP-DEVPORTAL-004's registry update) |
+| Worker test suite | 247 files / 2516 tests passing | `npx vitest run`, run 2026-07-12 — +4 tests this wave, extended `anonymousExposureAudit.test.mjs` (CAP-DEVPORTAL-004: proves POST /api/growth/upgrade rejects anonymous callers and that the underlying leads.plan write never executes without authorization). Baseline going into this wave was 247 files / 2512 tests (CAP-DEVPORTAL-002). |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — **unchanged by this wave's CAP-MYTHOS-003 fix**: its backend went from fabricated to real and its `operational_status` improved (`NOT READY`→`PILOT ONLY`), but its frontend is still `missing`, so it stays in the same backend-only/no-frontend structural bucket this report measures — a quality improvement, not a structural one |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,84 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — 22-paid-feature program, item 4 (of 22): CAP-DEVPORTAL-004 — a sibling route let anyone mint a free ENTERPRISE-tier API key with zero payment; closed
+
+- **Started from CAP-DEVPORTAL-004's own open questions**, not a fresh
+  grep sweep: this capability's frontend is intentionally `missing` (it
+  provisions `sap_` API keys for "programmatic growth/API-economy
+  customers" via a marketing-funnel path, not a customer-facing UI), and
+  the registry's own notes already say the backend was fixed and tested
+  in two prior waves (2026-07-09, 2026-07-11). Before accepting "nothing
+  left to do here," traced whether the auto-provisioning loop is
+  genuinely live: confirmed `workers/src/services/apiRevenueEngine.js`'s
+  `handlePaymentSuccess` (called by the real, HMAC-verified Razorpay
+  webhook) does call `provisionApiKey()` automatically on every real
+  payment (line 299) — not dead/orphaned infrastructure, a real
+  auto-provisioning loop.
+- **While tracing that loop, found a second live vulnerability this
+  program has now uncovered** (after CAP-MYTHOS-003's fabricated-scan
+  finding): `POST /api/growth/upgrade` (`handleUpgradeLead`,
+  `workers/src/handlers/growth.js:427`) was never previously catalogued
+  as an entry point of this capability, registered fully public
+  (`workers/src/index.js`'s own comment: "mark lead as upgraded
+  (public)"), and took `{email, plan}` directly from an anonymous
+  client's JSON body with zero verification. It called `upgradeLead()`
+  (`workers/src/services/funnelEngine.js:146`), which writes `UPDATE
+  leads SET plan = ? WHERE email = ?` — **the exact same column**
+  `handleProvisionApiKey`'s 2026-07-09 fix relies on as its entire trust
+  boundary ("plan comes only from the lead's own server-recorded value,
+  set exclusively by the HMAC-verified Razorpay webhook — never client
+  input"). `handleUpgradeLead` then immediately auto-provisioned a key
+  itself for any non-free plan. **Net effect: any anonymous caller could
+  mint a real, working ENTERPRISE-tier `sap_` API key for any email —
+  full access to the premium `/api/v1` threat-intel monetized feed — with
+  zero payment**, via two unauthenticated POST requests. This reopened,
+  through a sibling code path the 2026-07-09 fix never touched, the exact
+  vulnerability class that fix documented as closed.
+- **Confirmed zero legitimate callers exist** before deciding how to fix
+  it: grepped `frontend/*.html`, all of `workers/`, `docs/`, and
+  `scripts/` for any reference to this route outside its own
+  registration and handler — none found. The capability's real,
+  legitimate payment path (the actual Razorpay webhook →
+  `handlePaymentSuccess` → `provisionApiKey`) does not call or depend on
+  this route at all.
+- **The fix:** gated the route behind the identical `admin:business:read`
+  RBAC check (`requireCan`) this exact file already uses for 3 sibling
+  routes fixed in an earlier "anonymous-exposure audit" pass
+  (`/api/growth/analytics`, `/api/growth/funnel`, `/api/growth/leads`) —
+  chose to gate rather than remove outright (unlike CAP-MYTHOS-003's
+  checkout) because a legitimate administrative use case plausibly exists
+  here (support staff manually marking a lead upgraded for an
+  out-of-band payment) and this matches the file's own established
+  remediation pattern exactly.
+- **Test plan:** extended `workers/test/anonymousExposureAudit.test.mjs`
+  — added `['/api/growth/upgrade', 'POST']` to the existing
+  table-driven route array (free anonymous-rejected + ADMIN_KEY-bypass
+  coverage), plus a new dedicated describe block proving the fix closes
+  the exploit at the database-mutation level, not just the HTTP-status
+  level: a recording D1 mock asserts **zero** `UPDATE leads SET plan`
+  writes occur for an anonymous caller and **exactly one** for an
+  authorized one. Full suite green: 247 files / 2516 tests (`npx vitest
+  run`, up from 247/2512). Registry validator: 0 failures, 0 warnings
+  (after fixing one of my own bare-filename evidence citations the
+  validator caught — `apiRevenueEngine.js` needed its
+  `workers/src/services/` prefix).
+- **Follow-up found, deliberately not fixed here (documented, not
+  silently dropped):** a key provisioned through the real payment-webhook
+  path has no delivery mechanism to the lead at all — no email, no UI.
+  The platform already has a ready-built email template for exactly this
+  (`emailEngine.js`'s `templateSubscriptionDay0` conditionally renders a
+  raw API-key block when `meta.api_key` is supplied), but nothing in this
+  growth-funnel path populates it. Not fixed because (a) it's genuinely
+  ambiguous whether this endpoint is meant to be consumed by an external
+  growth-automation tool that already handles delivery through its own
+  channel — invisible to this session either way — and (b) reusing the
+  established `triggerPostPurchase()` lifecycle helper wholesale would
+  also re-log `revenue_events`/`funnel_events` for a payment this
+  module's own `handlePaymentSuccess` already recorded once, risking
+  double-counted revenue metrics without deeper reconciliation. Flagged
+  for an explicit product decision rather than guessed at.
 
 ### 2026-07-12 — 22-paid-feature program, item 3 (of 22): CAP-DEVPORTAL-002 — Self-Service Automation API Keys had zero discoverable path to its page; both open "unknown" registry fields resolved
 

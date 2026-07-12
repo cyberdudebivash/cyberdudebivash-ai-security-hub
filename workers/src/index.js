@@ -4157,8 +4157,20 @@ export async function routeRequest(request, env, ctx, requestId) {
       return withSecurityHeaders(withCors(await handleUpgradeCheck(request, env), request));
     }
 
-    // POST /api/growth/upgrade — mark lead as upgraded (public)
+    // POST /api/growth/upgrade — mark lead as upgraded AND auto-provisions a
+    // real API key for the given email/plan (see handleUpgradeLead). Was
+    // fully unauthenticated — any caller could mint a free ENTERPRISE-tier
+    // sap_ key for any email with zero payment, via {email,plan} client
+    // input alone (the exact vulnerability class CAP-DEVPORTAL-004's own
+    // prior fix closed in handleProvisionApiKey, reopened here via this
+    // sibling route the anonymous-exposure audit missed because it targeted
+    // GET/read routes only). Closed the same way as this file's 3 sibling
+    // routes above (analytics/funnel/leads).
     if (path === '/api/growth/upgrade' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { requireCan } = await import('./auth/rbac.js');
+      const deny = await requireCan(authCtx, env, 'admin:business:read');
+      if (deny) return withSecurityHeaders(withCors(deny, request));
       return withSecurityHeaders(withCors(await handleUpgradeLead(request, env), request));
     }
 

@@ -54,6 +54,7 @@ describe('Anonymous-exposure audit — previously-open business-data routes now 
     ['/api/growth/analytics', 'GET'],
     ['/api/growth/funnel', 'GET'],
     ['/api/growth/leads', 'GET'],
+    ['/api/growth/upgrade', 'POST'],
     ['/api/gtm/funnel-dashboard', 'GET'],
   ];
 
@@ -127,5 +128,60 @@ describe('handleGetStatus (/api/affiliate/status) — email-param IDOR closed', 
     // the only identity source — a 401 here would mean the fix regressed
     // real logged-in users, which this must not do.
     expect(res.status).not.toBe(401);
+  });
+});
+
+describe('POST /api/growth/upgrade — free ENTERPRISE-key-minting exploit closed (CAP-DEVPORTAL-004)', () => {
+  // Before this fix: {email, plan} taken directly from an anonymous client's
+  // JSON body, no verification of any kind. upgradeLead() then wrote
+  // leads.plan=<attacker-chosen plan> for <attacker-chosen email>, and
+  // handleUpgradeLead immediately auto-provisioned a real sap_ API key at
+  // that plan — the exact "plan must only ever come from the HMAC-verified
+  // Razorpay webhook, never client input" invariant CAP-DEVPORTAL-004's own
+  // prior fix documented, reopened by this sibling route.
+  function recordingDB() {
+    const writes = [];
+    return {
+      writes,
+      prepare(sql) {
+        let bound = [];
+        return {
+          bind(...args) { bound = args; return this; },
+          async run() { writes.push({ sql, bound }); return { success: true }; },
+          async first() { return null; },
+          async all() { return { results: [] }; },
+        };
+      },
+    };
+  }
+
+  it('an anonymous caller cannot cause leads.plan to be written at all (the exploit write never runs)', async () => {
+    const db = recordingDB();
+    const env = genericEnv({ DB: db });
+    const res = await worker.fetch(
+      new Request('https://x/api/growth/upgrade', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'attacker@example.com', plan: 'enterprise' }),
+      }),
+      env, ctxStub(),
+    );
+    expect(res.status).toBe(403);
+    const planWrites = db.writes.filter(w => /UPDATE leads SET plan/.test(w.sql));
+    expect(planWrites.length).toBe(0);
+  });
+
+  it('a real admin caller (ADMIN_KEY bypass) can still legitimately reach the handler', async () => {
+    const db = recordingDB();
+    const env = genericEnv({ DB: db, ADMIN_KEY: 'test-admin-key' });
+    const res = await worker.fetch(
+      new Request('https://x/api/growth/upgrade', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': 'test-admin-key' },
+        body: JSON.stringify({ email: 'real-customer@example.com', plan: 'pro' }),
+      }),
+      env, ctxStub(),
+    );
+    expect(res.status).not.toBe(403);
+    const planWrites = db.writes.filter(w => /UPDATE leads SET plan/.test(w.sql));
+    expect(planWrites.length).toBe(1);
   });
 });
