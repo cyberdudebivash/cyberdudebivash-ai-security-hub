@@ -378,7 +378,7 @@ async function loadMetrics() {
     document.getElementById('wh-ingest').textContent = d.cron.ingest_success_today;
     const ratio = (d.kv.hit_ratio * 100).toFixed(1);
     document.getElementById('wh-kv-ratio').textContent = ratio + '%';
-    document.getElementById('wh-bar').style.width = ratio + '%';
+    document.getElementById('wh-kv-bar').style.width = ratio + '%';
     // Top endpoints overview
     const tbody = document.querySelector('#top-endpoints tbody');
     tbody.innerHTML = (d.d1.top_endpoints || []).map(e =>

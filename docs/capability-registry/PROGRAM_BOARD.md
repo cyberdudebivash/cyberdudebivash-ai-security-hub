@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-12 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry twenty below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session has fixed all 10 Tier-1 items and all 8 Tier-2 items — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable — and has now started Tier 3 (minor/cosmetic class) with item #1: `billing-portal.html` displayed a real USD overage-charge figure (`overage_charges_usd`, a genuine `SUM(amount_usd)`) through the ₹-prepending INR formatter — the wrong currency entirely, not just wrong formatting — plus a static placeholder showing "$0" for a tile that's actually populated with real Rupees once loaded. Fixed with a real USD formatter and a corrected placeholder (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 19 session-log entries below. 5 of the 24 backlog items remain — all Tier 3 — queued next in the audit's stated priority order.)
+## Current status (2026-07-12 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry twenty-one below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session has fixed all 10 Tier-1 items and all 8 Tier-2 items — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable — and is now 2 items into Tier 3 (minor/cosmetic class). Item #2, just completed: `ops-dashboard.html`'s `loadMetrics()` referenced a nonexistent element id (`wh-bar`; the real id is `wh-kv-bar`), and since that line ran immediately before the Top Endpoints table population in the same `try` block, the resulting `TypeError` (silently caught) meant the table — itself already correctly wired — never got a chance to render, for any visitor, ever. Fixed the id and added a general "no orphan element-id reference" contract test for the whole page (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 20 session-log entries below. 4 of the 24 backlog items remain — all Tier 3 — queued next in the audit's stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 239 files / 2458 tests passing | `npx vitest run`, run 2026-07-12 — +6 tests this wave, new file `billingPortalCurrencySymbolFix.test.mjs` (Tier-3 item #1: billing-portal.html's overage-charges tile now uses a real USD formatter instead of the ₹-prepending INR one). Baseline going into this wave was 238 files / 2452 tests (Tier-2 item #8, the last Tier-2 item) |
+| Worker test suite | 240 files / 2465 tests passing | `npx vitest run`, run 2026-07-12 — +7 tests this wave, new file `opsDashboardElementIdFix.test.mjs` (Tier-3 item #2: ops-dashboard.html's wh-bar → wh-kv-bar element-id fix, plus a general no-orphan-id-reference contract test for the whole page). Baseline going into this wave was 239 files / 2458 tests (Tier-3 item #1) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,65 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — Tier-3 backlog item #2 (of 6): ops-dashboard.html — a nonexistent element id silently killed the Top Endpoints table 2 lines later
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-3
+  item #1.
+- **Investigation false starts, corrected before concluding anything:**
+  traced both "Top Endpoints"-labeled tables on the page in full — the
+  Overview tab's `#top-endpoints` (fed by `loadMetrics()`, reading
+  `d.d1.top_endpoints`) and the Usage tab's `#usage-endpoints` (fed by
+  `loadUsage()`, reading `d.top_endpoints`). Cross-checked both against
+  their real backend response shapes (`handleOpsMetrics` and
+  `handleAdminUsage`, `workers/src/handlers/opsEngine.js`) — both DOM ids
+  and both field paths were already completely correct. Neither table had
+  an obvious bug on direct inspection.
+- **Found the real bug via a systematic, whole-file cross-reference instead
+  of further inspection of the table code itself:** extracted every literal
+  `getElementById('...')`/`querySelector('#...')` id reference in the
+  page's inline script and every `id="..."` defined in its HTML, and
+  diffed the two sets. Exactly one referenced id had no matching element:
+  `wh-bar`. The real element (a KV cache-hit-ratio progress bar) is
+  `id="wh-kv-bar"`. `document.getElementById('wh-bar')` always returned
+  `null`; the very next statement, `.style.width = ratio + '%'`, threw a
+  `TypeError` — silently caught by `loadMetrics()`'s own empty `catch {}`.
+  Critically, that throw happens **immediately before, in the same `try`
+  block as**, the Top Endpoints table population 2 lines later — so
+  execution never reached it. The table itself (DOM id and field path both
+  already correct, as established above) never had a chance to render, for
+  any visitor, on any page load, ever — a wrong element ID silently
+  breaking a *different*, unrelated-looking table via early termination of
+  their shared try block, exactly matching the audit's description once
+  the real mechanism was found.
+- **Fix (`frontend/ops-dashboard.html`):** changed
+  `document.getElementById('wh-bar')` to `document.getElementById
+  ('wh-kv-bar')` — the one-line, root-cause-complete fix.
+- **Verification:** `node --check` on the extracted inline `<script>`
+  block; new `workers/test/opsDashboardElementIdFix.test.mjs` (7 tests,
+  static parse) — rather than only asserting the one specific string fix,
+  formalized the manual diffing process used to find the bug as a
+  permanent, general contract test: every literal id reference anywhere in
+  the page's script must resolve to a real `id="..."` element (0 orphans
+  allowed), which would have caught this exact bug class immediately and
+  now guards against any future regression of it anywhere on this page —
+  plus specific assertions that `wh-bar` is gone, `wh-kv-bar` is used and
+  really exists, and the Top Endpoints table's (already-correct) DOM id and
+  field path are unchanged. Searched `workers/test/` for any pre-existing
+  test referencing this page — none existed, so no bug-reinforcing
+  assertion needed correcting. Full suite: 240 files / 2465 tests passing
+  (was 239/2458 before this item — +1 file, +7 tests). `node
+  scripts/registry/validate.mjs`: 0 failures, 0 warnings. Updated
+  `CAP-ADMIN-001`'s `notes` in
+  `docs/capability-registry/domains/administration.json` (it already
+  covers `frontend/ops-dashboard.html` and `handleOpsMetrics` specifically)
+  to record the fix — `test_coverage.has_tests` deliberately left
+  unchanged since the new test is frontend-only static parse, not new
+  import-based coverage of `handleOpsMetrics` or any other backend
+  entry_point. `node scripts/registry/generate-report.mjs` regenerated
+  (only the timestamp changed).
+- **4 Tier-3 items remain** (of 6), queued next in the audit's stated
+  priority order.
 
 ### 2026-07-12 — Tier-3 backlog item #1 (of 6): billing-portal.html — a real USD figure displayed with a ₹ symbol, plus a wrong-currency static placeholder
 
