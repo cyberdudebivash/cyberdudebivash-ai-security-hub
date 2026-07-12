@@ -310,9 +310,9 @@
     },
     "frontend": {
       "surface_type": "embedded_widget",
-      "pages": ["frontend/index.html"],
+      "pages": ["frontend/index.html", "frontend/agent-threats.html"],
       "status": "exists",
-      "evidence": "No dedicated page found; frontend/index.html embeds an 'AI Threat Intel' panel (renderAIThreatIntelFlagship, auto-refresh every 90s matching the handler's own autoRefreshSec:90 contract)."
+      "evidence": "frontend/index.html embeds an 'AI Threat Intel' panel (renderAIThreatIntelFlagship, auto-refresh every 90s matching the handler's own autoRefreshSec:90 contract). frontend/agent-threats.html has a dedicated 'Scan My Agent' modal (runAgentScan(), 2026-07-11) that POSTs to /api/ai-security/agents/scan — the handleScanAgent entry point specifically."
     },
     "navigation": {
       "discoverable": "unknown",
@@ -338,7 +338,7 @@
       "evidence": "workers/src/handlers/aiThreatIntel.js read (1011 lines, read to line 825; core exports confirmed via import statements). workers/src/index.js routes 7700-7725 read directly. Freemium gating confirmed: FREE_LIVE_PREVIEW=3 live entries plus full curated library for anonymous callers, no isRealUser hard gate. workers/test/*.mjs matches confirmed by direct grep."
     },
     "contradicts_doc": [],
-    "notes": "Priority P3 (navigation partly unconfirmed) rather than lower, since this is otherwise one of the better-built and better-tested capabilities in the domain — the gap is specifically not having verified where/how a customer discovers it beyond the homepage embed."
+    "notes": "Priority P3 (navigation partly unconfirmed) rather than lower, since this is otherwise one of the better-built and better-tested capabilities in the domain — the gap is specifically not having verified where/how a customer discovers it beyond the homepage embed. auth_enforced:false describes the feed/report/radar entry points only (confirmed genuinely public, no isRealUser gate) — it does NOT apply to handleScanAgent/handleRegisterAgent/handleListAgents, all 3 of which DO hard-require a real authenticated user (`if (!authCtx?.userId) return err('Auth required', 401)`), a nuance this single top-level field can't capture for a capability bundling entry points with different auth requirements. 2026-07-11 (Tier-2 backlog item #7): found and fixed the real consequence of that nuance — frontend/agent-threats.html's runAgentScan() sent zero auth header of any kind, so handleScanAgent always 401'd for every visitor including logged-in customers. The bug was invisible in the UI because the page has a fully-functional client-side fallback (an identical OWASP LLM Top 10 rule engine) that always produced a complete-looking report — but the real, D1-persisted assessment (real agent_id, actually retrievable via handleListAgents, actually eligible for 'Register & Save Report' / advisory alerts / rescans) never fired for anyone. Fixed by adding a getAuthToken() helper (sessionStorage['cdb_access'] first, matching the convention already established elsewhere this session) and attaching it as a Bearer Authorization header."
   },
   {
     "id": "CAP-TIH-008",

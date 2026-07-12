@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry seventeen below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed all 10 Tier-1 items and has now completed Tier-2 items #1–#6 (of 8) — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable: #1 `threat-intel-workbench.html`'s unauthenticated/unrate-limited AI-analyst LLM routes; #2 `sentinel-apex-marketplace.html`'s 100%-fabricated Threat Actor/Malware cards; #3 `index.html`'s fabricated "PATCHED" KPI, hardcoded platform-status badge, and false "CyberBrain V2" claims; #4 `cyber-defense.html`'s EPSS/KEV fields (missing from the live-NVD response entirely) and IOC-lookup nested-field mismatch; #5 `god-mode.html`'s Agentic AI Command Center panels always 401'ing (no Authorization header ever sent) plus the identical dead-token-key bug in the run-trigger helper; #6 `ai-security-assessment.html`'s free "Live MITRE ATLAS Probe" demo always failing because it called a POST-only route with the default GET method (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 16 session-log entries below. 8 of the 24 backlog items remain (2 more Tier 2, all 6 of Tier 3), queued in the same stated priority order.)
+## Current status (2026-07-12 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry eighteen below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed all 10 Tier-1 items and Tier-2 items #1–#6 (of 8) — threat-intel-workbench.html's unauth/unrate-limited AI-analyst routes, sentinel-apex-marketplace.html's fabricated intel cards, index.html's fabricated PATCHED KPI/status badge/CyberBrain V2 claims, cyber-defense.html's EPSS/KEV+IOC field mismatches, god-mode.html's Agentic panel auth gap, and ai-security-assessment.html's Red Team demo method mismatch; full detail for each lives in its own session-log entry below, not repeated here. Just completed Tier-2 item #7: `agent-threats.html`'s "Scan My Agent" tool sent zero Authorization header of any kind, so the real, D1-persisted backend assessment (`handleScanAgent`, hard-requires auth) always 401'd for every visitor — invisibly, since a fully-functional client-side fallback always rendered a complete-looking report anyway, just never a real, persisted one. Fixed by adding a token helper (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 17 session-log entries below. 7 of the 24 backlog items remain (1 more Tier 2, all 6 of Tier 3), queued in the same stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 236 files / 2440 tests passing | `npx vitest run`, run 2026-07-11 — +6 tests this wave, new file `aiRedTeamDemoPostFix.test.mjs` (Tier-2 item #6: ai-security-assessment.html's free Red Team demo now sends a real POST with a JSON body to the POST-only probe/jailbreak route). Baseline going into this wave was 235 files / 2434 tests (Tier-2 item #5) |
+| Worker test suite | 237 files / 2445 tests passing | `npx vitest run`, run 2026-07-12 — +5 tests this wave, new file `agentThreatsScanAuthFix.test.mjs` (Tier-2 item #7: agent-threats.html's "Scan My Agent" tool now attaches the real session token). Baseline going into this wave was 236 files / 2440 tests (Tier-2 item #6) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,72 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — Tier-2 backlog item #7 (of 8): agent-threats.html — "Scan My Agent" tool sent zero Authorization header, always 401'd invisibly behind a client-side fallback
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-2
+  item #6.
+- **Re-verified against actual code:** `runAgentScan()` (behind the "Scan
+  My Agent →" button and its modal, "Scan Your AI Agent") POSTs to
+  `/api/ai-security/agents/scan` with `{'Content-Type':'application/json'}`
+  only — no `Authorization` header anywhere on this page (grep-confirmed
+  zero occurrences of `cdb_access`/`cdb_token`/`Authorization` in the whole
+  file before this fix). Traced the handler,
+  `handleScanAgent` (`workers/src/handlers/aiThreatIntel.js:957`):
+  `if (!authCtx?.userId) return err('Auth required', 401);` — a hard gate.
+  With no token ever sent, every visitor — including a real, logged-in,
+  paying customer — always got a 401 from the real backend.
+- **Why this one was invisible in the UI (unlike the god-mode.html panels in
+  item #5, which showed a visible error):** the frontend has a complete,
+  parallel client-side fallback — "local OWASP LLM Top 10 assessment (no
+  server)" — using the identical scoring rules as the backend. Because
+  `runAgentScan()` checks `if(r.ok){backendResult=await r.json();}` and the
+  401 makes `r.ok` false, it silently falls through to this client-only
+  path and renders a complete-looking risk report regardless. The bug had
+  zero visible symptom — every visitor always saw a full assessment — but
+  the report was never the real one: no real `agent_id`
+  (`backendResult.agent_id` never populated, `ai_agent_inventory` never
+  written), so "Register & Save Report", advisory alerts for the agent's
+  framework, and automated rescans (all explicitly promised right below the
+  results) had nothing real to attach to, for anyone, ever.
+- **Fix (`frontend/agent-threats.html`):** added a `getAuthToken()` helper
+  (checks `sessionStorage['cdb_access']` first — the real key
+  `user-dashboard.html`'s login/signup flow writes — falling back to the
+  legacy `cdb_token` keys, the same convention already established
+  elsewhere this session, e.g. Tier-2 item #5's god-mode.html fix) and
+  attached it as `Authorization: Bearer <token>` on the scan request when
+  present. The client-side fallback logic itself is unchanged — it's still
+  the correct behavior for a genuinely anonymous visitor or a real backend
+  outage, just no longer the silent default for every authenticated
+  customer too.
+- **Verification:** `node --check` on the extracted inline `<script>`
+  block; new `workers/test/agentThreatsScanAuthFix.test.mjs` (5 tests) — 2
+  real behavioral tests importing `handleScanAgent` directly (confirms a
+  401 with no `userId` on `authCtx`, confirms 200 + a real `agt_`-prefixed
+  `agent_id` with one) plus 3 static-parse tests confirming
+  `getAuthToken()`'s key-priority order, that `runAgentScan()` calls it and
+  conditionally sets the `Authorization` header, and that the existing
+  `Content-Type`/body construction is unchanged. Searched `workers/test/`
+  for any pre-existing test referencing `runAgentScan`/`getAuthToken` — none
+  existed (the one hit for `handleScanAgent`'s sibling file,
+  `agentThreatAdvisories.test.mjs`, tests a different, unrelated admin
+  route) — no bug-reinforcing assertion needed correcting. Full suite: 237
+  files / 2445 tests passing (was 236/2440 before this item — +1 file, +5
+  tests). `node scripts/registry/validate.mjs`: 0 failures, 0 warnings.
+  Updated `CAP-TIH-007`'s `frontend`/`notes` fields in
+  `docs/capability-registry/domains/threat-hunting-intel.json` — it already
+  listed `handleScanAgent` as an entry point but its `frontend.pages` was
+  missing `frontend/agent-threats.html` entirely (only listed
+  `frontend/index.html`), and its single `auth_enforced:false` field was
+  accurate for the feed/report/radar entry points but not for
+  `handleScanAgent`/`handleRegisterAgent`/`handleListAgents` (all 3 hard-
+  require auth) — documented that nuance in `notes` rather than overstating
+  or understating a single boolean field for a capability that bundles
+  entry points with different real auth requirements.
+  `node scripts/registry/generate-report.mjs` regenerated (only the
+  timestamp changed).
+- **1 Tier-2 item remains** (of 8), plus all 6 Tier-3 items, queued next in
+  the audit's stated priority order.
 
 ### 2026-07-11 — Tier-2 backlog item #6 (of 8): ai-security-assessment.html — free "Live MITRE ATLAS Probe" demo called a POST-only route with GET, always failed
 
