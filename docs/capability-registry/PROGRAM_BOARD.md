@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-12 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry twenty-one below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session has fixed all 10 Tier-1 items and all 8 Tier-2 items — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable — and is now 2 items into Tier 3 (minor/cosmetic class). Item #2, just completed: `ops-dashboard.html`'s `loadMetrics()` referenced a nonexistent element id (`wh-bar`; the real id is `wh-kv-bar`), and since that line ran immediately before the Top Endpoints table population in the same `try` block, the resulting `TypeError` (silently caught) meant the table — itself already correctly wired — never got a chance to render, for any visitor, ever. Fixed the id and added a general "no orphan element-id reference" contract test for the whole page (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 20 session-log entries below. 4 of the 24 backlog items remain — all Tier 3 — queued next in the audit's stated priority order.)
+## Current status (2026-07-12 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry twenty-two below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session has fixed all 10 Tier-1 items and all 8 Tier-2 items — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable — and is now 3 items into Tier 3 (minor/cosmetic class). Item #3, just completed: `user-dashboard.html`'s Settings "Alert Notifications" card could save preferences (`POST /api/auth/alerts`) but had no way to load them back — no GET counterpart ever existed on either the backend or the frontend, so the form always rendered its blank default state on every visit regardless of what a user had actually saved. Added `handleGetAlertConfig` + the `GET /api/auth/alerts` route + a new `loadAlerts()` frontend caller wired into `showPage()`'s settings branch (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 21 session-log entries below. 3 of the 24 backlog items remain — all Tier 3 — queued next in the audit's stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 240 files / 2465 tests passing | `npx vitest run`, run 2026-07-12 — +7 tests this wave, new file `opsDashboardElementIdFix.test.mjs` (Tier-3 item #2: ops-dashboard.html's wh-bar → wh-kv-bar element-id fix, plus a general no-orphan-id-reference contract test for the whole page). Baseline going into this wave was 239 files / 2458 tests (Tier-3 item #1) |
+| Worker test suite | 241 files / 2475 tests passing | `npx vitest run`, run 2026-07-12 — +10 tests this wave, new file `userDashboardAlertPreferencesGetFix.test.mjs` (Tier-3 item #3: user-dashboard.html's missing GET /api/auth/alerts endpoint, a real node:sqlite-backed save→load round trip plus static frontend wiring checks). Baseline going into this wave was 240 files / 2465 tests (Tier-3 item #2) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,68 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — Tier-3 backlog item #3 (of 6): user-dashboard.html — Settings' Alert Notifications form had no way to load previously-saved preferences
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-3
+  item #2.
+- **Root cause confirmed against actual code:** `saveAlerts()` in
+  `frontend/user-dashboard.html` already correctly POSTs to
+  `/api/auth/alerts` (backed by the real, working `handleAlertConfig`,
+  which upserts into the `alert_configs` table). But no GET counterpart —
+  neither a backend handler nor a frontend caller — ever existed. Every
+  visit to the Settings page rendered the "Alert Notifications" card's
+  `#alert-email` dropdown and `#alert-tg` input at their hardcoded HTML
+  defaults, regardless of what a returning user had actually saved. A user
+  had no way to confirm their alert preferences had taken effect short of
+  re-submitting the form blind.
+- **Fix:**
+  - `workers/src/handlers/auth.js`: added `handleGetAlertConfig`,
+    reading the same `alert_configs` row `handleAlertConfig` writes
+    (`workers/schema_bootstrap.sql:384-396`). A user with no saved row
+    yet gets the form's own blank-state defaults (`email_enabled: true,
+    min_risk_score: 0, telegram_enabled: false`) rather than a 404 or
+    `handleAlertConfig`'s INSERT-time fallback of `min_risk_score: 70`,
+    which this frontend form never actually sends or represents.
+  - `workers/src/index.js`: registered `GET /api/auth/alerts` alongside
+    the existing `POST` route, both resolving auth via the same
+    `resolveAuthV5()` call.
+  - `frontend/user-dashboard.html`: added `loadAlerts()`, calling the new
+    endpoint via the page's existing `apiFetch()` wrapper and
+    reverse-mapping the saved config onto `#alert-email`/`#alert-tg` (the
+    exact inverse of `saveAlerts()`'s own forward mapping); wired into
+    `showPage()`'s `settings` branch alongside the two pre-existing
+    analogous calls (`loadMFAStatus()`, `loadSessions()`).
+- **Verification:** `node --check` on both backend files and the
+  extracted inline `<script>` block. New
+  `workers/test/userDashboardAlertPreferencesGetFix.test.mjs` (10 tests):
+  real `node:sqlite`-backed `alert_configs` table (not mocks) proving a
+  genuine `handleAlertConfig` POST → `handleGetAlertConfig` GET round
+  trip, the no-saved-row default shape, 401/503 gates, boolean
+  coercion (not raw SQLite 0/1), and upsert-not-duplicate on a second
+  save — plus static-parse assertions that `loadAlerts()` exists, is
+  wired into `showPage()`, and references only element ids that really
+  exist in the markup. Searched `workers/test/` for any pre-existing test
+  referencing `handleAlertConfig`/`alert_configs`/`saveAlerts` — none
+  existed, so no bug-reinforcing assertion needed correcting. Full suite:
+  241 files / 2475 tests passing (was 240/2465 before this item — +1
+  file, +10 tests). `node scripts/registry/validate.mjs`: 0 failures, 0
+  warnings.
+- **Registry:** no domain JSON edited. Checked all three plausible
+  entries first: `CAP-NOTIF-001` (`notifications.json`) covers a
+  *different* system entirely — the still-frontend-less Slack/Teams
+  webhook preferences backed by `notificationPlatform.js`, unrelated to
+  the `alert_configs` table this fix touches; `CAP-PORTAL-001`
+  (`customer-portal.json`, "Profile & Security Settings") covers the same
+  page but explicitly scopes only profile/password/MFA, not alerts
+  (`entry_points` lists only `handleUpdateProfile`/
+  `handleChangePassword`); `CAP-IDN-001` (`identity.json`) lists
+  `handleAlertConfig` only incidentally inside a broad sign-in-flow
+  entry_points array, not as a described capability. None directly
+  covers Alert Notifications, so per this file's established convention
+  no entry was edited and none was created.
+- **3 Tier-3 items remain** (of 6), queued next in the audit's stated
+  priority order.
 
 ### 2026-07-12 — Tier-3 backlog item #2 (of 6): ops-dashboard.html — a nonexistent element id silently killed the Top Endpoints table 2 lines later
 

@@ -3839,6 +3839,21 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     }
   }
 
+  async function loadAlerts() {
+    try {
+      const res = await apiFetch('/api/auth/alerts');
+      if (!res.ok) return;
+      const d = await res.json();
+      const config = d.config || d;
+      const emailSel = document.getElementById('alert-email');
+      const tgInput  = document.getElementById('alert-tg');
+      // Reverse of saveAlerts()'s own mapping (email_enabled/min_risk_score
+      // -> the 3-option dropdown) so a round trip shows back what was saved.
+      if (emailSel) emailSel.value = !config.email_enabled ? 'none' : (config.min_risk_score >= 90 ? 'critical_only' : 'all');
+      if (tgInput) tgInput.value = config.telegram_chat_id || '';
+    } catch (e) { /* leave the form's default state on load failure */ }
+  }
+
   async function saveAlerts() {
     const emailPref = document.getElementById('alert-email').value;
     const tg        = document.getElementById('alert-tg').value.trim();
@@ -4180,6 +4195,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     // Settings page is opened.
     if (id === 'settings' && typeof loadMFAStatus === 'function') loadMFAStatus();
     if (id === 'settings' && typeof loadSessions === 'function') loadSessions();
+    if (id === 'settings' && typeof loadAlerts === 'function') loadAlerts();
   }
 
   // ── Modals ───────────────────────────────────────────────────────────────────

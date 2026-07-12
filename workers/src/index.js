@@ -180,7 +180,7 @@ import { handleEnterpriseOnboarding, handleSaveOnboardingProfile, handleEnterpri
 import { handleReportDownload, handleReportGenerate } from './handlers/report.js';
 import {
   handleSignup, handleLogin, handleRefresh, handleLogout,
-  handleGetProfile, handleUpdateProfile, handleAlertConfig, handleTestAlert,
+  handleGetProfile, handleUpdateProfile, handleAlertConfig, handleGetAlertConfig, handleTestAlert,
   handleChangePassword, handleDeleteAccount,
   handleForgotPassword, handleResetPassword,
   handleListSessions, handleRevokeSession,
@@ -2044,6 +2044,10 @@ export async function routeRequest(request, env, ctx, requestId) {
     if (path === '/api/auth/profile' && method === 'PUT') {
       const authCtx = await resolveAuthV5(request, env);
       return withSecurityHeaders(withCors(await handleUpdateProfile(request, env, authCtx), request));
+    }
+    if (path === '/api/auth/alerts' && method === 'GET') {
+      const authCtx = await resolveAuthV5(request, env);
+      return withSecurityHeaders(withCors(await handleGetAlertConfig(request, env, authCtx), request));
     }
     if (path === '/api/auth/alerts' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env);
