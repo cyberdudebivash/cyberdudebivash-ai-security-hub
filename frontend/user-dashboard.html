@@ -2556,10 +2556,33 @@
         <td style="color:var(--muted);font-size:.8rem">${fmtDate(k.created_at)}</td>
         <td style="color:var(--muted);font-size:.8rem">${k.last_used ? fmtDate(k.last_used) : 'Never'}</td>
         <td>
+          <button class="btn btn-outline btn-sm" onclick="viewKeyUsage('${k.id}', '${(k.name || k.key_prefix || k.id).replace(/'/g, "\\'")}')">Usage</button>
           <button class="btn btn-danger btn-sm" onclick="openRevokeKey('${k.id}', '${k.key_prefix || k.id}')">Revoke</button>
         </td>
       </tr>
     `).join('');
+  }
+
+  async function viewKeyUsage(id, label) {
+    const tbody = document.getElementById('key-usage-table');
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px"><span class="spinner"></span> Loading usage for ${label}…</td></tr>`;
+    try {
+      const res = await apiFetch('/api/keys/' + id + '/usage');
+      if (!res.ok) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">Could not load usage for ${label}.</td></tr>`;
+        return;
+      }
+      const d = await res.json();
+      const today = new Date().toISOString().slice(0, 10);
+      const byModule = d.today?.by_module || [];
+      const todayRows = byModule.length
+        ? byModule.map(m => `<tr><td>${today}</td><td>${m.total}</td><td>${m.module || 'unknown'}</td></tr>`).join('')
+        : `<tr><td>${today}</td><td>0</td><td style="color:var(--muted)">No requests yet today</td></tr>`;
+      const monthRow = `<tr style="color:var(--muted)"><td>This month</td><td>${d.month?.total ?? 0}</td><td>All modules</td></tr>`;
+      tbody.innerHTML = todayRows + monthRow;
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">Could not load usage for ${label}.</td></tr>`;
+    }
   }
 
   function openCreateKeyModal() {

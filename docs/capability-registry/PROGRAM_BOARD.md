@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-12 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry twenty-two below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session has fixed all 10 Tier-1 items and all 8 Tier-2 items — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable — and is now 3 items into Tier 3 (minor/cosmetic class). Item #3, just completed: `user-dashboard.html`'s Settings "Alert Notifications" card could save preferences (`POST /api/auth/alerts`) but had no way to load them back — no GET counterpart ever existed on either the backend or the frontend, so the form always rendered its blank default state on every visit regardless of what a user had actually saved. Added `handleGetAlertConfig` + the `GET /api/auth/alerts` route + a new `loadAlerts()` frontend caller wired into `showPage()`'s settings branch (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 21 session-log entries below. 3 of the 24 backlog items remain — all Tier 3 — queued next in the audit's stated priority order.)
+## Current status (2026-07-12 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry twenty-three below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session has fixed all 10 Tier-1 items and all 8 Tier-2 items — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable — and is now 4 items into Tier 3 (minor/cosmetic class). Item #4, just completed: `user-dashboard.html`'s API Keys "Usage" card permanently read "Select a key to view usage" because no key row had a click handler, link, or button that could ever select one — the backend it needed (`GET /api/keys/:id/usage`) was already correct and already tested. Added a per-row "Usage" button calling a new `viewKeyUsage()` that renders the existing endpoint's response into the table; no backend change needed (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 22 session-log entries below. 2 of the 24 backlog items remain — both Tier 3 — queued next in the audit's stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 241 files / 2475 tests passing | `npx vitest run`, run 2026-07-12 — +10 tests this wave, new file `userDashboardAlertPreferencesGetFix.test.mjs` (Tier-3 item #3: user-dashboard.html's missing GET /api/auth/alerts endpoint, a real node:sqlite-backed save→load round trip plus static frontend wiring checks). Baseline going into this wave was 240 files / 2465 tests (Tier-3 item #2) |
+| Worker test suite | 242 files / 2481 tests passing | `npx vitest run`, run 2026-07-12 — +6 tests this wave, new file `userDashboardApiKeysUsageClickFix.test.mjs` (Tier-3 item #4: user-dashboard.html's API Keys Usage card had no way to select a key; static parse checks on the new viewKeyUsage() wiring). Baseline going into this wave was 241 files / 2475 tests (Tier-3 item #3) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,59 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — Tier-3 backlog item #4 (of 6): user-dashboard.html — API Keys "Usage" card had no way to ever select a key
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-3
+  item #3.
+- **Root cause confirmed against actual code:** the backend side of this
+  feature was already correct and already tested — `GET
+  /api/keys/{id}/usage` (`handleKeyUsage` /
+  `getKeyUsageSummary`, `workers/src/handlers/apikeys.js`) works and is
+  covered by the pre-existing `workers/test/keyUsageBola.test.mjs`
+  (BOLA/IDOR ownership-scoping tests). The bug was entirely on the
+  frontend: `renderKeys()` in `frontend/user-dashboard.html` gave every
+  key row exactly one action, a "Revoke" button — no click handler, no
+  link, nothing — so the adjacent "Usage" card's `#key-usage-table`
+  permanently showed its static placeholder, "Select a key to view
+  usage," with no way for a user to ever actually select one. Grepped the
+  whole file for any dead/mis-wired handler that might already reference
+  a usage-selection function — found none; the click interaction never
+  existed at all.
+- **Fix (`frontend/user-dashboard.html`, frontend-only, no backend
+  change needed):** added a second, `btn-outline` "Usage" button to each
+  key row (alongside the existing "Revoke" button, not replacing it),
+  calling a new `viewKeyUsage(id, label)`. It fetches the existing
+  endpoint via `apiFetch` and renders the real response shape into the
+  table: one row per module from `today.by_module` (falling back to an
+  explicit "No requests yet today" row when empty) plus a summary row
+  for `month.total`, with its own loading and error states so the table
+  never gets stuck on a spinner.
+- **Verification:** `node --check` on the extracted inline `<script>`
+  block. New
+  `workers/test/userDashboardApiKeysUsageClickFix.test.mjs` (6 tests,
+  static parse): `viewKeyUsage()` exists and calls the real endpoint,
+  renders into the real `#key-usage-table` element, is actually wired
+  onto each rendered row alongside (not instead of) the Revoke button,
+  reads the backend's real `today.by_module`/`month.total` fields, and
+  degrades gracefully on a failed fetch. Searched `workers/test/` for
+  any pre-existing test referencing `viewKeyUsage`/`key-usage-table` —
+  none existed, so no bug-reinforcing assertion needed correcting. Full
+  suite: 242 files / 2481 tests passing (was 241/2475 before this item —
+  +1 file, +6 tests). `node scripts/registry/validate.mjs`: 0 failures,
+  0 warnings.
+- **Registry:** `CAP-DEVPORTAL-001` (`developer-portal-apikeys.json`,
+  "API Key Management (canonical)") directly covers this capability —
+  its own description names "per-key usage stats" explicitly and its
+  `entry_points` already list `getKeyUsageSummary`/`handleKeyUsage`.
+  Appended a dated fix paragraph to its `notes` field documenting the
+  gap and the fix; `test_coverage.has_tests` left unchanged since the
+  new test is frontend-only static parse, not new import-based coverage
+  of any backend `entry_point`. `node
+  scripts/registry/generate-report.mjs` regenerated (only the timestamp
+  changed).
+- **2 Tier-3 items remain** (of 6), queued next in the audit's stated
+  priority order.
 
 ### 2026-07-12 — Tier-3 backlog item #3 (of 6): user-dashboard.html — Settings' Alert Notifications form had no way to load previously-saved preferences
 
