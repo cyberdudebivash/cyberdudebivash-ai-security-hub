@@ -431,19 +431,39 @@ async function handleUsageDashboard(req, env, authCtx) {
   const url = new URL(req.url);
   const days = Math.min(parseInt(url.searchParams.get('days') || '30', 10), 90);
   try {
-    const [hourly, daily, topEndpoints, byPoint] = await Promise.all([
+    const [hourly, daily, topEndpoints, byPoint, overall, monthToDate] = await Promise.all([
       D.prepare(`SELECT strftime('%Y-%m-%dT%H:00:00', ts) as hour, COUNT(*) as calls, SUM(latency_ms) as total_ms FROM ops_usage_events WHERE user_id=? AND ts >= datetime('now', ?) GROUP BY hour ORDER BY hour DESC LIMIT 48`).bind(userId(authCtx), `-${days} day`).all().catch(() => ({ results: [] })),
       D.prepare(`SELECT strftime('%Y-%m-%d', ts) as day, COUNT(*) as calls FROM ops_usage_events WHERE user_id=? AND ts >= datetime('now', ?) GROUP BY day ORDER BY day DESC`).bind(userId(authCtx), `-${days} day`).all().catch(() => ({ results: [] })),
       D.prepare(`SELECT endpoint, COUNT(*) as calls, AVG(latency_ms) as avg_ms, SUM(cached) as cache_hits FROM ops_usage_events WHERE user_id=? AND ts >= datetime('now', ?) GROUP BY endpoint ORDER BY calls DESC LIMIT 10`).bind(userId(authCtx), `-${days} day`).all().catch(() => ({ results: [] })),
       D.prepare(`SELECT strftime('%Y-%m-%d', ts) as day, endpoint, COUNT(*) as calls FROM ops_usage_events WHERE user_id=? AND ts >= datetime('now', ?) GROUP BY day, endpoint ORDER BY day DESC, calls DESC LIMIT 50`).bind(userId(authCtx), `-${days} day`).all().catch(() => ({ results: [] })),
+      // Un-limited totals for the window (topEndpoints above is LIMIT 10, so
+      // undercounts total_calls/cache hits once a caller uses >10 distinct endpoints).
+      D.prepare(`SELECT COUNT(*) as calls, SUM(cached) as cache_hits FROM ops_usage_events WHERE user_id=? AND ts >= datetime('now', ?)`).bind(userId(authCtx), `-${days} day`).first().catch(() => ({ calls: 0, cache_hits: 0 })),
+      // Quota is a calendar-month concept, independent of the `days` window param.
+      D.prepare(`SELECT COUNT(*) as cnt FROM ops_usage_events WHERE user_id=? AND ts >= datetime('now','start of month')`).bind(userId(authCtx)).first().catch(() => ({ cnt: 0 })),
     ]);
+    const tier = userTier(authCtx);
+    const limits = TIER_LIMITS[tier] || TIER_LIMITS.FREE;
+    const monthCalls = monthToDate?.cnt || 0;
+    const radarLimit = limits.monthly_limit > 0 ? limits.monthly_limit : null; // -1 = unlimited
     return Response.json({
       user_id: userId(authCtx), days,
       hourly_trend: hourly.results || [],
       daily_trend: daily.results || [],
       top_endpoints: topEndpoints.results || [],
       breakdown_by_day: byPoint.results || [],
-      tier: userTier(authCtx),
+      tier,
+      // frontend/automation-dashboard.html's KPI tiles and quota panel read
+      // these exact shapes — previously nothing here at all, always 0/∞.
+      summary: {
+        total_calls: overall?.calls || 0,
+        cache_hit_ratio: overall?.calls > 0 ? (overall.cache_hits || 0) / overall.calls : 0,
+      },
+      quota: {
+        month_calls: monthCalls,
+        radar_limit: radarLimit,
+        quota_pct: radarLimit ? Math.round((monthCalls / radarLimit) * 1000) / 10 : 0,
+      },
     });
   } catch { return Response.json({ usage: [] }); }
 }
@@ -530,7 +550,37 @@ export function getLifecycleHeaders(path) {
 
 async function handleGovernance(req, env, authCtx) {
   const deny = requireAuth(authCtx); if (deny) return deny;
-  return Response.json(API_MANIFEST);
+  const tier = userTier(authCtx);
+  const limits = TIER_LIMITS[tier] || TIER_LIMITS.FREE;
+
+  // frontend/automation-dashboard.html's Governance tab reads user_tier/
+  // throttle_limits/quota_warning/released — API_MANIFEST alone is a static,
+  // non-personalized manifest (version/endpoints/deprecations only) and
+  // never carried any of these, so the tab was permanently blank on them.
+  let quota_warning = null;
+  const D = db(env);
+  if (D && limits.monthly_limit > 0) {
+    const row = await D.prepare(`SELECT COUNT(*) as cnt FROM ops_usage_events WHERE user_id=? AND ts >= datetime('now','start of month')`).bind(userId(authCtx)).first().catch(() => null);
+    const used = row?.cnt || 0;
+    const pct = Math.round((used / limits.monthly_limit) * 1000) / 10;
+    if (pct >= 80) {
+      quota_warning = {
+        message: pct >= 100 ? 'Monthly quota exceeded' : 'Approaching your monthly quota',
+        pct, used, limit: limits.monthly_limit,
+      };
+    }
+  }
+
+  return Response.json({
+    ...API_MANIFEST,
+    released: API_MANIFEST.last_updated,
+    user_tier: tier,
+    throttle_limits: {
+      requests_per_minute: limits.burst_per_min,
+      requests_per_day: limits.daily_limit, // -1 = unlimited, same convention frontend already handles elsewhere
+    },
+    quota_warning,
+  });
 }
 
 // ─── P7.0-007: Webhook Catalog (public) ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────

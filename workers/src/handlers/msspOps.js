@@ -125,6 +125,7 @@ export async function handleAddMsspPartner(request, env) {
     company = '', contact_email = '', tier = 'RESELLER',
     plan = 'reseller', brand_name = '', custom_domain = '',
     primary_color = '#00d4ff', margin_pct = 20,
+    contact_name = '', contract_value = 0, notes = '',
   } = body;
 
   if (!company || !contact_email) {
@@ -133,6 +134,11 @@ export async function handleAddMsspPartner(request, env) {
 
   const id = 'mp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const apiKey = 'cdb_mssp_' + crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '').slice(0, 8);
+  // mssp_partners has no dedicated columns for these (schema_bootstrap.sql) —
+  // stored in the existing metadata JSON column (already SELECTed via `p.*`
+  // in handleListMsspPartners, so this is real, retrievable data) rather
+  // than silently dropped.
+  const metadata = JSON.stringify({ contact_name, contract_value: Number(contract_value) || 0, notes });
 
   if (db) {
     try {
@@ -140,11 +146,12 @@ export async function handleAddMsspPartner(request, env) {
         INSERT INTO mssp_partners
           (id, company, contact_email, tier, plan, brand_name, custom_domain,
            primary_color, api_key, client_count, max_clients, margin_pct,
-           status, onboarded_at, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 10, ?, 'pending', unixepoch(), unixepoch())
+           status, onboarded_at, created_at, metadata)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 10, ?, 'pending', unixepoch(), unixepoch(), ?)
       `).bind(
         id, company, contact_email, tier.toUpperCase(), plan,
         brand_name, custom_domain, primary_color, apiKey, parseFloat(margin_pct) || 20,
+        metadata,
       ).run();
 
       // Write to subscriptions table for revenue tracking and renewal engine

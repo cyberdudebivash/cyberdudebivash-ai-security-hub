@@ -322,6 +322,15 @@ option{background:#0d0d22;color:var(--text)}
 <script>
 // ── CYBERDUDEBIVASH Agent Threats — Live Engine ───────────────────────────────
 
+// ── Auth helper ────────────────────────────────────────────────────────────
+// frontend/user-dashboard.html's real login/signup flow (saveTokens()) writes
+// the current session token to sessionStorage['cdb_access'] only; 'cdb_token'
+// is a legacy key some older/OAuth flows still populate. Checked first so it
+// takes priority when both exist.
+function getAuthToken(){
+  try{return sessionStorage.getItem('cdb_access')||localStorage.getItem('cdb_token')||sessionStorage.getItem('cdb_token')||'';}catch(e){return '';}
+}
+
 // ── FEATURE 1 & 2: Agent Scan Modal ──────────────────────────────────────────
 function openAgentScanModal(){
   const m=document.getElementById('scan-modal');
@@ -364,12 +373,19 @@ async function runAgentScan(){
   const stEl=document.getElementById('scan-status');
   if(stEl)stEl.textContent='Submitting configuration to security engine...';
 
-  // Try real backend endpoint first (stores result to D1, returns real agent_id)
+  // Try real backend endpoint first (stores result to D1, returns real agent_id).
+  // handleScanAgent requires a real authenticated user (401 otherwise) — with
+  // no Authorization header this always 401'd, silently degrading every
+  // visitor (including logged-in customers) to the client-only fallback
+  // below, which produces an identical-looking report that is never actually
+  // persisted — "Register & Save Report" / alerts / rescans never had
+  // anything real to attach to.
+  const _authToken=getAuthToken();
   let backendResult=null;
   try{
     const r=await fetch('/api/ai-security/agents/scan',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json',...(_authToken?{'Authorization':'Bearer '+_authToken}:{})},
       body:JSON.stringify({name,framework:fw,permissions:caps,internet_access:net,tools:caps}),
       signal:AbortSignal.timeout(10000)
     });

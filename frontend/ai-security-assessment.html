@@ -1067,7 +1067,17 @@ async function openRedTeamDemo() {
   try {
     var [techRes, promptRes] = await Promise.all([
       fetch(API_BASE + '/api/ai-redteam/techniques', { signal: AbortSignal.timeout(8000) }),
-      fetch(API_BASE + '/api/ai-redteam/probe/jailbreak', { signal: AbortSignal.timeout(8000) }),
+      // /api/ai-redteam/probe/jailbreak is POST-only (workers/src/handlers/
+      // aiRedTeamPro.js's probeJailbreak) — the default GET always 404'd,
+      // which made !promptRes.ok always true below, so this entire "free,
+      // no payment" demo modal always fell straight to the generic
+      // "temporarily unavailable" message and never showed real data.
+      fetch(API_BASE + '/api/ai-redteam/probe/jailbreak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+        signal: AbortSignal.timeout(8000),
+      }),
     ]);
     if (!techRes.ok || !promptRes.ok) throw new Error('API unavailable');
     var tech = await techRes.json();

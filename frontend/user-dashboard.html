@@ -2556,10 +2556,33 @@
         <td style="color:var(--muted);font-size:.8rem">${fmtDate(k.created_at)}</td>
         <td style="color:var(--muted);font-size:.8rem">${k.last_used ? fmtDate(k.last_used) : 'Never'}</td>
         <td>
+          <button class="btn btn-outline btn-sm" onclick="viewKeyUsage('${k.id}', '${jsAttrEsc(k.name || k.key_prefix || k.id)}')">Usage</button>
           <button class="btn btn-danger btn-sm" onclick="openRevokeKey('${k.id}', '${k.key_prefix || k.id}')">Revoke</button>
         </td>
       </tr>
     `).join('');
+  }
+
+  async function viewKeyUsage(id, label) {
+    const tbody = document.getElementById('key-usage-table');
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px"><span class="spinner"></span> Loading usage for ${label}…</td></tr>`;
+    try {
+      const res = await apiFetch('/api/keys/' + id + '/usage');
+      if (!res.ok) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">Could not load usage for ${label}.</td></tr>`;
+        return;
+      }
+      const d = await res.json();
+      const today = new Date().toISOString().slice(0, 10);
+      const byModule = d.today?.by_module || [];
+      const todayRows = byModule.length
+        ? byModule.map(m => `<tr><td>${today}</td><td>${m.total}</td><td>${m.module || 'unknown'}</td></tr>`).join('')
+        : `<tr><td>${today}</td><td>0</td><td style="color:var(--muted)">No requests yet today</td></tr>`;
+      const monthRow = `<tr style="color:var(--muted)"><td>This month</td><td>${d.month?.total ?? 0}</td><td>All modules</td></tr>`;
+      tbody.innerHTML = todayRows + monthRow;
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">Could not load usage for ${label}.</td></tr>`;
+    }
   }
 
   function openCreateKeyModal() {
@@ -2737,14 +2760,18 @@
     const members = org.members || [];
     document.getElementById('org-members-table').innerHTML = members.map(m => {
       const isSelf = _user && m.user_id === _user.id;
-      const memberLabel = orgEsc(m.full_name || m.email || m.user_id);
+      // aria-label is a double-quoted HTML attribute — orgEsc() only escapes
+      // &<> (safe for text content, where it's used everywhere else in this
+      // function) and leaves a raw " free to break out of an attribute value.
+      // mfaEsc() escapes " too, which is what this specific use needs.
+      const memberLabel = mfaEsc(m.full_name || m.email || m.user_id);
       const roleControl = (isOwner && m.role !== 'OWNER')
         ? `<select class="form-input" style="width:auto;display:inline-block;padding:4px 8px;font-size:.78rem;margin-right:6px" aria-label="Change role for ${memberLabel}" onchange="updateMemberRole('${org.id}','${m.user_id}',this.value)">
              ${['ADMIN','ANALYST','MEMBER','VIEWER'].map(r => `<option value="${r}" ${r === m.role ? 'selected' : ''}>${r}</option>`).join('')}
            </select>`
         : '';
       const removeControl = ((canManage || isSelf) && m.role !== 'OWNER')
-        ? `<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:rgba(239,68,68,.4)" onclick="confirmRemoveMember('${org.id}','${m.user_id}','${orgEsc(m.full_name || m.email || m.user_id).replace(/'/g, "\\'")}')">${isSelf ? 'Leave' : 'Remove'}</button>`
+        ? `<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:rgba(239,68,68,.4)" onclick="confirmRemoveMember('${org.id}','${m.user_id}','${jsAttrEsc(m.full_name || m.email || m.user_id)}')">${isSelf ? 'Leave' : 'Remove'}</button>`
         : '';
       return `
         <tr>
@@ -3721,6 +3748,15 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     const el = kind === 'ok' ? o : e; el.textContent = text; el.style.display = 'block';
   }
   function mfaEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  // Safe for embedding inside a single-quoted JS string literal that itself sits
+  // inside a double-quoted HTML attribute (e.g. onclick="fn('${...}')"): escapes
+  // HTML metacharacters first, then backslashes, then quotes — backslashes must
+  // be escaped before quotes, otherwise the backslash a quote-escape introduces
+  // gets doubled by a later backslash pass and desyncs the string. Escaping only
+  // the quote (not the backslash) is an incomplete-escaping bug: a label ending
+  // in a raw backslash lets an attacker's next character escape out of the JS
+  // string and inject arbitrary onclick-handler code.
+  function jsAttrEsc(s){return mfaEsc(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");}
 
   async function loadMFAStatus() {
     const badge = document.getElementById('mfa-badge'); const body = document.getElementById('mfa-body');
@@ -3837,6 +3873,21 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     } catch (e) {
       mfaMsg('err', e.message);
     }
+  }
+
+  async function loadAlerts() {
+    try {
+      const res = await apiFetch('/api/auth/alerts');
+      if (!res.ok) return;
+      const d = await res.json();
+      const config = d.config || d;
+      const emailSel = document.getElementById('alert-email');
+      const tgInput  = document.getElementById('alert-tg');
+      // Reverse of saveAlerts()'s own mapping (email_enabled/min_risk_score
+      // -> the 3-option dropdown) so a round trip shows back what was saved.
+      if (emailSel) emailSel.value = !config.email_enabled ? 'none' : (config.min_risk_score >= 90 ? 'critical_only' : 'all');
+      if (tgInput) tgInput.value = config.telegram_chat_id || '';
+    } catch (e) { /* leave the form's default state on load failure */ }
   }
 
   async function saveAlerts() {
@@ -4180,6 +4231,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     // Settings page is opened.
     if (id === 'settings' && typeof loadMFAStatus === 'function') loadMFAStatus();
     if (id === 'settings' && typeof loadSessions === 'function') loadSessions();
+    if (id === 'settings' && typeof loadAlerts === 'function') loadAlerts();
   }
 
   // ── Modals ───────────────────────────────────────────────────────────────────
@@ -4252,10 +4304,14 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
         : `${window.API_BASE || 'https://cyberdudebivash.in'}/api/delivery/my-purchases?email=${encodeURIComponent(email)}`;
 
       const res  = await fetch(url, { headers }).catch(() => null);
-      const data = res?.ok ? await res.json().catch(() => null) : null;
+      const raw  = res?.ok ? await res.json().catch(() => null) : null;
+      // handleMyPurchases wraps its response in the standard
+      // {success,data,error} envelope, under the real field name
+      // `purchases` — not the top-level `deliveries` this used to read.
+      const data = (raw && raw.success && raw.data) ? raw.data : raw;
 
       // Filter to training/bundle only
-      const purchases = (data?.deliveries || []).filter(d =>
+      const purchases = (data?.purchases || []).filter(d =>
         d.product_type === 'training' || d.product_type === 'bundle'
       );
 
@@ -4398,8 +4454,11 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
         : `${window.API_BASE || 'https://cyberdudebivash.in'}/api/delivery/my-purchases?email=${encodeURIComponent(email)}`;
 
       const res  = await fetch(url, { headers }).catch(() => null);
-      const data = res?.ok ? await res.json().catch(() => null) : null;
-      const deliveries = data?.deliveries || [];
+      const raw  = res?.ok ? await res.json().catch(() => null) : null;
+      // See loadMyTrainings() above — handleMyPurchases wraps its response
+      // in {success,data,error}, and the real field is `purchases`.
+      const data = (raw && raw.success && raw.data) ? raw.data : raw;
+      const deliveries = data?.purchases || [];
 
       if (!deliveries.length) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">No purchases found for this account.</td></tr>`;
@@ -4597,11 +4656,17 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
       // Primary: dedicated reports endpoint
+      // Both handleUserReports and handleMyPurchases wrap their response in
+      // the standard {success,data,error} envelope — reading d?.reports (the
+      // top-level object) instead of d?.data?.reports always missed, so this
+      // primary path never worked and silently fell to the fallback below,
+      // which had the identical bug plus a wrong field name.
       let reports = [];
       const res = await fetch(`${base}/api/user/reports`, { headers }).catch(() => null);
       if (res?.ok) {
-        const d = await res.json().catch(() => null);
-        reports = d?.reports || d?.deliveries || [];
+        const raw = await res.json().catch(() => null);
+        const d   = (raw && raw.success && raw.data) ? raw.data : raw;
+        reports = d?.reports || [];
       }
 
       // Fallback: filter my-purchases for report_access type
@@ -4611,8 +4676,9 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
           : `${base}/api/delivery/my-purchases?email=${encodeURIComponent(email)}`;
         const res2 = await fetch(url2, { headers }).catch(() => null);
         if (res2?.ok) {
-          const d2 = await res2.json().catch(() => null);
-          const all = d2?.deliveries || d2?.purchases || [];
+          const raw2 = await res2.json().catch(() => null);
+          const d2   = (raw2 && raw2.success && raw2.data) ? raw2.data : raw2;
+          const all  = d2?.purchases || [];
           reports = all.filter(r => r.product_type === 'report_access' || r.product_type === 'report');
         }
       }
@@ -5041,9 +5107,14 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
       // new tier baked in) plus a refresh token — without storing these, the
       // rest of the platform (resolveAuthV5, every tier-gated feature) would
       // still see the customer's old tier despite a successful charge.
+      // Must go through the same _token/saveTokens() path doLogin() uses
+      // (sessionStorage['cdb_access']) — writing to localStorage['cdb_token']
+      // (as this did previously) is a key/storage-type this page's own
+      // apiFetch() never reads, so the UI kept enforcing the pre-upgrade
+      // tier until the session naturally expired and forced a fresh login.
       if (type === 'subscription' && d.token) {
-        localStorage.setItem('cdb_token', d.token);
-        if (d.refresh_token) localStorage.setItem('cdb_refresh_token', d.refresh_token);
+        _token = d.token;
+        saveTokens(_token, d.refresh_token);
       }
 
       // Get MCP training recommendation — GOD MODE v16: use /mcp/control first
@@ -5095,10 +5166,15 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
         mcp_training: mcpTraining,
       });
 
-      // Refresh dashboard state
+      // Refresh dashboard state. loadDashboard() does not exist anywhere in
+      // this file — it threw a ReferenceError right after the "Access
+      // Unlocked" modal, caught by this function's own catch block below,
+      // surfacing a confusing "Something went wrong" toast immediately after
+      // a successful upgrade. initDashboard() is this page's real
+      // full-refresh function (already used by doLogin()'s own success
+      // path) and already calls syncPlanCards() itself once its data loads.
       if (type === 'subscription') {
-        await loadDashboard();
-        syncPlanCards && syncPlanCards();
+        await initDashboard();
       }
     } catch (err) {
       showToast(err.message || 'Something went wrong. Check My Reports tab.', 'err');

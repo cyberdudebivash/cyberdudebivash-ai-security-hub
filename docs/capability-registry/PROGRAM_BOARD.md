@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-11 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry three below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed Tier-1 items #1 and #2: `enterprise-kpi-dashboard.html`'s impossible-tier admin gate (PR #184), and `index.html`'s Autonomous SOC/SIEM Integration Deploy/Org Memory widgets — 14 fetch() calls missing their auth token, plus 2 sections gated to "any authenticated user" when their backend actually requires the literal platform owner. See the top 2 session-log entries below. 22 of the 24 backlog items remain, queued in the same stated priority order.)
+## Current status (2026-07-12 — the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit is now **fully closed** (see the entry twenty-six below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed all 10 Tier-1 items, all 8 Tier-2 items, and all 6 Tier-3 items — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable. Immediately after closing the backlog, the owner asked to verify/validate/audit and merge PR #185 into `main`. That audit caught a real thing: GitHub's native CodeQL code-scanning check (distinct from the SARIF-generation jobs, which were green) failed with 1 new High-severity "incomplete string escaping" alert on this backlog's own Tier-3 item #4 code. Fixed with a new `jsAttrEsc()` helper, and — found in the same pass — a worse, pre-existing sibling bug in unrelated Organization-member code got fixed alongside it (see the top session-log entry for full detail). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 25 session-log entries below for this backlog's full closure account plus the pre-merge security fix, item by item. 0 of the 24 backlog items remain; PR #185 is being merged to `main` now that CI is green.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 223 files / 2327 tests passing | `npx vitest run`, run 2026-07-11 — +1 file / +17 tests this wave (`homepageOwnerAndTierGatedActionsAuthGaps.test.mjs`, 17 new; also widened a pre-existing test's fixed-length source slice in `executiveHubEnvelopeUnwrap.test.mjs` that broke when this wave's fix added lines earlier in `cdbMemoryRefresh` — see session log). Baseline going into this wave was 222 files / 2310 tests (Tier-1 item #1, PR #184) |
+| Worker test suite | 245 files / 2495 tests passing | `npx vitest run`, run 2026-07-12 — +6 tests this wave, new file `userDashboardOnclickEscapingFix.test.mjs` (pre-merge security fix: CodeQL High-severity incomplete-escaping bug in this backlog's own Tier-3 item #4 code, plus a worse pre-existing sibling found in Organization-member code). Baseline going into this wave was 244 files / 2489 tests (Tier-3 item #6, which closed the 24-item backlog). **The 24-item backlog is closed and this pre-merge security fix is the last thing gating PR #185's merge to `main`** |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,1616 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — Pre-merge security gate: CodeQL caught a real High-severity incomplete-escaping bug in this backlog's own PR before it reached `main`
+
+- **Trigger:** owner asked to verify/validate/audit and merge PR #185 (the
+  entire 24-item Tier 1–3 backlog) into `main`. Before merging, checked the
+  PR's live CI status rather than assuming green — `total_count: 32` check
+  runs, all green except one: a native GitHub code-scanning check named
+  `CodeQL` (distinct from the `Analyze (javascript-typescript)`/`Analyze
+  (python)` SARIF-generation jobs, both of which had already passed)
+  reported `conclusion: failure`, 1 new High-severity alert, rule
+  "Incomplete string escaping or encoding", `frontend/user-dashboard.html`
+  line 2559.
+- **Confirmed real, not a false gate:** line 2559 is this backlog's own
+  Tier-3 item #4 code (the API Keys "Usage" button, task #22 earlier this
+  session): `onclick="viewKeyUsage('${k.id}', '${label.replace(/'/g,
+  "\\'")}')"`. This only escapes a literal `'`, never a literal `\` — a key
+  name ending in a raw backslash (fully user-controlled: the key owner
+  names their own key at creation) collapses the escaper's own inserted `\`
+  together with the label's trailing `\`, which the browser's JS parser
+  then reads as a single escaped quote — terminating the string one
+  character early and letting the remainder of the label execute as
+  trailing script inside the onclick handler. A real, if narrow (self-only
+  — the caller can only inject into their own session), DOM XSS.
+- **Found a worse sibling while fixing it:** grepped the same file for the
+  identical `.replace(/'/g, "\\'")` pattern and found a second, pre-existing
+  (not part of this PR's diff — confirmed via `git diff origin/main..HEAD
+  -- frontend/user-dashboard.html`'s hunk list, nowhere near this line)
+  instance in the Organization "Remove member" button: `onclick=
+  "confirmRemoveMember('${org.id}','${m.user_id}','${orgEsc(m.full_name ||
+  m.email || m.user_id).replace(/'/g, "\\'")}')"`. This one is strictly
+  worse: `orgEsc()` (a `textContent`-round-trip HTML escaper meant for text
+  *content*, safe everywhere else it's used in this file) never escapes a
+  literal `"` either, so a member's `full_name`/`email` containing a `"`
+  breaks straight out of the double-quoted `onclick="..."` attribute with
+  no JS-string layer needed at all — and because organization member names
+  are set by *other* members, not just the viewer, this is genuine stored
+  XSS across users (e.g. any member could plant a payload that fires in the
+  org owner's browser when they view the member list), not merely
+  self-inflicted like the first one. A third, related instance: the same
+  member-role `<select>`'s `aria-label="Change role for
+  ${memberLabel}"` used the same under-escaping `orgEsc()` result in an
+  attribute context.
+- **Fix (`frontend/user-dashboard.html`):** added one new helper,
+  `jsAttrEsc(s)`, immediately after the existing `mfaEsc()`: HTML-escapes
+  `&<>"` first (delegating to `mfaEsc`, unchanged), then escapes `\` before
+  `'` (order matters — escaping the quote first would double the
+  backslash the quote-escape itself introduces on a second pass). Used at
+  all 3 sites: the Usage button, the Remove-member button, and
+  `memberLabel`'s definition (this last one only needed the `mfaEsc()` half
+  — no JS-string layer, since `aria-label` isn't parsed as JS — so it was
+  switched from `orgEsc()` straight to `mfaEsc()`, not `jsAttrEsc()`).
+  `orgEsc()` itself is untouched and remains correct for its ~13 other,
+  genuinely text-content-only call sites in this file.
+- **Also found, deliberately left alone (out of scope for this PR):** the
+  identical `.replace(/'/g, "\\'")` pattern also appears 5× in
+  `frontend/index.html` (`dsPurchase`/`initiatePayment`/`CDB_PAYMENT.open`
+  buttons, e.g. `:3210,3307,3520,10149,14413`) — confirmed via `git diff`
+  that none of those lines are anywhere near this PR's actual `index.html`
+  changes (Tier-2 item #3's fake-KPI/badge fix, entirely different section
+  of the file). Those use catalog/product data the site owner controls
+  (`s.title`/`course.label`), a materially different risk profile than
+  free-text user/member names — flagged here as a follow-up worth its own
+  dedicated pass, not fixed opportunistically inside an unrelated merge.
+- **Verification:** `node --check` on the extracted inline `<script>`
+  block. New `workers/test/userDashboardOnclickEscapingFix.test.mjs` (6
+  tests): confirms `jsAttrEsc()`'s exact escape order, confirms all 3 call
+  sites were updated, and — the real proof — 2 end-to-end tests that
+  simulate the actual 2-stage browser parse (HTML-entity-decode the
+  escaped output, then hand it to a real JS engine via `new Function` to
+  parse as a single-quoted string literal) for a trailing-backslash label
+  and a label containing embedded quotes plus an injection attempt,
+  asserting both reconstruct to *exactly* the original label with no
+  early termination or breakout — the precise mechanism CodeQL flagged.
+  Re-ran the 2 pre-existing tests referencing the touched code
+  (`userDashboardApiKeysUsageClickFix.test.mjs`,
+  `orgAuditLog.test.mjs`) — both still pass unchanged. Full suite: 245
+  files / 2495 tests passing (was 244/2489 before this fix — +1 file, +6
+  tests). `node scripts/registry/validate.mjs`: 0 failures, 0 warnings.
+- **No capability-registry domain JSON edited** — this is a security
+  hardening fix to existing rendering code, not a capability-completeness
+  change; no domain entry's `description`/`entry_points` scope covers
+  "onclick-attribute escaping correctness" as a capability in its own
+  right.
+- Pushed as an additional commit on top of the 24-item backlog on
+  `claude/production-tasks-resume-akvl95` (PR #185) before merging to
+  `main`, per the owner's explicit instruction to verify/validate/audit
+  first. This is exactly what that gate is for: caught before production,
+  not after.
+
+### 2026-07-12 — Tier-3 backlog item #6 (last of 6): threat-intel-workbench.html — APT actor cards rendered raw keyword text instead of an icon glyph — closes the entire 24-item backlog
+
+- **Trigger:** continuing the Tier 1–3 backlog, final item after Tier-3
+  item #5.
+- **Root cause confirmed against actual code:** the APT Actor Profiles
+  panel's `renderActorGrid()` and `showActorDetail()` both rendered
+  `${a.icon || '🎭'}` into a small (36px grid / 40px modal) icon box.
+  `workers/src/services/aptActorProfiles.js`'s `icon` field turned out to
+  be a semantic keyword (`'bear'`, `'dragon'`, `'typhoon'`, `'skull'`,
+  `'panda'`, `'worm'`, `'ghost'`, `'lock'`, `'cat'`, `'spider'`,
+  `'snake'`), not a display-ready glyph — and every one of the 15 actors
+  in `APT_ACTORS` has this field set to a non-empty string. That means
+  the `|| '🎭'` fallback was dead code: it never triggered for any real
+  actor. Every single APT actor card, for every actor, always rendered
+  the literal keyword text crammed into a box sized for one emoji glyph
+  — a real, if purely cosmetic, bug matching the audit's description
+  once the actual mechanism was found.
+- **Fix (`frontend/threat-intel-workbench.html`, frontend-only, no
+  backend change needed):** added an `ACTOR_ICON_EMOJI` keyword→glyph
+  map (covering all 11 keywords actually used across the dataset) and an
+  `actorIconEmoji(a)` helper — falling back to the original 🎭 mask for
+  any future unmapped keyword, preserving the original
+  degrade-gracefully intent instead of ever printing raw text again.
+  Wired into both the grid card and the detail modal, the only two
+  actor-icon render sites on the page (a third `relevant_actors` render
+  site in the sector-brief panel renders `a.id` text tags, not icons —
+  confirmed out of scope).
+- **Verification:** `node --check` on the extracted inline `<script>`
+  block. New
+  `workers/test/threatIntelWorkbenchActorIconFix.test.mjs` (5 tests):
+  imports the real `APT_ACTORS` dataset directly and asserts every
+  actor's real `icon` keyword is covered by the frontend's map — the
+  general form of this bug (an unmapped keyword silently falling
+  through to the mask), not just today's 11 instances — plus
+  static-parse checks that both render sites use the new helper and
+  that the graceful-degradation fallback still exists. Searched
+  `workers/test/` for any pre-existing test referencing actor-icon
+  rendering — none existed, so no bug-reinforcing assertion needed
+  correcting. Full suite: 244 files / 2489 tests passing (was 243/2484
+  before this item — +1 file, +5 tests). `node
+  scripts/registry/validate.mjs`: 0 failures, 0 warnings.
+- **Registry:** `CAP-TIH-003` (`threat-hunting-intel.json`, "Threat
+  Intel Pro Workbench (MITRE ATT&CK, APT Actors, STIX/TAXII, AI
+  Analyst)") directly covers this exact page and the APT Actor Profiles
+  panel specifically (same entry Tier-2 item #1 fixed earlier this
+  session). Appended a dated fix paragraph to its `notes` field;
+  `test_coverage.has_tests` left unchanged since the new test is
+  frontend-only static parse plus a data-shape assertion, not new
+  import-based coverage of `handleThreatIntelPro` itself. `node
+  scripts/registry/generate-report.mjs` regenerated (only the timestamp
+  changed).
+- **All 6 Tier-3 items are now fixed. All 24 items in the original
+  24-item Tier 1–3 backlog (10 Tier-1 + 8 Tier-2 + 6 Tier-3) are now
+  fixed.** The entire follow-up backlog from the full 80-page frontend
+  audit — every item queued after the 2 Tier-0 exposures already fixed
+  in PR #183 — is closed. Every fix in this backlog followed the same
+  discipline: confirm the real root cause against actual code (not just
+  the audit's one-line paraphrase), implement the minimal
+  root-cause-complete fix, add a real regression test (importing real
+  handlers/data directly wherever feasible, static-parse contract tests
+  for frontend-only fixes), run the full suite, run the registry
+  validator, update the capability-registry entry that already covers
+  the fixed capability when one existed (never inventing a new entry for
+  a bounded bug fix), and commit/push individually. PR #185 (open) now
+  carries every Tier-3 item's commits on top of the earlier Tier-1/Tier-2
+  work already merged via PR #184.
+
+### 2026-07-12 — Tier-3 backlog item #5 (of 6): soc-agents.html — the per-agent token-count pill read a field that never existed
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-3
+  item #4.
+- **Root cause confirmed against actual code:** `updateAgentCard()`'s meta
+  row (model · provider · latency · tokens) read
+  `result.tokens?.total_tokens`. Traced every route that feeds it
+  (`/api/agents/run`, `/api/agents/stream`, `/api/agents/dispatch/:id` —
+  all three call the same `runAgent()`, `workers/src/handlers/multiAgentSOC.js`)
+  and its underlying `routeAICall()`/`dispatchToProvider()`
+  (`workers/src/core/aiProviderRouter.js`): the real, only-ever-produced
+  shape is `tokens: { input, output }` — there is no `total_tokens` field
+  anywhere in the real response, on any of the three routes. The token
+  pill accordingly never rendered, for any agent, on any successful run,
+  regardless of real usage — a pure field-path mismatch, not a missing
+  backend capability (the backend already correctly tracks and returns
+  real usage).
+- **Also found while tracing this:** `workers/test/multiAgentSOC.test.mjs`'s
+  own `routeAICall` mock used the identical wrong shape
+  (`tokens: { total_tokens: 42 }`) — harmless to that file's own
+  assertions (which only check property presence via `toHaveProperty
+  ('tokens')`, never the inner shape), but a misleading model of the real
+  contract sitting right next to the code this fix touches. Corrected to
+  the real `{ input, output }` shape in the same change.
+- **Fix (`frontend/soc-agents.html`):** `updateAgentCard()` now sums
+  `(result.tokens?.input || 0) + (result.tokens?.output || 0)` and only
+  renders the pill when that total is truthy — preserving the original
+  no-pill-when-no-real-data behavior while actually letting a nonzero
+  total render for the first time.
+- **Verification:** `node --check` on the extracted inline `<script>`
+  block. New `workers/test/socAgentsTokenCountFix.test.mjs` (3 tests,
+  static parse): confirms the dead `tokens?.total_tokens` read is gone,
+  confirms the real `tokens.input`/`tokens.output` fields are read
+  instead, and confirms the pill still degrades cleanly to nothing when
+  there's no real usage data. Re-ran the corrected
+  `workers/test/multiAgentSOC.test.mjs` in full (42 tests, all still
+  passing — the mock-shape correction changed no assertion's outcome).
+  Full suite: 243 files / 2484 tests passing (was 242/2481 before this
+  item — +1 file, +3 tests). `node scripts/registry/validate.mjs`: 0
+  failures, 0 warnings.
+- **Registry:** `CAP-MASOC-001` (`masoc.json`, "Multi-Agent SOC — 9
+  Parallel AI Security Agents") directly covers this capability — exact
+  page and exact entry_points match. Appended a dated fix paragraph to
+  its `notes` field; `test_coverage.has_tests` left unchanged since the
+  new test is frontend-only static parse, not new import-based coverage
+  of any backend `entry_point`. `node
+  scripts/registry/generate-report.mjs` regenerated (only the timestamp
+  changed).
+- **1 Tier-3 item remains** (of 6, the last one), queued next in the
+  audit's stated priority order.
+
+### 2026-07-12 — Tier-3 backlog item #4 (of 6): user-dashboard.html — API Keys "Usage" card had no way to ever select a key
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-3
+  item #3.
+- **Root cause confirmed against actual code:** the backend side of this
+  feature was already correct and already tested — `GET
+  /api/keys/{id}/usage` (`handleKeyUsage` /
+  `getKeyUsageSummary`, `workers/src/handlers/apikeys.js`) works and is
+  covered by the pre-existing `workers/test/keyUsageBola.test.mjs`
+  (BOLA/IDOR ownership-scoping tests). The bug was entirely on the
+  frontend: `renderKeys()` in `frontend/user-dashboard.html` gave every
+  key row exactly one action, a "Revoke" button — no click handler, no
+  link, nothing — so the adjacent "Usage" card's `#key-usage-table`
+  permanently showed its static placeholder, "Select a key to view
+  usage," with no way for a user to ever actually select one. Grepped the
+  whole file for any dead/mis-wired handler that might already reference
+  a usage-selection function — found none; the click interaction never
+  existed at all.
+- **Fix (`frontend/user-dashboard.html`, frontend-only, no backend
+  change needed):** added a second, `btn-outline` "Usage" button to each
+  key row (alongside the existing "Revoke" button, not replacing it),
+  calling a new `viewKeyUsage(id, label)`. It fetches the existing
+  endpoint via `apiFetch` and renders the real response shape into the
+  table: one row per module from `today.by_module` (falling back to an
+  explicit "No requests yet today" row when empty) plus a summary row
+  for `month.total`, with its own loading and error states so the table
+  never gets stuck on a spinner.
+- **Verification:** `node --check` on the extracted inline `<script>`
+  block. New
+  `workers/test/userDashboardApiKeysUsageClickFix.test.mjs` (6 tests,
+  static parse): `viewKeyUsage()` exists and calls the real endpoint,
+  renders into the real `#key-usage-table` element, is actually wired
+  onto each rendered row alongside (not instead of) the Revoke button,
+  reads the backend's real `today.by_module`/`month.total` fields, and
+  degrades gracefully on a failed fetch. Searched `workers/test/` for
+  any pre-existing test referencing `viewKeyUsage`/`key-usage-table` —
+  none existed, so no bug-reinforcing assertion needed correcting. Full
+  suite: 242 files / 2481 tests passing (was 241/2475 before this item —
+  +1 file, +6 tests). `node scripts/registry/validate.mjs`: 0 failures,
+  0 warnings.
+- **Registry:** `CAP-DEVPORTAL-001` (`developer-portal-apikeys.json`,
+  "API Key Management (canonical)") directly covers this capability —
+  its own description names "per-key usage stats" explicitly and its
+  `entry_points` already list `getKeyUsageSummary`/`handleKeyUsage`.
+  Appended a dated fix paragraph to its `notes` field documenting the
+  gap and the fix; `test_coverage.has_tests` left unchanged since the
+  new test is frontend-only static parse, not new import-based coverage
+  of any backend `entry_point`. `node
+  scripts/registry/generate-report.mjs` regenerated (only the timestamp
+  changed).
+- **2 Tier-3 items remain** (of 6), queued next in the audit's stated
+  priority order.
+
+### 2026-07-12 — Tier-3 backlog item #3 (of 6): user-dashboard.html — Settings' Alert Notifications form had no way to load previously-saved preferences
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-3
+  item #2.
+- **Root cause confirmed against actual code:** `saveAlerts()` in
+  `frontend/user-dashboard.html` already correctly POSTs to
+  `/api/auth/alerts` (backed by the real, working `handleAlertConfig`,
+  which upserts into the `alert_configs` table). But no GET counterpart —
+  neither a backend handler nor a frontend caller — ever existed. Every
+  visit to the Settings page rendered the "Alert Notifications" card's
+  `#alert-email` dropdown and `#alert-tg` input at their hardcoded HTML
+  defaults, regardless of what a returning user had actually saved. A user
+  had no way to confirm their alert preferences had taken effect short of
+  re-submitting the form blind.
+- **Fix:**
+  - `workers/src/handlers/auth.js`: added `handleGetAlertConfig`,
+    reading the same `alert_configs` row `handleAlertConfig` writes
+    (`workers/schema_bootstrap.sql:384-396`). A user with no saved row
+    yet gets the form's own blank-state defaults (`email_enabled: true,
+    min_risk_score: 0, telegram_enabled: false`) rather than a 404 or
+    `handleAlertConfig`'s INSERT-time fallback of `min_risk_score: 70`,
+    which this frontend form never actually sends or represents.
+  - `workers/src/index.js`: registered `GET /api/auth/alerts` alongside
+    the existing `POST` route, both resolving auth via the same
+    `resolveAuthV5()` call.
+  - `frontend/user-dashboard.html`: added `loadAlerts()`, calling the new
+    endpoint via the page's existing `apiFetch()` wrapper and
+    reverse-mapping the saved config onto `#alert-email`/`#alert-tg` (the
+    exact inverse of `saveAlerts()`'s own forward mapping); wired into
+    `showPage()`'s `settings` branch alongside the two pre-existing
+    analogous calls (`loadMFAStatus()`, `loadSessions()`).
+- **Verification:** `node --check` on both backend files and the
+  extracted inline `<script>` block. New
+  `workers/test/userDashboardAlertPreferencesGetFix.test.mjs` (10 tests):
+  real `node:sqlite`-backed `alert_configs` table (not mocks) proving a
+  genuine `handleAlertConfig` POST → `handleGetAlertConfig` GET round
+  trip, the no-saved-row default shape, 401/503 gates, boolean
+  coercion (not raw SQLite 0/1), and upsert-not-duplicate on a second
+  save — plus static-parse assertions that `loadAlerts()` exists, is
+  wired into `showPage()`, and references only element ids that really
+  exist in the markup. Searched `workers/test/` for any pre-existing test
+  referencing `handleAlertConfig`/`alert_configs`/`saveAlerts` — none
+  existed, so no bug-reinforcing assertion needed correcting. Full suite:
+  241 files / 2475 tests passing (was 240/2465 before this item — +1
+  file, +10 tests). `node scripts/registry/validate.mjs`: 0 failures, 0
+  warnings.
+- **Registry:** no domain JSON edited. Checked all three plausible
+  entries first: `CAP-NOTIF-001` (`notifications.json`) covers a
+  *different* system entirely — the still-frontend-less Slack/Teams
+  webhook preferences backed by `notificationPlatform.js`, unrelated to
+  the `alert_configs` table this fix touches; `CAP-PORTAL-001`
+  (`customer-portal.json`, "Profile & Security Settings") covers the same
+  page but explicitly scopes only profile/password/MFA, not alerts
+  (`entry_points` lists only `handleUpdateProfile`/
+  `handleChangePassword`); `CAP-IDN-001` (`identity.json`) lists
+  `handleAlertConfig` only incidentally inside a broad sign-in-flow
+  entry_points array, not as a described capability. None directly
+  covers Alert Notifications, so per this file's established convention
+  no entry was edited and none was created.
+- **3 Tier-3 items remain** (of 6), queued next in the audit's stated
+  priority order.
+
+### 2026-07-12 — Tier-3 backlog item #2 (of 6): ops-dashboard.html — a nonexistent element id silently killed the Top Endpoints table 2 lines later
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-3
+  item #1.
+- **Investigation false starts, corrected before concluding anything:**
+  traced both "Top Endpoints"-labeled tables on the page in full — the
+  Overview tab's `#top-endpoints` (fed by `loadMetrics()`, reading
+  `d.d1.top_endpoints`) and the Usage tab's `#usage-endpoints` (fed by
+  `loadUsage()`, reading `d.top_endpoints`). Cross-checked both against
+  their real backend response shapes (`handleOpsMetrics` and
+  `handleAdminUsage`, `workers/src/handlers/opsEngine.js`) — both DOM ids
+  and both field paths were already completely correct. Neither table had
+  an obvious bug on direct inspection.
+- **Found the real bug via a systematic, whole-file cross-reference instead
+  of further inspection of the table code itself:** extracted every literal
+  `getElementById('...')`/`querySelector('#...')` id reference in the
+  page's inline script and every `id="..."` defined in its HTML, and
+  diffed the two sets. Exactly one referenced id had no matching element:
+  `wh-bar`. The real element (a KV cache-hit-ratio progress bar) is
+  `id="wh-kv-bar"`. `document.getElementById('wh-bar')` always returned
+  `null`; the very next statement, `.style.width = ratio + '%'`, threw a
+  `TypeError` — silently caught by `loadMetrics()`'s own empty `catch {}`.
+  Critically, that throw happens **immediately before, in the same `try`
+  block as**, the Top Endpoints table population 2 lines later — so
+  execution never reached it. The table itself (DOM id and field path both
+  already correct, as established above) never had a chance to render, for
+  any visitor, on any page load, ever — a wrong element ID silently
+  breaking a *different*, unrelated-looking table via early termination of
+  their shared try block, exactly matching the audit's description once
+  the real mechanism was found.
+- **Fix (`frontend/ops-dashboard.html`):** changed
+  `document.getElementById('wh-bar')` to `document.getElementById
+  ('wh-kv-bar')` — the one-line, root-cause-complete fix.
+- **Verification:** `node --check` on the extracted inline `<script>`
+  block; new `workers/test/opsDashboardElementIdFix.test.mjs` (7 tests,
+  static parse) — rather than only asserting the one specific string fix,
+  formalized the manual diffing process used to find the bug as a
+  permanent, general contract test: every literal id reference anywhere in
+  the page's script must resolve to a real `id="..."` element (0 orphans
+  allowed), which would have caught this exact bug class immediately and
+  now guards against any future regression of it anywhere on this page —
+  plus specific assertions that `wh-bar` is gone, `wh-kv-bar` is used and
+  really exists, and the Top Endpoints table's (already-correct) DOM id and
+  field path are unchanged. Searched `workers/test/` for any pre-existing
+  test referencing this page — none existed, so no bug-reinforcing
+  assertion needed correcting. Full suite: 240 files / 2465 tests passing
+  (was 239/2458 before this item — +1 file, +7 tests). `node
+  scripts/registry/validate.mjs`: 0 failures, 0 warnings. Updated
+  `CAP-ADMIN-001`'s `notes` in
+  `docs/capability-registry/domains/administration.json` (it already
+  covers `frontend/ops-dashboard.html` and `handleOpsMetrics` specifically)
+  to record the fix — `test_coverage.has_tests` deliberately left
+  unchanged since the new test is frontend-only static parse, not new
+  import-based coverage of `handleOpsMetrics` or any other backend
+  entry_point. `node scripts/registry/generate-report.mjs` regenerated
+  (only the timestamp changed).
+- **4 Tier-3 items remain** (of 6), queued next in the audit's stated
+  priority order.
+
+### 2026-07-12 — Tier-3 backlog item #1 (of 6): billing-portal.html — a real USD figure displayed with a ₹ symbol, plus a wrong-currency static placeholder
+
+- **Trigger:** all 10 Tier-1 and all 8 Tier-2 items closed; starting Tier 3
+  (minor/cosmetic class), first item.
+- **Re-verified against actual code:** the overage-charges tile read
+  `u.overage_charges_usd` and rendered it through `fmtINR(n)` (`'₹' +
+  Number(n||0).toLocaleString('en-IN')`). Traced the field to its real
+  source, `handleGetUsageStats`
+  (`workers/src/handlers/enterpriseTransformHandler.js:441`):
+  `overage_charges_usd: Math.round(overageUsd * 100) / 100`, where
+  `overageUsd` comes from `SELECT SUM(amount_usd) as total FROM invoices
+  WHERE ... description='API Overage Charge'` — a genuinely US-dollar
+  figure, confirmed by both its own field name and the real DB column it's
+  summed from. A customer with real overage charges of, say, $45.50 would
+  have seen "₹45.50" on this page — the **wrong currency entirely** (not a
+  formatting nit — roughly an 80x difference in real value), directly
+  contradicting whatever their actual Razorpay/invoice charge shows.
+- **Found a second, related instance while auditing every static currency
+  placeholder on the page:** the plan-price tile's static HTML fallback
+  read `"$0"`, but the real field that replaces it once data loads
+  (`sub.price_inr`) is genuinely INR — every other `*_inr` field on this
+  exact page (`monthly-spend`, the upgrade-plan list, invoice rows) is
+  already correctly formatted with `fmtINR()`. Grepped the whole file for
+  every static `$`-prefixed placeholder (`>\$[0-9]`) to confirm these were
+  the only two — `overage-charges`'s own static placeholder ("$0.00") was
+  already correct and needed no change, only its *dynamic* JS update was
+  wrong.
+- **Fix (`frontend/billing-portal.html`):**
+  - Added a real `fmtUSD(n)` formatter (`'$' +
+    Number(n||0).toLocaleString('en-US', {minimumFractionDigits:2,
+    maximumFractionDigits:2})`), matching `fmtINR()`'s existing style.
+  - `overage-charges`'s update now calls `fmtUSD(u.overage_charges_usd)`
+    instead of `fmtINR(...)`.
+  - `plan-price`'s static HTML placeholder corrected from `$0` to `₹0` to
+    match the real currency of the data that replaces it.
+- **Verification:** `node --check` on the extracted inline `<script>`
+  block; new `workers/test/billingPortalCurrencySymbolFix.test.mjs`
+  (6 tests, static parse) asserting: `fmtUSD()` is defined; the
+  overage-charges assignment uses it (and no longer uses `fmtINR` for that
+  field); the overage-charges *static* placeholder was confirmed
+  already-correct and unchanged; the plan-price static placeholder now
+  reads `₹0` (not `$0`) while its dynamic assignment (`fmtINR(sub.price_inr)`)
+  is unchanged; every other real-INR field on the page (`monthly-spend`,
+  the upgrade-plan list) still correctly uses `fmtINR()`, confirming the
+  fix didn't overcorrect anything that was already right. Checked
+  `workers/test/billingPortal.test.mjs` — it tests the *backend*
+  `overage_charges_usd` value (confirms the handler computes `4.5`
+  correctly) but never asserts anything about frontend currency-symbol
+  formatting, so no conflict/reconciliation was needed. Full suite: 239
+  files / 2458 tests passing (was 238/2452 before this item — +1 file,
+  +6 tests). `node scripts/registry/validate.mjs`: 0 failures, 0 warnings.
+  Updated `CAP-BILL-003`'s `notes` in
+  `docs/capability-registry/domains/commercial-billing.json` (it already
+  covers `frontend/billing-portal.html` as its dedicated page) to record
+  the fix. `node scripts/registry/generate-report.mjs` regenerated (only
+  the timestamp changed).
+- **5 Tier-3 items remain** (of 6), queued next in the audit's stated
+  priority order.
+
+### 2026-07-12 — Tier-2 backlog item #8 (last of 8): academy.html — attention-strip CVE/scan counters read fields that never existed, one permanently invisible
+
+- **Trigger:** continuing the Tier 1–3 backlog, final Tier-2 item, next after
+  item #7. Closes out Tier 2 entirely.
+- **Re-verified against actual code — two independent bugs:** `liveCounters()`
+  fetched `GET /api/health` and read `d.cves_tracked`/`d.total_scans`
+  directly off the top-level response. Traced the real handler
+  (`healthResponseAsync`, `workers/src/index.js:996`): its response has
+  **no `cves_tracked` field anywhere** (this endpoint reports D1/KV/cache
+  health and scan counts, not CVE counts), and its real scan count is
+  nested at `stats.total_scans` — never a top-level `total_scans`. Both
+  reads always evaluated to `undefined`.
+  1. `#acy-cve` has a static HTML fallback ("3") and no visibility toggle,
+     so the failed read was invisible — the counter silently just never
+     updated from launch-day placeholder, forever presented as if live.
+  2. `#acy-scan` has **no static text of its own at all** and starts
+     `style="display:none"` in the markup — clearly designed to be revealed
+     by this same script once real data loads. Since the read always failed,
+     this element was never populated AND never unhidden — the entire
+     "scans completed" strip item has never appeared to any visitor, on any
+     page load, since it was built.
+- **Fix (`frontend/academy.html`):**
+  - `liveCounters()` now fetches `/api/health` (for the real, correctly-
+    nested `stats.total_scans`) and `/api/threat-intel/stats` (a second,
+    already-public, already-used-elsewhere-this-session endpoint, for a
+    real CVE-adjacent figure — `stats.critical`, the platform's real,
+    currently-tracked critical-severity CVE count) in parallel.
+  - `#acy-scan` now gets both real descriptive text (`"{N} scans
+    completed"` — it has no surrounding label in the HTML, unlike `#acy-cve`,
+    so the script must supply one) and has its `display:none` cleared once
+    a real count arrives.
+  - `#acy-cve`'s static fallback copy was corrected from "critical CVEs
+    **today**" to "critical CVEs **tracked**": `stats.critical` is a real,
+    live, currently-tracked total with no time-boxing, and continuing to
+    label it "today" once real (much larger, cumulative) data replaced the
+    small static "3" placeholder would have started making a *new* false
+    claim — the same class of bug this whole backlog exists to remove, not
+    a fix for one.
+- **Verification:** `node --check` on the extracted inline `<script>`
+  block; new `workers/test/academyLiveCountersFieldPathFix.test.mjs`
+  (7 tests, static parse) asserting: the old top-level `d.cves_tracked`/
+  `d.total_scans` reads are gone; the real nested `health.stats.
+  total_scans` and `intel.stats.critical` paths are used; `#acy-scan`'s
+  `display:none` is actually cleared and its text includes a real label
+  (not a bare number); the markup itself still starts hidden/textless
+  (confirming the JS is solely responsible for revealing it — this wasn't
+  redundantly duplicated); the "today" claim is gone and "tracked" is used
+  instead. One self-inflicted false failure caught and fixed while writing
+  the test: an overly clever regex meant to catch any bare top-level
+  `total_scans` read matched this fix's own explanatory code comment
+  (which necessarily names the old buggy field); simplified to a precise
+  `not.toContain('d.total_scans')` check instead. Searched `workers/test/`
+  for any pre-existing test referencing this page — none existed, so no
+  bug-reinforcing assertion needed correcting. Full suite: 238 files / 2452
+  tests passing (was 237/2445 before this item — +1 file, +7 tests).
+  `node scripts/registry/validate.mjs`: 0 failures, 0 warnings. Checked
+  `docs/capability-registry/domains/academy.json`'s existing 2 entries
+  (`CAP-ACAD-001` covers this exact page but scoped specifically to the
+  purchase/verify flow; `CAP-ACAD-002` covers a different page's buy
+  buttons) — neither covers the attention-strip counters specifically, so
+  no existing entry needed correcting and no new one was added, consistent
+  with this session's practice for bounded bug fixes.
+  `PRODUCTION_READINESS_REPORT.md` was not regenerated this item since no
+  registry domain JSON was touched.
+- **All 8 Tier-2 items are now fixed.** All 6 Tier-3 items (minor/cosmetic
+  class) remain, queued next in the audit's stated priority order:
+  billing-portal.html USD/₹ symbol mismatch; ops-dashboard.html wrong
+  element ID breaking the Top Endpoints table; user-dashboard.html
+  Notification Preferences with no GET endpoint; user-dashboard.html API
+  Keys Usage tab's dead click handler; soc-agents.html's dead token-count
+  field; threat-intel-workbench.html's cosmetic APT icon issue.
+
+### 2026-07-12 — Tier-2 backlog item #7 (of 8): agent-threats.html — "Scan My Agent" tool sent zero Authorization header, always 401'd invisibly behind a client-side fallback
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-2
+  item #6.
+- **Re-verified against actual code:** `runAgentScan()` (behind the "Scan
+  My Agent →" button and its modal, "Scan Your AI Agent") POSTs to
+  `/api/ai-security/agents/scan` with `{'Content-Type':'application/json'}`
+  only — no `Authorization` header anywhere on this page (grep-confirmed
+  zero occurrences of `cdb_access`/`cdb_token`/`Authorization` in the whole
+  file before this fix). Traced the handler,
+  `handleScanAgent` (`workers/src/handlers/aiThreatIntel.js:957`):
+  `if (!authCtx?.userId) return err('Auth required', 401);` — a hard gate.
+  With no token ever sent, every visitor — including a real, logged-in,
+  paying customer — always got a 401 from the real backend.
+- **Why this one was invisible in the UI (unlike the god-mode.html panels in
+  item #5, which showed a visible error):** the frontend has a complete,
+  parallel client-side fallback — "local OWASP LLM Top 10 assessment (no
+  server)" — using the identical scoring rules as the backend. Because
+  `runAgentScan()` checks `if(r.ok){backendResult=await r.json();}` and the
+  401 makes `r.ok` false, it silently falls through to this client-only
+  path and renders a complete-looking risk report regardless. The bug had
+  zero visible symptom — every visitor always saw a full assessment — but
+  the report was never the real one: no real `agent_id`
+  (`backendResult.agent_id` never populated, `ai_agent_inventory` never
+  written), so "Register & Save Report", advisory alerts for the agent's
+  framework, and automated rescans (all explicitly promised right below the
+  results) had nothing real to attach to, for anyone, ever.
+- **Fix (`frontend/agent-threats.html`):** added a `getAuthToken()` helper
+  (checks `sessionStorage['cdb_access']` first — the real key
+  `user-dashboard.html`'s login/signup flow writes — falling back to the
+  legacy `cdb_token` keys, the same convention already established
+  elsewhere this session, e.g. Tier-2 item #5's god-mode.html fix) and
+  attached it as `Authorization: Bearer <token>` on the scan request when
+  present. The client-side fallback logic itself is unchanged — it's still
+  the correct behavior for a genuinely anonymous visitor or a real backend
+  outage, just no longer the silent default for every authenticated
+  customer too.
+- **Verification:** `node --check` on the extracted inline `<script>`
+  block; new `workers/test/agentThreatsScanAuthFix.test.mjs` (5 tests) — 2
+  real behavioral tests importing `handleScanAgent` directly (confirms a
+  401 with no `userId` on `authCtx`, confirms 200 + a real `agt_`-prefixed
+  `agent_id` with one) plus 3 static-parse tests confirming
+  `getAuthToken()`'s key-priority order, that `runAgentScan()` calls it and
+  conditionally sets the `Authorization` header, and that the existing
+  `Content-Type`/body construction is unchanged. Searched `workers/test/`
+  for any pre-existing test referencing `runAgentScan`/`getAuthToken` — none
+  existed (the one hit for `handleScanAgent`'s sibling file,
+  `agentThreatAdvisories.test.mjs`, tests a different, unrelated admin
+  route) — no bug-reinforcing assertion needed correcting. Full suite: 237
+  files / 2445 tests passing (was 236/2440 before this item — +1 file, +5
+  tests). `node scripts/registry/validate.mjs`: 0 failures, 0 warnings.
+  Updated `CAP-TIH-007`'s `frontend`/`notes` fields in
+  `docs/capability-registry/domains/threat-hunting-intel.json` — it already
+  listed `handleScanAgent` as an entry point but its `frontend.pages` was
+  missing `frontend/agent-threats.html` entirely (only listed
+  `frontend/index.html`), and its single `auth_enforced:false` field was
+  accurate for the feed/report/radar entry points but not for
+  `handleScanAgent`/`handleRegisterAgent`/`handleListAgents` (all 3 hard-
+  require auth) — documented that nuance in `notes` rather than overstating
+  or understating a single boolean field for a capability that bundles
+  entry points with different real auth requirements.
+  `node scripts/registry/generate-report.mjs` regenerated (only the
+  timestamp changed).
+- **1 Tier-2 item remains** (of 8), plus all 6 Tier-3 items, queued next in
+  the audit's stated priority order.
+
+### 2026-07-11 — Tier-2 backlog item #6 (of 8): ai-security-assessment.html — free "Live MITRE ATLAS Probe" demo called a POST-only route with GET, always failed
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-2 item #5.
+- **Re-verified against actual code:** `openRedTeamDemo()` — the handler
+  behind the page's "🔍 See a Live MITRE ATLAS Probe — Free, No Payment"
+  button, whose own inline code comment says these probes are "genuinely
+  backed by /api/ai-redteam/*, not fabricated demo data" — fetches two
+  endpoints in parallel and does
+  `if (!techRes.ok || !promptRes.ok) throw new Error('API unavailable')`.
+  One of the two, `fetch(API_BASE + '/api/ai-redteam/probe/jailbreak', {
+  signal: ... })`, sent no `method`, defaulting to GET. Traced the backend's
+  internal router (`handleAIRedTeamPro`,
+  `workers/src/handlers/aiRedTeamPro.js:146`): this exact path is registered
+  **POST-only** (`path === '/api/ai-redteam/probe/jailbreak' && method ===
+  'POST'`); every other method falls through to the router's final
+  `404 {error:'Not found'}`. Because `Promise.all` always resolved
+  `promptRes.ok` to `false`, the `throw` fired on **every single visit**,
+  meaning this entire free demo modal — explicit bait to prove "this is the
+  real engine, not a mockup" before asking for ₹99,999 — always showed the
+  generic "⚠️ Live demo temporarily unavailable" fallback and never once
+  rendered real MITRE ATLAS data to any visitor.
+- **Confirmed a bare method fix alone would not be enough:** `probeJailbreak`
+  (the real handler behind this route) does `const body = await
+  request.json();` unconditionally — a POST with no body at all throws
+  (invalid JSON), caught and turned into a 500. The frontend fix needed a
+  real JSON body, not just the right verb.
+- **Fix (`frontend/ai-security-assessment.html`):** the `/probe/jailbreak`
+  fetch now sends `method: 'POST'`, `'Content-Type': 'application/json'`,
+  and `body: JSON.stringify({})` — an empty object is sufficient since
+  `probeJailbreak` treats both of its read fields
+  (`body.technique`/`body.target_model`) as optional. The sibling
+  `/api/ai-redteam/techniques` fetch (already correctly GET, matching its
+  own GET-only registration) and the page's third `/api/ai-redteam/prompts`
+  call (also already correctly GET) were both verified unaffected/correct
+  and left untouched.
+- **Verification:** `node --check` on the extracted inline `<script>` block;
+  new `workers/test/aiRedTeamDemoPostFix.test.mjs` (6 tests) — 3 real
+  behavioral tests importing `handleAIRedTeamPro` directly (GET really 404s,
+  confirming the root cause; POST with a valid empty-object body really
+  returns 200 with real `probeType`/`probes`/`probeCount`; POST with no body
+  at all really 500s, confirming the body was a necessary part of the fix)
+  plus 3 static-parse tests confirming the frontend's fetch call now
+  specifies `method:'POST'`, the JSON headers/body, and that the sibling
+  GET-only `/api/ai-redteam/techniques` call was left untouched. One
+  self-inflicted false-anchor bug caught and fixed while writing the test:
+  an initial `body.indexOf('/api/ai-redteam/probe/jailbreak')` matched this
+  fix's own explanatory code comment (placed just above the real fetch
+  call, and mentioning the same path) instead of the call site itself;
+  corrected to anchor on the fuller `fetch(API_BASE + '/api/ai-redteam/
+  probe/jailbreak'` substring, which only the real call contains. Searched
+  `workers/test/` for any pre-existing test referencing `openRedTeamDemo`/
+  `probe/jailbreak` — none existed, so no bug-reinforcing assertion needed
+  correcting. Full suite: 236 files / 2440 tests passing (was 235/2434
+  before this item — +1 file, +6 tests). `node scripts/registry/
+  validate.mjs`: 0 failures, 0 warnings. No capability registry domain file
+  covers `aiRedTeamPro.js`/`ai-security-assessment.html` at all (a
+  pre-existing cataloguing gap) — consistent with this session's practice,
+  no new capability entry was added for a bounded bug fix;
+  `PRODUCTION_READINESS_REPORT.md` was not regenerated this item since no
+  registry domain JSON was touched.
+- **2 Tier-2 items remain** (of 8), plus all 6 Tier-3 items, queued next in
+  the audit's stated priority order.
+
+### 2026-07-11 — Tier-2 backlog item #5 (of 8): god-mode.html — Agentic AI Command Center panels always 401'd, no Authorization header ever sent
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-2 item #4.
+- **Re-verified against actual code:** `god-mode.html`'s "Agentic AI Command
+  Center" (`loadAnomaly()`/`loadPredict()`/`loadAgentBus()`, added in an
+  earlier pass per this page's own code comment: "these three engines are
+  real, D1-backed, cron-driven backends with no UI anywhere on the platform
+  until now") all call the page's one shared `fetchJson(path)` helper, which
+  sent only `{Accept: 'application/json'}` — no `Authorization` header of
+  any kind, ever. Traced their backend routes in `workers/src/index.js`:
+  `/api/anomaly/*`, `/api/predict/*`, and `/api/agent/*` each resolve
+  `authCtx` via `resolveAuthV5` and then hard-gate with
+  `if (!isRealUser(authCtx)) return unauthorized();` before dispatching.
+  With no token ever sent, **every visitor to this page — including a real,
+  logged-in ENTERPRISE customer — always got a 401** on all three panels,
+  rendering "Anomaly/Predictive/Agent Bus endpoint error: HTTP 401"
+  permanently, regardless of login state.
+- **Found the identical root cause one function away, already broken for a
+  second, adjacent feature:** `getUserToken()` (used by `buildTriggerHeaders()`
+  for the ENTERPRISE "trigger a God Mode run" button) only read
+  `localStorage.getItem('cdb_token')` — a legacy key. Cross-checked against
+  `frontend/user-dashboard.html`'s real login/signup flow (`saveTokens()`):
+  it writes the real, current session token to `sessionStorage['cdb_access']`
+  only. This is the exact same bug class already found and fixed once before
+  in `frontend/assets/copilot-widget.js` (see
+  `workers/test/copilotWidgetDashboardFix.test.mjs`, whose own comment
+  explicitly lists `god-mode.html` among the pages still on the old,
+  narrower fallback) — confirming this is a real, recurring pattern across
+  the codebase, not a one-off. The run-trigger has a partial mitigation
+  (an `x-api-key` admin-key fallback), so it wasn't fully dead like the
+  panels, but real ENTERPRISE customers' own JWTs were silently never used.
+- **Fix (`frontend/god-mode.html`):**
+  - `getUserToken()`: now checks `sessionStorage.getItem('cdb_access')`
+    first, falling back to the legacy `localStorage`/`sessionStorage`
+    `cdb_token` keys unchanged (preserves the admin/OAuth flows that still
+    populate those).
+  - `fetchJson()`: now calls `getUserToken()` and conditionally attaches
+    `Authorization: Bearer <token>` when one is present, fixing all three
+    Agentic AI panel loaders (and any other current/future caller of this
+    shared helper) in one place.
+  - **Deliberately not touched:** a third, separate occurrence of the same
+    dead-key read pattern in this file's inline copilot-chat handler
+    (`POST /api/copilot/chat`) — that endpoint doesn't hard-require auth
+    (no `isRealUser` gate found), so it's a minor personalization/attribution
+    gap rather than a fully-broken feature, and is a different widget from
+    the named "Agentic AI panels" finding; left alone to keep this fix
+    bounded to the two provably-broken (hard 401 / silently-never-used-JWT)
+    call sites.
+- **Verification:** `node --check` on the extracted inline `<script>` block;
+  ran the pre-existing `workers/test/godModeDashboard.test.mjs` (11 tests —
+  document hygiene, API contract, security/escaping, syntax) first to
+  confirm no regression, then added new
+  `workers/test/godModeAgenticPanelAuthFix.test.mjs` (5 tests, static parse)
+  asserting: `getUserToken()` checks `cdb_access` before the legacy keys
+  (and still falls back to them); `fetchJson()` calls `getUserToken()` and
+  conditionally sets the `Authorization` header while preserving the
+  `Accept` header; all 3 panel loaders (`loadAnomaly`/`loadPredict`/
+  `loadAgentBus`) go through `fetchJson()` with their documented endpoint
+  paths. Searched `workers/test/` for any test referencing
+  `god-mode.html`/`fetchJson`/`getUserToken` — found 4 hits
+  (`adminRevenueShellGating.test.mjs`, `copilotWidgetDashboardFix.test.mjs`,
+  `godModeDashboard.test.mjs`, `phase6TruthLocks.test.mjs`); read each and
+  confirmed none assert anything about `fetchJson`/`getUserToken`'s
+  implementation (copilotWidgetDashboardFix.test.mjs only *mentions*
+  god-mode.html in an explanatory comment about a different file) — no
+  bug-reinforcing assertion needed correcting. Full suite: 235 files / 2434
+  tests passing (was 234/2429 before this item — +1 file, +5 tests).
+  `node scripts/registry/validate.mjs`: 0 failures, 0 warnings. No capability
+  registry domain file covers the Anomaly/Predictive/Agent-Bus engines or
+  their god-mode.html panels at all (a pre-existing cataloguing gap) —
+  consistent with this session's practice, no new capability entry was
+  added for a bounded bug fix; `PRODUCTION_READINESS_REPORT.md` was not
+  regenerated this item since no registry domain JSON was touched.
+- **3 Tier-2 items remain** (of 8), plus all 6 Tier-3 items, queued next in
+  the audit's stated priority order.
+
+### 2026-07-11 — Tier-2 backlog item #4 (of 8): cyber-defense.html — EPSS/KEV fields never populate on live-NVD lookups + IOC lookup nested-field mismatch
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-2 item #3.
+- **Re-verified against actual code — two independent bugs, one backend, one
+  frontend:**
+  1. **EPSS/KEV never populate:** `cyber-defense.html`'s "Live CVE Threat
+     Intelligence Lookup" (`cdLookup()`) calls `GET /api/vulns/cve/:cveId`
+     (`handleCVELookup`, `workers/src/handlers/vulnManagement.js`) and reads
+     `d.epss_score`/`d.in_kev`. Traced the handler: its primary path (live
+     NVD API lookup, the common case for any real, well-known CVE) returned
+     only `cvss_score/cvss_vector/cvss_version/severity/cwe/references/
+     configurations` — **no `epss_score` or `in_kev` field at all**, because
+     NVD's own API carries neither. Only the secondary fallback path (local
+     seed data, used only when NVD is unreachable or the CVE isn't in NVD)
+     included them. Net effect: the page's own default pre-filled example,
+     `CVE-2024-3400` — a real, famous, actively-exploited CISA KEV entry —
+     showed EPSS "N/A" and "⚪ Not in KEV" on every normal page load.
+  2. **IOC lookup nested-field mismatch:** the same tool's IOC branch calls
+     `POST /api/hunt/ioc` (`handleIOCLookup`,
+     `workers/src/handlers/threatHunting.js`) and reads `d.virustotal`/
+     `d.abuseipdb` directly off the top-level response. Traced the real
+     response shape: this endpoint supports batch lookups
+     (`{ioc}` or `{iocs:[]}`), so the real per-target result is nested at
+     `d.results[0]`, and the real field names inside it
+     (`services/iocEnrichmentEngine.js`'s `enrichIOC`) are `raw_data.
+     virustotal` (not a top-level `virustotal`) and `abuse_score` (a plain
+     0–100 number, not a nested `abuseipdb.abuse_confidence_score`).
+     `d.virustotal`/`d.abuseipdb` never existed at any level of the real
+     response — the tile always showed 0 malicious engines and "AbuseIPDB
+     checked" (the generic fallback text), regardless of the real verdict.
+- **Fix:**
+  - `workers/src/handlers/vulnManagement.js`: imported the existing
+    `fetchEPSS()` (`services/compositeRiskScoring.js`, already used
+    elsewhere in this codebase, KV-cached against the real FIRST.org EPSS
+    API) and added a small new `fetchKEVIds(env)` helper mirroring its exact
+    KV-caching pattern (`kev:ids:cache`, 6h TTL) against the same live CISA
+    KEV feed URL `handleKEVFeed` (right below, in the same file) already
+    fetches uncached for its own full-catalog-browse use case. The NVD
+    live-lookup success path now enriches its response with a real
+    `epss_score` (from `fetchEPSS`) and real `in_kev` (CVE-ID membership
+    check against `fetchKEVIds`'s cached list) — `in_kev` is `null` (not a
+    false "not exploited" claim) if the KEV feed itself is unreachable.
+  - `frontend/cyber-defense.html`: the IOC branch now unwraps
+    `d.results[0]`, reads VirusTotal stats from `res.raw_data.virustotal`,
+    and the abuse score from `res.abuse_score` directly (a number) instead
+    of a non-existent nested `abuseipdb.abuse_confidence_score`.
+- **Verification:** `node --check` on both modified files; new
+  `workers/test/cveEpssKevEnrichmentFix.test.mjs` (7 tests) — 4 real
+  behavioral tests importing `handleCVELookup` directly with mocked
+  `fetch` (NVD + FIRST.org EPSS + CISA KEV, all three branched by URL) and
+  a mock KV, asserting: a KEV-listed CVE gets `epss_score`+`in_kev:true`; a
+  genuinely non-KEV CVE gets `in_kev:false`; an unreachable KEV feed yields
+  `in_kev:null` (never a fabricated `false`); the new KEV-ids KV cache is
+  actually used (a second lookup within the TTL doesn't re-fetch CISA) — plus
+  3 static-parse tests confirming `cyber-defense.html`'s IOC branch unwraps
+  `d.results[0]` and reads the real `raw_data.virustotal`/`abuse_score`
+  paths, with the old buggy code patterns (`= d.virustotal`, `d.abuseipdb
+  ?`, `abuse_confidence_score`) confirmed gone. One self-inflicted false
+  failure caught and fixed immediately: an overly broad `not.toContain
+  ('d.virustotal')` assertion matched this fix's own explanatory code
+  comment (which necessarily names the old buggy pattern); narrowed to the
+  actual executable-code substring. Searched `workers/test/` for any
+  pre-existing test referencing `handleCVELookup`/`cyber-defense.html`/
+  these field names — none existed, so no bug-reinforcing assertion needed
+  correcting. Full suite: 234 files / 2429 tests passing (was 233/2422
+  before this item — +1 file, +7 tests). `node scripts/registry/
+  validate.mjs`: 0 failures, 0 warnings. Updated `CAP-TIH-001`'s `notes` in
+  `docs/capability-registry/domains/threat-hunting-intel.json` (it already
+  documented `handleIOCLookup` and explicitly cited
+  `frontend/cyber-defense.html:156` as a caller) to record the frontend fix
+  — `test_coverage.has_tests` deliberately left `false` since no new
+  import-based test of `handleIOCLookup` itself was added (that handler
+  was never the bug; only its frontend consumer's field-path assumptions
+  were wrong). No existing registry entry covers `handleCVELookup`/
+  `/api/vulns/cve` at all (a pre-existing cataloguing gap, not created by
+  this fix) — consistent with this session's practice, no new capability
+  entry was added for a bounded bug fix.
+  `node scripts/registry/generate-report.mjs` regenerated (only the
+  timestamp changed).
+- **4 Tier-2 items remain** (of 8), plus all 6 Tier-3 items, queued next in
+  the audit's stated priority order.
+
+### 2026-07-11 — Tier-2 backlog item #3 (of 8): index.html — fabricated "PATCHED" KPI, hardcoded "Platform: Operational" badge, and 3 false "CyberBrain V2" claims
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-2 item #2.
+- **Re-verified against actual code, found each of the 3 named sub-bugs had
+  a distinct root cause requiring its own fix:**
+  1. **Fake PATCHED counter:** the Vulnerability Management section's
+     "PATCHED" KPI tile (`#vm-patched`) computed
+     `Math.floor(s.confirmed_exploited/10)` from the real
+     `/api/threat-intel/stats` response — an invented formula with *zero*
+     factual relationship to remediation. Traced the full stack looking for
+     a real "patched count" field: `handleThreatIntelStats`
+     (`workers/src/handlers/threatIntel.js`) only returns
+     `total_advisories/critical/high/medium/low/confirmed_exploited/
+     ransomware_linked` — no patch-status field exists. A genuine vuln
+     lifecycle *does* exist (`workers/src/handlers/vulnManagement.js`'s
+     `open→in_progress→testing→patched→...` stage machine, real
+     `POST /api/vulns/:id/remediate`), but `handleListVulns` hardcodes
+     `stage:'open'` for every CVE sourced from the platform-wide
+     `threat_intel` table (the vast majority) — only a small, per-org,
+     authenticated-user-created KV subset can ever have a different stage.
+     There is no real "how many CVEs has this platform patched" number
+     anywhere. Fixed to `statOrDash('vm-patched', null)` (both the success
+     and pre-existing catch paths) — the same honest "—" dash this exact
+     file's `statOrDash()` helper already shows for every other KPI when
+     real data isn't available, with a comment explaining why.
+  2. **Hardcoded "Platform: Operational" live dot:** the Command Centers
+     mega-widget's header badge (`#cdb-platform-status`, plus its
+     `.cdb-live-dot` pulsing green dot) was static HTML — grep-confirmed
+     `#cdb-platform-status` appears exactly once in the whole file, never
+     assigned to by any script. It always read "Operational" in green
+     regardless of real backend health. Found this page *already* runs a
+     genuinely real, working health poller two sections earlier — a
+     "V21.0 PRODUCTION ENGINE — Real API data only. Zero hardcoded/fake
+     metrics" IIFE that fetches `/api/platform/health` every 90s and
+     correctly branches on real `OK`/`DEGRADED`/`DOWN` status for a warning
+     banner and the SOC live-log feed — it simply never updated this badge.
+     Fixed by extending that existing poller (both its success and its
+     `.catch` failure path) to also set the badge's text/CSS class and the
+     dot's color from the same real `st` value, rather than adding a second,
+     redundant poller. Added the one missing CSS variant needed
+     (`.cdb-status-red`, for `DOWN` — only green/amber existed).
+  3. **3 false "CyberBrain V2" claims:** the MYTHOS AI Analyst chat panel's
+     header badge ("POWERED BY CYBERBRAIN V2") and status line ("ONLINE ·
+     CyberBrain V2 active"), plus a third, separate "AUTONOMOUS SOC MODE ·
+     CYBERBRAIN V2" badge — all claim a "CyberBrain V2" engine powers these
+     features. Traced the real call chain: this chat panel's
+     `cdbAnalystSend()` calls `POST /api/ai/chat` →
+     `handleAIChat` (`workers/src/handlers/aiAnalysis.js`) → a
+     template-based intent-detection/response-builder (grounded in real CVE
+     data via `lookupCveIntel()`, but not an LLM call and not CyberBrain).
+     The platform's *real* CyberBrain engine
+     (`workers/src/core/cyberBrain.js` / `services/cyberBrainEngine.js`) is
+     a completely separate, genuinely-versioned-v20.0 module used for
+     scan-result enrichment (`enrichScanWithBrain`) — never imported by
+     `handleAIChat` or anywhere near this UI. "V2" corresponds to no real
+     version of anything; the domain's own `CAP-MYTHOS-001` registry entry
+     already documented a closely-related naming collision ("'MYTHOS' is
+     also the customer-facing AI-chat-widget brand name... UI branding
+     only") without yet catching this third, CyberBrain-specific
+     mislabeling. Fixed all 3 occurrences to plain, accurate "MYTHOS"
+     branding — matching what the real backend actually is, and matching
+     the correct "MYTHOS AI ENGINE"/"MYTHOS AI Analyst" labels already used
+     one line above each fix site.
+- **Verification:** `node --check` on both extracted inline `<script>`
+  blocks containing the JS edits (the `vm-patched` fix and the extended
+  health poller); new `workers/test/indexFabricatedStatsAndStatusFix.test.mjs`
+  (9 tests, static parse) asserting: the fabricated `Math.floor(.../10)`
+  formula is gone and both `vm-patched` call sites pass `null`; the platform
+  dot has a targetable id and a red status class now exists; the real
+  health poller's body now references both the badge and dot ids in both
+  its success and failure paths, with each real status value driving a
+  distinct real label (`OK`→"Operational", `DEGRADED`→"Degraded",
+  `DOWN`→"Down"); zero case-insensitive occurrences of "CYBERBRAIN V2"
+  remain anywhere in the file; all 3 corrected badges read the accurate
+  MYTHOS branding. Searched `workers/test/` for any pre-existing test
+  referencing these strings/ids — none existed, so no bug-reinforcing
+  assertion needed correcting. Full suite: 233 files / 2422 tests passing
+  (was 232/2413 before this item — +1 file, +9 tests).
+  `node scripts/registry/validate.mjs`: 0 failures, 0 warnings (after fixing
+  one JSON syntax error of my own making — a stray trailing period after a
+  closing quote in `CAP-MYTHOS-001`'s `notes` field, caught immediately by
+  `python3 -c "import json; json.load(...)"` before the validator run).
+  Updated `CAP-MYTHOS-001`'s `notes` in
+  `docs/capability-registry/domains/mythos-godmode.json` to record this
+  third naming-collision fix alongside the two the entry already documented.
+  `node scripts/registry/generate-report.mjs` regenerated (only the
+  timestamp changed).
+- **5 Tier-2 items remain** (of 8), plus all 6 Tier-3 items, queued next in
+  the audit's stated priority order.
+- **Also fixed in this entry's commit:** my own `old_string`/`new_string`
+  Edit for inserting this entry initially dropped the `## Session log (most
+  recent first)` heading above it — the same mistake documented earlier in
+  this session's item #5/#6 entries. Caught immediately via
+  `grep -c "^## Session log"` returning 0 right after the edit; restored
+  before this commit.
+
+### 2026-07-11 — Tier-2 backlog item #2 (of 8): sentinel-apex-marketplace.html — Threat Actor and Malware intel cards were 100% fabricated static data
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-2 item #1.
+- **Re-verified against actual code:** the page's Intelligence tabs
+  (`loadIntelTab()`, line ~740) dispatch to 4 loader functions —
+  `loadCVECards()`, `loadThreatActorCards()`, `loadMalwareCards()`,
+  `loadReportCatalogGrid()`. `loadCVECards()` was already correctly fixed in
+  an earlier pass (real fetch to `/api/v1/intel/latest.json`, honest
+  "temporarily unavailable" fallback on failure — explicit code comments at
+  lines 753-754/796-797 document this). `loadThreatActorCards()` (line 806)
+  and `loadMalwareCards()` (line 840), by contrast, had **zero fetch calls of
+  any kind** — a fixed JS array of 6 hardcoded objects each, unconditionally
+  rendered every single page load, no live/fallback distinction at all. Two
+  of the malware entries were entirely invented with no basis in this
+  platform's own data (`'AI-Enhanced RAT'`, `'BianLian'` — neither appears in
+  `workers/src/handlers/intelligencePreview.js`'s real `MALWARE_FAMILIES`
+  dict), and every numeric "Risk Score" (9.8, 9.5, 8.9, …) and "Vector"
+  string was fabricated prose with no backing field in any real API. This
+  page's own meta description and hero copy advertise "Live CVE
+  intelligence, threat actor dossiers, malware reports... powered by
+  SENTINEL APEX™" — every visitor saw the identical static fiction
+  presented as live, regardless of what the platform's real intelligence
+  actually contains.
+- **Found real, already-working backend sources for both, requiring no new
+  capability:** `GET /api/intel/actors` (`workers/src/handlers/threatIntelPro.js`,
+  confirmed public/no-auth-required in the Tier-2 item #1 investigation
+  immediately prior) already serves the platform's real APT actor database
+  (`workers/src/services/aptActorProfiles.js`'s `APT_ACTORS`, 60+ tracked
+  groups with real `id`/`aliases`/`origin`/`target_sectors`/`known_tools`/
+  `risk_score` fields) — the exact same backend `threat-intel-workbench.html`
+  already uses. For malware, `GET /api/preview/malware/:familyId`
+  (`workers/src/handlers/intelligencePreview.js`) serves a real, curated
+  `MALWARE_FAMILIES` dict (8 families: lockbit, blackcat, cobeacon, qakbot,
+  emotet, icedid, sliver, metasploit) with real `name`/`malware_type`/
+  `severity`/`active_in_wild`/`summary` fields — confirmed public (only a
+  FREE-tier + logged-in rate limit applies; anonymous calls are unmetered,
+  a separate pre-existing characteristic of that router not touched here
+  since these are cheap DB/dict lookups, not LLM calls — not the same
+  cost-abuse class as Tier-2 item #1). No "list all malware families"
+  endpoint exists yet, only this single-id preview; rather than add a new
+  backend route (out of scope for a bug fix), the frontend now fetches a
+  fixed set of 6 of the 8 known real family ids in parallel and renders
+  only the real fields the API returns — the *content* is never invented
+  client-side, only the *list of ids to ask about* is client-known, the
+  same pattern `tools.html`'s marketplace already uses for its own catalog.
+- **Fix (`frontend/sentinel-apex-marketplace.html`):**
+  - `loadThreatActorCards()`: now fetches `/api/intel/actors`, maps up to 6
+    real actors (severity bucketed from real `risk_score`: ≥90 CRITICAL,
+    ≥75 HIGH, else MEDIUM; tactics from real `known_tools`/`motivation`;
+    sectors from real `target_sectors`), and falls back to a new
+    `renderFallbackThreatActors()` honest-unavailable state (mirroring
+    `renderFallbackCVEs()`'s exact pattern) if the feed is empty or the
+    fetch fails — never the old fabricated array.
+  - `loadMalwareCards()`: now fetches `/api/preview/malware/:id` for 6 known
+    real family ids in parallel, renders only real returned fields
+    (`name`, `malware_type`, `severity`, `active_in_wild`, `summary`), and
+    falls back to a new `renderFallbackMalware()` honest-unavailable state
+    on total failure — never the old fabricated array.
+  - All backend-sourced display text now passed through the page's existing
+    `escHtml()` helper (already used by `loadCVECards()`) before injection.
+  - The "Buy Dossier"/"Buy Report" purchase-modal buttons and
+    `openModal(...)` wiring are unchanged — this fix only replaces the data
+    source, not the purchase flow (already covered by CAP-MKT-003).
+- **Verification:** `node --check` on the extracted inline `<script>` block;
+  new `workers/test/sentinelApexMarketplaceRealIntel.test.mjs` (10 tests,
+  static parse, same convention as this session's other frontend-fix tests)
+  asserting: both loaders fetch the real endpoints and read the real
+  response shapes; neither contains the old hardcoded array literal; the
+  fabricated static roster (`AI-Enhanced RAT`, `BianLian`, the fake risk-
+  score/vector literals, `SideCopy (Pakistan)`, `Scattered Spider`) is gone
+  from the file entirely; both new fallback functions exist and are honest
+  ("temporarily unavailable", not a re-hidden fabricated list); both loaders
+  escape backend-sourced fields via `escHtml()`. Searched `workers/test/`
+  for any pre-existing test referencing this file or these two function
+  names — found 3 unrelated hits (`marketplaceDeadCodeRemoval.test.mjs`,
+  `seoStructuredDataTruth.test.mjs`, `truthClaims.test.mjs`); read each
+  reference and confirmed none assert anything about the Threat Actor/
+  Malware cards specifically (`truthClaims.test.mjs`'s two
+  `sentinel-apex-marketplace.html` describe blocks cover the CVE feed and
+  report catalog only — both already-fixed, different functions) — no
+  bug-reinforcing assertion needed correcting. Full suite: 232 files / 2413
+  tests passing (was 231/2403 before this item — +1 file, +10 tests).
+  `node scripts/registry/validate.mjs`: 0 failures, 0 warnings.
+  `node scripts/registry/generate-report.mjs` regenerated (only the
+  timestamp changed — no capability registry entry was touched: none of
+  this domain's existing 6 `CAP-MKT-*` entries cover the intel-grid preview
+  cards specifically, only the separate purchase/checkout flows, so there
+  was no existing entry to correct; adding a brand-new capability entry for
+  a previously-uncatalogued feature was judged out of scope for a bounded
+  bug fix, consistent with how Tier-1 items #1–#10 and this same page's
+  earlier CVE-feed fix were handled).
+- **6 Tier-2 items remain** (of 8), plus all 6 Tier-3 items, queued next in
+  the audit's stated priority order.
+
+### 2026-07-11 — Tier-2 backlog item #1 (of 8): threat-intel-workbench.html — AI Analyst / CVE-brief / sector-brief routes had zero auth and zero rate limiting
+
+- **Trigger:** all 10 Tier-1 items closed (see the entry immediately below);
+  starting Tier 2, first item.
+- **Re-verified against actual code, traced the full call chain from the
+  frontend through to the LLM provider:** `threat-intel-workbench.html`'s
+  AI Analyst chat (`sendChat()` → `POST /api/intel/analyst/query`, line 1405)
+  is dispatched by `index.js:5251-5273` to `handleThreatIntelPro()`
+  (`workers/src/handlers/threatIntelPro.js`) with `authCtx` best-effort —
+  `resolveAuthV5(...).catch(() => null) || {}`, i.e. it never rejects the
+  request even if auth resolution fails entirely. Inside that handler, the
+  `analyst`/`analyst/query` route (line 513, pre-fix) called `analyzeQuery()`
+  (`workers/src/services/aiThreatAnalyst.js`) — a **real LLM call** via
+  `callLLM()` — with no auth check, no tier check, and no rate-limit check
+  of any kind anywhere in the file. Two sibling routes in the same handler
+  have the identical defect: `cve-brief/:id` (line 471, calls
+  `generateCVEBrief()` → LLM) and `sector/:sector` (line 439, calls
+  `generateSectorBrief()` → LLM). All three were reachable by any anonymous
+  visitor, unlimited times — every request is billed as real third-party LLM
+  API usage, a genuine open cost-abuse vector (this domain's own registry
+  entry, CAP-TIH-003, already recorded `auth_enforced: false` and
+  `test_coverage.has_tests: false` for this exact handler — corroborating,
+  not new information invented for this fix).
+- **Found the fix should reuse existing, tested infrastructure rather than
+  invent new:** `workers/src/middleware/rateLimit.js` already exports
+  `checkRateLimitCost(env, authCtx, endpoint)` + `rateLimitResponse(result,
+  module)`, a KV-backed, tier-aware, cost-weighted quota system with an
+  established `ENDPOINT_COST` registry — already used identically by
+  `handlers/threatHunting.js` (`'hunt'`, `'hunt/ioc'`),
+  `handlers/vulnManagement.js` and `handlers/auditLog.js` for their own
+  costly operations. `authCtx.identity`/`authCtx.tier` are reliably
+  populated even for anonymous callers: `resolveAuthV5()`'s IP-fallback
+  branch (`auth/middleware.js:242-253`) sets `identity: `ip:${ip}``,
+  `tier: 'FREE'` for any keyless/session-less request, so the quota keys
+  correctly per-IP instead of collapsing to one shared anonymous bucket.
+  Confirmed a **different**, unrelated `/api/intel/*` product
+  (`handlers/intelAPIHandlers.js`'s `ioc`/`cve`/`actor`/`ttp`/`risk`
+  developer-API-key economy, its own `checkIntelQuota()`) exists at
+  overlapping-looking but distinct route paths — deliberately left
+  untouched; conflating the two would entangle an unrelated monetized
+  product's tier policy with this workbench's AI-chat feature.
+- **Fix:**
+  - `workers/src/middleware/rateLimit.js`: added 3 new `ENDPOINT_COST`
+    entries — `'intel/analyst': 2, 'intel/cve-brief': 2, 'intel/sector': 2`
+    (cost 2 mirrors the existing `'ai/chat': 2` entry — same class of
+    operation).
+  - `workers/src/handlers/threatIntelPro.js`: imported
+    `checkRateLimitCost`/`rateLimitResponse`; added `const rl = await
+    checkRateLimitCost(env, authCtx, '<endpoint>'); if (!rl.allowed) return
+    rateLimitResponse(rl, '<module>');` as the first action inside each of
+    the 3 LLM-calling route blocks, before any D1 query or LLM call.
+  - **Deliberately not touched:** `auth_enforced` stays `false` — this fix
+    closes the cost-abuse gap via a per-IP/per-tier daily quota (~5 calls/day
+    for anonymous/FREE callers under `TIERS.FREE`'s 10-cost-unit budget,
+    scaling up by tier), not by requiring login; the other ~12 non-LLM
+    sub-routes in the same handler (actors, tactics, techniques, heatmap,
+    STIX/TAXII, etc.) were not part of this finding and are untouched.
+- **Verification:** `node --check` on both modified `.js` files; new
+  `workers/test/threatIntelProAiRateLimit.test.mjs` (12 tests) — mocks
+  `middleware/rateLimit.js` and the LLM-calling service functions
+  (`analyzeQuery`/`generateCVEBrief`/`generateSectorBrief`) to assert: each
+  of the 3 routes calls `checkRateLimitCost` with its distinct endpoint key
+  before any LLM work; a denied quota returns 429 and never invokes the LLM
+  function; an allowed quota proceeds normally (asserted via the mocked LLM
+  functions actually being called); the GET `?q=` alias at `/api/intel/analyst`
+  is gated identically to the POST path; an unrelated sibling route
+  (`/api/intel/actors`) is confirmed NOT gated by the new check (guards
+  against a future overly-broad refactor); a static source-check pins the 3
+  new `ENDPOINT_COST` entries. Searched `workers/test/` for any pre-existing
+  test referencing `threatIntelPro.js` or these route paths — none existed
+  (matches the registry's own "zero test coverage" finding), so no
+  bug-reinforcing assertion needed correcting. Full suite: 231 files / 2403
+  tests passing (was 230/2391 before this item — +1 file, +12 tests).
+  `node scripts/registry/validate.mjs`: 0 failures, 0 warnings.
+  `node scripts/registry/generate-report.mjs` regenerated (only the
+  timestamp changed). Also updated CAP-TIH-003's `test_coverage`,
+  `verification.evidence` and `notes` fields in
+  `docs/capability-registry/domains/threat-hunting-intel.json` to record
+  the fix and the now-partial (3-of-~15-sub-routes) test coverage — first
+  fixing a validator hard-failure of my own making (bare filenames like
+  `mitreAttackService.js` in the new evidence text resolved against repo
+  root and failed the "cited file must exist" check; corrected to the full
+  `workers/src/services/...` paths the validator requires).
+- **7 Tier-2 items remain** (of 8), plus all 6 Tier-3 items, queued next in
+  the audit's stated priority order.
+
+### 2026-07-11 — Tier-1 backlog item #10 (last of 10): tools.html — Tools/AI/Marketplace grids crashed empty + Marketplace wrong-catalog Buy Now 404s
+
+- **Trigger:** continuing the Tier 1–3 backlog, final Tier-1 item, next after
+  item #9.
+- **Re-verified against actual code — found the real bug was worse than the
+  audit's one-line paraphrase ("'Buy Now' 404s ... falls back to WhatsApp
+  quoting the wrong price"), and traced it to three separate, compounding
+  defects across `renderOfficialTools()`, `renderAITools()` and
+  `renderMarketplace()`:**
+  1. **All three render functions built their Buy button's price argument
+     via `price.match(/\\d+/)[0]`** — a regex literal with a *doubled*
+     backslash (confirmed byte-for-byte with `cat -A`/`od -c`, not a display
+     artifact). `/\\d+/` matches a literal backslash character followed by
+     digits, which never appears in a `'₹999'`-style string, so `.match()`
+     always returned `null` and `null[0]` threw a `TypeError` — synchronously,
+     during template-literal evaluation inside the `Array#map` callback.
+     A throw inside a `.map()` callback aborts the *entire* `.map()` call, so
+     `grid.innerHTML` was never assigned. Net effect: `officialToolsGrid`
+     (for any premium item), `aiToolsGrid` (unconditionally — every AI tool
+     has a Buy button) and `marketplaceGrid` (unconditionally, both live and
+     fallback data) rendered **nothing at all**, for every visitor, not just
+     a broken purchase button on an otherwise-visible catalog.
+  2. **`renderOfficialTools()`'s live `/api/tools/catalog` path dropped
+     `category`/`description`** when mapping API tools to render objects —
+     even after fixing the regex, every API-sourced card would have shown
+     the literal text "undefined" for its category badge and description
+     (the fallback array already carried both fields; only the live-API
+     mapping forgot them).
+  3. **`renderMarketplace()` read `item.demand`/`item.cve`/`item.price`**,
+     but the real `/api/defense/solutions` response (`enrichSolution()` in
+     `workers/src/handlers/defenseMarketplace.js`) returns
+     `demand_score`/`cve_id`/`price_inr` (a number, no `.price` string field
+     at all) — so every live listing silently showed the hardcoded fallback
+     demand (75%), CVE ('N/A') and price (₹999) instead of its real values.
+  4. **Worse, "Buy Now" on a live (API-sourced) marketplace item was wired to
+     `cdbToolBuy()` → `POST /api/tools/purchase`**, which looks up
+     `TOOLS_CATALOG[product_id]` — a small static dict of ~28 fixed product
+     IDs in `workers/src/handlers/toolsMarketplace.js` covering the Official
+     Tools and AI Tools sections only. Every dynamic `defense_solutions` row
+     ID (the Marketplace section's real, live inventory) is absent from that
+     dict, so the purchase call always returned `404 {error:'Product not
+     found'}`, tripping `cdbToolBuy`'s `manualFallback()` — which opens a
+     WhatsApp deep link quoting the `priceNum` already computed wrong by
+     defect #3 above (hardcoded ₹999 instead of the item's real `price_inr`).
+     The correct backend endpoints for these dynamic solutions
+     (`POST /api/defense/purchase/:id` + `POST /api/defense/verify/:id`,
+     `handleInitiatePurchase`/`handleVerifyPurchase` in
+     `defenseMarketplace.js`) already existed, fully implemented and
+     correct — nothing in the frontend called them.
+  Confirmed the Official Tools (`fallbackOfficialTools`), AI Tools
+  (`aiTools`, no live fetch at all) and Marketplace-fallback
+  (`fallbackMarketplace`) hardcoded arrays' product IDs *do* all exist in
+  `TOOLS_CATALOG` — so `cdbToolBuy`/`CDB_PAY.open` remains correct for every
+  item sourced from those three arrays; the wrong-catalog defect is scoped
+  specifically to Marketplace items sourced from the live
+  `/api/defense/solutions` fetch.
+- **Fix (`frontend/tools.html`):**
+  - Changed all three `match(/\\d+/)` occurrences to the correct single-
+    backslash `match(/\d+/)` (lines in `renderOfficialTools`, `renderAITools`,
+    `renderMarketplace`).
+  - `renderOfficialTools()`: added `category: t.category || '', description:
+    t.description || ''` to the live-API tool mapping.
+  - `renderMarketplace()`: reads `item.demand_score ?? item.demand ?? 75` and
+    `item.cve_id || item.cve || 'N/A'`; builds `priceNum`/`price` from
+    `item.price_inr` (numeric) when present, falling back to parsing
+    `item.price` (fallback-array string) otherwise; tracks a new
+    `liveSource` flag (true only when the live fetch actually returned
+    solutions) and branches the Buy button's `onclick` accordingly.
+  - Added a new `cdbBuySolution(solutionId, priceInr, label)` function
+    (in the same bottom-of-file Razorpay-checkout IIFE as `cdbToolBuy`,
+    reusing its `loadRzp()` loader and manual/WhatsApp-fallback shape) that
+    posts to `/api/defense/purchase/:id` and `/api/defense/verify/:id`
+    instead, adapted to that endpoint's real response field names
+    (`order.order_id`, not `order.razorpay_order_id`; `vData.solution_title`,
+    not `vData.product_name`; no `product_id`/`email` in the verify body —
+    the solution ID lives in the URL). Exposed as `window.cdbBuySolution`.
+    Live-sourced Marketplace items now call this; fallback-array items keep
+    calling `window.CDB_PAY.open()` (→ `cdbToolBuy`) exactly as before,
+    since their IDs are genuinely in the static `TOOLS_CATALOG`.
+- **Verification:** `node --check` on both extracted inline `<script>`
+  blocks; new `workers/test/toolsMarketplaceFieldAndPurchaseFix.test.mjs`
+  (14 tests, pure static parse of the raw HTML — same convention as this
+  session's other frontend-fix tests) asserting: the doubled-backslash regex
+  is gone from all three render functions; `renderOfficialTools` carries
+  `category`/`description` through; `renderMarketplace` reads the real
+  `demand_score`/`cve_id`/`price_inr` fields; `renderMarketplace` routes
+  `liveSource` items to `window.cdbBuySolution` and fallback items to
+  `window.CDB_PAY.open`; `cdbBuySolution` is defined, exported on `window`,
+  calls the `/api/defense/purchase|verify/:id` endpoints (never the
+  `/api/tools/*` ones), and correctly falls back to the manual/WhatsApp flow
+  when no real Razorpay order is returned. Searched `workers/test/` for any
+  pre-existing test referencing `tools.html`/these function names — none
+  existed, so no bug-reinforcing assertion needed correcting. Full suite:
+  230 files / 2391 tests passing (was 229/2377 before this item — +1 file,
+  +14 tests). `node scripts/registry/validate.mjs`: 0 failures, 0 warnings
+  (unchanged — no capability registry entries touched by this item).
+  `node scripts/registry/generate-report.mjs` regenerated (only the
+  timestamp changed — same 97 capabilities, same Backend/Frontend/Parity
+  percentages, still **NOT READY**, as expected since this item fixed
+  existing capabilities' bugs rather than adding new capabilities).
+- **This closes all 10 Tier-1 items from the full-frontend audit.** 14 of
+  the 24-item backlog remain: all 8 Tier-2 items (cost-abuse / misleading-
+  data class) and all 6 Tier-3 items (minor/cosmetic class), queued next in
+  the audit's stated priority order.
+
+### 2026-07-11 — Tier-1 backlog item #9: developer-onboarding.html — trial-key tier normalization bug
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-1 item #8.
+- **Re-verified against actual code, traced through 3 files to the real
+  root cause:** `handleTrialKeyRequest`
+  (`workers/src/handlers/developerOnboardingHandler.js`) computes
+  `tier = normalizeTier(TRIAL_TIER)` where `TRIAL_TIER = 'COMMUNITY'`.
+  `normalizeTier()` (`subscriptionPaywallEngine.js`) correctly returns the
+  string `'COMMUNITY'` — the canonical modern tier vocabulary
+  (`COMMUNITY/PROFESSIONAL/TEAM/BUSINESS/ENTERPRISE`) this codebase is
+  migrating toward. That value is then passed straight into
+  `createApiKey(env.DB, userId, tier, ...)` (`auth/apiKeys.js`), whose
+  rate-limit lookup is `const limits = TIER_LIMITS[userTier] ||
+  TIER_LIMITS.FREE` — but `TIER_LIMITS` only had entries for the *legacy*
+  vocabulary (`FREE/STARTER/PRO/ENTERPRISE/MSSP`). `TIER_LIMITS['COMMUNITY']`
+  is `undefined`, so every trial key silently fell back to
+  `TIER_LIMITS.FREE` (5 req/day, 50/month) — baked into the key's
+  `daily_limit`/`monthly_limit` columns at creation time — contradicting
+  the 100 req/day this exact page advertises (meta description, pricing
+  table) and `SUBSCRIPTION_TIERS.COMMUNITY`'s own real definition
+  (100/day, 3,000/month, burst 5/min).
+- **This is the identical bug class `TIER_LIMITS`'s own comment already
+  documents being fixed once before:** "Missing entries here fall back to
+  TIER_LIMITS.FREE ... MSSP customers were silently rate-limited as FREE."
+  Same root cause, different missing tier.
+- **Fix:** added a `COMMUNITY` entry to `TIER_LIMITS`
+  (`daily_limit: 100, monthly_limit: 3000, burst_per_min: 5`, mirroring
+  `SUBSCRIPTION_TIERS.COMMUNITY` exactly; other fields — `price_inr`,
+  `scan_limit`, `api_keys`, `ai_access` — mirror `TIER_LIMITS.FREE`, since
+  `subscriptionPaywallEngine.js`'s own comments establish COMMUNITY as
+  the new name for the same free-tier concept:
+  `FREE: null, // resolved to COMMUNITY at runtime`). Purely additive —
+  no existing tier's values changed. `api_keys.tier` has no CHECK
+  constraint (confirmed against `schema_bootstrap.sql`; unlike
+  `users.tier`, which does and is why that INSERT correctly hardcodes the
+  literal `'FREE'` already), so storing `'COMMUNITY'` there was always
+  schema-safe — the bug was purely the missing rate-limit lookup entry.
+- **Not touched:** `TIER_LIMITS.FREE` itself (used by real non-trial FREE
+  signups elsewhere) — changing its value would be a much broader,
+  unrelated change outside this bug's scope.
+- **Tests:** extended the existing `test/developerOnboardingHandler.test.mjs`
+  (already covers `handleTrialKeyRequest` with a real mock D1/KV env) — its
+  `INSERT INTO api_keys` mock now also captures `daily_limit`/`monthly_limit`
+  (previously ignored), and a new test asserts a fresh trial key gets
+  `tier: 'COMMUNITY'`, `daily_limit: 100`, `monthly_limit: 3000` — not the
+  old FREE-fallback 5/50. All 16 pre-existing tests in that file still
+  pass unchanged. Full suite green: 229 files / 2377 tests (baseline
+  229/2376 from Tier-1 item #8 — no new test *file*, extended an existing
+  one).
+- **Validator:** 0 failures, 0 warnings, 97 capabilities (unchanged — same
+  reasoning as items #1–#8). `PRODUCTION_READINESS_REPORT.md` regenerated
+  (timestamp-only diff).
+- **Remaining in the Tier 1–3 backlog (15 of 24):** next up: `tools.html`'s
+  marketplace field mismatches + Buy Now 404s (Tier-1 #10, the last Tier-1
+  item), then all of Tier 2/3 (full original list in the audit entry ten
+  below).
+
+### 2026-07-11 — Tier-1 backlog item #8: user-dashboard.html — My Trainings/My Purchases envelope-unwrap bug (plus a third, previously unnamed tab with the identical bug)
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-1 item #7.
+- **Re-verified against actual code — found the real bug is one level
+  deeper than the audit's paraphrase:** the finding said "both read
+  data.deliveries; the real endpoint returns data.purchases." Reading
+  `handleMyPurchases` (`workers/src/handlers/delivery.js`) directly:
+  it returns `jsonOk({purchases, total})`, and `jsonOk()` wraps *every*
+  response in this codebase's standard `{success, data, error, timestamp}`
+  envelope. So the real path is `response.data.purchases` — fixing only
+  the field name (`data.purchases` instead of `data.deliveries`, without
+  also unwrapping the envelope) would have left the bug exactly as broken,
+  just failing at a different property access. `loadMyTrainings()` and
+  `loadMyDeliveries()` both had this exact double gap.
+- **A third, unnamed tab found with the identical bug while fixing the
+  named two:** `loadUserReports()` ("My Reports") calls
+  `GET /api/user/reports` (`handleUserReports`, same file, same `jsonOk()`
+  envelope, real field `reports`) as its primary source, falling back to
+  `/api/delivery/my-purchases` on empty. Both its primary read (`d?.reports
+  || d?.deliveries`) and its fallback read (`d2?.deliveries || d2?.purchases`)
+  had the same missing-envelope-unwrap bug — the fallback's own
+  `d2?.purchases` addition (from some earlier, partial fix attempt) was
+  still wrong for the same reason, just one property deeper into the
+  wrong object. This tab was not named in the original audit finding but
+  shares the identical root cause and was fixed alongside it rather than
+  left for a future pass to rediscover independently.
+- **Fix:** all three call sites now unwrap `(raw && raw.success && raw.data)
+  ? raw.data : raw` first — the same idiom already established elsewhere
+  in this exact file (`loadCisoMetrics()`'s own comment: "Unwrap standard
+  { success, data, error } response envelope") — then read the real field
+  names (`purchases`, `reports`) instead of the nonexistent `deliveries`.
+- **Tests:** new `test/userDashboardPurchasesEnvelopeFix.test.mjs` (6
+  tests, static source-parse) — confirms all three call sites (2 named +
+  1 discovered) unwrap the envelope and read the real field names, and
+  that `.deliveries` no longer appears anywhere in the file (confirmed via
+  full-file grep, 0 matches). Full suite green: 229 files / 2376 tests
+  (baseline 228/2370 from Tier-1 item #7).
+- **Validator:** 0 failures, 0 warnings, 97 capabilities (unchanged — same
+  reasoning as items #1–#7). `PRODUCTION_READINESS_REPORT.md` regenerated
+  (timestamp-only diff).
+- **Remaining in the Tier 1–3 backlog (16 of 24):** next up, in stated
+  order: `developer-onboarding.html`'s trial-key tier normalization bug
+  (Tier-1 #9), then `tools.html`'s marketplace field mismatches (Tier-1
+  #10), then all of Tier 2/3 (full original list in the audit entry nine
+  below).
+
+### 2026-07-11 — Tier-1 backlog item #7: user-dashboard.html — post-upgrade billing token-storage + loadDashboard() bug
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-1 item #6.
+- **Re-verified against actual code, two independent bugs in the same
+  post-payment success handler (`handlePaymentSuccess`)**:
+  1. `handleVerifyPayment`'s subscription branch (`workers/src/handlers/payments.js`)
+     issues a real JWT with the new tier baked in, returned as
+     `token`/`refresh_token` — confirmed by reading the actual return
+     statement, not assuming the audit's paraphrase. The frontend read
+     these correctly but stored them via
+     `localStorage.setItem('cdb_token', d.token)` — a key and storage type
+     this page's own `apiFetch()` (and 6 other read sites) never look at;
+     the real, established pattern (already used by `doLogin()`'s own
+     success path) is `_token = ...; saveTokens(_token, refresh)`, which
+     writes to `sessionStorage['cdb_access']`. The customer's UI kept
+     enforcing their pre-upgrade tier until the session token naturally
+     expired and forced a fresh login.
+  2. The same success path then called `await loadDashboard()` —
+     confirmed via exhaustive grep that no such function exists anywhere
+     in this file. This threw a `ReferenceError` immediately after the
+     "Access Unlocked" success modal was already shown, caught by the
+     surrounding `catch`, surfacing a confusing "Something went wrong"
+     toast to a customer who had just successfully paid.
+     `initDashboard()` — the same full-refresh function `doLogin()`'s own
+     success path already calls — is the real, existing equivalent; it
+     already calls `syncPlanCards()` internally once its data loads, so no
+     separate call was needed.
+- **Fix:** replaced both the `localStorage` writes with `_token = d.token;
+  saveTokens(_token, d.refresh_token);`, and `await loadDashboard()` with
+  `await initDashboard()`.
+- **Pre-existing test corrected, not worked around:**
+  `test/dashboardProUpgradeAuthPath.test.mjs` (written 2026-07-10 for a
+  different, already-fixed bug in this same handler) had its own final
+  assertion locking in `localStorage.setItem('cdb_token', d.token)` as
+  correct behavior — the exact bug this wave fixed. Corrected to assert
+  the real `_token`/`saveTokens()` path, preserving the test's original
+  intent (confirm the JWT is actually captured) without re-encoding the
+  storage bug as a requirement.
+- **Also fixed in this entry's commit:** restored the `## Session log
+  (most recent first)` heading, accidentally dropped 2 entries ago (item
+  #5's own edit) — already corrected in the item #6 entry below; noted
+  here for completeness of this session's housekeeping trail.
+- **Tests:** new `test/userDashboardBillingTokenAndRefresh.test.mjs` (5
+  tests, static source-parse) — confirms the success handler uses
+  `_token`/`saveTokens()` (not `localStorage`), that `saveTokens()` itself
+  writes to `sessionStorage`, that `initDashboard()` (not the nonexistent
+  `loadDashboard()`) is called, and that `initDashboard` already syncs
+  plan cards itself. Full suite green: 228 files / 2370 tests (baseline
+  227/2365 from Tier-1 item #6).
+- **Validator:** 0 failures, 0 warnings, 97 capabilities (unchanged — same
+  reasoning as items #1–#6). `PRODUCTION_READINESS_REPORT.md` regenerated
+  (timestamp-only diff).
+- **Remaining in the Tier 1–3 backlog (17 of 24):** next up, in stated
+  order: `user-dashboard.html` My Trainings/My Purchases field mismatch
+  (Tier-1 #8), then developer-onboarding.html and tools.html (Tier-1
+  #9–#10) before Tier 2/3 (full original list in the audit entry eight
+  below).
+
+### 2026-07-11 — Tier-1 backlog item #6: soc-dashboard.html — AI Decision Engine field/scaling bugs
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-1 item #5.
+- **Re-verified against actual code:** `loadDecisions()`'s real-data path
+  read `d.action`/`d.reasoning`/`d.timestamp`. The real object shape
+  (`services/decisionEngine.js`'s own header comment: `{decision, reason,
+  confidence, priority, actions_recommended, risk_score}`, plus
+  `decided_at` added at construction) never matched — every real decision
+  rendered as a generic "ANALYZE" badge with "Processing threat data..."
+  text, regardless of what the engine actually decided. Separately,
+  `confidence` is already 0–100 (`computeConfidence()`'s own
+  `Math.min(100, Math.round(...))`) — the frontend did `Math.round(d.confidence
+  * 100)` for the percentage and `(d.confidence||.85)*80` for the bar
+  width, both assuming a 0–1 scale, so a real confidence of 75 rendered as
+  "7500%" with a confidence bar ~6000px wide.
+- **Mock-data fallback, re-examined as two distinct call sites, not one bug:**
+  `buildMockDecisions()` (fabricated CVE-2025-xxxx / 185.234.x.x IP data)
+  is called from two places. (1) When `USER_PLAN !== 'ENTERPRISE'`
+  (`USER_PLAN` is read from `localStorage.getItem('cdb_plan')` — the
+  "client-controlled localStorage value" in the audit finding) — this path
+  sits behind `#decision-gate`, an overlay that clearly reads "Autonomous
+  threat triage and response requires ENTERPRISE plan" with an "Upgrade to
+  Enterprise" button. Confirmed this is a legitimate, honestly-disclosed
+  teaser pattern (matches this codebase's own established convention for
+  gated preview content) — left unchanged. (2) The `catch` block of the
+  *real* fetch, with no gate or disclosure of any kind — a genuine
+  ENTERPRISE customer hitting a transient network error would silently see
+  fabricated threat data presented as live. This is the actual bug: fixed
+  to show an honest "Unable to load decisions — try refreshing" message
+  instead, matching the disclosure standard this file already uses
+  elsewhere (`loadIOCs()`'s own comment: "a clear upgrade prompt rather
+  than a confusing empty state").
+- **Fix:** `d.action`→`d.decision`, `d.reasoning`→`d.reason`,
+  `d.timestamp`→`d.decided_at`; confidence display is now
+  `Math.round(d.confidence)` (no `*100`) and the bar width scales by `*0.8`
+  (not `*80`) to correctly map a 0–100 value onto the existing 0–80px bar.
+  Also added the 5 missing `.dt-*` CSS classes for real decision values
+  that had never had one (`auto_contain`, `fast_patch`, `monitor_closely`,
+  `low_priority`, `false_positive` — only `escalate`/`block`/`alert`/`allow`
+  existed), since real decisions will now actually reach this code path.
+- **Tests:** new `test/socDashboardDecisionEngineFieldFix.test.mjs` (7
+  tests, static source-parse) — confirms the real field names are read and
+  the old ones are gone, confidence is not re-scaled, the catch block no
+  longer calls `buildMockDecisions()` and shows the honest message instead,
+  the legitimate non-ENTERPRISE teaser path is untouched and still clearly
+  overlaid, and all 6 real `DECISIONS` values have a matching CSS class.
+  Full suite green: 227 files / 2365 tests (baseline 226/2358 from Tier-1
+  item #5).
+- **Validator:** 0 failures, 0 warnings, 97 capabilities (unchanged — same
+  reasoning as items #1–#5). `PRODUCTION_READINESS_REPORT.md` regenerated
+  (timestamp-only diff).
+- **Also fixed in this entry's commit:** restored the `## Session log (most
+  recent first)` heading, accidentally dropped by the previous entry's own
+  edit (item #5) — confirmed via `git show b8bca62 -- PROGRAM_BOARD.md`,
+  the heading line was replaced instead of preserved. No content was lost,
+  only the section heading itself; this fixes it in place per this file's
+  own convention of correcting mistakes visibly rather than silently.
+- **Remaining in the Tier 1–3 backlog (18 of 24):** next up, in stated
+  order: `user-dashboard.html` billing token-storage + `loadDashboard()`
+  bug (Tier-1 #7), then My Trainings/My Purchases field mismatch (Tier-1
+  #8), then developer-onboarding.html and tools.html (Tier-1 #9–#10)
+  before Tier 2/3 (full original list in the audit entry seven below).
+
+### 2026-07-11 — Tier-1 backlog item #5: automation-dashboard.html — 5 dead/wrong endpoints
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-1 item #4.
+- **Re-verified against actual code**, each of the 5 named issues independently:
+  1. **Connector Health** (`loadConnectors`) called `/api/integrations/connectors`
+     — the owner-only internal domain (`index.js:1550`'s
+     `/^\/api\/(integrations|org-memory|...)/` prefix gate, `isOwner()`
+     required). The real, customer-facing, API-key-authenticated route is
+     `/api/auto/integrations/connectors` (`handleAutoRoute` →
+     `handleIntegrationConnectors`, confirmed in the route's own
+     `API_MANIFEST` entry). Once the path is fixed the field names already
+     matched — this was a pure wrong-path bug, no shape mismatch.
+  2. **SIEM Test** (`testConnector`) called `POST /api/integrations/test` —
+     same wrong owner-only domain; the real route is
+     `/api/auto/integrations/test` (`handleIntegrationTest`). Separately,
+     that handler always returns HTTP 200 even for a failed connection test
+     (`{success:false, message}` in the body, never a non-2xx status) —
+     `testConnector`'s try/catch only had a failure branch for a thrown
+     error, so it unconditionally rendered "Connection successful" as long
+     as the request itself didn't throw. Fixed to branch on `d.success`.
+  3. **Usage tab** (`loadUsage`) read `d.summary.{total_calls,cache_hit_ratio}`,
+     `d.quota.{quota_pct,radar_limit,month_calls}`, and `d.by_endpoint` — the
+     real handler (`handleUsageDashboard`) never computed a `summary` or
+     `quota` object at all (only `hourly_trend`/`daily_trend`/
+     `top_endpoints`/`breakdown_by_day` existed), and called the endpoint
+     breakdown `top_endpoints`, not `by_endpoint`. `summary`/`quota` are a
+     missing capability, not a rename (same class as the revenue-command-center.html
+     KPI-tiles fix, item #3) — added real queries against the existing
+     `ops_usage_events` table (already used by this same handler) plus
+     `auth/apiKeys.js`'s `TIER_LIMITS` for the per-tier monthly quota.
+     `radar_limit` sends `null` (not `TIER_LIMITS`'s internal `-1`) for
+     unlimited tiers, matching the truthiness check `loadUsage` already
+     uses. Frontend's `d.by_endpoint` corrected to `d.top_endpoints`
+     (simpler than adding a backend alias, unlike the revenue fix's
+     `pipeline`/`pipeline_value` case — no other consumer to preserve).
+  4. **Governance tab** (`loadGovernance`) read `d.released`, `d.user_tier`,
+     `d.quota_warning`, `d.throttle_limits` — `handleGovernance` just
+     returned the static `API_MANIFEST` (version/endpoints/deprecations —
+     platform-wide, not personalized) with none of those fields. Same
+     missing-capability class as #3 above: added `user_tier` (from
+     `authCtx`), `throttle_limits` (from `TIER_LIMITS[tier]`), `released`
+     (aliases the manifest's existing `last_updated`), and a computed
+     `quota_warning` (populated once calendar-month usage crosses 80% of
+     the tier's monthly limit, `null` otherwise) — reusing the exact same
+     `ops_usage_events`/`TIER_LIMITS` building blocks as the Usage tab fix.
+  5. **Webhooks list** (`loadWebhooks`) called `JSON.parse(w.events||'[]')`
+     on a field the real handler (`handleWebhookList`) already runs through
+     `safeParseJSON()` server-side — `w.events` arrives as a real array, and
+     `JSON.parse()` on a non-string argument coerces it via `.toString()`
+     (producing a comma-joined, non-JSON string) and throws, silently
+     caught by the surrounding try/catch, leaving the list permanently
+     empty despite real webhooks existing. Fixed to use `w.events||[]`
+     directly — no parsing needed, it's already the real array.
+- **Tests:** new `test/automationDashboardDeadEndpoints.test.mjs` (11 tests)
+  — backend: real in-memory SQLite (`node:sqlite`, same pattern as
+  `enterpriseAutomationTeamManagement.test.mjs`) verifying `summary`/`quota`
+  are computed correctly from real `ops_usage_events` rows (including that
+  `radar_limit` is `null` not `-1` for unlimited tiers, and that
+  `quota_warning` correctly appears only past the 80% threshold); frontend:
+  static source-parse confirming the corrected paths, the `d.success`
+  branch, the non-parsing webhook render, and the `top_endpoints` field
+  name. Full suite green: 226 files / 2358 tests (baseline 225/2347 from
+  Tier-1 item #4).
+- **Validator:** 0 failures, 0 warnings, 97 capabilities (unchanged — same
+  reasoning as items #1–#4). `PRODUCTION_READINESS_REPORT.md` regenerated
+  (timestamp-only diff).
+- **Remaining in the Tier 1–3 backlog (19 of 24):** next up, in stated
+  order: `soc-dashboard.html`'s AI Decision Engine field/scaling bugs, then
+  `user-dashboard.html`'s billing token-storage bug, then the rest of Tier
+  1 before Tier 2/3 (full original list in the audit entry six below).
+
+### 2026-07-11 — Tier-1 backlog item #4: mssp-command-center.html — Add Partner always 400'd
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-1 item #3.
+- **Re-verified against actual code:** `submitPartner()`
+  (`frontend/mssp-command-center.html`) posted
+  `{company, contact, tier, contract_value, email, notes}` to
+  `POST /api/mssp/partners`. The real handler
+  (`handleAddMsspPartner`, `workers/src/handlers/msspOps.js`) destructures
+  `{company, contact_email, tier, plan, brand_name, custom_domain,
+  primary_color, margin_pct}` and requires both `company` and
+  `contact_email` — the frontend's `email` field was never read under that
+  name, so `contact_email` was always empty and the `if (!company ||
+  !contact_email)` check 400'd on literally every submission.
+  `contact`/`contract_value`/`notes` were also silently dropped — no
+  matching destructured field existed for any of them.
+- **Fix:**
+  - `submitPartner()` now sends `contact_email`/`contact_name` (the real
+    field names), and its own client-side required-field check now
+    includes email (previously the "Contact Email" label had no `*` and
+    the form let you submit without it, guaranteeing a 400 even after the
+    field-name fix if left blank) — label corrected to "Contact Email *"
+    to match.
+  - `handleAddMsspPartner` now also accepts `contact_name`/`contract_value`/
+    `notes` and stores them in `mssp_partners.metadata` — a JSON column
+    already in `schema_bootstrap.sql`, provisioned for exactly this kind of
+    extensibility but never populated on insert. Confirmed this is real,
+    retrievable data, not a write-only stub: `handleListMsspPartners`
+    already `SELECT p.*`s every column including `metadata`. No schema
+    migration needed or performed.
+- **Deliberately not done in this pass:** surfacing `metadata`'s fields in
+  the partner table or `viewPartner()`'s detail view — the audit finding
+  was specifically about the 400 (a hard failure), not about the partner
+  list's displayed columns; adding new visible UI is a separate, smaller
+  follow-up now that the data is actually being captured.
+- **Tests:** new `test/msspAddPartnerFieldMismatch.test.mjs` (5 tests) —
+  backend: still 400s on missing `contact_email` (unchanged validation),
+  succeeds and correctly stores `contact_name`/`contract_value`/`notes` in
+  `metadata` on a valid submission; frontend: static source-parse
+  confirming `submitPartner` sends the real field names, requires email
+  client-side, and the label is marked required. Full suite green: 225
+  files / 2347 tests (baseline 224/2342 from Tier-1 item #3).
+- **Validator:** 0 failures, 0 warnings, 97 capabilities (unchanged — same
+  reasoning as items #1–#3). `PRODUCTION_READINESS_REPORT.md` regenerated
+  (timestamp-only diff).
+- **Remaining in the Tier 1–3 backlog (20 of 24):** next up, in stated
+  order: `automation-dashboard.html`'s dead/wrong endpoints, then
+  `soc-dashboard.html`'s AI Decision Engine field/scaling bugs, then the
+  rest of Tier 1 before Tier 2/3 (full original list in the audit entry
+  five below).
+
+### 2026-07-11 — Tier-1 backlog item #3: revenue-command-center.html — 6 of 8 panels broken by response-shape mismatches
+
+- **Trigger:** continuing the Tier 1–3 backlog, next item after Tier-1 item #2.
+- **Re-verified against actual code**, endpoint by endpoint, rather than
+  trusting the audit's category label ("object vs array, flat vs nested").
+  Read every one of the 8 panels' frontend consumers
+  (`frontend/revenue-command-center.html`) against their real backend
+  handlers (`workers/src/handlers/revenueOps.js`,
+  `workers/src/handlers/revenueMetrics.js`). 2 panels (Breakdown, MSSP
+  Opportunities) were already correctly wired — confirmed, not touched. The
+  other 6 each had a distinct, independently-verified mismatch:
+  1. **KPI Metrics tiles** (`loadRevMetrics`) — MRR/ARR were correct, but
+     `d.today`/`d.week`/`d.month` had **no corresponding backend field at
+     all** (`handlers/revenueMetrics.js` only ever computed MRR/ARR from
+     subscription-tier counts, never actual cash collected), and `d.pipeline`
+     read a field the backend calls `pipeline_value`. This is a missing
+     capability, not a rename — fixed by adding real `today`/`week`/`month`
+     queries against the same `payments` table `revenueOps.js` already reads
+     correctly (confirmed `env.DB` and `env.SECURITY_HUB_DB` are the same
+     D1 database via `index.js`'s `if (env.SECURITY_HUB_DB && !env.DB) env.DB
+     = env.SECURITY_HUB_DB` alias), plus a `pipeline` alias field.
+  2. **Lead Sources** (`loadLeads`) — hardcoded a 6-item Title-Case taxonomy
+     (`'Organic Search'`, `'Direct'`, …) that never matched any real
+     `source` value; the real response is `{breakdown:[{source,count,pct}]}`.
+     Fixed to render `d.breakdown` directly with a generic humanizer instead
+     of a fixed, guessed taxonomy.
+  3. **Conversion Funnel** (`loadFunnel`) — hardcoded 5 keys
+     (`visitors`/`free_scan`/`lead_captured`/…) that matched none of the
+     backend's real 7 stage ids (`visit`/`scan_start`/…/`purchase`); the
+     real response is `{stages:[{stage,label,count,conversion_from_prev}]}`,
+     already computed server-side. Fixed to render `d.stages` directly,
+     with bar width now proportional to real counts instead of a fixed,
+     fake sequence (100%/80%/60%/40%/25%).
+  4. **Transactions** (`loadTransactions`) — checked `Array.isArray(data)`
+     on a response that's actually `{transactions:[...], total}`, so the
+     table was always empty; rows also read `tx.date`, a field that doesn't
+     exist (`created_at`/`paid_at` do). Fixed to unwrap `data.transactions`
+     and format `tx.paid_at || tx.created_at`.
+  5. **Forecast** (`loadForecast`) — read flat
+     `current_month_actual`/`next_month_projection`/`quarterly_forecast`;
+     the real response nests these under `current_month.actual`,
+     `next_month.projected`, `quarterly.projected`. Fixed to read the real
+     nested paths.
+  6. **Pipeline Kanban + Add Deal** (`loadPipeline`, `renderKanban`,
+     `submitDeal`) — the deepest mismatch: `loadPipeline` expected the raw
+     response to be an array of deals; it's actually
+     `{stages:{lead:{count,value,deals},...}, total_deals, pipeline_value}`,
+     already grouped server-side. The frontend's own stage taxonomy
+     (`Lead`/`Qualified`/`Discovery`/`Proposal Sent`/`Negotiation`/`Won`)
+     also didn't match any of the backend's real keys (`lead`/`qualified`/
+     `demo`/`proposal`/`negotiation`/`closed_won`/`closed_lost`), so even a
+     correctly-shaped deal could never land in the right column.
+     Separately, `submitDeal` posted `{contact, value}`; the backend
+     requires `contact_email` specifically (400s without it) and reads
+     `deal_value_inr` — and the modal never had an email input at all
+     (only a generic "Contact Person" name field), so this couldn't be
+     fixed by renaming alone. Added a real Contact Email field to the
+     modal, updated the stage `<select>` to the real backend values, and
+     rewrote `loadPipeline`/`renderKanban` to consume the real grouped
+     shape directly instead of re-grouping a (nonexistent) flat array
+     client-side.
+- **Deliberately not fixed in this pass:** `handleRevenueMetrics`'s own
+  inner tier check (`isAdmin` or tier ENTERPRISE/MSSP) is redundant with
+  — and stricter than — the route-level `isOwner()` gate `index.js` already
+  applies before calling it; a real owner whose own account isn't tier
+  ENTERPRISE/MSSP and isn't using the ADMIN_KEY bypass could theoretically
+  still 403 here. Not touched: out of scope for a response-shape fix, not
+  confirmed as an active problem (the owner's own account is ENTERPRISE in
+  practice), and flagged here rather than silently left for a future pass
+  to rediscover.
+- **Tests:** new `test/revenueCommandCenterPanelFixes.test.mjs` (15 tests)
+  — backend: real `payments`-table sums bucketed correctly into
+  today/week/month with non-`success` and out-of-window rows excluded, and
+  `pipeline` aliasing `pipeline_value`; frontend: static source-parse
+  (same established pattern as `homepageSignInPath.test.mjs`) confirming
+  each panel now reads the real field/shape and no longer references the
+  old, never-matching one. Full suite green: 224 files / 2342 tests
+  (baseline 223/2327 from Tier-1 item #2).
+- **Validator:** 0 failures, 0 warnings, 97 capabilities (unchanged — same
+  reasoning as items #1–#2). `PRODUCTION_READINESS_REPORT.md` regenerated
+  (timestamp-only diff).
+- **Remaining in the Tier 1–3 backlog (21 of 24):** next up, in stated
+  order: `mssp-command-center.html` Add Partner field mismatch, then
+  `automation-dashboard.html`'s dead/wrong endpoints, then the rest of Tier
+  1 before Tier 2/3 (full original list in the audit entry four below).
 
 ### 2026-07-11 — Tier-1 backlog item #2: index.html Autonomous SOC / SIEM Integration Deploy / Org Memory auth gaps
 

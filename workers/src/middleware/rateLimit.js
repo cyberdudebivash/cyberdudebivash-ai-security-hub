@@ -119,6 +119,12 @@ export const ENDPOINT_COST = {
   'attack-graph':         3,
   'threat-intel':         1,
   'audit-log':            1,
+  // threat-intel-workbench.html's AI Analyst chat + AI-generated CVE/sector
+  // briefs — each one is a real LLM call (see handlers/threatIntelPro.js);
+  // previously unmetered and reachable without authentication.
+  'intel/analyst':        2,
+  'intel/cve-brief':      2,
+  'intel/sector':         2,
   'default':              1,
 };
 

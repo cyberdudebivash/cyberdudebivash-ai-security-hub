@@ -144,6 +144,11 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .dt-alert{background:rgba(245,158,11,.15);color:#f59e0b}
 .dt-allow{background:rgba(16,185,129,.15);color:#10b981}
 .dt-escalate{background:rgba(124,58,237,.15);color:var(--accent2)}
+.dt-auto_contain{background:rgba(239,68,68,.15);color:#ef4444}
+.dt-fast_patch{background:rgba(245,158,11,.15);color:#f59e0b}
+.dt-monitor_closely{background:rgba(59,130,246,.15);color:#3b82f6}
+.dt-low_priority{background:rgba(148,163,184,.15);color:#94a3b8}
+.dt-false_positive{background:rgba(16,185,129,.15);color:#10b981}
 .decision-text{font-size:12px;color:var(--text);line-height:1.5}
 .decision-confidence{font-size:10px;color:var(--text-dim);margin-top:4px}
 .confidence-bar{display:inline-flex;align-items:center;gap:6px}
@@ -746,21 +751,29 @@ async function loadDecisions() {
       return;
     }
 
+    // Real shape (services/decisionEngine.js): {decision, reason, confidence,
+    // decided_at, ...} — confidence is already 0-100 (computeConfidence()'s
+    // own Math.min(100, Math.round(...))), not 0-1. The previous field names
+    // (action/reasoning/timestamp) never matched, and confidence was scaled
+    // as if 0-1 (a real 75 rendered as "7500%" with a ~6000px-wide bar).
     feed.innerHTML = decs.map(d => `
       <div class="decision-item">
         <div class="decision-header">
-          <span class="decision-type dt-${(d.action||'alert').toLowerCase()}">${d.action || 'ANALYZE'}</span>
-          <span style="font-size:10px;color:var(--text-dim)">${new Date(d.timestamp||Date.now()).toLocaleTimeString()}</span>
+          <span class="decision-type dt-${(d.decision||'alert').toLowerCase()}">${d.decision || 'ANALYZE'}</span>
+          <span style="font-size:10px;color:var(--text-dim)">${new Date(d.decided_at||Date.now()).toLocaleTimeString()}</span>
         </div>
-        <div class="decision-text">${escHtml(d.reasoning || d.summary || 'Processing threat data...')}</div>
+        <div class="decision-text">${escHtml(d.reason || d.summary || 'Processing threat data...')}</div>
         <div class="decision-confidence">
-          Confidence: ${d.confidence ? Math.round(d.confidence * 100) : 85}%
-          <span class="confidence-bar"><span class="conf-fill" style="width:${(d.confidence||.85)*80}px;display:inline-block"></span></span>
+          Confidence: ${d.confidence != null ? Math.round(d.confidence) : 85}%
+          <span class="confidence-bar"><span class="conf-fill" style="width:${(d.confidence!=null?d.confidence:85)*0.8}px;display:inline-block"></span></span>
         </div>
       </div>`).join('');
   } catch {
-    feed.innerHTML = buildMockDecisions();
-    document.getElementById('kpi-decisions').textContent = '3';
+    // A real fetch failure for a real Enterprise customer must not silently
+    // show fabricated threat data as if it were live — buildMockDecisions()
+    // is only for the honest, clearly-overlaid non-Enterprise teaser above.
+    feed.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:20px">Unable to load decisions — try refreshing.</div>';
+    document.getElementById('kpi-decisions').textContent = '—';
   }
 }
 

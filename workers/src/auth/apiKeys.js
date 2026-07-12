@@ -17,6 +17,14 @@ export const TIER_LIMITS = {
   // Missing entries here fall back to TIER_LIMITS.FREE (see resolveFromJWT in
   // auth/middleware.js) — MSSP customers were silently rate-limited as FREE.
   MSSP:       { daily_limit: -1,    monthly_limit: -1,    burst_per_min: 120,price_inr: 9999, scan_limit: -1,    api_keys: -1, ai_access: 'full'    },
+  // handlers/subscriptionPaywallEngine.js's normalizeTier() canonical output
+  // for a trial signup ('COMMUNITY') was missing here too — the same bug
+  // class as the MSSP gap above. createApiKey() below falls back to
+  // TIER_LIMITS.FREE (5 req/day) for any tier it doesn't recognize, so every
+  // trial key silently got 5 req/day instead of the 100/day advertised on
+  // developer-onboarding.html. Values mirror SUBSCRIPTION_TIERS.COMMUNITY
+  // (subscriptionPaywallEngine.js), the canonical source for this tier.
+  COMMUNITY:  { daily_limit: 100,   monthly_limit: 3000,  burst_per_min: 5,  price_inr: 0,    scan_limit: 50,    api_keys: 1,  ai_access: 'none'    },
 };
 
 // ─── Plan features matrix ─────────────────────────────────────────────────────

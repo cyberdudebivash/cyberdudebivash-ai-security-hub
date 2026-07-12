@@ -3863,7 +3863,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <!-- Header -->
 <div style="text-align:center;margin-bottom:48px">
 <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:20px;padding:6px 16px;font-size:11px;font-weight:800;letter-spacing:.12em;color:#00d4ff;text-transform:uppercase;margin-bottom:16px">
-      🧠 MYTHOS AI ENGINE · POWERED BY CYBERBRAIN V2
+      🧠 MYTHOS AI ENGINE
     </div>
 <h2 style="font-size:clamp(28px,4vw,46px);font-weight:900;margin:0 0 12px;background:linear-gradient(135deg,#00d4ff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">
       AI Cyber Analyst
@@ -3884,7 +3884,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <div style="font-weight:800;font-size:13px;color:#fff">MYTHOS AI Analyst</div>
 <div style="font-size:10px;color:#10b981;display:flex;align-items:center;gap:4px">
 <span style="width:6px;height:6px;background:#10b981;border-radius:50%;display:inline-block;animation:mythosPulse 2s infinite"></span>
-              ONLINE · CyberBrain V2 active
+              ONLINE · MYTHOS Analyst active
             </div>
 </div>
 </div>
@@ -4173,7 +4173,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <!-- Header -->
 <div style="text-align:center;margin-bottom:56px">
 <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:20px;padding:6px 16px;font-size:11px;font-weight:800;letter-spacing:.12em;color:#ef4444;text-transform:uppercase;margin-bottom:16px">
-      🤖 AUTONOMOUS SOC MODE · CYBERBRAIN V2
+      🤖 AUTONOMOUS SOC MODE · MYTHOS
     </div>
 <h2 style="font-size:clamp(28px,4vw,46px);font-weight:900;color:#fff;margin:0 0 12px;letter-spacing:-.02em">
       Autonomous AI SOC<br/><span style="background:linear-gradient(90deg,#ef4444,#f59e0b,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Command Center</span>
@@ -22589,7 +22589,7 @@ function zdLoadAlerts(){
 /* === INTERSECTION COUNTER ANIMATIONS === */
 function cntUp(id,target){var el=document.getElementById(id);if(!el)return;var v=0,step=target/60,iv=setInterval(function(){v+=step;if(v>=target){v=target;clearInterval(iv);}el.textContent=Math.floor(v).toLocaleString();},1400/60);}
 function statOrDash(id,v){var el=document.getElementById(id);if(!el)return;if(v==null||isNaN(v)){el.textContent='—';}else{cntUp(id,v);}}
-var _obs=new IntersectionObserver(function(ents){ents.forEach(function(e){if(!e.isIntersecting)return;var id=e.target.id;if(id==='global-threat-map'){fetch('/api/threat-intel/stats').then(function(r){return r.ok?r.json():null;}).then(function(d){var s=d&&(d.stats||d.data&&d.data.stats||d);statOrDash('gtm-attacks',s&&s.total_advisories!=null?s.total_advisories:null);statOrDash('gtm-campaigns',s&&s.critical!=null?s.critical:null);statOrDash('gtm-blocked',s&&s.confirmed_exploited!=null?s.confirmed_exploited:null);}).catch(function(){statOrDash('gtm-attacks',null);statOrDash('gtm-campaigns',null);statOrDash('gtm-blocked',null);});}if(id==='vuln-management'){fetch('/api/threat-intel/stats').then(function(r){return r.ok?r.json():null;}).then(function(d){var s=d&&(d.stats||d.data&&d.data.stats||d);statOrDash('vm-critical',s&&s.critical!=null?s.critical:null);statOrDash('vm-high',s&&s.high!=null?s.high:null);statOrDash('vm-medium',s&&s.medium!=null?s.medium:null);statOrDash('vm-patched',s&&s.confirmed_exploited!=null?Math.floor(s.confirmed_exploited/10):null);}).catch(function(){statOrDash('vm-critical',null);statOrDash('vm-high',null);statOrDash('vm-medium',null);statOrDash('vm-patched',null);});}if(id==='zero-day-intel'){fetch('/api/zeroday/feed').then(function(r){return r.ok?r.json():null;}).then(function(d){var total=d&&d.total!=null?d.total:null;var exploited=d&&Array.isArray(d.data)?d.data.filter(function(z){return z.st==='ITW';}).length:null;var pocs=d&&Array.isArray(d.data)?d.data.filter(function(z){return z.poc;}).length:null;statOrDash('zd-active',total);statOrDash('zd-exploited',exploited);statOrDash('zd-pocs',pocs);}).catch(function(){statOrDash('zd-active',null);statOrDash('zd-exploited',null);statOrDash('zd-pocs',null);});}_obs.unobserve(e.target);});},{threshold:.1});
+var _obs=new IntersectionObserver(function(ents){ents.forEach(function(e){if(!e.isIntersecting)return;var id=e.target.id;if(id==='global-threat-map'){fetch('/api/threat-intel/stats').then(function(r){return r.ok?r.json():null;}).then(function(d){var s=d&&(d.stats||d.data&&d.data.stats||d);statOrDash('gtm-attacks',s&&s.total_advisories!=null?s.total_advisories:null);statOrDash('gtm-campaigns',s&&s.critical!=null?s.critical:null);statOrDash('gtm-blocked',s&&s.confirmed_exploited!=null?s.confirmed_exploited:null);}).catch(function(){statOrDash('gtm-attacks',null);statOrDash('gtm-campaigns',null);statOrDash('gtm-blocked',null);});}if(id==='vuln-management'){fetch('/api/threat-intel/stats').then(function(r){return r.ok?r.json():null;}).then(function(d){var s=d&&(d.stats||d.data&&d.data.stats||d);statOrDash('vm-critical',s&&s.critical!=null?s.critical:null);statOrDash('vm-high',s&&s.high!=null?s.high:null);statOrDash('vm-medium',s&&s.medium!=null?s.medium:null);/* no real per-CVE remediation-stage field exists on this platform's ingested threat_intel feed — was Math.floor(confirmed_exploited/10), an invented formula with no factual basis */statOrDash('vm-patched',null);}).catch(function(){statOrDash('vm-critical',null);statOrDash('vm-high',null);statOrDash('vm-medium',null);statOrDash('vm-patched',null);});}if(id==='zero-day-intel'){fetch('/api/zeroday/feed').then(function(r){return r.ok?r.json():null;}).then(function(d){var total=d&&d.total!=null?d.total:null;var exploited=d&&Array.isArray(d.data)?d.data.filter(function(z){return z.st==='ITW';}).length:null;var pocs=d&&Array.isArray(d.data)?d.data.filter(function(z){return z.poc;}).length:null;statOrDash('zd-active',total);statOrDash('zd-exploited',exploited);statOrDash('zd-pocs',pocs);}).catch(function(){statOrDash('zd-active',null);statOrDash('zd-exploited',null);statOrDash('zd-pocs',null);});}_obs.unobserve(e.target);});},{threshold:.1});
 (function(){function i(){['global-threat-map','vuln-management','zero-day-intel'].forEach(function(id){var el=document.getElementById(id);if(el)_obs.observe(el);});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',i);else i();})();
 
 /* === XSS-SAFE innerHTML WRAPPER === */
@@ -22915,7 +22915,25 @@ document.addEventListener('DOMContentLoaded', async function() {
         var e1=document.getElementById('v21-real-scan-count');if(e1)e1.textContent=Number(_applyFloor(h.stats.total_scans||0,_SCAN_BASELINE)).toLocaleString();
         var e2=document.getElementById('v21-scans-today');if(e2&&h.stats.scans_today!==undefined)e2.textContent=h.stats.scans_today;
       }
-    }).catch(function(e){if(typeof logSOC==='function')logSOC('Health check failed: '+e.message,'warn','warn');});
+      // Command Centers header badge — was static HTML hardcoded to "Operational"
+      // forever, never reflecting this same real health probe's actual result.
+      var pBadge=document.getElementById('cdb-platform-status');
+      if(pBadge){
+        pBadge.textContent=st==='OK'?'Operational':st==='DEGRADED'?'Degraded':st==='DOWN'?'Down':'Unknown';
+        pBadge.className=st==='OK'?'cdb-status-green':st==='DEGRADED'?'cdb-status-amber':st==='DOWN'?'cdb-status-red':'cdb-status-amber';
+      }
+      var pDot=document.getElementById('cdb-platform-dot');
+      if(pDot){
+        var dotColor=st==='OK'?'#22c55e':st==='DEGRADED'?'#eab308':st==='DOWN'?'#ef4444':'#94a3b8';
+        pDot.style.background=dotColor;pDot.style.boxShadow='0 0 6px '+dotColor;
+      }
+    }).catch(function(e){
+      if(typeof logSOC==='function')logSOC('Health check failed: '+e.message,'warn','warn');
+      var pBadge=document.getElementById('cdb-platform-status');
+      if(pBadge){pBadge.textContent='Unknown';pBadge.className='cdb-status-amber';}
+      var pDot=document.getElementById('cdb-platform-dot');
+      if(pDot){pDot.style.background='#94a3b8';pDot.style.boxShadow='0 0 6px #94a3b8';}
+    });
   }
   setTimeout(poll,3000);setInterval(poll,90000);
 })();
@@ -23412,6 +23430,7 @@ function v21TriggerUrgencyPayment(){
     #cdb-platform-status { padding: 3px 10px; border-radius: 9999px; font-size: 10px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; }
     .cdb-status-green { background: rgba(34,197,94,.12); color: #4ade80; border: 1px solid rgba(34,197,94,.2); }
     .cdb-status-amber { background: rgba(234,179,8,.12);  color: #fbbf24; border: 1px solid rgba(234,179,8,.2); }
+    .cdb-status-red   { background: rgba(239,68,68,.12);  color: #f87171; border: 1px solid rgba(239,68,68,.2); }
     .cdb-live-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; animation: cdb-pulse 2s infinite; box-shadow: 0 0 6px #22c55e; }
     @keyframes cdb-pulse { 0%,100%{opacity:1;transform:scale(1);box-shadow:0 0 6px #22c55e} 50%{opacity:.7;transform:scale(1.4);box-shadow:0 0 10px #22c55e} }
     .cdb-last-refresh { font-size: 10px; color: rgba(71,85,105,.8); letter-spacing: .2px; }
@@ -23717,7 +23736,7 @@ function v21TriggerUrgencyPayment(){
 </div>
 <div class="cdb-cc-meta">
 <div class="cdb-platform-status-wrap">
-<div class="cdb-live-dot"></div>
+<div class="cdb-live-dot" id="cdb-platform-dot"></div>
 <span>Platform</span>
 <span class="cdb-status-green" id="cdb-platform-status">Operational</span>
 </div>

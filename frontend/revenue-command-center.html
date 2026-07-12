@@ -542,18 +542,25 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:32px
     </div>
     <div class="form-row">
       <div class="form-group">
+        <label class="form-label">Contact Email *</label>
+        <input type="email" class="form-input" id="dContactEmail" placeholder="john@acme.com">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
         <label class="form-label">Deal Value (&#x20b9;) *</label>
         <input type="number" class="form-input" id="dValue" placeholder="49999" min="0">
       </div>
       <div class="form-group">
         <label class="form-label">Stage *</label>
         <select class="form-select" id="dStage">
-          <option value="Lead">Lead</option>
-          <option value="Qualified">Qualified</option>
-          <option value="Discovery">Discovery</option>
-          <option value="Proposal Sent">Proposal Sent</option>
-          <option value="Negotiation">Negotiation</option>
-          <option value="Won">Won</option>
+          <option value="lead">Lead</option>
+          <option value="qualified">Qualified</option>
+          <option value="demo">Demo</option>
+          <option value="proposal">Proposal</option>
+          <option value="negotiation">Negotiation</option>
+          <option value="closed_won">Won</option>
+          <option value="closed_lost">Lost</option>
         </select>
       </div>
     </div>
@@ -679,14 +686,27 @@ async function loadBreakdown() {
 }
 
 // ── 3. PIPELINE KANBAN ───────────────────────────────────────────────────────
-const STAGES = ['Lead','Qualified','Discovery','Proposal Sent','Negotiation','Won'];
+// Keys and colors match the real backend stages (handlers/revenueOps.js
+// handleGetEnterprisePipeline groups deals under these exact keys) — the
+// previous Title-Case-with-spaces keys ('Discovery','Proposal Sent','Won')
+// never matched any real deal.stage value, so every column was always empty.
+const STAGES = [
+  { key: 'lead',         label: 'Lead' },
+  { key: 'qualified',    label: 'Qualified' },
+  { key: 'demo',         label: 'Demo' },
+  { key: 'proposal',     label: 'Proposal' },
+  { key: 'negotiation',  label: 'Negotiation' },
+  { key: 'closed_won',   label: 'Won' },
+  { key: 'closed_lost',  label: 'Lost' },
+];
 const STAGE_COLORS = {
-  'Lead': 'var(--text-dim)',
-  'Qualified': 'var(--info)',
-  'Discovery': 'var(--accent)',
-  'Proposal Sent': 'var(--gold)',
-  'Negotiation': 'var(--warn)',
-  'Won': 'var(--accent3)'
+  lead: 'var(--text-dim)',
+  qualified: 'var(--info)',
+  demo: 'var(--accent)',
+  proposal: 'var(--gold)',
+  negotiation: 'var(--warn)',
+  closed_won: 'var(--accent3)',
+  closed_lost: '#ef4444',
 };
 let pipelineData = {};
 
@@ -694,55 +714,49 @@ async function loadPipeline() {
   const kanban = document.getElementById('pipelineKanban');
   kanban.innerHTML = '';
   try {
-    const deals = await apiFetch('/api/enterprise/pipeline');
-    const byStage = {};
-    STAGES.forEach(s => { byStage[s] = []; });
-    (Array.isArray(deals) ? deals : []).forEach(deal => {
-      const s = deal.stage || 'Lead';
-      if (byStage[s]) byStage[s].push(deal);
-      else byStage['Lead'].push(deal);
-    });
-    pipelineData = byStage;
-    renderKanban(byStage);
+    // Real response: { stages: { lead: {count,value,deals}, ... }, total_deals, pipeline_value }
+    // — not a raw array of deals (the previous bug's assumption).
+    const d = await apiFetch('/api/enterprise/pipeline');
+    pipelineData = d.stages || {};
+    renderKanban(pipelineData);
   } catch(e) {
-    const byStage = {};
-    STAGES.forEach(s => { byStage[s] = []; });
-    renderKanban(byStage);
+    renderKanban({});
   }
 }
 
-function renderKanban(byStage) {
+function renderKanban(stagesObj) {
   const kanban = document.getElementById('pipelineKanban');
   kanban.innerHTML = '';
-  STAGES.forEach(stage => {
-    const deals = byStage[stage] || [];
-    const total = deals.reduce((s,d) => s + (Number(d.value)||0), 0);
+  STAGES.forEach(({ key, label }) => {
+    const stageData = stagesObj[key] || { count: 0, value: 0, deals: [] };
+    const deals = stageData.deals || [];
     const col = document.createElement('div');
     col.className = 'kanban-col';
     col.innerHTML = `
       <div class="kanban-col-header">
-        <div class="kanban-col-title" style="color:${STAGE_COLORS[stage]||'#fff'}">${stage}</div>
-        <div class="kanban-col-meta">${deals.length} deal${deals.length!==1?'s':''} &middot; ${fmtINR(total)}</div>
+        <div class="kanban-col-title" style="color:${STAGE_COLORS[key]||'#fff'}">${label}</div>
+        <div class="kanban-col-meta">${stageData.count||0} deal${stageData.count!==1?'s':''} &middot; ${fmtINR(stageData.value)}</div>
       </div>
       ${deals.length === 0 ? '<div class="kanban-empty">No deals</div>' :
         deals.map(d => `
           <div class="kanban-deal">
             <div class="deal-company">${esc(d.company||'Unknown')}</div>
-            <div class="deal-value">${fmtINRFull(d.value)}</div>
-            <div class="deal-contact">${esc(d.contact||'')}</div>
+            <div class="deal-value">${fmtINRFull(d.deal_value_inr)}</div>
+            <div class="deal-contact">${esc(d.contact_name||d.contact_email||'')}</div>
           </div>
         `).join('')
       }
-      <button class="kanban-add-btn" onclick="openDealModal('${stage}')">+ Add Deal</button>
+      <button class="kanban-add-btn" onclick="openDealModal('${key}')">+ Add Deal</button>
     `;
     kanban.appendChild(col);
   });
 }
 
 function openDealModal(stage) {
-  document.getElementById('dStage').value = stage || 'Lead';
+  document.getElementById('dStage').value = stage || 'lead';
   document.getElementById('dCompany').value = '';
   document.getElementById('dContact').value = '';
+  document.getElementById('dContactEmail').value = '';
   document.getElementById('dValue').value = '';
   document.getElementById('dNotes').value = '';
   document.getElementById('dealModal').classList.add('open');
@@ -752,18 +766,22 @@ function closeDealModal() {
 }
 async function submitDeal() {
   const company = document.getElementById('dCompany').value.trim();
-  const contact = document.getElementById('dContact').value.trim();
+  const contactName = document.getElementById('dContact').value.trim();
+  const contactEmail = document.getElementById('dContactEmail').value.trim();
   const value = document.getElementById('dValue').value;
   const stage = document.getElementById('dStage').value;
   const notes = document.getElementById('dNotes').value.trim();
-  if (!company || !contact || !value) {
+  if (!company || !contactName || !contactEmail || !value) {
     showToast('Please fill all required fields.', 'error');
     return;
   }
   try {
+    // Real backend (handleAddEnterpriseDeal) requires contact_email specifically
+    // and reads deal_value_inr — the previous contact/value field names never
+    // matched, so contact_email was always empty and every submission 400'd.
     await CDB_STAFF_AUTH.authFetch(API_BASE + '/api/enterprise/pipeline', {
       method: 'POST',
-      body: JSON.stringify({ company, contact, value: Number(value), stage, notes })
+      body: JSON.stringify({ company, contact_name: contactName, contact_email: contactEmail, deal_value_inr: Number(value), stage, notes })
     });
     closeDealModal();
     showToast('Deal added to pipeline!');
@@ -775,59 +793,67 @@ async function submitDeal() {
 }
 
 // ── 4. LEAD SOURCES ──────────────────────────────────────────────────────────
-const LEAD_SOURCES = ['Organic Search','Direct','API Discovery','Referral','WhatsApp','Enterprise Inquiry'];
+function humanizeSource(s) {
+  return String(s||'unknown').replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+}
 async function loadLeads() {
   const container = document.getElementById('leadBars');
-  let data = {};
+  let breakdown = [];
   try {
+    // Real response: { total, breakdown: [{source,count,pct}], visitors, conversion_rate }
+    // — not a flat map keyed by a fixed set of display labels (the previous
+    // hardcoded LEAD_SOURCES list never matched any real `source` value, so
+    // every bar always read 0).
     const d = await apiFetch('/api/revenue/leads');
-    data = d || {};
+    breakdown = Array.isArray(d.breakdown) ? d.breakdown : [];
   } catch(e) {}
-  const total = LEAD_SOURCES.reduce((s,k) => s + (Number(data[k])||0), 0);
-  container.innerHTML = LEAD_SOURCES.map(src => {
-    const count = Number(data[src]) || 0;
-    const pct = total > 0 ? Math.round((count/total)*100) : 0;
-    return `
-      <div class="lead-row">
-        <div class="lead-label">${src}</div>
-        <div class="lead-bar-wrap">
-          <div class="lead-bar" style="width:${pct}%"></div>
-        </div>
-        <div class="lead-pct">${count} &middot; ${pct}%</div>
+  if (breakdown.length === 0) {
+    container.innerHTML = '<div class="table-empty">No lead data yet.</div>';
+    return;
+  }
+  container.innerHTML = breakdown.map(b => `
+    <div class="lead-row">
+      <div class="lead-label">${esc(humanizeSource(b.source))}</div>
+      <div class="lead-bar-wrap">
+        <div class="lead-bar" style="width:${b.pct||0}%"></div>
       </div>
-    `;
-  }).join('');
+      <div class="lead-pct">${b.count||0} &middot; ${b.pct||0}%</div>
+    </div>
+  `).join('');
 }
 
 // ── 5. CONVERSION FUNNEL ─────────────────────────────────────────────────────
-const FUNNEL_STEPS = [
-  { key: 'visitors', label: 'Visitors', color: '#3b82f6', w: '100%' },
-  { key: 'free_scan', label: 'Free Scan Users', color: '#00d4ff', w: '80%' },
-  { key: 'lead_captured', label: 'Lead Captured', color: '#7c3aed', w: '60%' },
-  { key: 'assessment_booked', label: 'Assessment Booked', color: '#f59e0b', w: '40%' },
-  { key: 'payment_completed', label: 'Payment Completed', color: '#10b981', w: '25%' }
-];
+// Colors cycled across the real backend's 7 stages (visit/scan_start/
+// scan_done/email_capture/product_view/checkout_start/purchase) — the
+// previous hardcoded 5-step key list never matched any real stage id, so
+// every step always read 0.
+const FUNNEL_COLORS = ['#3b82f6','#00d4ff','#7c3aed','#a855f7','#f59e0b','#f97316','#10b981'];
 async function loadFunnel() {
   const container = document.getElementById('funnelViz');
-  let data = {};
+  let stages = [];
   try {
+    // Real response: { stages: [{stage,label,count,conversion_from_prev,drop_off}], ... }
     const d = await apiFetch('/api/revenue/funnel');
-    data = d || {};
+    stages = Array.isArray(d.stages) ? d.stages : [];
   } catch(e) {}
   container.innerHTML = '';
-  FUNNEL_STEPS.forEach((step, i) => {
-    const count = Number(data[step.key]) || 0;
-    const rate = i > 0 && Number(data[FUNNEL_STEPS[i-1].key]) > 0
-      ? Math.round((count / Number(data[FUNNEL_STEPS[i-1].key])) * 100) : (i === 0 ? 100 : 0);
+  if (stages.length === 0) {
+    container.innerHTML = '<div class="table-empty">No funnel data yet.</div>';
+    return;
+  }
+  const firstCount = stages[0].count || 0;
+  stages.forEach((step, i) => {
+    const color = FUNNEL_COLORS[i % FUNNEL_COLORS.length];
+    const width = firstCount > 0 ? Math.max(15, Math.round((step.count / firstCount) * 100)) : 100;
     const stepEl = document.createElement('div');
     stepEl.className = 'funnel-step';
     stepEl.innerHTML = `
-      <div class="funnel-bar" style="background:linear-gradient(135deg,${step.color}22,${step.color}11);border:1px solid ${step.color}44;width:${step.w};margin:0 auto">
-        <span class="funnel-step-name">${step.label}</span>
-        <span class="funnel-step-count">${count > 0 ? count.toLocaleString() : '—'}</span>
-        ${i > 0 ? `<span class="funnel-rate">${rate}% conv.</span>` : ''}
+      <div class="funnel-bar" style="background:linear-gradient(135deg,${color}22,${color}11);border:1px solid ${color}44;width:${width}%;margin:0 auto">
+        <span class="funnel-step-name">${esc(step.label)}</span>
+        <span class="funnel-step-count">${step.count > 0 ? step.count.toLocaleString() : '—'}</span>
+        ${i > 0 ? `<span class="funnel-rate">${step.conversion_from_prev}% conv.</span>` : ''}
       </div>
-      ${i < FUNNEL_STEPS.length - 1 ? '<div class="funnel-arrow">&#x2193;</div>' : ''}
+      ${i < stages.length - 1 ? '<div class="funnel-arrow">&#x2193;</div>' : ''}
     `;
     container.appendChild(stepEl);
   });
@@ -835,11 +861,19 @@ async function loadFunnel() {
 
 // ── 6. TRANSACTIONS ──────────────────────────────────────────────────────────
 let txData = [];
+function fmtTxDate(tx) {
+  const raw = tx.paid_at || tx.created_at;
+  if (!raw) return '—';
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-IN', { year:'numeric', month:'short', day:'numeric' });
+}
 async function loadTransactions() {
   const wrap = document.getElementById('txTableWrap');
   try {
+    // Real response: { transactions: [...], total } — not a raw array (the
+    // previous bug's assumption), and rows carry created_at/paid_at, not `date`.
     const data = await apiFetch('/api/revenue/transactions?limit=20');
-    txData = Array.isArray(data) ? data : [];
+    txData = Array.isArray(data.transactions) ? data.transactions : [];
     if (txData.length === 0) {
       wrap.innerHTML = '<div class="table-empty">No transactions recorded yet.</div>';
       return;
@@ -852,7 +886,7 @@ async function loadTransactions() {
         <tbody>
           ${txData.map(tx => `
             <tr>
-              <td>${esc(tx.date||'—')}</td>
+              <td>${esc(fmtTxDate(tx))}</td>
               <td>${esc(tx.product||'—')}</td>
               <td style="font-weight:700;color:var(--accent3)">${fmtINRFull(tx.amount)}</td>
               <td><span class="status-badge ${statusClass(tx.status)}">${esc(tx.status||'—')}</span></td>
@@ -887,8 +921,12 @@ async function loadForecast() {
       `;
       return;
     }
-    const actual = Number(d.current_month_actual) || 0;
-    const target = Number(d.current_month_target) || 0;
+    // Real response nests these under current_month/next_month/quarterly —
+    // the previous flat current_month_actual/next_month_projection/
+    // quarterly_forecast field names never existed, so this card always
+    // showed ₹0 regardless of insufficient_data.
+    const actual = Number(d.current_month?.actual) || 0;
+    const target = Number(d.current_month?.target) || 0;
     const pct = target > 0 ? Math.min(100, Math.round((actual/target)*100)) : 0;
     grid.innerHTML = `
       <div class="forecast-card">
@@ -902,12 +940,12 @@ async function loadForecast() {
       </div>
       <div class="forecast-card">
         <div class="fc-label">Next Month Projection</div>
-        <div class="fc-value">${fmtINR(d.next_month_projection)}</div>
+        <div class="fc-value">${fmtINR(d.next_month?.projected)}</div>
         <div class="fc-sub">Based on current trend</div>
       </div>
       <div class="forecast-card">
         <div class="fc-label">Quarterly Forecast</div>
-        <div class="fc-value">${fmtINR(d.quarterly_forecast)}</div>
+        <div class="fc-value">${fmtINR(d.quarterly?.projected)}</div>
         <div class="fc-sub">Q forecast (3-month roll)</div>
       </div>
     `;

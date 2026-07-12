@@ -1201,6 +1201,19 @@ async function loadCVEPlaybook(cveId) {
 }
 
 // ── APT Actors ───────────────────────────────────────────────────────────────
+// aptActorProfiles.js's `icon` field is a semantic keyword (e.g. 'bear',
+// 'dragon', 'typhoon'), not a display glyph — every actor has one set, so
+// the `|| '🎭'` fallback below never actually triggered; instead every
+// actor card rendered the raw keyword text crammed into a 36px icon box.
+const ACTOR_ICON_EMOJI = {
+  bear: '🐻', skull: '💀', dragon: '🐉', panda: '🐼', worm: '🪱',
+  ghost: '👻', lock: '🔒', cat: '🐱', typhoon: '🌀', spider: '🕷',
+  snake: '🐍',
+};
+function actorIconEmoji(a) {
+  return ACTOR_ICON_EMOJI[a.icon] || '🎭';
+}
+
 async function loadActors() {
   const grid = document.getElementById('actor-grid');
   try {
@@ -1225,7 +1238,7 @@ function renderActorGrid(actors) {
     return `
       <div class="actor-card" onclick="showActorDetail('${a.id}')">
         <div class="actor-header">
-          <div class="actor-icon">${a.icon || '🎭'}</div>
+          <div class="actor-icon">${actorIconEmoji(a)}</div>
           <div>
             <div class="actor-name">${a.id}</div>
             <div class="actor-origin">${a.origin || '—'} ${a.suspected_sponsor ? '· ' + a.suspected_sponsor : ''}</div>
@@ -1270,7 +1283,7 @@ async function showActorDetail(actorId) {
     const riskColor = a.risk_score >= 90 ? '#ff3b3b' : a.risk_score >= 70 ? '#ff7a00' : '#f59e0b';
     body.innerHTML = `
       <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:20px">
-        <div style="font-size:40px">${a.icon || '🎭'}</div>
+        <div style="font-size:40px">${actorIconEmoji(a)}</div>
         <div style="flex:1">
           <h2 style="font-size:20px;font-weight:800">${a.id}</h2>
           <div style="font-size:13px;color:var(--text-muted);margin-top:2px">${(a.aliases || []).join(' · ')}</div>

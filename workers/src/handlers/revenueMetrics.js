@@ -132,6 +132,28 @@ async function buildRevenueMetrics(db) {
     }
   } catch (_) {}
 
+  // ── Actual revenue collected: today / this week / this month ────────────
+  // Distinct from MRR above (recurring subscription run-rate, derived from
+  // tier counts) — this is real cash collected via /api/payment/verify,
+  // same `payments` table/columns handlers/revenueOps.js already reads.
+  // frontend/revenue-command-center.html's KPI tiles read these exact
+  // field names (d.today/d.week/d.month) and previously had nothing to
+  // read at all, always rendering ₹0.
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  let revenueToday = 0, revenueWeek = 0, revenueMonth = 0;
+  try {
+    const [todayQ, weekQ, monthQ] = await Promise.all([
+      db.prepare(`SELECT COALESCE(SUM(amount_inr),0) as total FROM payments WHERE status='success' AND created_at >= ?`).bind(startOfToday).first(),
+      db.prepare(`SELECT COALESCE(SUM(amount_inr),0) as total FROM payments WHERE status='success' AND created_at >= ?`).bind(sevenDaysAgo).first(),
+      db.prepare(`SELECT COALESCE(SUM(amount_inr),0) as total FROM payments WHERE status='success' AND created_at >= ?`).bind(startOfMonth).first(),
+    ]);
+    revenueToday = todayQ?.total || 0;
+    revenueWeek  = weekQ?.total  || 0;
+    revenueMonth = monthQ?.total || 0;
+  } catch (_) {}
+
   // ── Monthly trend (last 12 months from revenue_snapshots if available) ──
   let mrrTrend = [];
   try {
@@ -154,11 +176,15 @@ async function buildRevenueMetrics(db) {
 
   return {
     // Revenue
+    today:        revenueToday,
+    week:         revenueWeek,
+    month:        revenueMonth,
     mrr:          Math.round(mrr_cents / 100),
     arr:          Math.round(arr_cents / 100),
     arpu:         Math.round(arpu_cents / 100),
     ltv_estimate: Math.round((arpu_cents * 18) / 100), // 18mo avg lifetime
     pipeline_value: Math.round(pipelineValue / 100),
+    pipeline:     Math.round(pipelineValue / 100), // alias — frontend/revenue-command-center.html reads this exact name
 
     // Subscribers
     total_subscribers:         planCounts.total,

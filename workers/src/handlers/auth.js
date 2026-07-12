@@ -422,6 +422,47 @@ export async function handleUpdateProfile(request, env, authCtx) {
   return Response.json({ success: true, updated: Object.keys(updates) });
 }
 
+// ─── GET /api/auth/alerts ──────────────────────────────────────────────────────
+// No read counterpart to the POST below ever existed — user-dashboard.html's
+// Settings page could save alert preferences but never load the ones a user
+// had already saved, so the form always rendered its blank/default state on
+// every visit regardless of what was actually stored.
+export async function handleGetAlertConfig(request, env, authCtx) {
+  if (!authCtx.user_id) return Response.json({ error: 'Authentication required' }, { status: 401 });
+  if (!env?.DB) return Response.json({ error: 'Database unavailable' }, { status: 503 });
+
+  const row = await env.DB.prepare(
+    `SELECT telegram_enabled, telegram_chat_id, email_enabled, alert_email, min_risk_score, alert_on_blacklist, alert_on_critical_cve, updated_at
+     FROM alert_configs WHERE user_id = ?`
+  ).bind(authCtx.user_id).first();
+
+  if (!row) {
+    // No saved preferences yet — mirror the form's own blank-state default
+    // (email alerts on with no risk-score gate, no Telegram) rather than
+    // handleAlertConfig's INSERT-time min_risk_score fallback of 70, which
+    // this frontend form never actually sends/represents.
+    return Response.json({
+      success: true,
+      config: {
+        telegram_enabled: false, telegram_chat_id: null,
+        email_enabled: true, alert_email: null, min_risk_score: 0,
+        alert_on_blacklist: true, alert_on_critical_cve: true,
+        updated_at: null,
+      },
+    });
+  }
+
+  return Response.json({
+    success: true,
+    config: {
+      telegram_enabled: !!row.telegram_enabled, telegram_chat_id: row.telegram_chat_id,
+      email_enabled: !!row.email_enabled, alert_email: row.alert_email,
+      min_risk_score: row.min_risk_score, alert_on_blacklist: !!row.alert_on_blacklist,
+      alert_on_critical_cve: !!row.alert_on_critical_cve, updated_at: row.updated_at,
+    },
+  });
+}
+
 // ─── POST /api/auth/alerts ────────────────────────────────────────────────────
 export async function handleAlertConfig(request, env, authCtx) {
   if (!authCtx.user_id) return Response.json({ error: 'Authentication required' }, { status: 401 });
