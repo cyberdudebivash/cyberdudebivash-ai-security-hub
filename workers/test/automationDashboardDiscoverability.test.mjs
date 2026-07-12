@@ -24,7 +24,11 @@ describe('automation-dashboard.html is discoverable from the customer dashboard 
   it('the new nav-item sits in a real sidebar section (not orphaned markup outside the sidebar)', () => {
     const idx = dash.indexOf(`onclick="location.href='/automation-dashboard.html'"`);
     expect(idx).toBeGreaterThan(-1);
-    const before = dash.slice(Math.max(0, idx - 400), idx);
+    // Window widened from 400: CAP-TIH-002 added an "API Explorer" nav-item
+    // between "API Keys" and "Automation" in this same section, pushing the
+    // distance to 401. Generously padded here so the next sibling addition
+    // to this section doesn't need this test touched again.
+    const before = dash.slice(Math.max(0, idx - 700), idx);
     expect(before).toContain('sidebar-section');
     expect(before).toContain('Developer');
   });

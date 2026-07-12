@@ -54,13 +54,14 @@
     "id": "CAP-TIH-002",
     "domain": "threat-hunting-intel",
     "name": "Threat Intelligence Feed & Versioned API (Sentinel APEX v2.0)",
-    "description": "Main paginated/tiered threat-intel feed (D1 -> KV -> seed fallback), SSE stream, manual ingest, and a v1 API surface (threat-intel, IOCs, correlations, graph, hunting) — the last three of which have no frontend caller.",
+    "description": "Main paginated/tiered threat-intel feed (D1 -> KV -> seed fallback), SSE stream, manual ingest, and a v1 API surface (threat-intel, IOCs, correlations, graph, hunting). The 5 previously-uncalled handlers (iocs/correlations/graph/hunting/manual-ingest) now have a real dashboard UI — an API-key-based \"API Explorer\" tab, since /api/v1/* deliberately rejects dashboard-session auth (see notes).",
     "backend": {
       "handlers": ["workers/src/handlers/threatIntel.js"],
       "entry_points": ["handleGetThreatIntel", "handleThreatIntelStats", "handleGetThreatIntelEntry", "handleManualIngest", "handleV1ThreatIntel", "handleV1IOCs", "handleThreatIntelStream", "handleV1Correlations", "handleV1Graph", "handleV1Hunting"],
       "routes_sampled": [
         { "path": "/api/threat-intel", "method": "GET", "evidence": "workers/src/index.js:2346" },
         { "path": "/api/threat-intel/stats", "method": "GET", "evidence": "workers/src/index.js:2352" },
+        { "path": "/api/threat-intel/ingest", "method": "POST", "evidence": "workers/src/index.js:3511" },
         { "path": "/api/v1/threat-intel", "method": "GET", "evidence": "workers/src/index.js:3859" },
         { "path": "/api/v1/iocs", "method": "GET", "evidence": "workers/src/index.js:3864" },
         { "path": "/api/v1/correlations", "method": "GET", "evidence": "workers/src/index.js:3971" },
@@ -72,13 +73,13 @@
     },
     "frontend": {
       "surface_type": "dedicated_page",
-      "pages": ["frontend/intel.html", "frontend/intel-hub.html", "frontend/index.html", "frontend/soc-dashboard.html"],
-      "status": "partial",
-      "evidence": "frontend/intel.html:1424,1656 and frontend/intel-hub.html:470,522 call /api/threat-intel and /stats; frontend/index.html:8890,22234 pull the CVE feed; frontend/soc-dashboard.html calls /api/v1/threat-intel. No frontend caller found anywhere for handleV1Correlations, handleV1Graph, handleV1Hunting, handleManualIngest, or handleV1IOCs — backend-only, API-key/curl reachable, no dashboard UI for those 5."
+      "pages": ["frontend/intel.html", "frontend/intel-hub.html", "frontend/index.html", "frontend/soc-dashboard.html", "frontend/user-dashboard.html"],
+      "status": "exists",
+      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html gained a real \"API Explorer\" tab (id=\"page-v1-explorer\", Developer sidebar section) with 5 live tools, one per previously-uncalled handler: IOC Registry query (ENTERPRISE), CVE Correlation lookup (PRO/ENTERPRISE), Intel Graph Neighborhood query (PRO/ENTERPRISE), Automated Hunting Alerts (PRO/ENTERPRISE), and Manual Feed Refresh (PRO/ENTERPRISE, triggers a real live re-ingestion from CISA KEV/NVD/GitHub Advisories). Unlike CAP-TIH-009/CAP-TIH-014's tabs, this one does NOT use the session-cookie apiFetch() helper — /api/v1/* rejects session auth outright (see auth_enforced/notes), so the tab collects the customer's own previously-issued API key and calls the endpoints directly with x-api-key. Named deliberately to avoid colliding with the existing \"Threat Hunting\" (CAP-TIH-001) and \"Threat Graph\" (client-side) nav-items elsewhere in this same sidebar. Before this fix: no frontend caller found anywhere for handleV1Correlations, handleV1Graph, handleV1Hunting, handleManualIngest, or handleV1IOCs. frontend/intel.html:1424,1656 and frontend/intel-hub.html:470,522 call /api/threat-intel and /stats; frontend/index.html:8890,22234 pull the CVE feed; frontend/soc-dashboard.html calls /api/v1/threat-intel (all three unchanged by this fix)."
     },
     "navigation": {
       "discoverable": true,
-      "evidence": "frontend/intel.html and frontend/intel-hub.html linked from sitemap and homepage ('Open full Intel Hub ->', frontend/index.html:1994). The /api/v1/* endpoints are documented in frontend/api-docs.html but have no dashboard UI."
+      "evidence": "frontend/intel.html and frontend/intel-hub.html linked from sitemap and homepage ('Open full Intel Hub ->', frontend/index.html:1994). FIXED 2026-07-12: frontend/user-dashboard.html's Developer sidebar section now has a real nav-item (data-page=\"v1-explorer\") for the 5 handlers described in frontend.evidence; the /api/v1/* endpoints are also still documented in frontend/api-docs.html."
     },
     "auth_enforced": false,
     "rbac": { "enforced": true, "permissions": ["tier:PRO", "tier:ENTERPRISE"] },
@@ -86,21 +87,21 @@
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "handleGetThreatIntel/handleThreatIntelStats <- workers/test/phase2ContractDrift.test.mjs. handleV1ThreatIntel <- workers/test/threatIntelExportEntitlement.test.mjs and workers/test/v1ThreatIntelConsistency.test.mjs. No import-confirmed test for handleGetThreatIntelEntry, handleManualIngest, handleThreatIntelStream, handleV1IOCs, handleV1Correlations, handleV1Graph, or handleV1Hunting; workers/src/services/huntingEngine.js, workers/src/services/correlationEngine.js, workers/src/services/graphEngine.js have zero import-confirmed tests."
+      "evidence": "handleGetThreatIntel/handleThreatIntelStats <- workers/test/phase2ContractDrift.test.mjs. handleV1ThreatIntel <- workers/test/threatIntelExportEntitlement.test.mjs and workers/test/v1ThreatIntelConsistency.test.mjs. FIXED 2026-07-12: workers/test/threatIntelV1Explorer.test.mjs (22 tests) closes the test-coverage gap for handleV1IOCs, handleV1Correlations, handleV1Graph, handleV1Hunting, and handleManualIngest — tier-gate checks for all 5, real-DB-driven (non-fabricated) response-shape checks for the 4 GET handlers, a network-stubbed run of the real ingestion pipeline for handleManualIngest, a full-router-level proof that /api/v1/* rejects a plain unauthenticated (session-shaped) request with ERR_API_KEY_REQUIRED before any tier check runs, and frontend checks for the new tab (nav-item, endpoint calls, envelope-unwrapping correctness, naming-collision avoidance). Still no import-confirmed test for handleGetThreatIntelEntry or handleThreatIntelStream (SSE) — untouched by this fix, out of its scope. workers/src/services/huntingEngine.js, workers/src/services/correlationEngine.js, workers/src/services/graphEngine.js still have zero DIRECT import-confirmed unit tests of their own (covered only indirectly via the handler tests above)."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "PILOT ONLY",
     "priority": "P2",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/threatIntel.js read directly (739 lines, 10 entry points with line numbers); workers/src/index.js routes read directly (2346-3529, 3859-3981); frontend/*.html grepped for each v1 route path; workers/test/*.mjs matches confirmed by direct grep."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/handlers/threatIntel.js read directly (739 lines, 10 entry points with line numbers); workers/src/index.js routes read directly (2346-3529, 3859-3981, plus 3511 for /api/threat-intel/ingest, previously uncited). Critically, workers/src/index.js:3827-3852 read directly and confirmed by a live router-level test: /api/v1/* requires authCtx.method === 'api_key' (a real x-api-key: cdb_* key), rejecting any session/Bearer-authenticated request with 401 ERR_API_KEY_REQUIRED before the PRO/ENTERPRISE tier gate even runs — this is why the new tab cannot reuse the session-cookie apiFetch() pattern used by CAP-TIH-009/CAP-TIH-014, unlike what a naive port of that pattern would assume. frontend/user-dashboard.html edited directly to add the tab described in frontend.evidence; all 3 inline <script> blocks re-parsed with node --check (syntax valid). Full suite green: 252 files / 2589 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": "workers/src/services/huntingEngine.js's runHunting (behind /api/v1/hunting) is a second, separate hunting implementation unrelated to CAP-TIH-001's workers/src/handlers/threatHunting.js. workers/src/services/graphEngine.js (behind /api/v1/graph) is a fourth separate graph implementation, distinct from threatGraph.js (CAP-TIH-004) and the dashboard's client-side Threat Graph and workers/src/lib/attackGraph.js (CAP-TIH-016). workers/src/services/correlationEngine.js (behind /api/v1/correlations) is a separate engine from workers/src/lib/threatCorrelation.js (CAP-TIH-017). None of these three parallel-implementation pairs are reconciled; recorded here rather than silently merged, per instruction to flag duplication rather than build over it."
+    "notes": "Third and final item in the owner-directed dashboard cluster that began with CAP-TIH-009 and CAP-TIH-014 (see CAP-TIH-009's session-log entry for the cluster decision). workers/src/services/huntingEngine.js's runHunting (behind /api/v1/hunting) is a second, separate hunting implementation unrelated to CAP-TIH-001's workers/src/handlers/threatHunting.js (which already has its own full dashboard page, frontend/threat-hunting.html) — the new tab calls this one \"Automated Hunting Alerts\" specifically to avoid presenting two same-named, unrelated \"Threat Hunting\" features to the same customer. workers/src/services/graphEngine.js (behind /api/v1/graph) is a fourth separate graph implementation, distinct from threatGraph.js (CAP-TIH-004), the dashboard's own client-side \"Threat Graph\" tab (built entirely from the customer's own scan history, no backend call at all), and workers/src/lib/attackGraph.js (CAP-TIH-016) — called \"Intel Graph Neighborhood\" here for the same collision-avoidance reason. workers/src/services/correlationEngine.js (behind /api/v1/correlations) is a separate engine from workers/src/lib/threatCorrelation.js (CAP-TIH-017, explicitly commented 'legacy' in its own source). None of these three parallel-implementation pairs are reconciled by this fix — reconciling them (picking one canonical engine per concept and retiring the others) is a materially larger, separate undertaking than adding a UI consumer for an existing, unreconciled handler, and was out of scope here; recorded rather than silently merged, per this program's standing instruction to flag duplication rather than build over it. Separately, while reading workers/src/index.js's /api/v1/* tier-gate block (line 3850) for this fix, noticed its upgrade-URL field points to https://tools.cyberdudebivash.com/#pricing — a third external-looking subdomain distinct from both this platform's live production domain (cyberdudebivash.in) and the two (intel.cyberdudebivash.com, cyberdudebivash.gumroad.com) already fixed under CAP-TIH-014. Not fixed here (out of scope for this capability's frontend gap, and the new tab never surfaces that specific field — see frontend.evidence's hardcoded '/#pricing' rendering, which never reads the field's actual value) but flagged for a follow-up sweep, since it may be the same bug class recurring a third time."
   },
   {
     "id": "CAP-TIH-003",

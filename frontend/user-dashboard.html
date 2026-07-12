@@ -950,6 +950,9 @@
       <div class="nav-item" data-page="apikeys" onclick="showPage('apikeys',this)">
         <span class="nav-icon">🔑</span> API Keys
       </div>
+      <div class="nav-item" data-page="v1-explorer" onclick="showPage('v1-explorer',this)">
+        <span class="nav-icon">🧪</span> API Explorer
+      </div>
       <div class="nav-item" onclick="location.href='/automation-dashboard.html'" title="Self-service automation API keys · webhooks · scheduled reports · team management · usage & governance">
         <span class="nav-icon">🤖</span> Automation
       </div>
@@ -1497,6 +1500,80 @@
               </td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-v1-explorer" class="page">
+      <div class="page-title">API Explorer — v1</div>
+      <div class="page-subtitle">Try the versioned Sentinel API v1 endpoints directly from your browser. These are PRO/ENTERPRISE, API-key-only endpoints — they do not accept your dashboard login session, by design. Paste a key from the API Keys tab below to begin.</div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-body" style="padding:20px">
+          <label class="form-label">Your API key</label>
+          <input id="v1-api-key" class="form-input" type="password" placeholder="cdb_..." autocomplete="off" />
+          <div style="font-size:.78rem;color:var(--muted);margin-top:6px">Sent directly to the API with each request below. Not stored or transmitted anywhere else by this page.</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🗂️ IOC Registry <span style="font-weight:400;color:var(--muted);font-size:.78rem">(ENTERPRISE)</span></span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="v1-ioc-type" class="form-input" style="max-width:200px" placeholder="Type filter (optional, e.g. ip)" />
+            <input id="v1-ioc-limit" class="form-input" style="max-width:120px" placeholder="Limit (default 50)" />
+            <button class="btn btn-primary" onclick="v1QueryIOCs()">Query</button>
+          </div>
+          <div id="v1-ioc-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🔗 CVE Correlation <span style="font-weight:400;color:var(--muted);font-size:.78rem">(PRO/ENTERPRISE)</span></span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="v1-corr-cve" class="form-input" style="flex:1;min-width:220px" placeholder="CVE ID (optional — leave blank for top-correlated summary)" />
+            <button class="btn btn-primary" onclick="v1QueryCorrelations()">Correlate</button>
+          </div>
+          <div id="v1-corr-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🕸️ Intel Graph Neighborhood <span style="font-weight:400;color:var(--muted);font-size:.78rem">(PRO/ENTERPRISE)</span></span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Distinct from the client-side "Threat Graph" tab above — this queries the server-side CVE/IOC knowledge graph.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="v1-graph-node" class="form-input" style="flex:1;min-width:220px" placeholder="Node ID (optional — leave blank for full graph summary)" />
+            <button class="btn btn-primary" onclick="v1QueryGraph()">Query Graph</button>
+          </div>
+          <div id="v1-graph-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🚨 Automated Hunting Alerts <span style="font-weight:400;color:var(--muted);font-size:.78rem">(PRO/ENTERPRISE)</span></span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Distinct from the "Threat Hunting" tool elsewhere on this platform — this automatically scans the live feed for pattern-based alerts (vendor clustering, ransomware campaigns, zero-day clusters) rather than running a query you write.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <select id="v1-hunt-severity" class="form-input" style="max-width:180px">
+              <option value="critical">Critical only</option>
+              <option value="high" selected>High and above</option>
+              <option value="medium">Medium and above</option>
+              <option value="low">Low and above</option>
+            </select>
+            <button class="btn btn-primary" onclick="v1RunHunting()">Run</button>
+          </div>
+          <div id="v1-hunt-result"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">🔄 Manual Feed Refresh <span style="font-weight:400;color:var(--muted);font-size:.78rem">(PRO/ENTERPRISE)</span></span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Triggers a real, live re-ingestion from CISA KEV, NVD, and GitHub Advisories — not a cached refresh.</div>
+          <button class="btn btn-outline" onclick="v1RefreshFeed()">Refresh feed now</button>
+          <div id="v1-refresh-result" style="margin-top:12px"></div>
         </div>
       </div>
     </div>
@@ -4133,6 +4210,116 @@
     } else {
       out.innerHTML = `<div style="color:var(--muted)">${data.error || 'Sign in to check unlock status.'}</div>`;
     }
+  }
+
+  async function v1ApiFetch(path, opts = {}) {
+    const key = document.getElementById('v1-api-key').value.trim();
+    if (!key) { alert('Paste your API key first (see the API Keys tab).'); return null; }
+    const headers = { 'x-api-key': key, ...(opts.headers || {}) };
+    const res = await fetch(API_BASE + path, { ...opts, headers });
+    const data = await res.json().catch(() => ({}));
+    return { res, data };
+  }
+
+  function v1ErrorLine(res, data) {
+    if (res.status === 401) return `<div style="color:var(--muted)">${data.error || 'Invalid or missing API key.'}</div>`;
+    if (res.status === 403) return `<div style="color:var(--muted)">${data.error || 'Your key\'s plan does not include this endpoint.'} ${data.upgrade ? `<a href="/#pricing" style="color:var(--accent)">Upgrade →</a>` : ''}</div>`;
+    return `<div style="color:var(--muted)">${data.error || `Request failed (${res.status}).`}</div>`;
+  }
+
+  async function v1QueryIOCs() {
+    const type = document.getElementById('v1-ioc-type').value.trim();
+    const limit = document.getElementById('v1-ioc-limit').value.trim() || '50';
+    const out = document.getElementById('v1-ioc-result');
+    out.innerHTML = '<span class="spinner"></span> Querying…';
+    const qs = new URLSearchParams({ ...(type ? { type } : {}), limit }).toString();
+    const r = await v1ApiFetch(`/api/v1/iocs?${qs}`);
+    if (!r) { out.innerHTML = ''; return; }
+    const { res, data } = r;
+    if (!res.ok) { out.innerHTML = v1ErrorLine(res, data); return; }
+    const p = data.data || {};
+    if (!p.iocs?.length) { out.innerHTML = '<div style="color:var(--muted)">No IOCs found.</div>'; return; }
+    out.innerHTML = `<div style="font-size:.8rem;color:var(--muted);margin-bottom:6px">${p.total} total, showing ${p.iocs.length}</div>
+      <table><thead><tr><th>Type</th><th>Value</th><th>Confidence</th><th>Severity</th></tr></thead><tbody>
+        ${p.iocs.map(i => `<tr><td>${i.type || ''}</td><td style="font-family:var(--mono);font-size:.78rem">${i.value || ''}</td><td>${i.confidence ?? '—'}</td><td>${i.severity || '—'}</td></tr>`).join('')}
+      </tbody></table>`;
+  }
+
+  async function v1QueryCorrelations() {
+    const cve = document.getElementById('v1-corr-cve').value.trim();
+    const out = document.getElementById('v1-corr-result');
+    out.innerHTML = '<span class="spinner"></span> Correlating…';
+    const qs = cve ? `?cve=${encodeURIComponent(cve)}` : '';
+    const r = await v1ApiFetch(`/api/v1/correlations${qs}`);
+    if (!r) { out.innerHTML = ''; return; }
+    const { res, data } = r;
+    if (!res.ok) { out.innerHTML = v1ErrorLine(res, data); return; }
+    const p = data.data || {};
+    if (p.correlation) {
+      const c = p.correlation;
+      out.innerHTML = `
+        <div style="font-weight:700;margin-bottom:6px">${c.cve_id}</div>
+        <div style="font-size:.82rem;color:var(--muted);margin-bottom:6px">Threat actor: ${c.threat_actor || 'None matched'} ${c.campaign ? `· Campaign: ${c.campaign}` : ''} · Confidence: ${c.confidence}%</div>
+        <div style="font-size:.82rem;color:var(--muted)">Related CVEs: ${(c.related_cves || []).join(', ') || 'None'}</div>
+        <div style="font-size:.82rem;color:var(--muted)">Related IOCs: ${(c.related_iocs || []).length}</div>`;
+      return;
+    }
+    const s = p.summary || {};
+    out.innerHTML = `
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:8px">${p.total || 0} correlated high-severity entries</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><div style="font-size:.78rem;color:var(--muted);margin-bottom:4px">Top threat actors</div>${(s.top_threat_actors || []).map(a => `<div style="font-size:.82rem">${a.actor} <span style="color:var(--muted)">(${a.count})</span></div>`).join('') || '<div style="color:var(--muted);font-size:.82rem">None matched</div>'}</div>
+        <div><div style="font-size:.78rem;color:var(--muted);margin-bottom:4px">Top vendor families</div>${(s.top_vendor_families || []).map(f => `<div style="font-size:.82rem">${f.family} <span style="color:var(--muted)">(${f.count})</span></div>`).join('') || '<div style="color:var(--muted);font-size:.82rem">None matched</div>'}</div>
+      </div>`;
+  }
+
+  async function v1QueryGraph() {
+    const node = document.getElementById('v1-graph-node').value.trim();
+    const out = document.getElementById('v1-graph-result');
+    out.innerHTML = '<span class="spinner"></span> Querying…';
+    const qs = node ? `?node=${encodeURIComponent(node)}` : '';
+    const r = await v1ApiFetch(`/api/v1/graph${qs}`);
+    if (!r) { out.innerHTML = ''; return; }
+    const { res, data } = r;
+    if (!res.ok) { out.innerHTML = v1ErrorLine(res, data); return; }
+    const p = data.data || {};
+    const g = p.graph || { nodes: [], edges: [] };
+    if (!g.nodes?.length) { out.innerHTML = '<div style="color:var(--muted)">No graph data found.</div>'; return; }
+    out.innerHTML = `
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">${g.nodes.length} nodes, ${g.edges.length} edges${p.root_node ? ` (neighborhood of ${p.root_node})` : ''}</div>
+      <table><thead><tr><th>Type</th><th>Label</th><th>Severity</th></tr></thead><tbody>
+        ${g.nodes.slice(0, 30).map(n => `<tr><td>${n.type || ''}</td><td>${n.label || n.value || ''}</td><td>${n.severity || '—'}</td></tr>`).join('')}
+      </tbody></table>`;
+  }
+
+  async function v1RunHunting() {
+    const minSev = document.getElementById('v1-hunt-severity').value;
+    const out = document.getElementById('v1-hunt-result');
+    out.innerHTML = '<span class="spinner"></span> Hunting…';
+    const r = await v1ApiFetch(`/api/v1/hunting?min_severity=${encodeURIComponent(minSev)}`);
+    if (!r) { out.innerHTML = ''; return; }
+    const { res, data } = r;
+    if (!res.ok) { out.innerHTML = v1ErrorLine(res, data); return; }
+    const p = data.data || {};
+    if (!p.alerts?.length) { out.innerHTML = '<div style="color:var(--muted)">No alerts at this severity threshold — feed looks clean.</div>'; return; }
+    const sevColor = { critical: '#ef4444', high: '#f97316', medium: '#eab308', low: '#10b981' };
+    out.innerHTML = `
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">${p.hunting_summary?.total_alerts ?? p.alerts.length} alert(s) across ${p.entry_count || 0} feed entries · Risk posture: <strong style="color:var(--fg)">${p.risk_posture?.level || '—'}</strong> (${p.risk_posture?.score ?? '—'})</div>
+      ${p.alerts.map(a => `<div style="border-left:3px solid ${sevColor[a.severity] || '#94a3b8'};padding-left:10px;margin-bottom:8px">
+        <span class="badge" style="background:${sevColor[a.severity] || '#94a3b8'}22;color:${sevColor[a.severity] || '#94a3b8'}">${a.severity}</span>
+        <span style="font-size:.85rem;margin-left:6px">${a.message}</span>
+      </div>`).join('')}`;
+  }
+
+  async function v1RefreshFeed() {
+    const out = document.getElementById('v1-refresh-result');
+    out.innerHTML = '<span class="spinner"></span> Refreshing from live sources (this may take a few seconds)…';
+    const r = await v1ApiFetch('/api/threat-intel/ingest', { method: 'POST' });
+    if (!r) { out.innerHTML = ''; return; }
+    const { res, data } = r;
+    if (!res.ok) { out.innerHTML = v1ErrorLine(res, data); return; }
+    const ing = data.data?.ingestion || {};
+    out.innerHTML = `<div style="color:#10b981;font-size:.85rem">✅ Refreshed. Sources: ${(ing.sources || []).join(', ') || '—'}${ing.errors?.length ? ` · ${ing.errors.length} source error(s)` : ''}</div>`;
   }
 
   function renderCisoTrend(trend) {

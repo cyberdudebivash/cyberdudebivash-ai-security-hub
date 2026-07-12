@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-12T12:00:54.362Z
+Generated: 2026-07-12T12:18:33.261Z
 Capabilities catalogued: 97
 
 ## Overall Completion
@@ -18,8 +18,8 @@ Capabilities catalogued: 97
 | Dimension | % |
 |---|---|
 | Backend | 89.7% |
-| Frontend | 70.6% |
-| Parity (backend **and** frontend both exist) | 64.9% |
+| Frontend | 71.1% |
+| Parity (backend **and** frontend both exist) | 66% |
 | Customer Journeys complete (dynamic_browser-verified) | 3.1% |
 
 ## Gaps by Priority
@@ -240,7 +240,7 @@ complete", "bug free", or "guaranteed".
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
 | CAP-TIH-001 | Threat Hunting Engine (KQL/Sigma/YARA) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
-| CAP-TIH-002 | Threat Intelligence Feed & Versioned API (Sentinel APEX v2.0) | ✓ | ◐ | ✓ | NOT READY | P2 |
+| CAP-TIH-002 | Threat Intelligence Feed & Versioned API (Sentinel APEX v2.0) | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
 | CAP-TIH-003 | Threat Intel Pro Workbench (MITRE ATT&CK, APT Actors, STIX/TAXII, AI Analyst) | ✓ | ✓ | ✓ | NOT READY | P6 |
 | CAP-TIH-004 | Threat Intelligence Graph (backend) — distinct from the dashboard's client-side Threat Graph | ✓ | ✗ | ✗ | NOT READY | P2 |
 | CAP-TIH-005 | AI Attack Library (MITRE ATLAS / OWASP LLM techniques) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
