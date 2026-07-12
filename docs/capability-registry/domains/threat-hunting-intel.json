@@ -364,8 +364,8 @@
       "evidence": "frontend/intel-hub.html:604 (/api/global-intel/briefing), :611 (/api/global-intel?limit=15&sort=breaking). Real, live."
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "Not in top-level nav or sitemap; reachable only via frontend/intel-hub.html."
+      "discoverable": true,
+      "evidence": "CORRECTED 2026-07-12 (was false — inconsistent with the sibling capability on this exact page, see below): frontend/intel-hub.html is linked from frontend/sitemap.html:94 ('Intel Hub') and frontend/index.html:2042 ('Open full Intel Hub →') — the same two links CAP-TIH-002's entry already credits as making that page discoverable. On the page itself, this capability is not a buried afterthought: frontend/intel-hub.html:258-265 gives it its own prominent, live-updating section headed 'Global Threat Intel Firehose' with an animated 'live' indicator dot, auto-refreshing every 5 minutes (frontend/intel-hub.html:634). The prior 'false' was technically narrow (no *dedicated* top-level nav entry distinct from frontend/intel-hub.html) but inconsistent with how the identically-situated CAP-TIH-002 is graded — corrected to match."
     },
     "auth_enforced": false,
     "rbac": { "enforced": true, "permissions": ["owner", "admin"] },
@@ -373,7 +373,7 @@
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "handleGlobalIntelFeed/handleGlobalIntelRefresh <- workers/test/globalIntelMonetization.test.mjs. handleGlobalIntelBriefing/handleGlobalIntelSources not import-confirmed. workers/src/services/globalIntelFirehose.js <- workers/test/globalIntelFirehose.test.mjs."
+      "evidence": "handleGlobalIntelFeed/handleGlobalIntelRefresh <- workers/test/globalIntelMonetization.test.mjs. FIXED 2026-07-12: handleGlobalIntelBriefing/handleGlobalIntelSources <- new workers/test/globalIntelBriefingSources.test.mjs (4 tests) — confirms the honest 'warming_up' fallback (no fabricated briefing when no snapshot/D1 data exists), the D1-derivation path, and that the source registry response reflects the real INTEL_SOURCES catalog (not a hardcoded count). workers/src/services/globalIntelFirehose.js <- workers/test/globalIntelFirehose.test.mjs."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
@@ -383,11 +383,11 @@
     "priority": "P3",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/globalIntel.js read directly (279 lines); workers/src/index.js:7945-7955 read directly; handleGlobalIntelRefresh's isOwner(authCtx) OR ADMIN_TOKEN gate confirmed at workers/src/handlers/globalIntel.js:259-274; GI_PLANS per-tier item caps (FREE 6/no IOCs up to MSSP 200) confirmed; workers/test/*.mjs matches confirmed by direct grep."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/handlers/globalIntel.js read directly (279 lines); workers/src/index.js:7945-7955 read directly; handleGlobalIntelRefresh's isOwner(authCtx) OR ADMIN_TOKEN gate confirmed at workers/src/handlers/globalIntel.js:259-274 (timing-safe token comparison); GI_PLANS per-tier item caps (FREE 6/no IOCs up to MSSP 200) confirmed; workers/test/*.mjs matches confirmed by direct grep. 2026-07-12: navigation.discoverable corrected by direct grep of frontend/sitemap.html and frontend/index.html for 'intel-hub', and of the intel hub page (frontend/intel-hub.html) for the firehose section's actual placement/prominence — zero frontend code change needed. Also added workers/test/globalIntelBriefingSources.test.mjs closing the test_coverage gap. Full suite green: 254 files / 2607 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": "Real, deliberate protection against an anonymous caller triggering an expensive 30-source pipeline. Reachable only through frontend/intel-hub.html with no direct top-level nav entry — a real, if minor, discoverability gap (P3) for an otherwise solid capability."
+    "notes": "Real, deliberate protection against an anonymous caller triggering an expensive 30-source pipeline. 2026-07-12: the discoverability concern this note used to flag is resolved — see navigation.evidence above. The page hosting this capability (frontend/intel-hub.html) is itself linked from the sitemap and homepage, and this capability gets its own prominent, live-updating section on that page, not a buried one; graded inconsistently against its sibling CAP-TIH-002 on the same page, now corrected to match. No remaining open field on this entry."
   },
   {
     "id": "CAP-TIH-009",

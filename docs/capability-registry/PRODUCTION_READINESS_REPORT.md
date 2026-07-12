@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-12T12:34:31.070Z
+Generated: 2026-07-12T12:39:47.380Z
 Capabilities catalogued: 97
 
 ## Overall Completion
@@ -40,7 +40,7 @@ Capabilities catalogued: 97
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 21 | Backend exists, but not discoverable via navigation |
+| Hidden features | 20 | Backend exists, but not discoverable via navigation |
 | Backend-only features | 14 | Backend exists, zero frontend surface |
 | Duplicate systems | 4 | Backend marked `duplicate` (two implementations of one capability) |
 | Broken journeys | 9 | Priority P1 |
@@ -246,7 +246,7 @@ complete", "bug free", or "guaranteed".
 | CAP-TIH-005 | AI Attack Library (MITRE ATLAS / OWASP LLM techniques) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-TIH-006 | Agent Threat Advisories (AI agent framework CVEs/advisories) | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 | CAP-TIH-007 | AI Threat Intelligence Feed & Agent Security (Pillar 4/5) | ✓ | ✓ | ✓ | PILOT ONLY | P3 |
-| CAP-TIH-008 | Global Threat Intel Firehose (worldwide OSINT) | ✓ | ✓ | ✗ | PILOT ONLY | P3 |
+| CAP-TIH-008 | Global Threat Intel Firehose (worldwide OSINT) | ✓ | ✓ | ✓ | PILOT ONLY | P3 |
 | CAP-TIH-009 | Threat Intelligence API Economy (monetized IOC/CVE/Actor/TTP/Risk) | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
 | CAP-TIH-010 | Production IOC Enrichment | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-TIH-011 | Threat Confidence & Exploitability Engine | ✓ | ✓ | ✗ | NOT READY | P6 |
