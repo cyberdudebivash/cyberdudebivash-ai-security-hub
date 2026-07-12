@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-12 — the prior 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit is **fully closed, merged, and live in production** (PR #185 squash-merged to `main` as commit `9819fed7`, `Deploy to Cloudflare` ran and passed its post-deploy smoke tests; see the entry twenty-eight below for the original 24-item list and the two entries above it for the closure + pre-merge security-fix account). **A new program has now started**, at the owner's explicit direction: bring all 22 `subscription_gated: true` (paid) capabilities in the registry to genuine, evidenced production grade — frontend, backend, RBAC, security, tests, docs, the works — not a subset. Every one of the 22 currently sits below GA; 5 have no working frontend at all. Tracked as tasks #25–#46. Item 1 (`CAP-RBAC-002`, chosen first since 8 other items share its "RBAC not enforced" gap) turned out to need **zero code changes** — the registry's own record was stale, predating the Organizations feature that had already closed the gap; corrected the record instead of inventing busywork. Item 2 (`CAP-MYTHOS-003`) was the opposite case: investigation found a live, unauthenticated production endpoint fabricating security-scan and compliance results under the platform's brand name, plus a dangerous, untested, live-reachable duplicate payment/tier-grant mechanism sitting behind it — both fixed (scan/compliance redirected to this platform's real engines; the duplicate payment path removed outright with the owner's explicit sign-off) — see the top session-log entry for the full account. 20 of 22 remain, continuing in chosen order.
+## Current status (2026-07-12 — the prior 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit is **fully closed, merged, and live in production** (PR #185 squash-merged to `main` as commit `9819fed7`, `Deploy to Cloudflare` ran and passed its post-deploy smoke tests; see the entry twenty-eight below for the original 24-item list and the two entries above it for the closure + pre-merge security-fix account). **A new program has now started**, at the owner's explicit direction: bring all 22 `subscription_gated: true` (paid) capabilities in the registry to genuine, evidenced production grade — frontend, backend, RBAC, security, tests, docs, the works — not a subset. Every one of the 22 currently sits below GA; 5 have no working frontend at all. Tracked as tasks #25–#46. Item 1 (`CAP-RBAC-002`, chosen first since 8 other items share its "RBAC not enforced" gap) turned out to need **zero code changes** — the registry's own record was stale, predating the Organizations feature that had already closed the gap; corrected the record instead of inventing busywork. Item 2 (`CAP-MYTHOS-003`) was the opposite case: investigation found a live, unauthenticated production endpoint fabricating security-scan and compliance results under the platform's brand name, plus a dangerous, untested, live-reachable duplicate payment/tier-grant mechanism sitting behind it — both fixed (scan/compliance redirected to this platform's real engines; the duplicate payment path removed outright with the owner's explicit sign-off). Item 3 (`CAP-DEVPORTAL-002`) resolved its two open "unknown" registry fields by direct verification: `subscription_gated` was confirmed `false` (correctly tier-scaled, not a paid-only gate — matches its canonical sibling), and `navigation.discoverable` was confirmed **false** and fixed — the page had zero links anywhere outside the sitemap, now has a real nav-item — see the top session-log entry for the full account. 19 of 22 remain, continuing in chosen order.
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -60,8 +60,8 @@ parallel tracking document.
 | Domains populated | 21 | see list below (all 3 former stubs now populated) |
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
-| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (after CAP-MYTHOS-003's rewrite) |
-| Worker test suite | 246 files / 2508 tests passing | `npx vitest run`, run 2026-07-12 — +13 tests this wave, new file `mythosRevenueEngineRealEngines.test.mjs` (CAP-MYTHOS-003: proves handleMythosScan/handleMythosCompliance now call this platform's real engines instead of fabricating results, and that the removed checkout/webhook handlers are genuinely gone). Baseline going into this wave was 245 files / 2495 tests. |
+| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (after CAP-DEVPORTAL-002's registry update) |
+| Worker test suite | 247 files / 2512 tests passing | `npx vitest run`, run 2026-07-12 — +4 tests this wave, new file `automationDashboardDiscoverability.test.mjs` (CAP-DEVPORTAL-002: proves the new nav-item exists and follows the established pattern). Baseline going into this wave was 246 files / 2508 tests (CAP-MYTHOS-003). |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — **unchanged by this wave's CAP-MYTHOS-003 fix**: its backend went from fabricated to real and its `operational_status` improved (`NOT READY`→`PILOT ONLY`), but its frontend is still `missing`, so it stays in the same backend-only/no-frontend structural bucket this report measures — a quality improvement, not a structural one |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,66 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — 22-paid-feature program, item 3 (of 22): CAP-DEVPORTAL-002 — Self-Service Automation API Keys had zero discoverable path to its page; both open "unknown" registry fields resolved
+
+- **Chose the 2 remaining P1-priority items next**, per the registry's own
+  priority field, now that the two higher-urgency findings (RBAC-002's
+  leverage, MYTHOS-003's live fabrication/payment risk) were closed.
+  `CAP-DEVPORTAL-002` (Self-Service Automation API Keys,
+  `frontend/automation-dashboard.html`) first.
+- **`navigation.discoverable` was recorded `"unknown"`** — a prior wave's
+  own note said it "was not verified this pass." Resolved by direct
+  check: grepped every file under `frontend/*.html` for any reference to
+  "automation-dashboard" at all. Exactly one hit — `frontend/sitemap.html`
+  (a machine-readable URL list, not a navigation surface). No nav bar, no
+  dashboard menu, no button, no card anywhere links to this page. A
+  paying customer with zero knowledge of the direct URL had no way to
+  ever find self-service automation API keys, webhooks, scheduled
+  reports, team management, or the usage/governance dashboards this page
+  hosts (P7.0-001 through P7.0-009) — a real, actionable "hidden feature"
+  gap, the same class already fixed for other capabilities in this
+  program (e.g. PR #181's homepage section discoverability fix).
+- **`subscription_gated` was also recorded `"unknown"`.** Resolved by
+  reading `workers/src/auth/apiKeys.js`'s `TIER_LIMITS` directly rather
+  than guessing from the capability's own description ("intended to let
+  self-service (including ENTERPRISE-tier) customers…", which reads
+  ambiguous out of context). Every tier — including `FREE` — has an
+  explicit, non-`Infinity` `api_keys` cap (FREE:1, STARTER:2, PRO:5,
+  ENTERPRISE:20, MSSP:unlimited); `maxSelfKeysForTier()`
+  (`workers/src/handlers/enterpriseAutomation.js:124`) reads the exact
+  same table the canonical `POST /api/keys` route enforces. This is
+  **not a paid-only gate** — it is a tier-scaled key-count limit
+  available to every authenticated tier, exactly mirroring its canonical
+  sibling `CAP-DEVPORTAL-001` (also `subscription_gated: false`).
+  Correcting an "unknown" to a verified `false` is itself real progress
+  toward this program's "genuine, evidenced" bar — an unresolved unknown
+  is not a passing grade for a paid feature either.
+- **The fix:** `frontend/user-dashboard.html`'s "Developer" sidebar
+  section gained a real nav-item linking to `automation-dashboard.html`,
+  next to the existing "API Keys" link — following the exact
+  dedicated-page-navigation pattern already established one section up
+  for `threat-intel-workbench.html` (`location.href='...'`, not the
+  in-page `showPage()` tab mechanism used for this file's own sections).
+  No backend change; `CAP-DEVPORTAL-002`'s underlying key-management
+  logic was already fixed and tested in a prior wave (2026-07-09) and
+  was not touched again here.
+- **Test plan:** new
+  `workers/test/automationDashboardDiscoverability.test.mjs` (4 tests) —
+  proves the real nav-item exists, sits inside a real sidebar section
+  (not orphaned markup), follows the established
+  `threat-intel-workbench.html` pattern, and leaves the existing API Keys
+  tab untouched. Full suite green: 247 files / 2512 tests (`npx vitest
+  run`, up from 246/2508). Registry validator: 0 failures, 0 warnings
+  (after correcting two of my own bare-filename evidence citations the
+  validator caught — `/automation-dashboard.html` and
+  `threat-intel-workbench.html` needed their `frontend/` prefix, and a
+  quoted JS literal in the evidence text itself false-matched the
+  validator's citation regex, reworded to prose to avoid it).
+  `PRODUCTION_READINESS_REPORT.md` regenerated — only the generation
+  timestamp changed; this capability's `operational_status` stayed
+  `PILOT ONLY` (unchanged) and the report's aggregate severity/parity
+  numbers are unaffected.
 
 ### 2026-07-12 — 22-paid-feature program, item 2 (of 22): CAP-MYTHOS-003 — a live, unauthenticated endpoint fabricating security-scan/compliance results was redirected to real engines; a dangerous duplicate payment path was removed
 
