@@ -19,6 +19,8 @@ registry-population session.
 
 **Update — the CAP-SCAN cluster (6 items sharing one domain file):** investigated all 6 together. CAP-SCAN-003/004/005 were re-verified fresh (not just trusted from their existing entries) — grepped their claimed test files directly and confirmed `handleRedteamScan`/`handleIdentityScan`/`handleCompliance` are still genuinely imported by `workers/test/paymentEntitlement.test.mjs` and `workers/test/proposalBola.test.mjs`; combined with clean notes fields and already-correct backend/frontend/nav status, these 3 needed no work. CAP-SCAN-006 had zero test coverage of any kind — added a full suite for its real 27-control CIS-aligned scoring engine plus its tier gate. CAP-SCAN-007/008 had real but incomplete tier-gate coverage in a shared test file (their own notes flagged this as unconfirmed) — extended it to cover FREE/STARTER/anonymous-rejected and ENTERPRISE/MSSP/isAdmin-admitted explicitly for both handlers. **19 of 22 done, 3 remain**: `CAP-MSSP-005`, `CAP-TIH-001`, `CAP-TIH-003`.
 
+**Update — item 20 (`CAP-TIH-001`):** closed the real test-coverage gap (the only prior "coverage" was a copy-pasted reimplementation of one small helper in a different file, not real handler tests) and fixed a genuine finding made while writing those tests: `handleMITREMatrix` returned hardcoded `covered_techniques: 47, coverage_pct: 25.4` that didn't match the ~10 techniques actually listed in the same response's `hunt_coverage` object — now computed for real. Confirmed via grep this endpoint isn't rendered by any frontend page today, so not a live customer-facing issue, but fixed at the source. Also resolved `auth_enforced` from `"unknown"` to `false`, with the one real exception (`handleHuntSessions` requires a real user) documented explicitly rather than lost in a single boolean. **20 of 22 done, 2 remain**: `CAP-MSSP-005`, `CAP-TIH-003`.
+
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
 appended their own session-log entry below but never rolled the header
@@ -68,8 +70,8 @@ parallel tracking document.
 | Domains populated | 21 | see list below (all 3 former stubs now populated) |
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
-| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (after CAP-SCAN-006/007/008's registry updates) |
-| Worker test suite | 257 files / 2645 tests passing | `npx vitest run`, run 2026-07-12 — +17 tests this wave: new file `cloudSecurityScanner.test.mjs` (CAP-SCAN-006, 12 tests — the real 27-control CIS-aligned scoring engine plus its full tier gate, previously zero coverage of any kind) and 6 tests added to the existing `appsecDarkwebScanners.test.mjs` (CAP-SCAN-007/008 — rounds out the tier-gate coverage to FREE/STARTER/anonymous-rejected and ENTERPRISE/MSSP/isAdmin-admitted for both handlers explicitly, closing a gap the entries' own notes had flagged as unconfirmed). Baseline going into this wave was 256 files / 2628 tests (CAP-PROD-002). |
+| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (after CAP-TIH-001's registry update) |
+| Worker test suite | 258 files / 2665 tests passing | `npx vitest run`, run 2026-07-12 — +20 tests this wave, new file `threatHuntingEngine.test.mjs` (CAP-TIH-001: real coverage for all 5 entry points — handleRunHunt's real D1-driven CVE findings and honest no-findings fallback, handleHuntTemplates' decoded-template content check, handleIOCLookup's honest 'clean'-from-internal-signals behavior, handleHuntSessions' auth gate, and a regression guard on the newly-fixed handleMITREMatrix coverage math). Baseline going into this wave was 257 files / 2645 tests (CAP-SCAN cluster). |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 71.6% / 67% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — % unchanged this wave (CAP-TIH-008's `frontend.status` was already `exists`, only `navigation.discoverable` moved) but **Hidden features 21→20** — the first movement on that specific counter in several waves, since CAP-TIH-008's field was a real boolean `false` (not an `"unknown"` string like the last two corrections), so flipping it genuinely removes one hidden feature. `priority` for CAP-TIH-008 stays `P3` per this file's historical-severity convention. |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -255,6 +257,64 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — 22-paid-feature program, item 20 (of 22 real): CAP-TIH-001 — real test coverage for all 5 hunt endpoints, a hardcoded/mismatched stat fixed at the source
+
+- **Context.** Second-to-last item. This capability's own registry entry
+  already named the exact test-coverage problem precisely:
+  `workers/test/handlers.unit.test.mjs` reimplements `__sig`/
+  `detectIOCType` as locally copy-pasted logic "kept in sync with"
+  `threatHunting.js`, rather than importing the real functions — a
+  drift-prone weak signal that could silently diverge from the real
+  implementation, not genuine coverage of any of the 5 real handlers.
+- **Read the whole handler file (574 lines) before writing a single
+  test.** Confirmed this is a substantial, real, non-fabricated engine:
+  real D1 queries against `threat_intel`/`scan_history`/
+  `analytics_events`, real regex-based CVE/IP/MITRE-technique extraction
+  from free-text hunt queries, real IOC type detection, real SIEM-config
+  detection, real KQL/Sigma/YARA templates stored base64-encoded at rest
+  specifically so host antivirus doesn't quarantine the file during local
+  builds (a legitimate, documented reason, not obfuscation).
+- **A real, verifiable finding caught in the process, not assumed:**
+  `handleMITREMatrix` returned hardcoded `covered_techniques: 47,
+  coverage_pct: 25.4` sitting in the *same response object* as a
+  `hunt_coverage` list that, counted directly, contains only ~10 unique
+  technique IDs across kql/sigma/yara. `47/185 = 25.4%` — internally
+  self-consistent, but disconnected from the data shown right next to
+  it. Before treating this as urgent, checked whether it's actually
+  customer-facing: grepped every `frontend/*.html` for `hunt/mitre` — 0
+  matches. Not a live discrepancy anyone sees today, but fixed at the
+  source anyway, since an external API consumer hitting
+  `GET /api/hunt/mitre` directly would see the mismatch. Now
+  `covered_techniques`/`coverage_pct` are computed from the real
+  `hunt_coverage` union.
+- **Also resolved `auth_enforced` from `"unknown"` to `false`** — the
+  entry's own prior verification pass had already worked out the real
+  shape (5 of 6 endpoints deliberately fail open to anonymous/FREE,
+  rate-limited rather than gated; only `handleHuntSessions` requires
+  `isRealUser`) but had left the top-level field unresolved. A single
+  boolean can't represent a 5-vs-1 split, so the exception is spelled
+  out explicitly in both `verification.evidence` and `notes` rather than
+  picked to hide it either way.
+- **Two test assumptions were wrong and had to be corrected against
+  real behavior, not weakened:** (1) assumed the daily/burst KV
+  put-count for a hunt-session write would be exactly 1 — it wasn't,
+  because the same KV binding also receives the rate-limiter's own
+  burst/daily/global/stats counter writes; fixed by filtering to the
+  specific session key rather than asserting a total count. (2) assumed
+  a fully-failed external IOC enrichment (`fetch` rejecting on every
+  call) would report `enrichment_status: 'unavailable'` — it doesn't,
+  by design: the engine's internal-threat-intel check runs independently
+  of the network, and a genuine "nothing bad found internally either"
+  result legitimately scores as a real `'clean'` verdict, which the
+  handler correctly reports as `'found'` (a completed lookup, not a
+  fabricated one). Fixed the test to assert the real, intentional
+  behavior instead of the wrong assumption.
+- **Test plan:** new `workers/test/threatHuntingEngine.test.mjs` (20
+  tests) covering all 5 entry points. Full suite green: 258 files /
+  2665 tests (up from 257/2645). Registry validator: 0 failures, 0
+  warnings on the first pass.
+- **20 of 22 done, 2 remain**: `CAP-MSSP-005`, `CAP-TIH-003`.
 
 ### 2026-07-12 — 22-paid-feature program, items 17-19 (of 22 real): the CAP-SCAN cluster — 3 items verified already-complete, 3 items had real test-coverage gaps closed
 
