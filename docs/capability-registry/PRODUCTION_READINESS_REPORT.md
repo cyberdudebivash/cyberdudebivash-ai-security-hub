@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-12T11:42:37.526Z
+Generated: 2026-07-12T12:00:54.362Z
 Capabilities catalogued: 97
 
 ## Overall Completion
@@ -18,8 +18,8 @@ Capabilities catalogued: 97
 | Dimension | % |
 |---|---|
 | Backend | 89.7% |
-| Frontend | 69.6% |
-| Parity (backend **and** frontend both exist) | 63.9% |
+| Frontend | 70.6% |
+| Parity (backend **and** frontend both exist) | 64.9% |
 | Customer Journeys complete (dynamic_browser-verified) | 3.1% |
 
 ## Gaps by Priority
@@ -40,8 +40,8 @@ Capabilities catalogued: 97
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 22 | Backend exists, but not discoverable via navigation |
-| Backend-only features | 15 | Backend exists, zero frontend surface |
+| Hidden features | 21 | Backend exists, but not discoverable via navigation |
+| Backend-only features | 14 | Backend exists, zero frontend surface |
 | Duplicate systems | 4 | Backend marked `duplicate` (two implementations of one capability) |
 | Broken journeys | 9 | Priority P1 |
 
@@ -252,7 +252,7 @@ complete", "bug free", or "guaranteed".
 | CAP-TIH-011 | Threat Confidence & Exploitability Engine | ✓ | ✓ | ✗ | NOT READY | P6 |
 | CAP-TIH-012 | Customer/MSSP Personalized Intelligence | ✓ | ✓ | ✗ | NOT READY | P3 |
 | CAP-TIH-013 | Enterprise Premium Intelligence API | ✓ | ◐ | ✓ | NOT READY | P3 |
-| CAP-TIH-014 | Intelligence Preview (freemium teaser cards) | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-TIH-014 | Intelligence Preview (freemium teaser cards) | ✓ | ✓ | ✓ | NOT READY | P2 |
 | CAP-TIH-015 | Public Threat-Intel Feeds & Monetization Tier Matrix | ✓ | ◐ | ✗ | PILOT ONLY | P3 |
 | CAP-TIH-016 | Attack Graph from Scan Results | ✓ | ◐ | ✓ | NOT READY | P6 |
 | CAP-TIH-017 | Scan-Finding to CVE Correlation (legacy) | ✓ | ✗ | ✗ | NOT READY | P7 |

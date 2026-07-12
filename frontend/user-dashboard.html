@@ -911,6 +911,9 @@
       <div class="nav-item" data-page="intel-api" onclick="showPage('intel-api',this);loadIntelAPIStatus()">
         <span class="nav-icon">🔎</span> Threat Intel API
       </div>
+      <div class="nav-item" data-page="intel-preview" onclick="showPage('intel-preview',this);intelPreviewFeatured()">
+        <span class="nav-icon">📡</span> Intelligence Preview
+      </div>
       <div class="nav-item" data-page="ai-analysis" onclick="showPage('ai-analysis',this)">
         <span class="nav-icon">🤖</span> AI Analysis
       </div>
@@ -2305,6 +2308,90 @@
             <button class="btn btn-primary" onclick="intelLookupRisk()">Score</button>
           </div>
           <div id="intel-risk-result"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-intel-preview" class="page">
+      <div class="page-title">Intelligence Preview</div>
+      <div class="page-subtitle">Live-look CVE, threat actor, malware, IOC, and report previews with real-time upgrade gating — the same feed shown on the public marketing pages, backed by your real plan entitlements</div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">⭐ Featured Intelligence</span></div>
+        <div class="card-body" style="padding:20px">
+          <div id="intel-preview-featured"><span class="spinner"></span> Loading…</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🛡️ CVE Preview</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="intel-preview-cve" class="form-input" style="flex:1;min-width:220px" placeholder="CVE ID (e.g. CVE-2024-1234)" />
+            <button class="btn btn-primary" onclick="intelPreviewCVE()">Preview</button>
+          </div>
+          <div id="intel-preview-cve-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🕵️ Threat Actor Preview</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="intel-preview-actor" class="form-input" style="flex:1;min-width:220px" placeholder="Actor name (e.g. apt29, lockbit, lazarus)" />
+            <button class="btn btn-primary" onclick="intelPreviewActor()">Preview</button>
+          </div>
+          <div id="intel-preview-actor-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🦠 Malware Family Preview</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="intel-preview-malware" class="form-input" style="flex:1;min-width:220px" placeholder="Family name (e.g. lockbit, emotet, qakbot)" />
+            <button class="btn btn-primary" onclick="intelPreviewMalware()">Preview</button>
+          </div>
+          <div id="intel-preview-malware-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">📶 IOC Feed Sample</span></div>
+        <div class="card-body" style="padding:20px">
+          <button class="btn btn-outline" style="margin-bottom:12px" onclick="intelPreviewIOCSample()">Load sample</button>
+          <div id="intel-preview-ioc-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">📄 Report Sample</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <select id="intel-preview-report-type" class="form-input" style="max-width:260px">
+              <option value="tactical_dossier">Tactical Threat Dossier</option>
+              <option value="executive_risk">Executive Risk Intelligence Report</option>
+              <option value="weekly_brief">Weekly SOC Intelligence Brief</option>
+            </select>
+            <button class="btn btn-primary" onclick="intelPreviewReportSample()">Preview</button>
+          </div>
+          <div id="intel-preview-report-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">📚 Previewable Catalog</span></div>
+        <div class="card-body" style="padding:20px">
+          <button class="btn btn-outline" style="margin-bottom:12px" onclick="intelPreviewCatalog()">Load catalog</button>
+          <div id="intel-preview-catalog-result"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">🔓 Unlock Status</span></div>
+        <div class="card-body" style="padding:20px">
+          <button class="btn btn-outline" style="margin-bottom:12px" onclick="intelPreviewUnlock()">Check my unlock status</button>
+          <div id="intel-preview-unlock-result"></div>
         </div>
       </div>
     </div>
@@ -3926,6 +4013,126 @@
       </div>
       ${data.executive_narrative ? `<div style="font-size:.85rem;color:var(--muted);border-left:3px solid var(--accent);padding-left:10px;margin-bottom:8px">${data.executive_narrative}</div>` : ''}
       <div style="font-size:.8rem;color:var(--muted)">Immediate actions: ${(data.recommendations?.immediate || []).join(', ')}</div>`;
+  }
+
+  async function intelPreviewGet(path) {
+    const res = await apiFetch(path);
+    const data = await res.json().catch(() => ({}));
+    return { res, data };
+  }
+
+  function intelPreviewLockedList(card) {
+    const locked = Object.keys(card).filter(k => card[k] && typeof card[k] === 'object' && card[k].locked === true);
+    if (!locked.length) return '';
+    const first = card[locked[0]];
+    const names = locked.map(k => card[k].feature || k).join(', ');
+    return `<div style="margin-top:10px">${intelUpgradeNotice(`${locked.length} field${locked.length > 1 ? 's' : ''} locked on your plan (${names}).`, first.upgrade_url)}</div>`;
+  }
+
+  async function intelPreviewFeatured() {
+    const out = document.getElementById('intel-preview-featured');
+    out.innerHTML = '<span class="spinner"></span> Loading…';
+    const { data } = await intelPreviewGet('/api/preview/featured');
+    if (!data.items?.length) { out.innerHTML = '<div style="color:var(--muted)">No featured intelligence right now.</div>'; return; }
+    const sevColor = s => ({ CRITICAL: '#ef4444', HIGH: '#f97316', MEDIUM: '#eab308', LOW: '#10b981' }[s] || '#94a3b8');
+    out.innerHTML = `<table><thead><tr><th>Severity</th><th>Title</th><th>Source</th></tr></thead><tbody>
+      ${data.items.map(i => `<tr><td><span class="badge" style="background:${sevColor(i.severity)}22;color:${sevColor(i.severity)};border:1px solid ${sevColor(i.severity)}55">${i.severity || '—'}</span></td><td>${i.title || ''}</td><td>${i.source || '—'}</td></tr>`).join('')}
+    </tbody></table>`;
+  }
+
+  async function intelPreviewCVE() {
+    const cveId = document.getElementById('intel-preview-cve').value.trim();
+    const out = document.getElementById('intel-preview-cve-result');
+    if (!cveId) { alert('Enter a CVE ID first.'); return; }
+    out.innerHTML = '<span class="spinner"></span> Loading…';
+    const { res, data } = await intelPreviewGet(`/api/preview/cve/${encodeURIComponent(cveId)}`);
+    if (!res.ok) { out.innerHTML = `<div style="color:var(--muted)">${data.error || 'Lookup failed.'}</div>`; return; }
+    const sevColor = { CRITICAL: '#ef4444', HIGH: '#f97316', MEDIUM: '#eab308', LOW: '#10b981' }[data.severity] || '#94a3b8';
+    out.innerHTML = `
+      <div style="font-weight:700;margin-bottom:6px">${data.title}</div>
+      <div style="display:flex;gap:16px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+        <span class="badge" style="background:${sevColor}22;color:${sevColor};border:1px solid ${sevColor}55">${data.severity}</span>
+        <span style="font-size:.82rem;color:var(--muted)">CVSS: <strong style="color:var(--fg)">${data.cvss_score}</strong></span>
+        <span class="badge" style="background:var(--accent)22;color:var(--accent)">${data.preview_tier}</span>
+      </div>
+      <div style="font-size:.85rem;color:var(--muted);margin-bottom:6px">${data.summary}</div>
+      ${intelPreviewLockedList(data)}`;
+  }
+
+  async function intelPreviewActor() {
+    const actorId = document.getElementById('intel-preview-actor').value.trim();
+    const out = document.getElementById('intel-preview-actor-result');
+    if (!actorId) { alert('Enter a threat actor name first.'); return; }
+    out.innerHTML = '<span class="spinner"></span> Loading…';
+    const { res, data } = await intelPreviewGet(`/api/preview/threat/${encodeURIComponent(actorId)}`);
+    if (!res.ok) { out.innerHTML = `<div style="color:var(--muted)">${data.error || 'Lookup failed.'}</div>`; return; }
+    out.innerHTML = `
+      <div style="font-weight:700;margin-bottom:6px">${data.name}</div>
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:8px">Nation-state: ${data.nation_state} · Sophistication: ${data.sophistication_level}</div>
+      <div style="font-size:.85rem;color:var(--muted)">${data.summary_preview}</div>
+      ${intelPreviewLockedList(data)}`;
+  }
+
+  async function intelPreviewMalware() {
+    const familyId = document.getElementById('intel-preview-malware').value.trim();
+    const out = document.getElementById('intel-preview-malware-result');
+    if (!familyId) { alert('Enter a malware family name first.'); return; }
+    out.innerHTML = '<span class="spinner"></span> Loading…';
+    const { res, data } = await intelPreviewGet(`/api/preview/malware/${encodeURIComponent(familyId)}`);
+    if (!res.ok) { out.innerHTML = `<div style="color:var(--muted)">${data.error || 'Lookup failed.'}</div>`; return; }
+    out.innerHTML = `
+      <div style="font-weight:700;margin-bottom:6px">${data.name} <span style="font-size:.75rem;color:var(--muted)">(${data.malware_type})</span></div>
+      <div style="font-size:.85rem;color:var(--muted);margin-bottom:6px">${data.summary}</div>
+      ${intelPreviewLockedList(data)}`;
+  }
+
+  async function intelPreviewIOCSample() {
+    const out = document.getElementById('intel-preview-ioc-result');
+    out.innerHTML = '<span class="spinner"></span> Loading…';
+    const { data } = await intelPreviewGet('/api/preview/ioc-sample');
+    if (!data.iocs?.length) {
+      out.innerHTML = '<div style="color:var(--muted)">No IOCs available yet — feed ingestion pending.</div>';
+    } else {
+      out.innerHTML = `<table><thead><tr><th>Type</th><th>Value</th><th>Confidence</th><th>TLP</th></tr></thead><tbody>
+        ${data.iocs.map(i => `<tr><td>${i.type || ''}</td><td style="font-family:var(--mono);font-size:.78rem">${i.value || ''}</td><td>${i.confidence ?? '—'}</td><td>${i.tlp || '—'}</td></tr>`).join('')}
+      </tbody></table>`;
+    }
+    if (data.upgrade) out.innerHTML += intelUpgradeNotice(data.upgrade.message, data.upgrade.upgrade_url);
+  }
+
+  async function intelPreviewReportSample() {
+    const type = document.getElementById('intel-preview-report-type').value;
+    const out = document.getElementById('intel-preview-report-result');
+    out.innerHTML = '<span class="spinner"></span> Loading…';
+    const { data } = await intelPreviewGet(`/api/preview/report-sample?type=${encodeURIComponent(type)}`);
+    out.innerHTML = `
+      <div style="font-weight:700;margin-bottom:6px">${data.report_meta?.name || ''}</div>
+      <div style="font-size:.85rem;color:var(--muted);white-space:pre-wrap;border-left:3px solid var(--accent);padding-left:10px;margin-bottom:8px">${data.sample_section?.sample_content || ''}</div>
+      <div style="font-size:.8rem;color:var(--muted)">${data.locked_sections?.length ? `${data.locked_sections.length} sections locked — ` : 'All sections unlocked. '}<a href="${data.purchase?.url || '/#pricing'}" style="color:var(--accent)">View plans →</a></div>`;
+  }
+
+  async function intelPreviewCatalog() {
+    const out = document.getElementById('intel-preview-catalog-result');
+    out.innerHTML = '<span class="spinner"></span> Loading…';
+    const { data } = await intelPreviewGet('/api/preview/catalog');
+    const cats = data.categories || {};
+    out.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+      ${Object.entries(cats).map(([, v]) => `<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:10px"><div style="font-size:1.2rem;font-weight:800">${v.count}</div><div style="font-size:.75rem;color:var(--muted)">${v.description}</div></div>`).join('')}
+    </div>`;
+  }
+
+  async function intelPreviewUnlock() {
+    const out = document.getElementById('intel-preview-unlock-result');
+    out.innerHTML = '<span class="spinner"></span> Checking…';
+    const res = await apiFetch('/api/preview/unlock', { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+    if (data.unlocked) {
+      out.innerHTML = `<div style="color:#10b981;font-weight:600">✅ Full intelligence access unlocked (${data.tier} plan).</div>`;
+    } else if (data.upgrade_url) {
+      out.innerHTML = intelUpgradeNotice(`Locked — your plan is ${data.current_tier}, ${data.required_tier} required.`, data.upgrade_url);
+    } else {
+      out.innerHTML = `<div style="color:var(--muted)">${data.error || 'Sign in to check unlock status.'}</div>`;
+    }
   }
 
   function renderCisoTrend(trend) {

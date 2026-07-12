@@ -633,33 +633,33 @@
     "id": "CAP-TIH-014",
     "domain": "threat-hunting-intel",
     "name": "Intelligence Preview (freemium teaser cards)",
-    "description": "A fully-built, tier-gated conversion-funnel feature (CVE/threat-actor/malware-family preview cards, IOC sample, report sample, catalog, featured, unlock) referencing an EXTERNAL storefront's pricing/upgrade URLs rather than this platform's own /pricing — and has zero frontend callers in this codebase.",
+    "description": "A tier-gated conversion-funnel feature (CVE/threat-actor/malware-family preview cards, IOC sample, report sample, catalog, featured, unlock) with a real dashboard tab and honest upgrade routing to this platform's own /pricing. A separate, deliberately-deferred content-fabrication issue remains open in the underlying data (see notes) — the routing/wiring fix below does not certify the intelligence shown as accurate.",
     "backend": {
       "handlers": ["workers/src/handlers/intelligencePreview.js"],
       "entry_points": ["handleIntelligencePreview"],
       "routes_sampled": [
-        { "path": "/api/preview/*", "method": "GET", "evidence": "workers/src/index.js:7557" }
+        { "path": "/api/preview/*", "method": "GET", "evidence": "workers/src/index.js:7585" }
       ],
       "routes_fully_enumerated": false,
       "status": "exists"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "missing",
-      "evidence": "Exhaustive grep of frontend/*.html for '/api/preview/' returns zero matches. A fully-built, tier-gated feature with no wiring into this codebase's own frontend at all — its upgrade URLs point to an external storefront (intel.cyberdudebivash.com), not this platform's own /pricing, suggesting it may have been built for a different property or channel."
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/user-dashboard.html"],
+      "status": "exists",
+      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html gained a real \"Intelligence Preview\" tab (id=\"page-intel-preview\") with 8 live tools, one per real /api/preview/* sub-action: Featured Intelligence (auto-loads on tab open), CVE Preview, Threat Actor Preview, Malware Family Preview, IOC Feed Sample, Report Sample (3 report types), Previewable Catalog, and Unlock Status. Each calls the real endpoint and renders the real response, including an inline locked-field summary (intelPreviewLockedList()) for FREE-tier teaser responses. Before this fix: exhaustive grep of frontend/*.html for '/api/preview/' returned zero matches."
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "No page, no nav entry — entirely unreachable from this codebase's frontend."
+      "discoverable": true,
+      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html's sidebar (same section as Threat Intel API/DPDP/Compliance/CISO Metrics) now has a real nav-item (data-page=\"intel-preview\") linking to the new tab."
     },
     "auth_enforced": false,
     "rbac": { "enforced": false, "permissions": [] },
     "subscription_gated": true,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "No import-confirmed test for handleIntelligencePreview."
+      "has_tests": true,
+      "evidence": "workers/test/intelligencePreviewDashboard.test.mjs (2026-07-12, 18 tests) — confirms all 14 former external-URL references (intel.cyberdudebivash.com, cyberdudebivash.gumroad.com) are gone from the source file and that every conversion/upgrade/purchase/unlock URL now resolves to '/#pricing' across FREE-tier, premium, rate-limited-429, and unlock-denied responses; also confirms unchanged honest behavior (empty IOC list when the DB has none, real catalog/featured structure, premium unlock grant) plus the new dashboard tab's nav-item, 8 tool inputs, and real endpoint calls."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
@@ -669,11 +669,11 @@
     "priority": "P2",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/intelligencePreview.js read directly (722 lines, single router dispatching 8 sub-actions); isPremium() JWT/D1-entitlement check and 10/min KV rate limit for FREE authenticated users confirmed; workers/src/index.js:7557-7558 read directly (single lazy-import prefix dispatch); frontend/*.html grepped exhaustively for '/api/preview/' (0 hits)."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/handlers/intelligencePreview.js read directly (719 lines after fix) and re-grepped for 'cyberdudebivash.com'/'gumroad.com' (0 hits, was 14); node --check on the file (syntax valid). frontend/user-dashboard.html edited directly to add the tab described in frontend.evidence; all 3 inline <script> blocks re-parsed with node --check (syntax valid). Full suite green: 251 files / 2567 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": "Before building any frontend for this, confirm with the business owner whether it targets this platform's own conversion funnel or was built for/copied from a different storefront (intel.cyberdudebivash.com) — the external upgrade URLs are a real, concrete signal this may be intentionally out of scope for this codebase's frontend, not simply an unwired backend. Do not build a UI here without that confirmation, per this wave's duplicate/orphan reconciliation-before-building discipline."
+    "notes": "22-paid-feature program, owner-directed cluster (see CAP-TIH-009's session-log entry for the 3-item cluster decision): owner chose 'build dashboards for all three' over this program's recommendation to leave TIH-002/009 API-only and hold TIH-014 pending confirmation given its external-storefront red flag. When investigation then found the deeper issue was not just a wrong URL but genuine fabricated content, owner again explicitly chose 'build the dashboard anyway, fix fabrication separately' over the recommendation to redirect to real data with honest empty states first. This entry reflects that direction precisely. FIXED: all 14 hardcoded external-storefront references (upgrade_url / purchase.url / conversion.products[].url pointing at intel.cyberdudebivash.com and cyberdudebivash.gumroad.com) now point to this platform's own /#pricing, and fake one-time-product price labels tied to those links ('$249 one-time' YARA signatures, '$499 IR Kit') were removed so free-tier teaser copy is internally consistent with the real PRO/ENTERPRISE subscription tiers actually sold here. NOT FIXED — deliberately deferred per explicit owner instruction, and the reason operational_status stays NOT READY rather than following CAP-TIH-009's PILOT ONLY precedent: this handler still fabricates substantive content and presents it as real intelligence. Concretely: (1) handleFeaturedIntelligence's defaultFeatured array includes an invented headline naming a real vendor with a fake named vulnerability ('Cisco FTD zero-day — FIRESTARTER backdoor active exploitation') that does not correspond to any real disclosed CVE, plus fabricated statistics ('surge 340%', 'surge 180%') on other entries — shown to every visitor as if it were live threat intelligence; (2) handlePreviewCatalog invents its total and per-category counts outright (previewCards.length + 46, plus hardcoded category counts of 85/30/8/74/3) with no backing query; (3) handleIOCSample's free-tier upgrade message hardcodes '784 additional IOCs locked', unrelated to the real totalAvailable computed two lines above it from the actual DB; (4) both handleCVEPreview and handleMalwarePreview fall back to templated placeholder IOCs/YARA rules (10.xx.xx.xx, c2.[REDACTED], a generic MZ-header YARA stub) for PREMIUM (paying) users when the real DB has no match for their query, presenting filler as if it were the paid product — arguably worse than the free-tier version of the same pattern since it reaches customers who already upgraded. None of this was touched in this pass, strictly per explicit owner instruction to scope this fix to the URL/routing issue only. This remains a genuine, high-priority, unresolved gap that should block calling this specific feature customer-ready or worth its price — flagged unambiguously so the URL fix cannot be mistaken for full remediation."
   },
   {
     "id": "CAP-TIH-015",
