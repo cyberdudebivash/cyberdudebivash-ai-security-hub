@@ -733,7 +733,7 @@ nav{position:sticky;top:0;z-index:1000;background:rgba(3,3,8,.92);backdrop-filte
   <div class="acy-attn-inner">
     <div class="acy-attn-item" style="color:#00ff88"><div class="acy-dot acy-dot-g"></div><span id="acy-scan" style="display:none"></span></div>
     <span class="acy-sep">|</span>
-    <div class="acy-attn-item" style="color:#f59e0b"><div class="acy-dot acy-dot-o"></div>⚠️ <span id="acy-cve">3</span> critical CVEs today</div>
+    <div class="acy-attn-item" style="color:#f59e0b"><div class="acy-dot acy-dot-o"></div>⚠️ <span id="acy-cve">3</span> critical CVEs tracked</div>
     <span class="acy-sep">|</span>
     <div class="acy-attn-item" style="color:#ef4444"><div class="acy-dot acy-dot-r"></div>🚨 Reports from ₹999 · <a href="/#scanner" style="color:#ff7777;font-weight:900;text-decoration:none">Scan Free →</a></div>
     <span class="acy-sep">|</span>
@@ -953,12 +953,31 @@ async function academyBuy(productId, amountInr, label) {
 // Static fallbacks reflect platform launch state — no fake random inflation.
 (function liveCounters(){
   function el(id){return document.getElementById(id);}
-  // Fetch real platform stats to show honest CVE and scan counts in the attention strip
-  fetch('/api/health',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
-    if(el('acy-cve')&&d.cves_tracked) el('acy-cve').textContent = d.cves_tracked.toLocaleString();
-    if(el('acy-scan')&&d.total_scans)  el('acy-scan').textContent = d.total_scans.toLocaleString();
+  // Fetch real platform stats to show honest CVE and scan counts in the
+  // attention strip. Neither field used to exist where this read them:
+  // /api/health has no top-level cves_tracked at all, and its scan count is
+  // nested at stats.total_scans, not top-level total_scans — both always
+  // read undefined, so acy-cve silently kept its static "3" and acy-scan
+  // (which also has no text of its own and stays display:none until JS sets
+  // it) never appeared at all. cves_tracked has no real equivalent on
+  // /api/health; the closest honest live figure is /api/threat-intel/stats's
+  // stats.critical (a real, currently-tracked count — the "today" framing
+  // in the static fallback copy was corrected to "tracked" to match).
+  Promise.all([
+    fetch('/api/health',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).catch(()=>null),
+    fetch('/api/threat-intel/stats',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).catch(()=>null),
+  ]).then(function(results){
+    var health = results[0], intel = results[1];
+    var scans = health && health.stats && health.stats.total_scans;
+    var crit  = intel && intel.stats && intel.stats.critical;
+    if(el('acy-cve') && crit) el('acy-cve').textContent = crit.toLocaleString();
+    var scanEl = el('acy-scan');
+    if(scanEl && scans){
+      scanEl.textContent = scans.toLocaleString() + ' scans completed';
+      scanEl.style.display = '';
+    }
     if(el('acy-upd')) el('acy-upd').textContent = 'live';
-  }).catch(()=>{
+  }).catch(function(){
     if(el('acy-upd')) el('acy-upd').textContent = 'live';
   });
 })();

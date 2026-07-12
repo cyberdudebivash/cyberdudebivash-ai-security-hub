@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-12 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry eighteen below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session fixed all 10 Tier-1 items and Tier-2 items #1–#6 (of 8) — threat-intel-workbench.html's unauth/unrate-limited AI-analyst routes, sentinel-apex-marketplace.html's fabricated intel cards, index.html's fabricated PATCHED KPI/status badge/CyberBrain V2 claims, cyber-defense.html's EPSS/KEV+IOC field mismatches, god-mode.html's Agentic panel auth gap, and ai-security-assessment.html's Red Team demo method mismatch; full detail for each lives in its own session-log entry below, not repeated here. Just completed Tier-2 item #7: `agent-threats.html`'s "Scan My Agent" tool sent zero Authorization header of any kind, so the real, D1-persisted backend assessment (`handleScanAgent`, hard-requires auth) always 401'd for every visitor — invisibly, since a fully-functional client-side fallback always rendered a complete-looking report anyway, just never a real, persisted one. Fixed by adding a token helper (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 17 session-log entries below. 7 of the 24 backlog items remain (1 more Tier 2, all 6 of Tier 3), queued in the same stated priority order.)
+## Current status (2026-07-12 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry nineteen below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session has now fixed all 10 Tier-1 items AND all 8 Tier-2 items — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable. Tier-2 closed out with item #8: `academy.html`'s "attention strip" CVE/scan counters read fields that never existed on `/api/health`'s response (`cves_tracked` doesn't exist anywhere; `total_scans` is real but nested under `stats`, not top-level) — the CVE counter silently kept its static fallback forever, and the scan counter (which starts `display:none` in the markup, meant to be revealed by this same script) never appeared at all, for any visitor, ever. Fixed by reading the real nested paths from `/api/health` and `/api/threat-intel/stats`, and revealing the scan counter once real data loads (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 18 session-log entries below. 6 of the 24 backlog items remain — all of Tier 3 (minor/cosmetic class) — queued next in the audit's stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 237 files / 2445 tests passing | `npx vitest run`, run 2026-07-12 — +5 tests this wave, new file `agentThreatsScanAuthFix.test.mjs` (Tier-2 item #7: agent-threats.html's "Scan My Agent" tool now attaches the real session token). Baseline going into this wave was 236 files / 2440 tests (Tier-2 item #6) |
+| Worker test suite | 238 files / 2452 tests passing | `npx vitest run`, run 2026-07-12 — +7 tests this wave, new file `academyLiveCountersFieldPathFix.test.mjs` (Tier-2 item #8, the last Tier-2 item: academy.html's CVE/scan counters now read the real nested field paths and the scan counter is actually revealed). Baseline going into this wave was 237 files / 2445 tests (Tier-2 item #7) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,78 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — Tier-2 backlog item #8 (last of 8): academy.html — attention-strip CVE/scan counters read fields that never existed, one permanently invisible
+
+- **Trigger:** continuing the Tier 1–3 backlog, final Tier-2 item, next after
+  item #7. Closes out Tier 2 entirely.
+- **Re-verified against actual code — two independent bugs:** `liveCounters()`
+  fetched `GET /api/health` and read `d.cves_tracked`/`d.total_scans`
+  directly off the top-level response. Traced the real handler
+  (`healthResponseAsync`, `workers/src/index.js:996`): its response has
+  **no `cves_tracked` field anywhere** (this endpoint reports D1/KV/cache
+  health and scan counts, not CVE counts), and its real scan count is
+  nested at `stats.total_scans` — never a top-level `total_scans`. Both
+  reads always evaluated to `undefined`.
+  1. `#acy-cve` has a static HTML fallback ("3") and no visibility toggle,
+     so the failed read was invisible — the counter silently just never
+     updated from launch-day placeholder, forever presented as if live.
+  2. `#acy-scan` has **no static text of its own at all** and starts
+     `style="display:none"` in the markup — clearly designed to be revealed
+     by this same script once real data loads. Since the read always failed,
+     this element was never populated AND never unhidden — the entire
+     "scans completed" strip item has never appeared to any visitor, on any
+     page load, since it was built.
+- **Fix (`frontend/academy.html`):**
+  - `liveCounters()` now fetches `/api/health` (for the real, correctly-
+    nested `stats.total_scans`) and `/api/threat-intel/stats` (a second,
+    already-public, already-used-elsewhere-this-session endpoint, for a
+    real CVE-adjacent figure — `stats.critical`, the platform's real,
+    currently-tracked critical-severity CVE count) in parallel.
+  - `#acy-scan` now gets both real descriptive text (`"{N} scans
+    completed"` — it has no surrounding label in the HTML, unlike `#acy-cve`,
+    so the script must supply one) and has its `display:none` cleared once
+    a real count arrives.
+  - `#acy-cve`'s static fallback copy was corrected from "critical CVEs
+    **today**" to "critical CVEs **tracked**": `stats.critical` is a real,
+    live, currently-tracked total with no time-boxing, and continuing to
+    label it "today" once real (much larger, cumulative) data replaced the
+    small static "3" placeholder would have started making a *new* false
+    claim — the same class of bug this whole backlog exists to remove, not
+    a fix for one.
+- **Verification:** `node --check` on the extracted inline `<script>`
+  block; new `workers/test/academyLiveCountersFieldPathFix.test.mjs`
+  (7 tests, static parse) asserting: the old top-level `d.cves_tracked`/
+  `d.total_scans` reads are gone; the real nested `health.stats.
+  total_scans` and `intel.stats.critical` paths are used; `#acy-scan`'s
+  `display:none` is actually cleared and its text includes a real label
+  (not a bare number); the markup itself still starts hidden/textless
+  (confirming the JS is solely responsible for revealing it — this wasn't
+  redundantly duplicated); the "today" claim is gone and "tracked" is used
+  instead. One self-inflicted false failure caught and fixed while writing
+  the test: an overly clever regex meant to catch any bare top-level
+  `total_scans` read matched this fix's own explanatory code comment
+  (which necessarily names the old buggy field); simplified to a precise
+  `not.toContain('d.total_scans')` check instead. Searched `workers/test/`
+  for any pre-existing test referencing this page — none existed, so no
+  bug-reinforcing assertion needed correcting. Full suite: 238 files / 2452
+  tests passing (was 237/2445 before this item — +1 file, +7 tests).
+  `node scripts/registry/validate.mjs`: 0 failures, 0 warnings. Checked
+  `docs/capability-registry/domains/academy.json`'s existing 2 entries
+  (`CAP-ACAD-001` covers this exact page but scoped specifically to the
+  purchase/verify flow; `CAP-ACAD-002` covers a different page's buy
+  buttons) — neither covers the attention-strip counters specifically, so
+  no existing entry needed correcting and no new one was added, consistent
+  with this session's practice for bounded bug fixes.
+  `PRODUCTION_READINESS_REPORT.md` was not regenerated this item since no
+  registry domain JSON was touched.
+- **All 8 Tier-2 items are now fixed.** All 6 Tier-3 items (minor/cosmetic
+  class) remain, queued next in the audit's stated priority order:
+  billing-portal.html USD/₹ symbol mismatch; ops-dashboard.html wrong
+  element ID breaking the Top Endpoints table; user-dashboard.html
+  Notification Preferences with no GET endpoint; user-dashboard.html API
+  Keys Usage tab's dead click handler; soc-agents.html's dead token-count
+  field; threat-intel-workbench.html's cosmetic APT icon issue.
 
 ### 2026-07-12 — Tier-2 backlog item #7 (of 8): agent-threats.html — "Scan My Agent" tool sent zero Authorization header, always 401'd invisibly behind a client-side fallback
 
