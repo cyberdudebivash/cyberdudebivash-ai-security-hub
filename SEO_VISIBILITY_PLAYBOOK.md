@@ -13,9 +13,10 @@ verifiable against the live site or a named external console.
 |---|---|
 | Document structure | Homepage previously shipped a premature `</head></html>` that pushed **all** Open Graph, Twitter Card, and JSON-LD markup outside the document head — invisible or unreliable for Google's rich-result parser and every link-preview crawler. Fixed 2026-07-04; locked. |
 | Rich results (JSON-LD) | Organization (full legal entity, postal address, contact points), WebSite + SearchAction, SoftwareApplication, FAQPage, BreadcrumbList, Service — all inside `<head>`, all valid JSON. |
-| URL previews | `og:*` + `twitter:card` (summary_large_image, 1200×630 og-image-v2.png) on the homepage **and** on all 22 public pages, verified inside `<head>`. |
+| URL previews | `og:*` + `twitter:card` (summary_large_image, 1200×630 og-image.png/og-image-v2.png) on the homepage **and** on all 30 locked public pages, verified inside `<head>`. |
 | Canonicals & descriptions | Every public page has exactly one canonical URL and a meta description. |
-| Sitemaps | `sitemap-index.xml` → sitemap / blog / services / api / cve, all referenced from robots.txt, lastmod maintained. |
+| Structured data coverage | 2026-07-12: every one of the 30 locked public pages now carries at least one JSON-LD block (AboutPage / ContactPage / CollectionPage / Service / WebPage / WebApplication as fits the page, plus a BreadcrumbList). Previously 19 sitemap-listed pages shipped zero JSON-LD — the lock script only validated blocks that existed, so a page with none silently passed. The check now fails on zero blocks, closing that gap for good. |
+| Sitemaps | `sitemap-index.xml` → sitemap / blog / services / api / cve, all referenced from robots.txt, lastmod maintained. `ai-security-scorecard` and `cyber-signal-radar` — both complete, public tool pages — were missing from every sitemap file; added 2026-07-12. |
 | Crawlability | robots.txt allows search crawlers; private dashboards are excluded from sitemaps. |
 
 Run the lock any time: `node scripts/seo-structure-lock.mjs` (exit 0 = green).

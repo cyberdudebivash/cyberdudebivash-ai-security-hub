@@ -18,6 +18,13 @@ const PUBLIC_PAGES = [
   'agent-threats', 'ai-governance-frameworks', 'api-docs', 'attack-library',
   'gadgets', 'intel-hub', 'privacy-policy', 'refund-policy', 'sitemap',
   'terms-of-service', 'upgrade',
+  // 2026-07-12 widened coverage: sitemap-listed public pages that previously
+  // shipped zero JSON-LD (silently passed the old check — see the ldOk fix
+  // below) or were missing OG/canonical tags entirely. Brought up to full
+  // spec and locked here so the fix can't silently regress.
+  'intel', 'soc-dashboard', 'god-mode', 'ai-security-scorecard',
+  'cyber-signal-radar', 'ai-security-services', 'developer-onboarding',
+  'vibe-code-scanner',
 ];
 
 let failures = 0;
@@ -63,6 +70,11 @@ for (const page of PUBLIC_PAGES) {
   // ── JSON-LD must be inside <head> and parse as JSON ─────────────────────
   const ldBlocks = [...src.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
   let ldOk = true;
+  // A page with zero JSON-LD blocks used to silently pass here (the loop
+  // below only validates blocks that exist). Every public page is expected
+  // to carry at least one structured-data block as of the 2026-07-12
+  // coverage sweep — fail loudly instead of passing silently on regression.
+  if (ldBlocks.length === 0) { fail(`${page}: zero JSON-LD blocks (expected at least 1)`); ldOk = false; }
   for (const [i, m] of ldBlocks.entries()) {
     if (m.index > headClose) { fail(`${page}: JSON-LD block ${i + 1} outside <head>`); ldOk = false; }
     try { JSON.parse(m[1]); }
