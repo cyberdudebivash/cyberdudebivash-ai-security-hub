@@ -191,7 +191,7 @@
           </div>
         </div>
         <div class="sub-plan-name" id="plan-name">Free</div>
-        <div class="sub-price">Billed at <span id="plan-price">$0</span>/month</div>
+        <div class="sub-price">Billed at <span id="plan-price">₹0</span>/month</div>
         <div class="sub-meta">
           <div class="sub-meta-row"><span class="sub-meta-label">Next renewal</span><span class="sub-meta-value" id="renewal-date">—</span></div>
           <div class="sub-meta-row"><span class="sub-meta-label">API calls / month</span><span class="sub-meta-value" id="monthly-limit">150</span></div>
@@ -355,6 +355,7 @@ function fmtDate(d) {
   catch { return d; }
 }
 function fmtINR(n) { return '₹' + Number(n || 0).toLocaleString('en-IN'); }
+function fmtUSD(n) { return '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function barClass(pct) { return pct >= 90 ? 'fill-red' : pct >= 70 ? 'fill-yellow' : 'fill-green'; }
 
 async function loadPortal() {
@@ -436,7 +437,7 @@ async function loadUsage() {
     const remaining = limit === Infinity ? '∞' : Math.max(0, limit - used).toLocaleString();
     document.getElementById('remaining-text').textContent = remaining + ' calls left';
     document.getElementById('total-requests').textContent = (u.total_requests ?? used).toLocaleString();
-    document.getElementById('overage-charges').textContent = fmtINR(u.overage_charges_usd);
+    document.getElementById('overage-charges').textContent = fmtUSD(u.overage_charges_usd);
     document.getElementById('monthly-limit').textContent = limit === Infinity ? 'Unlimited' : limit.toLocaleString();
 
     if (monthlyPct >= 90 && limit !== Infinity) {

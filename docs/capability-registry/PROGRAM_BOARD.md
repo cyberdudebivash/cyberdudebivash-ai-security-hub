@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-12 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry nineteen below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session has now fixed all 10 Tier-1 items AND all 8 Tier-2 items — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable. Tier-2 closed out with item #8: `academy.html`'s "attention strip" CVE/scan counters read fields that never existed on `/api/health`'s response (`cves_tracked` doesn't exist anywhere; `total_scans` is real but nested under `stats`, not top-level) — the CVE counter silently kept its static fallback forever, and the scan counter (which starts `display:none` in the markup, meant to be revealed by this same script) never appeared at all, for any visitor, ever. Fixed by reading the real nested paths from `/api/health` and `/api/threat-intel/stats`, and revealing the scan counter once real data loads (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 18 session-log entries below. 6 of the 24 backlog items remain — all of Tier 3 (minor/cosmetic class) — queued next in the audit's stated priority order.)
+## Current status (2026-07-12 — continuing the 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit (see the entry twenty below for the full original list and the 2 Tier-0 exposures already fixed in PR #183). This session has fixed all 10 Tier-1 items and all 8 Tier-2 items — full detail for each lives in its own session-log entry below, not repeated here to keep this line scannable — and has now started Tier 3 (minor/cosmetic class) with item #1: `billing-portal.html` displayed a real USD overage-charge figure (`overage_charges_usd`, a genuine `SUM(amount_usd)`) through the ₹-prepending INR formatter — the wrong currency entirely, not just wrong formatting — plus a static placeholder showing "$0" for a tile that's actually populated with real Rupees once loaded. Fixed with a real USD formatter and a corrected placeholder (PR #185, open). **Housekeeping:** PR #184 (items #1–#2 only) merged mid-session before items #3–#5 were pushed; per `EXECUTION_PROCEDURE.md` §3, the 3 unmerged commits were rebased onto the post-merge `main` and opened fresh as PR #185 rather than lost or force-pushed over the merged history. See the top 19 session-log entries below. 5 of the 24 backlog items remain — all Tier 3 — queued next in the audit's stated priority order.)
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -61,7 +61,7 @@ parallel tracking document.
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
 | Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 238 files / 2452 tests passing | `npx vitest run`, run 2026-07-12 — +7 tests this wave, new file `academyLiveCountersFieldPathFix.test.mjs` (Tier-2 item #8, the last Tier-2 item: academy.html's CVE/scan counters now read the real nested field paths and the scan counter is actually revealed). Baseline going into this wave was 237 files / 2445 tests (Tier-2 item #7) |
+| Worker test suite | 239 files / 2458 tests passing | `npx vitest run`, run 2026-07-12 — +6 tests this wave, new file `billingPortalCurrencySymbolFix.test.mjs` (Tier-3 item #1: billing-portal.html's overage-charges tile now uses a real USD formatter instead of the ₹-prepending INR one). Baseline going into this wave was 238 files / 2452 tests (Tier-2 item #8, the last Tier-2 item) |
 | Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
 | Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
@@ -247,6 +247,65 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — Tier-3 backlog item #1 (of 6): billing-portal.html — a real USD figure displayed with a ₹ symbol, plus a wrong-currency static placeholder
+
+- **Trigger:** all 10 Tier-1 and all 8 Tier-2 items closed; starting Tier 3
+  (minor/cosmetic class), first item.
+- **Re-verified against actual code:** the overage-charges tile read
+  `u.overage_charges_usd` and rendered it through `fmtINR(n)` (`'₹' +
+  Number(n||0).toLocaleString('en-IN')`). Traced the field to its real
+  source, `handleGetUsageStats`
+  (`workers/src/handlers/enterpriseTransformHandler.js:441`):
+  `overage_charges_usd: Math.round(overageUsd * 100) / 100`, where
+  `overageUsd` comes from `SELECT SUM(amount_usd) as total FROM invoices
+  WHERE ... description='API Overage Charge'` — a genuinely US-dollar
+  figure, confirmed by both its own field name and the real DB column it's
+  summed from. A customer with real overage charges of, say, $45.50 would
+  have seen "₹45.50" on this page — the **wrong currency entirely** (not a
+  formatting nit — roughly an 80x difference in real value), directly
+  contradicting whatever their actual Razorpay/invoice charge shows.
+- **Found a second, related instance while auditing every static currency
+  placeholder on the page:** the plan-price tile's static HTML fallback
+  read `"$0"`, but the real field that replaces it once data loads
+  (`sub.price_inr`) is genuinely INR — every other `*_inr` field on this
+  exact page (`monthly-spend`, the upgrade-plan list, invoice rows) is
+  already correctly formatted with `fmtINR()`. Grepped the whole file for
+  every static `$`-prefixed placeholder (`>\$[0-9]`) to confirm these were
+  the only two — `overage-charges`'s own static placeholder ("$0.00") was
+  already correct and needed no change, only its *dynamic* JS update was
+  wrong.
+- **Fix (`frontend/billing-portal.html`):**
+  - Added a real `fmtUSD(n)` formatter (`'$' +
+    Number(n||0).toLocaleString('en-US', {minimumFractionDigits:2,
+    maximumFractionDigits:2})`), matching `fmtINR()`'s existing style.
+  - `overage-charges`'s update now calls `fmtUSD(u.overage_charges_usd)`
+    instead of `fmtINR(...)`.
+  - `plan-price`'s static HTML placeholder corrected from `$0` to `₹0` to
+    match the real currency of the data that replaces it.
+- **Verification:** `node --check` on the extracted inline `<script>`
+  block; new `workers/test/billingPortalCurrencySymbolFix.test.mjs`
+  (6 tests, static parse) asserting: `fmtUSD()` is defined; the
+  overage-charges assignment uses it (and no longer uses `fmtINR` for that
+  field); the overage-charges *static* placeholder was confirmed
+  already-correct and unchanged; the plan-price static placeholder now
+  reads `₹0` (not `$0`) while its dynamic assignment (`fmtINR(sub.price_inr)`)
+  is unchanged; every other real-INR field on the page (`monthly-spend`,
+  the upgrade-plan list) still correctly uses `fmtINR()`, confirming the
+  fix didn't overcorrect anything that was already right. Checked
+  `workers/test/billingPortal.test.mjs` — it tests the *backend*
+  `overage_charges_usd` value (confirms the handler computes `4.5`
+  correctly) but never asserts anything about frontend currency-symbol
+  formatting, so no conflict/reconciliation was needed. Full suite: 239
+  files / 2458 tests passing (was 238/2452 before this item — +1 file,
+  +6 tests). `node scripts/registry/validate.mjs`: 0 failures, 0 warnings.
+  Updated `CAP-BILL-003`'s `notes` in
+  `docs/capability-registry/domains/commercial-billing.json` (it already
+  covers `frontend/billing-portal.html` as its dedicated page) to record
+  the fix. `node scripts/registry/generate-report.mjs` regenerated (only
+  the timestamp changed).
+- **5 Tier-3 items remain** (of 6), queued next in the audit's stated
+  priority order.
 
 ### 2026-07-12 — Tier-2 backlog item #8 (last of 8): academy.html — attention-strip CVE/scan counters read fields that never existed, one permanently invisible
 
