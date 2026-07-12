@@ -28,6 +28,12 @@ Owner: Platform SRE · Review cadence: quarterly · Last updated: June 2026
 - **CLI alternative:** `wrangler pages deployment list` → redeploy the good commit.
 
 ### 2.2 Worker API
+**Now automatic:** `deploy.yml`'s `rollback` job runs `wrangler rollback` automatically
+whenever the post-deploy smoke test's API health check fails (the only hard-fail
+condition in that job), then verifies `/api/health` returns 200 before reporting
+success in the deployment summary. Manual steps below remain the fallback, and
+are still required if you need to target a *specific* (non-immediately-prior)
+deployment:
 1. `cd workers && npx wrangler deployments list`
 2. `npx wrangler rollback [DEPLOYMENT_ID]` (or `git revert` + `npx wrangler deploy`).
 3. Verify: `curl -s https://cyberdudebivash.in/api/health` returns `status: ok` and the expected version.
@@ -69,5 +75,20 @@ Owner: Platform SRE · Review cadence: quarterly · Last updated: June 2026
 - Smoke test: 5 attempts × exponential backoff per endpoint; hard-fail only on all-unreachable.
 - Version gate: deployed version compared to `PLATFORM_VERSION`.
 - Concurrency: `deploy-production` group serializes deploys (no partial/overlapping).
+- Post-deploy: `rollback` job auto-reverts the Worker via `wrangler rollback` if smoke-test's
+  API health check fails, and verifies `/api/health` before reporting success (see § 2.2).
+  Pages/frontend is not covered by this automation — still a manual dashboard rollback.
 
 > Add the `Test & Quality Gate` workflow (`hardening/test.yml`) as a required status check so no deploy proceeds on a failing unit/Lighthouse/E2E gate.
+
+## 6. D1 schema migration paths
+
+Two workflow_dispatch paths exist, both now gated the same way (typed confirmation +
+mandatory pre-migration backup that aborts if empty, uploaded as a 90-day artifact):
+- `db-migrate.yml` — applies any repo-relative `.sql` file (general-purpose; default
+  `workers/schema_master.sql`, idempotent via `IF NOT EXISTS`). Confirm input: `APPLY`.
+- `automation.yml` (`job: schema_migrate`) — a narrower, hardcoded set of idempotent
+  `ALTER TABLE ... ADD COLUMN` drift patches for known tables/columns. Confirm input:
+  `confirm_schema_migrate: APPLY`.
+
+Prefer `db-migrate.yml` for anything beyond patching already-known drift.

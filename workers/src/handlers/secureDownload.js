@@ -48,12 +48,22 @@ async function validateToken(kv, token) {
 // ─── Report Generator ──────────────────────────────────────────────────────
 async function generateReportContent(env, reportId, orderId) {
   // Try to pull live threat intel from D1 to populate report
-  let cves = [], actors = [], summary = {}, iocs = [];
+  let cves = [], actors = [], summary = {}, iocs = [], landscape = null;
 
   try {
-    const [cveRows, actorRows, summaryRow, iocRows] = await Promise.all([
+    const [cveRows, actorRows, summaryRow, iocRows, landscapeRow] = await Promise.all([
       env.DB.prepare(`SELECT * FROM threat_intel WHERE severity IN ('CRITICAL','HIGH') ORDER BY cvss_score DESC LIMIT 15`).all(),
-      env.DB.prepare(`SELECT * FROM threat_intel WHERE category = 'threat_actor' OR title LIKE '%APT%' OR title LIKE '%Lazarus%' LIMIT 8`).all(),
+      // cti_actors is the dedicated threat-actor table (name/nation_state/
+      // motivation/sophistication/target_sectors/description) — previously
+      // this queried threat_intel (a CVE table) by title-keyword match instead,
+      // and the result (`actors`) was fetched but never actually used in the
+      // HTML below; section 4 rendered 3 hardcoded actor write-ups regardless.
+      env.DB.prepare(`
+        SELECT name, aliases, nation_state, motivation, sophistication, target_sectors, description, threat_level, confidence_score, last_active
+        FROM cti_actors
+        ORDER BY CASE threat_level WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END, confidence_score DESC
+        LIMIT 5
+      `).all(),
       env.DB.prepare(`SELECT COUNT(*) as total, MAX(cvss_score) as max_cvss FROM threat_intel WHERE severity = 'CRITICAL'`).first(),
       env.DB.prepare(
         `SELECT i.ioc_type, i.value, i.severity, i.confidence, i.last_seen, a.name AS actor_name
@@ -61,11 +71,28 @@ async function generateReportContent(env, reportId, orderId) {
          WHERE i.is_active = 1 AND i.false_positive = 0
          ORDER BY i.last_seen DESC LIMIT 8`
       ).all(),
+      // Real current-dataset composition (not a fabricated period-over-period
+      // trend — this platform doesn't retain the historical snapshots needed
+      // to compute a real QoQ/YoY delta, so section 2 reports counts, not %).
+      env.DB.prepare(`
+        SELECT
+          COUNT(*) as total,
+          SUM(CASE WHEN is_ransomware = 1 THEN 1 ELSE 0 END) as ransomware_count,
+          SUM(CASE WHEN apt_groups IS NOT NULL AND apt_groups != '' AND apt_groups != '[]' THEN 1 ELSE 0 END) as apt_attributed_count,
+          SUM(CASE WHEN is_exploited = 1 THEN 1 ELSE 0 END) as kev_count
+        FROM threat_intel
+        WHERE severity IN ('CRITICAL','HIGH')
+      `).first(),
     ]);
-    cves = cveRows.results || [];
+    // threat_intel's real KEV column is is_exploited — the fallback list below
+    // (and the report template) use is_kev; map it here so real D1 rows and
+    // the fallback share one shape instead of the KEV badge/count silently
+    // reading undefined (and always showing 0) for genuine live data.
+    cves = (cveRows.results || []).map(c => ({ ...c, is_kev: !!c.is_exploited }));
     actors = actorRows.results || [];
     summary = summaryRow || {};
     iocs = iocRows.results || [];
+    landscape = landscapeRow || null;
   } catch {}
 
   // Fallback intelligence data — real, publicly documented CVEs (not fabricated)
@@ -82,7 +109,14 @@ async function generateReportContent(env, reportId, orderId) {
   const reportMeta = getReportMeta(reportId);
   const now = new Date().toISOString().slice(0, 10);
 
-  return generateReportHTML({ reportMeta, cves, actors, summary, iocs, now, orderId });
+  return generateReportHTML({ reportMeta, cves, actors, summary, iocs, landscape, now, orderId });
+}
+
+function formatJsonList(raw) {
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) && arr.length ? arr.join(', ') : null;
+  } catch { return null; }
 }
 
 function getReportMeta(reportId) {
@@ -99,7 +133,7 @@ function getReportMeta(reportId) {
   return catalog[reportId] || { title: 'SENTINEL APEX™ Intelligence Report', category: 'Threat Intelligence', classification: 'CONFIDENTIAL', pages: 50 };
 }
 
-function generateReportHTML({ reportMeta, cves, actors, summary, iocs, now, orderId }) {
+function generateReportHTML({ reportMeta, cves, actors, summary, iocs, landscape, now, orderId }) {
   const critCount = cves.filter(c => c.severity === 'CRITICAL').length;
   const kevCount = cves.filter(c => c.is_kev).length;
 
@@ -159,7 +193,7 @@ function generateReportHTML({ reportMeta, cves, actors, summary, iocs, now, orde
     <div class="logo">⚔️ CYBERDUDEBIVASH® · SENTINEL APEX™</div>
     <div class="classification">🔴 ${reportMeta.classification}</div>
     <h1>${reportMeta.title}</h1>
-    <p>Produced by CYBERDUDEBIVASH SENTINEL APEX™ threat intelligence analysts. This report contains live intelligence sourced from NVD, CISA KEV, dark web monitoring, and APEX AI correlation engine. Authorized recipients only.</p>
+    <p>Produced by CYBERDUDEBIVASH SENTINEL APEX™ threat intelligence analysts. CVE and IOC data in this report is sourced live from NVD, CISA KEV, and the SENTINEL APEX threat-actor/indicator database as of the publish date below. Authorized recipients only.</p>
     <div class="meta-grid">
       <div class="meta-item"><label>Published</label><span>${now}</span></div>
       <div class="meta-item"><label>Category</label><span>${reportMeta.category}</span></div>
@@ -204,19 +238,19 @@ function generateReportHTML({ reportMeta, cves, actors, summary, iocs, now, orde
   <!-- Threat Landscape -->
   <div class="section" id="threat-landscape">
     <h2>2. Threat Landscape Overview</h2>
-    <h3>2.1 Active Threat Categories</h3>
+    <h3>2.1 Current Dataset Composition</h3>
+    <p style="font-size:0.78rem;color:#64748b">Counts below are drawn from the ${landscape?.total ?? cves.length} CRITICAL/HIGH-severity CVEs currently tracked in the SENTINEL APEX database as of ${now}. These are snapshot counts, not a period-over-period trend — the platform does not yet retain the historical snapshots needed to compute a real QoQ/YoY delta, so no such percentage is shown.</p>
     <table>
-      <tr><th>Threat Category</th><th>Risk Level</th><th>Trend</th><th>Primary Targets</th></tr>
-      <tr><td>Ransomware Operations</td><td><span class="badge badge-critical">CRITICAL</span></td><td>↑ +34% QoQ</td><td>Healthcare, Finance, Manufacturing</td></tr>
-      <tr><td>Nation-State APT Campaigns</td><td><span class="badge badge-critical">CRITICAL</span></td><td>↑ +22% QoQ</td><td>Defence, Government, Energy</td></tr>
-      <tr><td>AI-Weaponized Attacks</td><td><span class="badge badge-high">HIGH</span></td><td>↑ +187% YoY (new)</td><td>Technology, Finance, SaaS</td></tr>
-      <tr><td>Supply Chain Compromise</td><td><span class="badge badge-critical">CRITICAL</span></td><td>→ Stable High</td><td>All sectors (via software vendors)</td></tr>
-      <tr><td>Credential-Based Attacks</td><td><span class="badge badge-high">HIGH</span></td><td>↑ +41% QoQ</td><td>Cloud, Identity Providers</td></tr>
-      <tr><td>OT/ICS Targeting</td><td><span class="badge badge-high">HIGH</span></td><td>↑ +67% YoY</td><td>Energy, Water, Manufacturing</td></tr>
+      <tr><th>Category</th><th>Tracked in Current Dataset</th><th>Primary Targets (industry reference)</th></tr>
+      <tr><td>Ransomware-Linked CVEs</td><td><strong style="color:#00d4ff">${landscape?.ransomware_count ?? '—'}</strong></td><td>Healthcare, Finance, Manufacturing</td></tr>
+      <tr><td>Nation-State APT-Attributed CVEs</td><td><strong style="color:#00d4ff">${landscape?.apt_attributed_count ?? '—'}</strong></td><td>Defence, Government, Energy</td></tr>
+      <tr><td>Actively Exploited (CISA KEV)</td><td><strong style="color:#00d4ff">${landscape?.kev_count ?? kevCount}</strong></td><td>All sectors</td></tr>
     </table>
 
-    <h3>2.2 Geographic Threat Activity</h3>
-    <p>Threat activity originates primarily from Russia (APT28, APT29, Sandworm), China (APT41, Salt Typhoon), North Korea (Lazarus Group, Kimsuky), and Iran (APT35, OilRig). India-targeted attacks have increased 78% year-over-year, primarily targeting BFSI, government portals, and UPI infrastructure.</p>
+    <h3>2.2 Threat Actor Attribution (Current Dataset)</h3>
+    <p>${actors.length
+      ? `Actor attribution in the current SENTINEL APEX database spans ${[...new Set(actors.map(a => a.nation_state).filter(Boolean))].join(', ') || 'multiple tracked groups'}. See Section 4 for individual actor profiles and targeted sectors.`
+      : `No threat-actor attribution records are currently cataloged in the SENTINEL APEX database for this report — see Section 4.`}</p>
   </div>
 
   <!-- Critical CVEs -->
@@ -238,18 +272,14 @@ function generateReportHTML({ reportMeta, cves, actors, summary, iocs, now, orde
   <!-- Threat Actors -->
   <div class="section" id="threat-actors">
     <h2>4. Threat Actor Intelligence</h2>
-    <h3>4.1 APT29 (Cozy Bear) — Russia SVR</h3>
-    <p><strong>Activity Status:</strong> ACTIVE · <strong>Confidence:</strong> HIGH · <strong>Last Observed:</strong> ${now}</p>
-    <p>APT29 continues spear-phishing campaigns targeting government, energy, and defence contractors. Recent TTPs include cloud credential theft via OAuth token abuse, living-off-the-land techniques to evade EDR detection, and supply chain compromise via trusted software update mechanisms.</p>
-    <p><strong>Targeted Sectors:</strong> Government, Energy, Defence, Think Tanks, Healthcare (COVID research)</p>
-
-    <h3>4.2 Lazarus Group — DPRK RGB</h3>
-    <p><strong>Activity Status:</strong> ACTIVE · <strong>Confidence:</strong> HIGH · <strong>Last Observed:</strong> ${now}</p>
-    <p>Lazarus Group remains the most active financially-motivated nation-state actor globally. Current campaigns targeting cryptocurrency exchanges, DeFi protocols, and banking SWIFT infrastructure. The group has pivoted to AI-assisted social engineering for initial access.</p>
-
-    <h3>4.3 APT41 (Double Dragon) — China MSS</h3>
-    <p><strong>Activity Status:</strong> ACTIVE · <strong>Confidence:</strong> HIGH</p>
-    <p>APT41 simultaneously runs state-sponsored espionage and financially-motivated cybercrime. Persistent focus on technology companies, healthcare research, and gaming. Notable for zero-day exploitation within hours of public disclosure.</p>
+    ${actors.length ? actors.map((a, i) => `
+    <h3>4.${i + 1} ${escapeHtmlLocal(a.name)}${a.nation_state ? ` — ${escapeHtmlLocal(a.nation_state)}` : ''}</h3>
+    <p><strong>Threat Level:</strong> ${escapeHtmlLocal(a.threat_level || 'UNKNOWN')} · <strong>Confidence:</strong> ${a.confidence_score != null ? a.confidence_score + '%' : '—'}${a.last_active ? ` · <strong>Last Active:</strong> ${escapeHtmlLocal(String(a.last_active).slice(0, 10))}` : ''}</p>
+    <p>${escapeHtmlLocal(a.description || 'No detailed profile on file yet for this actor.')}</p>
+    ${formatJsonList(a.target_sectors) ? `<p><strong>Targeted Sectors:</strong> ${escapeHtmlLocal(formatJsonList(a.target_sectors))}</p>` : ''}
+    ${formatJsonList(a.aliases) ? `<p><strong>Aliases:</strong> ${escapeHtmlLocal(formatJsonList(a.aliases))}</p>` : ''}
+    `).join('') : `
+    <div class="warning"><strong>ℹ️ No threat-actor profiles currently cataloged</strong>The SENTINEL APEX threat-actor database has no entries as of ${now}. Actor profiles are added continuously as intelligence is ingested — this section will populate in future reports.</div>`}
   </div>
 
   <!-- MITRE Mapping -->

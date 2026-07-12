@@ -8,6 +8,8 @@
  *   GET  /api/revos/ciso-report/:id
  */
 
+import { queryComplianceResults, calculateMTTX, loadIncidents } from '../../handlers/cisoMetrics.js';
+
 // ─── Generate CISO report data snapshot ──────────────────────────────────────
 export async function generateCISOReport(db, kv, options = {}) {
   const { reportType = 'monthly', userId, clientId, period } = options;
@@ -15,7 +17,7 @@ export async function generateCISOReport(db, kv, options = {}) {
 
   try {
     // Gather all data in parallel
-    const [threatStats, scanStats, complianceData, mrrData, topCVEs, csSignals] = await Promise.all([
+    const [threatStats, scanStats, latestMRRRow, mrrTrend, topCVEs, csSignals, complianceRows, incidents] = await Promise.all([
       // Threat landscape
       db?.prepare(`
         SELECT
@@ -39,7 +41,7 @@ export async function generateCISOReport(db, kv, options = {}) {
         WHERE created_at > datetime('now','-30 days')
       `).first().catch(() => null),
 
-      // MRR (for executive reports)
+      // MRR (for executive reports) — latest single snapshot row
       db?.prepare(`SELECT * FROM mrr_snapshots ORDER BY snapshot_date DESC LIMIT 1`).first().catch(() => null),
 
       // MRR trend
@@ -63,11 +65,29 @@ export async function generateCISOReport(db, kv, options = {}) {
         FROM cs_signals WHERE resolved=0
         GROUP BY signal_type
       `).all().catch(() => ({ results: [] })),
+
+      // Real compliance posture — same D1-authoritative compliance_results
+      // source cisoMetrics.js uses. Previously never queried here at all;
+      // compliance_status below was 5 hardcoded framework scores
+      // (ALIGNED/COMPLIANT/90+) shown identically on every report.
+      queryComplianceResults(db),
+
+      // Real incident log for MTTD/MTTR — same per-user KV source
+      // cisoMetrics.js reads. Only available when this report is for a
+      // specific user; an MSSP clientId-only report has no incident log
+      // keyed by clientId, so it honestly gets no MTTD/MTTR rather than a
+      // guess.
+      userId ? loadIncidents({ SECURITY_HUB_KV: kv }, userId) : Promise.resolve([]),
     ]);
 
     const now = new Date();
     const periodLabel = now.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
-    const latestMRR = mrrData;
+    // Was wrongly aliased to `mrrData` (the MRR *trend* array from the query
+    // below, `{results:[...]}`) instead of this single latest-snapshot row —
+    // mrr_inr/churn_rate/nrr were reading undefined off the wrong shape on
+    // every executive report.
+    const latestMRR = latestMRRRow;
+    const mttx = calculateMTTX(incidents);
 
     const report = {
       report_id:    `RPT-${Date.now().toString(36).toUpperCase()}`,
@@ -77,7 +97,7 @@ export async function generateCISOReport(db, kv, options = {}) {
       generated_at: now.toISOString(),
       generated_by: 'CYBERDUDEBIVASH MYTHOS AI Engine',
 
-      executive_summary: buildExecutiveSummary(threatStats, scanStats, latestMRR, reportType),
+      executive_summary: buildExecutiveSummary(threatStats, scanStats, latestMRR, reportType, mttx),
 
       threat_landscape: {
         total_cves_tracked:    threatStats?.total || 0,
@@ -100,11 +120,11 @@ export async function generateCISOReport(db, kv, options = {}) {
         critical_scans:  scanStats?.critical_scans || 0,
         high_risk_scans: scanStats?.high_scans || 0,
         unique_targets:  scanStats?.unique_targets || 0,
-        mttd_hours:      2.3,
-        mttr_hours:      18.5,
+        mttd_hours:      mttx.mttd_hours,     // real, from incident log — null if no incidents on file (was hardcoded 2.3)
+        mttr_hours:      mttx.mttr_hours,     // real, from incident log — null if no resolved incidents (was hardcoded 18.5)
         rules_generated: 0,
-        incidents_resolved: 0,
-        sla_compliance_pct: 98.5,
+        incidents_resolved: incidents.filter(i => i.status === 'RESOLVED').length,
+        sla_compliance_pct: null,   // no SLA-incident tracking data source yet — honest null, not a fabricated 98.5
       },
 
       revenue_metrics: reportType === 'executive' ? {
@@ -113,16 +133,13 @@ export async function generateCISOReport(db, kv, options = {}) {
         active_subs:     latestMRR?.active_subs || 0,
         churn_rate:      latestMRR?.churn_rate || 0,
         nrr:             latestMRR?.nrr || 100,
-        mrr_trend:       (mrrData?.results || []).slice(0, 12).reverse(),
+        mrr_trend:       (mrrTrend?.results || []).slice(0, 12).reverse(),
       } : null,
 
-      compliance_status: {
-        iso_27001:   { status: 'IN_PROGRESS', score: 72, gaps: 8 },
-        soc2:        { status: 'ALIGNED',     score: 85, gaps: 3 },
-        gdpr:        { status: 'COMPLIANT',   score: 90, gaps: 1 },
-        dpdp_2023:   { status: 'ALIGNED',     score: 80, gaps: 5 },
-        pci_dss:     { status: 'PARTIAL',     score: 65, gaps: 12 },
-      },
+      // Real D1 compliance_results data (same source cisoMetrics.js uses) —
+      // NO_DATA/null per framework, not a fabricated ALIGNED/COMPLIANT score,
+      // when this org/client has no assessment on file for it yet.
+      compliance_status: buildComplianceStatusSection(complianceRows),
 
       recommendations: buildRecommendations(threatStats, scanStats, latestMRR),
 
@@ -155,8 +172,31 @@ export async function generateCISOReport(db, kv, options = {}) {
   }
 }
 
+// ─── Map real compliance_results rows onto the report's 5 known frameworks ────
+// Preserves the original object shape (iso_27001/soc2/gdpr/dpdp_2023/pci_dss
+// keys) so existing consumers of this report don't break — but each value is
+// now real (matched by framework name) or an honest NO_DATA/null sentinel,
+// never a fabricated score.
+const FRAMEWORK_KEY_MATCHERS = [
+  { key: 'iso_27001', test: f => /iso\s*27001/i.test(f || '') },
+  { key: 'soc2',      test: f => /soc\s*2/i.test(f || '') },
+  { key: 'gdpr',      test: f => /gdpr/i.test(f || '') },
+  { key: 'dpdp_2023', test: f => /dpdp/i.test(f || '') },
+  { key: 'pci_dss',   test: f => /pci/i.test(f || '') },
+];
+
+function buildComplianceStatusSection(rows) {
+  const out = {};
+  for (const { key } of FRAMEWORK_KEY_MATCHERS) out[key] = { status: 'NO_DATA', score: null, gaps: null };
+  for (const row of rows || []) {
+    const match = FRAMEWORK_KEY_MATCHERS.find(m => m.test(row.framework));
+    if (match) out[match.key] = { status: row.status, score: Math.round(row.compliance_pct), gaps: row.open_gaps };
+  }
+  return out;
+}
+
 // ─── Build executive summary ──────────────────────────────────────────────────
-function buildExecutiveSummary(threats, scans, mrr, type) {
+function buildExecutiveSummary(threats, scans, mrr, type, mttx) {
   const threatLevel = getThreatLevel(threats);
   const lines = [
     `**Threat Level: ${threatLevel}** — ${threats?.critical || 0} critical CVEs tracked this period`,
@@ -169,8 +209,11 @@ function buildExecutiveSummary(threats, scans, mrr, type) {
     lines.push(`Churn rate: ${mrr.churn_rate || 0}% | NRR: ${mrr.nrr || 100}%`);
   }
 
-  lines.push(`MTTD: 2.3 hours (industry avg: 194 hours) | MTTR: 18.5 hours`);
-  lines.push(`Platform SLA compliance: 98.5% | Uptime: 99.97%`);
+  // Real MTTD/MTTR from this user's incident log — omitted (not fabricated as
+  // a fixed 2.3h/18.5h) when there's no incident history yet to compute them from.
+  if (mttx && (mttx.mttd_hours != null || mttx.mttr_hours != null)) {
+    lines.push(`MTTD: ${mttx.mttd_hours ?? '—'} hours (industry avg: ${mttx.industry_mttd_hours} hours) | MTTR: ${mttx.mttr_hours ?? '—'} hours`);
+  }
 
   return lines.join('\n\n');
 }
@@ -205,13 +248,6 @@ function buildRecommendations(threats, scans, mrr) {
       effort: 'MEDIUM', impact: 'HIGH',
     });
   }
-
-  recs.push({
-    priority: 'MEDIUM',
-    title: 'Enable DNSSEC across all domains',
-    detail: '61% of scanned targets lack DNSSEC — configure at registrar to prevent BGP hijacking',
-    effort: 'LOW', impact: 'MEDIUM',
-  });
 
   recs.push({
     priority: 'MEDIUM',

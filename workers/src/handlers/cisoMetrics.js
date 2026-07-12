@@ -201,7 +201,10 @@ function scoreToGrade(score) {
 }
 
 // ─── MTTD / MTTR calculation from incident log ────────────────────────────────
-function calculateMTTX(incidents) {
+// Exported for reuse by cisoReportEngine.js — that file previously hardcoded
+// mttd_hours/mttr_hours (2.3 / 18.5) for every report instead of computing
+// them from this same incident log.
+export function calculateMTTX(incidents) {
   const resolved   = incidents.filter(i => i.status === 'RESOLVED' && i.detected_at && i.resolved_at);
   const detected   = incidents.filter(i => i.detected_at && i.created_at);
 
@@ -283,10 +286,15 @@ function buildRiskRegister(scanHistory, incidents) {
 }
 
 // ─── Compliance posture from D1 compliance scan data ─────────────────────────
-async function buildComplianceStatus(env) {
-  if (!env?.DB) return [];
+// Exported so other report generators (executiveRiskHandlers.js,
+// cisoReportEngine.js) read the same D1-authoritative source instead of each
+// maintaining their own hardcoded/undisclosed compliance constants — that
+// divergence (this query vs. invented placeholder scores) was itself a
+// fabrication finding in two sibling files.
+export async function queryComplianceResults(db) {
+  if (!db) return [];
   try {
-    const rows = await env.DB.prepare(`
+    const rows = await db.prepare(`
       SELECT framework, controls_met, controls_total, last_audit_date, next_audit_date, status, trend, gap_details
       FROM compliance_results
       ORDER BY framework ASC
@@ -314,6 +322,10 @@ async function buildComplianceStatus(env) {
   }
 }
 
+async function buildComplianceStatus(env) {
+  return queryComplianceResults(env?.DB);
+}
+
 // ─── Load incidents from KV ───────────────────────────────────────────────────
 // Previously a single shared key for every caller — any customer's logged
 // incident was visible (and editable) by every other customer. Namespaced
@@ -321,7 +333,12 @@ async function buildComplianceStatus(env) {
 function incidentsKey(userId) {
   return `${KV_INCIDENTS_KEY}:${userId || 'anon'}`;
 }
-async function loadIncidents(env, userId) {
+// Exported so cisoReportEngine.js's generateCISOReport() reads the same
+// per-user incident log this file uses for MTTD/MTTR, rather than fabricating
+// those numbers. clientId-scoped (MSSP) callers have no incident log here yet
+// (nothing writes incidents keyed by clientId) — callers should only pass a
+// real userId, and treat "no userId" as "no incident data available".
+export async function loadIncidents(env, userId) {
   if (!env?.SECURITY_HUB_KV) return getSeedIncidents();
   try {
     const stored = await env.SECURITY_HUB_KV.get(incidentsKey(userId), { type: 'json' });
