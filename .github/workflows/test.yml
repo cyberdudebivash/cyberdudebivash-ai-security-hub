@@ -90,6 +90,36 @@ jobs:
       - name: CVE meta integrity (no truncated/missing/inconsistent tags)
         run: node scripts/repair-cve-meta.mjs --check
 
+  # ── Domain scan engine rule conformance (required) ───────────────────────
+  # trust-center.html publishes this result as a public, checkable claim
+  # ("N/N documented risk rules verified") in place of an unauditable AI
+  # accuracy percentage. This job re-runs the real assertions against the
+  # real engine on every build and fails if the committed frontend/data/
+  # artifact the page fetches has drifted from a fresh run — the published
+  # claim can never silently go stale or diverge from the code it describes.
+  domain-engine-conformance:
+    name: Domain Engine Rule Conformance
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with: { node-version: "24" }
+      - name: Run rule conformance benchmark
+        run: node scripts/domain-engine-rule-conformance.mjs
+      - name: Fail if the published result no longer matches a fresh run
+        # Compares substantive fields only — generated_at legitimately differs
+        # on every run and is not itself a drift signal.
+        run: |
+          COMMITTED=$(git show HEAD:frontend/data/domain-engine-conformance.json | jq -S 'del(.generated_at)')
+          FRESH=$(jq -S 'del(.generated_at)' frontend/data/domain-engine-conformance.json)
+          if [ "$COMMITTED" != "$FRESH" ]; then
+            echo "::error::frontend/data/domain-engine-conformance.json's committed results no longer match a fresh run against the current engine — commit the regenerated file."
+            diff <(echo "$COMMITTED") <(echo "$FRESH") || true
+            exit 1
+          fi
+          echo "Committed results match a fresh run — not stale."
+
   # ── Accessibility (required) ─────────────────────────────────────────────
   a11y:
     name: Accessibility (axe)

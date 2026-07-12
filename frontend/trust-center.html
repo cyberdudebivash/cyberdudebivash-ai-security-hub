@@ -160,7 +160,7 @@ footer a{color:#22c55e;text-decoration:none}
 <div class="card">
 <div class="card-icon">🔍</div>
 <h3>Scan Engine</h3>
-<p>Multi-layer active reconnaissance: DNS, TLS, HTTP headers, CVE correlation, OWASP mapping.</p>
+<p>Deterministic, static analysis — not live network reconnaissance. Domain risk scoring runs entirely from domain-string characteristics (TLD reputation, phishing-pattern matching, structural signals); TLS, DNSSEC, HTTP header, port, and email-authentication findings are explicitly flagged as requiring live verification rather than presented as observed. Every scan response carries a machine-readable <code>assessment_mode</code> and <code>live_verification</code> field so this is checkable, not just claimed. See <a href="#detection-methodology" style="color:#86efac">Verified Detection Methodology</a> below.</p>
 </div>
 <div class="card">
 <div class="card-icon">🧠</div>
@@ -177,6 +177,14 @@ footer a{color:#22c55e;text-decoration:none}
 <h3>Compliance Framework Status</h3>
 <p>Honestly scoped — we mark frameworks "In Progress" or "Planning" rather than implying certifications we don't yet hold.</p>
 <div id="compliance-table"></div>
+</div>
+<div class="prose" style="margin-top:32px" id="detection-methodology">
+<h3>Verified Detection Methodology</h3>
+<p>Most AI security vendors report a single "detection accuracy" percentage with no independent audit behind it. Our domain scan engine isn't an ML classifier making claims like that in the first place — it's deterministic, documented business logic, so instead of an unverifiable accuracy number we publish something checkable: every documented risk rule, tested in isolation, with the real pass/fail result from the last CI run.</p>
+<div id="conformance-results">
+<p style="color:#94a3b8">Loading verified results…</p>
+</div>
+<p style="font-size:0.85em;color:#94a3b8">Methodology and full rule list: <code>scripts/domain-engine-rule-conformance.mjs</code> in the public repository. Re-run it yourself against <code>workers/src/engine.js</code> — same input, same result, every time.</p>
 </div>
 </div>
 </section>
@@ -314,6 +322,25 @@ footer a{color:#22c55e;text-decoration:none}
     }
   } catch (e) {
     // Graceful degradation — static content above already covers the essentials
+  }
+})();
+
+(async () => {
+  const el = document.getElementById('conformance-results');
+  try {
+    const res = await fetch('/data/domain-engine-conformance.json');
+    const d = await res.json();
+    const when = new Date(d.generated_at).toISOString().slice(0, 10);
+    const allPass = d.assertions_failed === 0;
+    el.innerHTML = `
+      <div class="card" style="border-color:${allPass ? 'var(--accent)' : '#ef4444'}">
+        <div style="font-size:2rem;font-weight:700;color:${allPass ? 'var(--accent)' : '#ef4444'}">${d.assertions_passed} / ${d.assertions_total}</div>
+        <div style="color:#94a3b8;margin:4px 0 12px">documented risk rules verified — ${d.status}</div>
+        <p style="margin:0;font-size:.9rem">${d.methodology}</p>
+        <p style="margin:8px 0 0;font-size:.8rem;color:#475569">Last verified ${when} against <code>${d.engine_file}</code>, re-run every CI build.</p>
+      </div>`;
+  } catch (e) {
+    el.innerHTML = '<p style="color:#94a3b8">Live results unavailable right now — methodology and source remain public in the repository (see below).</p>';
   }
 })();
 </script>
