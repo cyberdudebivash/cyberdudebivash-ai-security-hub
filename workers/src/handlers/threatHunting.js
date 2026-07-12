@@ -539,7 +539,20 @@ export async function handleHuntSessions(request, env, authCtx) {
 }
 
 // ─── GET /api/hunt/mitre ──────────────────────────────────────────────────────
+// MITRE ATT&CK Enterprise total technique count — a stable published baseline,
+// not derived from this codebase's own data (unlike covered_techniques/
+// coverage_pct below, which previously were hardcoded to numbers that didn't
+// match hunt_coverage at all — 47/25.4% vs. the ~10 techniques actually listed).
+const MITRE_ENTERPRISE_TOTAL_TECHNIQUES = 185;
+
 export async function handleMITREMatrix(request, env, authCtx) {
+  const hunt_coverage = {
+    kql:   ['T1021', 'T1003', 'T1059', 'T1547', 'T1071', 'T1048'],
+    sigma: ['T1003', 'T1021', 'T1059', 'T1505', 'T1055'],
+    yara:  ['T1486', 'T1071', 'T1027', 'T1055'],
+  };
+  const coveredTechniques = new Set(Object.values(hunt_coverage).flat());
+
   const matrix = {
     tactics: [
       { id: 'TA0001', name: 'Initial Access',        techniques: ['T1566', 'T1190', 'T1133', 'T1078', 'T1091'] },
@@ -555,14 +568,10 @@ export async function handleMITREMatrix(request, env, authCtx) {
       { id: 'TA0011', name: 'Command and Control',   techniques: ['T1071', 'T1090', 'T1095', 'T1102', 'T1571'] },
       { id: 'TA0040', name: 'Impact',                techniques: ['T1485', 'T1486', 'T1489', 'T1490', 'T1498'] },
     ],
-    hunt_coverage: {
-      kql:   ['T1021', 'T1003', 'T1059', 'T1547', 'T1071', 'T1048'],
-      sigma: ['T1003', 'T1021', 'T1059', 'T1505', 'T1055'],
-      yara:  ['T1486', 'T1071', 'T1027', 'T1055'],
-    },
-    total_techniques: 185,
-    covered_techniques: 47,
-    coverage_pct: 25.4,
+    hunt_coverage,
+    total_techniques:   MITRE_ENTERPRISE_TOTAL_TECHNIQUES,
+    covered_techniques: coveredTechniques.size,
+    coverage_pct:        Math.round((coveredTechniques.size / MITRE_ENTERPRISE_TOTAL_TECHNIQUES) * 1000) / 10,
   };
 
   return Response.json({

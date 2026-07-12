@@ -5200,15 +5200,13 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       const jobId = path.replace('/api/mythos/god-mode/report', '').replace(/^\//, '') || 'latest';
       return withSecurityHeaders(withCors(await handleGodModeReport(request, env, null, jobId), request));
     }
-    // GET /api/mythos/god-mode/ciso — CISO intel pack + board report
+    // GET /api/mythos/god-mode/ciso — CISO intel pack + board report (public read, no authCtx used)
     if (path === '/api/mythos/god-mode/ciso' && method === 'GET') {
-      const authCtx = await resolveAuthV5(request, env).catch(() => null);
-      return withSecurityHeaders(withCors(await handleGodModeCISOIntel(request, env, authCtx || {}), request));
+      return withSecurityHeaders(withCors(await handleGodModeCISOIntel(request, env), request));
     }
-    // GET /api/mythos/god-mode/hunt-pack — latest SOAR hunt pack (KQL + Sigma + YARA)
+    // GET /api/mythos/god-mode/hunt-pack — latest SOAR hunt pack (KQL + Sigma + YARA) (public read, no authCtx used)
     if (path === '/api/mythos/god-mode/hunt-pack' && method === 'GET') {
-      const authCtx = await resolveAuthV5(request, env).catch(() => null);
-      return withSecurityHeaders(withCors(await handleGodModeHuntPack(request, env, authCtx || {}), request));
+      return withSecurityHeaders(withCors(await handleGodModeHuntPack(request, env), request));
     }
     // GET /api/mythos/god-mode/compliance — compliance posture snapshot
     if (path === '/api/mythos/god-mode/compliance' && method === 'GET') {

@@ -76,21 +76,21 @@
     "subscription_gated": true,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "Global request-ID correlation is genuinely covered: workers/test/globalErrorBoundary.test.mjs:23 imports the real worker from workers/src/index.js and :75 asserts a caller-supplied correlation ID is echoed back in the response body's request_id field. Rate limiting itself is not: the only related test, workers/test/globalIntelMonetization.test.mjs:14, mocks checkRateLimitV2 to always return {allowed:true} rather than exercising the real tier-based cost/limit logic in workers/src/middleware/rateLimit.js — grepped workers/test/*.mjs for any direct import of that module, 0 matches."
+      "has_tests": true,
+      "evidence": "Global request-ID correlation is genuinely covered: workers/test/globalErrorBoundary.test.mjs:23 imports the real worker from workers/src/index.js and :75 asserts a caller-supplied correlation ID is echoed back in the response body's request_id field. FIXED 2026-07-12: rate limiting itself now has real coverage too — workers/test/rateLimitArithmetic.test.mjs (13 tests) imports checkRateLimitV2/checkRateLimitCost/rateLimitResponse/injectRateLimitHeaders directly (unmocked) and exercises them against a real in-memory KV: FREE-tier burst_per_min=2 (3rd call to the same endpoint in the same minute is burst_exceeded), FREE-tier daily_limit=5 tracked per-(identity,endpoint) (6th call to the same endpoint, spread across simulated minutes via vi.useFakeTimers to avoid tripping burst first, is daily_limit_reached), per-endpoint remaining-count decrement, ENTERPRISE unlimited (daily_limit:-1) across 10 real calls, an abuse-ban short-circuit, fail-open behavior with no KV binding, an unknown-tier fallback to FREE limits (not unlimited), and checkRateLimitCost's cost-weighted budget (FREE costBudget=10, two cost-5 calls succeed, a third is cost_budget_exceeded). Also confirms rateLimitResponse's upgrade_url is this platform's own real production domain, not an external one. The pre-existing workers/test/globalIntelMonetization.test.mjs:14 still mocks checkRateLimitV2 away for its own unrelated purpose — that is fine now that the real function has its own direct test file."
     },
     "docs": [
       { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "PILOT ONLY",
     "priority": "P6",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-08",
-      "evidence": "workers/src/middleware/rateLimit.js read in full (4 exported functions); workers/src/index.js grepped for 'rateLimit' (6 call sites, confirming real usage, not dead code); workers/src/index.js:8532-8546 read directly for request-ID generation/propagation; workers/test/*.mjs grepped for direct imports of workers/src/middleware/rateLimit.js and for request_id/requestId references."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/middleware/rateLimit.js read in full (4 exported functions); workers/src/index.js grepped for 'rateLimit' (6 call sites, confirming real usage, not dead code); workers/src/index.js:8532-8546 read directly for request-ID generation/propagation; workers/test/*.mjs grepped for direct imports of workers/src/middleware/rateLimit.js and for request_id/requestId references. FIXED 2026-07-12: workers/src/middleware/auth.js's real TIERS table (FREE 5/day+2/min, PRO 500/day+20/min, ENTERPRISE unlimited+60/min) read directly to build accurate test fixtures — confirmed the daily-limit KV key (rl:day:identity:endpoint:day) is per-endpoint, not global, which the first draft of the new test got wrong and had to correct using fake timers rather than weakening the assertions. Full suite green: 256 files / 2628 tests. Registry validator: 0 failures, 0 warnings."
     },
-    "notes": "subscription_gated: true reflects that rate limits are tier-differentiated (ENDPOINT_COST / per-tier limits in workers/src/middleware/rateLimit.js), not that the middleware itself requires a subscription to run. The concrete, actionable gap is test coverage of the real rate-limiting arithmetic (tier limits, cost accounting, KV counter behavior) — every existing reference to it in tests mocks it away rather than exercising it, so a regression in the actual limit/cost logic would not be caught by the current suite."
+    "notes": "subscription_gated: true reflects that rate limits are tier-differentiated (ENDPOINT_COST / per-tier limits in workers/src/middleware/rateLimit.js), not that the middleware itself requires a subscription to run. FIXED 2026-07-12: the concrete, actionable gap this entry named — real test coverage of the rate-limiting arithmetic — is closed; see test_coverage.evidence. operational_status moves NOT READY -> PILOT ONLY. No code change was made to the middleware itself; the real implementation was already correct, just unverified by any real (non-mocked) test."
   },
   {
     "id": "CAP-PROD-003",
