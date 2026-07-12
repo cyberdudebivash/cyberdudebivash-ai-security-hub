@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-12T07:56:59.933Z
+Generated: 2026-07-12T08:03:16.903Z
 Capabilities catalogued: 97
 
 ## Overall Completion
@@ -18,8 +18,8 @@ Capabilities catalogued: 97
 | Dimension | % |
 |---|---|
 | Backend | 89.7% |
-| Frontend | 67.5% |
-| Parity (backend **and** frontend both exist) | 61.9% |
+| Frontend | 68.6% |
+| Parity (backend **and** frontend both exist) | 62.9% |
 | Customer Journeys complete (dynamic_browser-verified) | 3.1% |
 
 ## Gaps by Priority
@@ -40,8 +40,8 @@ Capabilities catalogued: 97
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 24 | Backend exists, but not discoverable via navigation |
-| Backend-only features | 17 | Backend exists, zero frontend surface |
+| Hidden features | 23 | Backend exists, but not discoverable via navigation |
+| Backend-only features | 16 | Backend exists, zero frontend surface |
 | Duplicate systems | 4 | Backend marked `duplicate` (two implementations of one capability) |
 | Broken journeys | 9 | Priority P1 |
 
@@ -93,7 +93,7 @@ complete", "bug free", or "guaranteed".
 | CAP-COMP-001 | Global Compliance Packs Store | ✓ | ✓ | ✓ | PILOT ONLY | P1 |
 | CAP-COMP-002 | Compliance Assessment / Readiness Engine (CDB-COMP-001) | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
 | CAP-COMP-003 | Tools Marketplace Compliance Toolkits | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
-| CAP-COMP-004 | DPDP Act 2023 Compliance Management Engine | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-COMP-004 | DPDP Act 2023 Compliance Management Engine | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
 | CAP-COMP-005 | Trust Center Compliance Framework Alignment | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
 
 ### customer-portal (4 capabilities)

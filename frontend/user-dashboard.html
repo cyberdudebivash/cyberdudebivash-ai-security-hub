@@ -905,6 +905,9 @@
       <div class="nav-item" data-page="compliance" onclick="showPage('compliance',this);loadComplianceAssessment()">
         <span class="nav-icon">📋</span> Compliance
       </div>
+      <div class="nav-item" data-page="dpdp" onclick="showPage('dpdp',this);loadDPDPOverview()">
+        <span class="nav-icon">🇮🇳</span> DPDP Act 2023
+      </div>
       <div class="nav-item" data-page="ai-analysis" onclick="showPage('ai-analysis',this)">
         <span class="nav-icon">🤖</span> AI Analysis
       </div>
@@ -2109,6 +2112,127 @@
         <div class="card">
           <div class="card-header"><span class="card-title">Certification Roadmap</span></div>
           <div class="card-body" style="padding:20px" id="compliance-roadmap"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-dpdp" class="page">
+      <div class="page-title">DPDP Act 2023 Compliance</div>
+      <div class="page-subtitle">India's Digital Personal Data Protection Act — section-by-section gap analysis, readiness scoring, and Record of Processing Activities (RoPA) generation</div>
+
+      <div class="upsell-banner" id="dpdp-upsell" style="display:none">
+        <div class="upsell-text">
+          <strong>Enterprise Feature</strong> — DPDP Compliance Engine requires Pro, Enterprise, or MSSP plan
+          <p>Covers 9 DPDP Act sections, an AI-powered remediation roadmap, and automated RoPA generation.</p>
+        </div>
+        <button class="btn-upgrade" onclick="showPage('billing',null)">Upgrade to Pro →</button>
+      </div>
+
+      <div id="dpdp-content" style="display:none">
+        <div class="ciso-kpi-grid" id="dpdp-overview-kpis" style="margin-bottom:20px">
+          <div class="ciso-kpi">
+            <div class="ciso-kpi-val" id="dpdp-latest-score" style="color:#7c3aed">—</div>
+            <div class="ciso-kpi-label">Latest Readiness Score</div>
+          </div>
+          <div class="ciso-kpi">
+            <div class="ciso-kpi-val" id="dpdp-total-sections" style="color:#00d4ff">—</div>
+            <div class="ciso-kpi-label">Act Sections Covered</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header"><span class="card-title">Run a DPDP Gap Assessment</span></div>
+          <div class="card-body" style="padding:20px">
+            <div class="form-group">
+              <label class="form-label">Organization Name</label>
+              <input id="dpdp-org-name" class="form-input" placeholder="e.g. Acme Pvt Ltd" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Industry</label>
+              <select id="dpdp-industry" class="form-input">
+                <option>Technology</option><option>Financial Services</option><option>Healthcare</option><option>Retail</option><option>Government</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Employee Count</label>
+              <input id="dpdp-employee-count" type="number" class="form-input" placeholder="e.g. 250" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Personal data categories processed</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:.85rem">
+                <label><input type="checkbox" class="dpdp-data-cat" value="email" checked /> Email / contact</label>
+                <label><input type="checkbox" class="dpdp-data-cat" value="financial" /> Financial</label>
+                <label><input type="checkbox" class="dpdp-data-cat" value="health" /> Health</label>
+                <label><input type="checkbox" class="dpdp-data-cat" value="biometric" /> Biometric</label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label style="font-size:.85rem"><input type="checkbox" id="dpdp-has-children" /> We process children's (under-18) personal data</label>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Controls currently in place</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.85rem">
+                <label><input type="checkbox" id="dpdp-has-dpo" /> Data Protection Officer appointed</label>
+                <label><input type="checkbox" id="dpdp-has-privacy-notice" /> Privacy notice published</label>
+                <label><input type="checkbox" id="dpdp-has-consent" /> Consent management mechanism</label>
+                <label><input type="checkbox" id="dpdp-has-dsr" /> Data Subject Rights (DSR) process</label>
+                <label><input type="checkbox" id="dpdp-has-breach" /> Breach notification process</label>
+                <label><input type="checkbox" id="dpdp-has-retention" /> Data retention policy</label>
+                <label><input type="checkbox" id="dpdp-has-audit" /> Recent security audit</label>
+              </div>
+            </div>
+            <button class="btn btn-primary" id="dpdp-assess-btn" onclick="runDPDPAssessment()">Run Assessment</button>
+          </div>
+        </div>
+
+        <div id="dpdp-results" style="display:none">
+          <div class="ciso-kpi-grid" style="margin-bottom:20px">
+            <div class="ciso-kpi">
+              <div class="ciso-kpi-val" id="dpdp-overall-score" style="color:#7c3aed">—</div>
+              <div class="ciso-kpi-label">Overall Score</div>
+            </div>
+            <div class="ciso-kpi">
+              <div class="ciso-kpi-val" id="dpdp-maturity" style="font-size:1rem">—</div>
+              <div class="ciso-kpi-label">Maturity Level</div>
+            </div>
+            <div class="ciso-kpi">
+              <div class="ciso-kpi-val" id="dpdp-critical-gaps" style="color:#ef4444">—</div>
+              <div class="ciso-kpi-label">Critical Gaps</div>
+            </div>
+            <div class="ciso-kpi">
+              <div class="ciso-kpi-val" id="dpdp-high-gaps" style="color:#f59e0b">—</div>
+              <div class="ciso-kpi-label">High Gaps</div>
+            </div>
+            <div class="ciso-kpi">
+              <div class="ciso-kpi-val" id="dpdp-ready" style="font-size:1rem">—</div>
+              <div class="ciso-kpi-label">Enforcement-Ready</div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:20px">
+            <div class="card-header"><span class="card-title">Section-by-Section Gap Analysis</span></div>
+            <div class="card-body" style="padding:20px" id="dpdp-sections"></div>
+          </div>
+
+          <div class="card" style="margin-bottom:20px">
+            <div class="card-header"><span class="card-title">Remediation Roadmap</span></div>
+            <div class="card-body" style="padding:20px" id="dpdp-roadmap"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><span class="card-title">Next Steps</span></div>
+            <div class="card-body" style="padding:20px" id="dpdp-next-steps"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:20px">
+          <div class="card-header">
+            <span class="card-title">Record of Processing Activities (RoPA)</span>
+          </div>
+          <div class="card-body" style="padding:20px">
+            <button class="btn btn-outline" onclick="generateDPDPRoPA()" style="margin-bottom:16px">📄 Generate RoPA</button>
+            <div id="dpdp-ropa-output" style="color:var(--muted);font-size:.85rem">Generate a RoPA document to see your processing-activity record here.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -3445,6 +3569,146 @@
       : '<div style="color:var(--muted)">No remediation actions — fully compliant on assessed controls.</div>';
 
     document.getElementById('compliance-results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ── DPDP Act 2023 Compliance (CAP-COMP-004) ─────────────────────────────────
+  // Backend (GET/POST /api/compliance/dpdp*) requires PRO/ENTERPRISE/MSSP tier
+  // or admin — see workers/src/handlers/dpdpCompliance.js. Free/Starter tiers
+  // get the honest upsell banner, matching the CISO Metrics / Compliance tabs.
+  async function loadDPDPOverview() {
+    const plan = (_plan?.plan || 'free').toLowerCase();
+    const isPaid = plan === 'pro' || plan === 'enterprise' || plan === 'mssp';
+    document.getElementById('dpdp-upsell').style.display  = isPaid ? 'none' : 'flex';
+    document.getElementById('dpdp-content').style.display = isPaid ? 'block' : 'none';
+    if (!isPaid) return;
+
+    try {
+      const res = await apiFetch('/api/compliance/dpdp');
+      if (!res.ok) return;
+      const { data } = await res.json();
+      if (!data) return;
+      document.getElementById('dpdp-total-sections').textContent = data.total_sections ?? '—';
+      document.getElementById('dpdp-latest-score').textContent =
+        data.latest_assessment ? data.latest_assessment.score + '%' : '—';
+    } catch (_) {}
+  }
+
+  async function runDPDPAssessment() {
+    const orgName = document.getElementById('dpdp-org-name').value.trim();
+    if (!orgName) { alert('Enter an organization name first.'); return; }
+
+    const body = {
+      org_name: orgName,
+      industry: document.getElementById('dpdp-industry').value,
+      employee_count: parseInt(document.getElementById('dpdp-employee-count').value, 10) || null,
+      data_categories: Array.from(document.querySelectorAll('.dpdp-data-cat:checked')).map(el => el.value),
+      processing_countries: ['IN'],
+      has_children_data:          document.getElementById('dpdp-has-children').checked,
+      has_dpo:                    document.getElementById('dpdp-has-dpo').checked,
+      has_privacy_notice:         document.getElementById('dpdp-has-privacy-notice').checked,
+      has_consent_mechanism:      document.getElementById('dpdp-has-consent').checked,
+      has_dsr_process:            document.getElementById('dpdp-has-dsr').checked,
+      has_breach_process:         document.getElementById('dpdp-has-breach').checked,
+      has_data_retention_policy:  document.getElementById('dpdp-has-retention').checked,
+      has_security_audit:         document.getElementById('dpdp-has-audit').checked,
+    };
+
+    const btn = document.getElementById('dpdp-assess-btn');
+    btn.disabled = true; btn.textContent = 'Running…';
+    try {
+      const res = await apiFetch('/api/compliance/dpdp/assess', { method: 'POST', body: JSON.stringify(body) });
+      if (res.status === 403) { alert('DPDP assessments require a Pro, Enterprise, or MSSP plan.'); return; }
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.success === false) { alert(json.error || 'Assessment failed. Please try again.'); return; }
+      renderDPDPResults(json.data);
+      document.getElementById('dpdp-latest-score').textContent = json.data.overall_score + '%';
+    } catch (_) {
+      alert('Could not run the assessment. Please try again.');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Run Assessment';
+    }
+  }
+
+  function renderDPDPResults(report) {
+    document.getElementById('dpdp-results').style.display = 'block';
+
+    document.getElementById('dpdp-overall-score').textContent = report.overall_score + '%';
+    const maturityEl = document.getElementById('dpdp-maturity');
+    maturityEl.textContent = report.maturity?.label || '—';
+    maturityEl.style.color = report.maturity?.color || '#7c3aed';
+    document.getElementById('dpdp-critical-gaps').textContent = report.summary?.critical_gaps ?? 0;
+    document.getElementById('dpdp-high-gaps').textContent     = report.summary?.high_gaps ?? 0;
+    const readyEl = document.getElementById('dpdp-ready');
+    readyEl.textContent = report.ready_for_enforcement ? 'Yes' : 'Not yet';
+    readyEl.style.color = report.ready_for_enforcement ? '#10b981' : '#ef4444';
+
+    document.getElementById('dpdp-sections').innerHTML = (report.gap_analysis || []).map(s => {
+      const color = s.score >= 80 ? '#10b981' : s.score >= 50 ? '#f59e0b' : '#ef4444';
+      return `<div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:4px">
+          <span>${s.title} (${s.section_id})</span><span style="font-family:var(--mono);color:${color}">${s.score}%</span>
+        </div>
+        <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:6px">
+          <div style="height:100%;width:${s.score}%;background:${color};border-radius:3px"></div>
+        </div>
+        ${s.gaps.length ? `<ul style="margin:0 0 0 18px;font-size:.78rem;color:var(--muted)">
+          ${s.gaps.map(g => `<li><span class="badge badge-${g.priority==='CRITICAL'?'red':g.priority==='HIGH'?'warn':'blue'}">${g.priority}</span> ${g.obligation}</li>`).join('')}
+        </ul>` : `<div style="font-size:.78rem;color:#10b981">✓ Fully compliant</div>`}
+      </div>`;
+    }).join('') || '<div style="color:var(--muted)">No section data.</div>';
+
+    document.getElementById('dpdp-roadmap').innerHTML = (report.remediation_roadmap || []).map(phase => `
+      <div style="margin-bottom:14px">
+        <div style="font-weight:700;font-size:.85rem;color:var(--accent)">Phase ${phase.phase}: ${phase.title} (${phase.timeline})</div>
+        <ul style="margin:6px 0 0 18px;font-size:.82rem;color:var(--muted)">
+          ${(phase.actions || []).map(a => `<li>${a.action} <span style="opacity:.7">— ${a.impact}</span></li>`).join('') || '<li>No actions needed for this phase.</li>'}
+        </ul>
+      </div>`).join('') || '<div style="color:var(--muted)">No roadmap generated.</div>';
+
+    document.getElementById('dpdp-next-steps').innerHTML = (report.next_steps || []).length
+      ? `<ol style="margin:0 0 0 18px;font-size:.85rem;color:var(--muted);line-height:1.8">
+          ${report.next_steps.map(s => `<li>${s.action}</li>`).join('')}
+        </ol>`
+      : '<div style="color:var(--muted)">No next steps.</div>';
+
+    document.getElementById('dpdp-results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function generateDPDPRoPA() {
+    const orgName = document.getElementById('dpdp-org-name').value.trim() || 'Your Organisation';
+    try {
+      const res = await apiFetch('/api/compliance/dpdp/ropa', {
+        method: 'POST', body: JSON.stringify({ org_name: orgName }),
+      });
+      if (res.status === 403) { alert('RoPA generation requires a Pro, Enterprise, or MSSP plan.'); return; }
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.success === false) { alert(json.error || 'Could not generate RoPA.'); return; }
+      renderDPDPRoPA(json.data);
+    } catch (_) {
+      alert('Could not generate RoPA. Please try again.');
+    }
+  }
+
+  function renderDPDPRoPA(ropa) {
+    const rows = (ropa.processing_activities || []).map(a => `
+      <tr>
+        <td>${a.sr_no}</td>
+        <td>${a.activity_name}</td>
+        <td style="font-size:.78rem">${a.purpose}</td>
+        <td style="font-size:.78rem">${(a.data_categories || []).join(', ')}</td>
+        <td style="font-size:.78rem">${a.legal_basis}</td>
+        <td style="font-size:.78rem">${a.retention}</td>
+        <td>${a.cross_border_transfer ? '⚠️ Yes' : 'No'}</td>
+      </tr>`).join('');
+
+    document.getElementById('dpdp-ropa-output').innerHTML = `
+      <div style="font-size:.85rem;color:var(--muted);margin-bottom:12px">
+        Prepared for <strong style="color:var(--fg)">${ropa.prepared_for}</strong> · Generated ${fmtDate(ropa.generated_at)} · Review due ${ropa.review_due}
+      </div>
+      <table>
+        <thead><tr><th>#</th><th>Activity</th><th>Purpose</th><th>Data Categories</th><th>Legal Basis</th><th>Retention</th><th>Cross-border</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">No processing activities.</td></tr>'}</tbody>
+      </table>`;
   }
 
   function renderCisoTrend(trend) {

@@ -162,36 +162,36 @@
       "status": "exists"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "missing",
-      "evidence": "frontend/compliance-management.html — the page whose marketing copy most resembles this feature ('Multi-framework compliance management', 'automated evidence collection', lines 7-8) — was checked explicitly for 'dpdp' (case-insensitive) and for every fetch/axios/XHR call: its only live API call (line 146) hits /api/generate/compliance, the already-catalogued CAP-SCAN-005 route. No frontend file anywhere calls any /api/compliance/dpdp/* route."
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/user-dashboard.html"],
+      "status": "exists",
+      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html gained a real \"DPDP Act 2023\" tab (id=\"page-dpdp\") — an assessment questionnaire (org name/industry/employee count/data categories/children's-data flag plus 7 real control checkboxes matching handleDPDPAssess's exact input keys) posting to the real POST /api/compliance/dpdp/assess and rendering the real report (overall score, maturity level, critical/high gap counts, enforcement-readiness, all 9 real DPDP Act section scores with gap lists, the 3-phase remediation roadmap, next steps); plus a \"Generate RoPA\" action posting to the real POST /api/compliance/dpdp/ropa and rendering the real processing-activities table. Gated to PRO/ENTERPRISE/MSSP matching the backend's own tier check exactly, with the same honest upsell-banner convention as the CISO Metrics and Compliance tabs. Before this fix: frontend/compliance-management.html — the page whose marketing copy most resembles this feature ('Multi-framework compliance management', 'automated evidence collection', lines 7-8) — was checked explicitly for 'dpdp' (case-insensitive) and for every fetch/axios/XHR call: its only live API call (line 146) hit /api/generate/compliance, the already-catalogued CAP-SCAN-005 route. No frontend file anywhere called any /api/compliance/dpdp/* route."
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "Not applicable — no frontend page reaches this backend at all, so there is nothing to navigate to."
+      "discoverable": true,
+      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html's sidebar (same section as Compliance/CISO Metrics) now has a real nav-item (data-page=\"dpdp\") linking to the new tab."
     },
     "auth_enforced": true,
     "rbac": { "enforced": true, "permissions": ["tier:PRO", "tier:ENTERPRISE", "tier:MSSP"] },
     "subscription_gated": true,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "grep -rn \"dpdpCompliance\" workers/test/*.mjs returns 0 matches."
+      "has_tests": true,
+      "evidence": "workers/test/dpdpComplianceDashboard.test.mjs (2026-07-12, 12 tests): backend handlers still correctly tier-gate (FREE 403) and produce real, input-driven reports (9 real sections, scores that genuinely differ by control-input strength, a real structured RoPA document); the new frontend/user-dashboard.html tab has a real nav-item, a real page section with the upsell banner and assessment form, a tier gate matching the backend's own check exactly, a submit handler posting the real questionnaire fields to the real route, a render function reading real report field names (gap_analysis/remediation_roadmap/next_steps), a RoPA-generation action hitting the real RoPA route, and confirms the pre-existing Compliance/CISO Metrics tabs are untouched."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "PILOT ONLY",
     "priority": "P2",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/dpdpCompliance.js read directly in full: tier gate confirmed real (not just a doc-comment claim) at lines 156-157 (handleDPDPOverview), 198-199 (handleDPDPAssess), 331-332 (handleDPDPSections), 354-355 (handleDPDPRoPA) — all hard-403 unless tier is PRO/ENTERPRISE/MSSP; handleDPDPReports/handleDPDPReport (lines 426,446) require only authentication (any tier), scoped by user_id, which is correctly safe since a sub-PRO user can never have created a report to list. workers/src/index.js:3776-3798 read directly for all 6 routes. frontend/compliance-management.html read directly and grepped for 'dpdp' and for fetch/axios calls (0 matches for either). workers/test/*.mjs grepped with 0 hits."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/handlers/dpdpCompliance.js read directly in full: tier gate confirmed real (not just a doc-comment claim) at lines 156-157 (handleDPDPOverview), 198-199 (handleDPDPAssess), 331-332 (handleDPDPSections), 354-355 (handleDPDPRoPA) — all hard-403 unless tier is PRO/ENTERPRISE/MSSP; handleDPDPReports/handleDPDPReport (lines 426,446) require only authentication (any tier), scoped by user_id, which is correctly safe since a sub-PRO user can never have created a report to list. workers/src/index.js:3776-3798 read directly for all 6 routes. FIXED 2026-07-12 (22-paid-feature program, item 6 of 22): frontend/user-dashboard.html read and edited directly to add the real DPDP tab described in frontend.evidence above, covering 3 of the 6 routes with direct customer value (overview, assess, ropa) — sections is folded into the assessment results view rather than a separate call, and reports/report/:id (history/retrieval of past assessments) were not built in this pass, a smaller, lower-priority follow-up (see notes). All 3 inline <script> blocks in that file re-parsed with node --check after the edit (syntax valid). No backend change. Full suite green: 249 files / 2538 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": "Fully backend-only today: a real, tier-gated, non-trivial engine (RoPA generation, section-level gap analysis) that no customer can reach through any UI. frontend/compliance-management.html's marketing copy ('automated evidence collection', 'continuous compliance monitoring', 'compliance as code') overstates what any backend capability in this domain actually does — every engine found in this audit (this one, CAP-COMP-002, and CAP-SCAN-005) is a one-off, on-demand gap assessment, not continuous monitoring or automated evidence collection. That page is linked from frontend/sitemap.html (lines 122, 208) and cross-linked from several other marketing pages, so the overclaim is genuinely customer-facing, not dead content. Precedent: workers/test/proposalGeneratorHonestClaims.test.mjs documents a prior, since-fixed incident of the proposal generator falsely claiming in-progress SOC 2/ISO 27001 certification — the same category of risk."
+    "notes": "frontend/compliance-management.html's marketing copy ('automated evidence collection', 'continuous compliance monitoring', 'compliance as code') overstates what any backend capability in this domain actually does — every engine in this audit (this one, CAP-COMP-002, and CAP-SCAN-005) is a one-off, on-demand gap assessment, not continuous monitoring or automated evidence collection. That page is linked from frontend/sitemap.html (lines 122, 208) and cross-linked from several other marketing pages, so the overclaim is genuinely customer-facing, not dead content. Precedent: workers/test/proposalGeneratorHonestClaims.test.mjs documents a prior, since-fixed incident of the proposal generator falsely claiming in-progress SOC 2/ISO 27001 certification — the same category of risk. Not fixed in this pass (deliberately, to keep this fix bounded to the frontend-access gap it targeted) — flagged as a real, separate finding for a future wave, ideally paired with actually wiring compliance-management.html's copy to the real engines it describes rather than just softening the claims. Also not built in this pass: a \"past assessments\" history view (GET /api/compliance/dpdp/reports and /report/:id) — each assessment IS persisted server-side (report_jobs table) and could be surfaced later without any backend change; the current tab always runs a fresh assessment rather than listing history. 2026-07-12 (22-paid-feature program, item 6): the fourth of the 22 paid features found to be a genuine no-frontend gap on an otherwise-real, well-built backend, not a bug — same root cause and same fix shape as CAP-COMP-002 immediately prior."
   },
   {
     "id": "CAP-COMP-005",
