@@ -238,7 +238,7 @@ function buildBusinessRisk(deal) {
     industry_risk:     `${deal.industry || 'Your sector'} is among the top targets for APT groups in 2026`,
     compliance_risk:   (deal.compliance_needs || []).length > 0 ? `${(deal.compliance_needs || []).join(', ')} compliance gaps carry regulatory penalty risk` : 'Multiple compliance frameworks require immediate attention',
     ai_risk:           deal.ai_adoption_level !== 'none' ? 'AI systems deployed without security controls face OWASP LLM Top 10 exposure' : 'AI adoption without security frameworks creates significant future risk',
-    financial_risk:    'Average breach cost in India: ₹54L (IBM 2025) — growing 12% YoY',
+    financial_risk:    'Average breach cost in India: ₹54L (IBM 2025)',
   };
 }
 
@@ -246,7 +246,7 @@ function buildThreatLandscape() {
   return {
     active_apt_groups:    ['APT29 (Russia)', 'Lazarus (DPRK)', 'APT41 (China)', 'SideWinder (India focus)'],
     top_active_cves:      ['CVE-2024-3400 (PAN-OS GlobalProtect RCE)', 'CVE-2024-21762 (FortiOS SSL-VPN RCE)', 'CVE-2024-27198 (TeamCity Auth Bypass)'],
-    attack_vectors:       ['Phishing (+340% YoY)', 'Ransomware-as-a-Service', 'Supply Chain', 'AI-assisted attacks'],
+    attack_vectors:       ['Phishing', 'Ransomware-as-a-Service', 'Supply Chain', 'AI-assisted attacks'],
     india_specific:       'India #3 globally for cyberattacks; BFSI and healthcare top targets',
   };
 }
