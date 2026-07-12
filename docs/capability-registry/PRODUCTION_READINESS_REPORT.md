@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-12T03:49:44.734Z
+Generated: 2026-07-12T07:05:20.618Z
 Capabilities catalogued: 97
 
 ## Overall Completion
@@ -153,7 +153,7 @@ complete", "bug free", or "guaranteed".
 |---|---|---|---|---|---|---|
 | CAP-MYTHOS-001 | MYTHOS GOD MODE — 16-Phase Autonomous Security Orchestrator | ✓ | ✓ | ✓ | PILOT ONLY | P4 |
 | CAP-MYTHOS-002 | MYTHOS Orchestrator Core (legacy v1.0 defense-tool generation pipeline) | ✓ | ✓ | ✓ | PILOT ONLY | P4 |
-| CAP-MYTHOS-003 | MYTHOS Revenue Engine (multi-rail checkout + paywalled scan/compliance) | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-MYTHOS-003 | MYTHOS Revenue Engine (real domain-scan + compliance-benchmark, paywall-aware) | ✓ | ✗ | ✗ | PILOT ONLY | P2 |
 | CAP-MYTHOS-004 | MYTHOS Platform Governor (autonomous health monitor + auto-repair) | ✓ | ✗ | ✗ | PILOT ONLY | P6 |
 | CAP-MYTHOS-005 | MYTHOS AI Provider / "APEX NEXUS" (multi-provider AI routing library) | ✓ | ✗ | ✗ | PILOT ONLY | P7 |
 | CAP-MYTHOS-006 | MYTHOS AI Enrichment Engine (cross-cutting scan-report enrichment) | ✓ | ◐ | ✓ | PILOT ONLY | P6 |

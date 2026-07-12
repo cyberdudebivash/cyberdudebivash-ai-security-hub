@@ -333,11 +333,10 @@ import {
 } from './handlers/mythosHandler.js';
 import { runMythosCron } from './services/mythosOrchestrator.js';
 
-// ─── MYTHOS REVENUE ENGINE v30.0.2 ───────────────────────────────────────────
-// Multi-rail checkout (UPI/Bank/Crypto/Razorpay), MYTHOS AI scan, compliance map
+// ─── MYTHOS REVENUE ENGINE v31.0.0 ───────────────────────────────────────────
+// Real-engine domain scan + compliance benchmark (paywall-aware). The
+// multi-rail checkout previously here was removed 2026-07-12 (CAP-MYTHOS-003).
 import {
-  handleMythosCheckout,
-  handleMythosWebhook,
   handleMythosScan,
   handleMythosCompliance,
 } from './handlers/mythosRevenueEngine.js';
@@ -5158,16 +5157,11 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleMythosAnalyze(request, env, authCtx || {}), request));
     }
 
-    // ── MYTHOS REVENUE ENGINE v30.0.2 ─────────────────────────────────────────
-    // POST /api/mythos/checkout/initialize — multi-rail UPI/Bank/Crypto/Razorpay
-    if (path === '/api/mythos/checkout/initialize' && method === 'POST') {
-      const authCtx = await resolveAuthV5(request, env).catch(() => null);
-      return withSecurityHeaders(withCors(await handleMythosCheckout(request, env, authCtx || {}), request));
-    }
-    // POST /api/mythos/checkout/webhook — Razorpay HMAC-verified webhook
-    if (path === '/api/mythos/checkout/webhook' && method === 'POST') {
-      return withSecurityHeaders(await handleMythosWebhook(request, env));
-    }
+    // ── MYTHOS REVENUE ENGINE v31.0.0 ─────────────────────────────────────────
+    // (checkout/webhook removed 2026-07-12 — CAP-MYTHOS-003: zero frontend
+    // callers, never minted a real Razorpay order, and its webhook wrote real
+    // tier upgrades to the same users.tier column the real billing path uses.
+    // See PROGRAM_BOARD.md session log for the full investigation.)
     // POST /api/mythos/scan — MYTHOS AI autonomous domain scan (paywall-aware)
     if (path === '/api/mythos/scan' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);

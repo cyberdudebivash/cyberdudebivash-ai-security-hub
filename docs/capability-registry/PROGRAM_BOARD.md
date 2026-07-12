@@ -9,7 +9,7 @@ measure and does not compete with `KPI_DASHBOARD.md`, which
 scoreboard. Read this + `EXECUTION_PROCEDURE.md` before starting any
 registry-population session.
 
-## Current status (2026-07-12 — the prior 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit is **fully closed, merged, and live in production** (PR #185 squash-merged to `main` as commit `9819fed7`, `Deploy to Cloudflare` ran and passed its post-deploy smoke tests; see the entry twenty-seven below for the original 24-item list and the two entries above it for the closure + pre-merge security-fix account). **A new program has now started**, at the owner's explicit direction: bring all 22 `subscription_gated: true` (paid) capabilities in the registry to genuine, evidenced production grade — frontend, backend, RBAC, security, tests, docs, the works — not a subset. Every one of the 22 currently sits below GA; 5 have no working frontend at all. Tracked as tasks #25–#46. Item 1 (`CAP-RBAC-002`, chosen first since 8 other items share its "RBAC not enforced" gap) turned out to need **zero code changes** — the registry's own record was stale, predating the Organizations feature that had already closed the gap; corrected the record instead of inventing busywork. 21 of 22 remain, continuing in chosen order (see the top session-log entry for the full account, including 2 of my own mistakes caught by the validator before commit).
+## Current status (2026-07-12 — the prior 24-item Tier 1–3 follow-up backlog from the full 80-page frontend audit is **fully closed, merged, and live in production** (PR #185 squash-merged to `main` as commit `9819fed7`, `Deploy to Cloudflare` ran and passed its post-deploy smoke tests; see the entry twenty-eight below for the original 24-item list and the two entries above it for the closure + pre-merge security-fix account). **A new program has now started**, at the owner's explicit direction: bring all 22 `subscription_gated: true` (paid) capabilities in the registry to genuine, evidenced production grade — frontend, backend, RBAC, security, tests, docs, the works — not a subset. Every one of the 22 currently sits below GA; 5 have no working frontend at all. Tracked as tasks #25–#46. Item 1 (`CAP-RBAC-002`, chosen first since 8 other items share its "RBAC not enforced" gap) turned out to need **zero code changes** — the registry's own record was stale, predating the Organizations feature that had already closed the gap; corrected the record instead of inventing busywork. Item 2 (`CAP-MYTHOS-003`) was the opposite case: investigation found a live, unauthenticated production endpoint fabricating security-scan and compliance results under the platform's brand name, plus a dangerous, untested, live-reachable duplicate payment/tier-grant mechanism sitting behind it — both fixed (scan/compliance redirected to this platform's real engines; the duplicate payment path removed outright with the owner's explicit sign-off) — see the top session-log entry for the full account. 20 of 22 remain, continuing in chosen order.
 
 **Housekeeping note:** this line had drifted 6 PRs stale (last updated as of the
 CAP-CRM-007/CAP-COMP-005 wave, #172/#173) — PRs #174–#179 each correctly
@@ -60,10 +60,10 @@ parallel tracking document.
 | Domains populated | 21 | see list below (all 3 former stubs now populated) |
 | Domains empty (stubs) | 0 | none remain |
 | Capabilities registered | 97 | `node scripts/registry/validate.mjs` (+2 this wave: CAP-MASOC-002, CAP-MSSP-005) |
-| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-11 (after this wave's 2 new entries) |
-| Worker test suite | 245 files / 2495 tests passing | `npx vitest run`, run 2026-07-12 — +6 tests this wave, new file `userDashboardOnclickEscapingFix.test.mjs` (pre-merge security fix: CodeQL High-severity incomplete-escaping bug in this backlog's own Tier-3 item #4 code, plus a worse pre-existing sibling found in Organization-member code). Baseline going into this wave was 244 files / 2489 tests (Tier-3 item #6, which closed the 24-item backlog). **The 24-item backlog is closed and this pre-merge security fix is the last thing gating PR #185's merge to `main`** |
-| Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
-| Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — the 2 new capabilities (CAP-MASOC-002 backend+frontend exist; CAP-MSSP-005 backend exists, frontend partial) shifted these slightly; parity ticked down (not up) because CAP-MSSP-005's frontend is only partial, not full, added to the denominator |
+| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (after CAP-MYTHOS-003's rewrite) |
+| Worker test suite | 246 files / 2508 tests passing | `npx vitest run`, run 2026-07-12 — +13 tests this wave, new file `mythosRevenueEngineRealEngines.test.mjs` (CAP-MYTHOS-003: proves handleMythosScan/handleMythosCompliance now call this platform's real engines instead of fabricating results, and that the removed checkout/webhook handlers are genuinely gone). Baseline going into this wave was 245 files / 2495 tests. |
+| Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
+| Backend / Frontend / Parity | 89.7% / 66.5% / 60.8% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — **unchanged by this wave's CAP-MYTHOS-003 fix**: its backend went from fabricated to real and its `operational_status` improved (`NOT READY`→`PILOT ONLY`), but its frontend is still `missing`, so it stays in the same backend-only/no-frontend structural bucket this report measures — a quality improvement, not a structural one |
 | Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
 | Gaps by severity | Critical 9 · High 24 · Medium 13 · Low 51 | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-11 — Medium +1 (P4, CAP-MSSP-005's rbac.enforced:true but frontend partial nudges its own bucket) and Low +1 (P6, CAP-MASOC-002/CAP-MSSP-005 both carry real but incomplete test coverage) from the 2 new entries; Critical/High unchanged. Do not hand-diff against older rows in this table — each was already flagged non-comparable; treat this run as the current baseline |
 
@@ -247,6 +247,149 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — 22-paid-feature program, item 2 (of 22): CAP-MYTHOS-003 — a live, unauthenticated endpoint fabricating security-scan/compliance results was redirected to real engines; a dangerous duplicate payment path was removed
+
+- **Resumed after a usage-limit cutoff.** The prior session had reached
+  item 2 of the 22-item paid-feature program, found the fabrication
+  described below, gotten explicit owner direction to redirect it to real
+  engines, and had just spawned 3 parallel research agents to design the
+  fix when it hit the usage limit mid-investigation. This session verified
+  ground truth first rather than trusting the cutoff transcript: `git
+  ls-remote` confirmed `main` was still exactly at `9819fed` (PR #185) with
+  `Test & Quality Gate` and `Deploy to Cloudflare` both green on that
+  commit; the item-1 (`CAP-RBAC-002`) docs fix had been pushed to an
+  abandoned branch (`claude/production-tasks-resume-akvl95`) right before
+  the cutoff — cherry-picked onto the correct working branch (commit
+  `b66f800`) rather than left orphaned, opened as PR #186.
+- **The finding, re-verified directly against source, not just the prior
+  session's notes:** `workers/src/handlers/mythosRevenueEngine.js`'s
+  `handleMythosScan` (`POST /api/mythos/scan`) pulled a generic,
+  not-target-specific intel list from KV and returned **100%-hardcoded**
+  Sigma/KQL/Suricata/YARA/SOC-playbook string templates — identical for
+  any target except the target name string-interpolated in — plus a fixed
+  4-IP IOC list (`45.33.32.156` etc.), branded `CYBERDUDEBIVASH MYTHOS AI
+  v30.0.2`, reachable with **zero authentication** (`isPremium(authCtx)`
+  silently treats a missing/failed auth resolve as free-tier rather than
+  rejecting the call). `handleMythosCompliance` (`POST
+  /api/mythos/compliance`) returned a static per-framework lookup table
+  with `verification_status` hardcoded `'ALIGNED'` for every organization,
+  for any of 7 frameworks. Both were live in production right now, not a
+  theoretical risk.
+- **3 parallel Explore agents investigated the real-engine landscape**
+  (domain-scan engine; rule/compliance-generation engines; the checkout
+  path's safety) so the fix could be designed from facts, not
+  assumptions:
+  - **Real scan engine confirmed real, not another layer of mocking:**
+    `workers/src/lib/dns.js`'s `resolveDomain()`/`inferTLSGrade()` make
+    genuine Cloudflare DoH queries and a live HTTPS `HEAD` probe against
+    the actual submitted target; `workers/src/lib/dnsbl.js`'s
+    `fullBlacklistCheck()` queries 7 real threat feeds (Spamhaus DBL/ZEN,
+    SURBL, URIBL, ABUSE.CH, Barracuda, SORBS) keyed on that same target.
+    `workers/src/handlers/domain.js`'s `buildRealResult()` assembles
+    these into the exact result already served to paying customers on
+    `/api/scan/domain` — proof of honesty: when DNS doesn't resolve it
+    returns `grade: null, risk_level: 'UNKNOWN'` rather than fabricate a
+    verdict.
+  - **Real rule-generation engine exists but doesn't fit this data
+    shape:** `workers/src/services/mythosOrchestrator.js` +
+    `workers/src/lib/solutionTemplates.js` genuinely branch on real
+    vulnerability-class intel (RCE/SQLI/AUTH_BYPASS/SSRF/DESERIALIZATION)
+    with real CVE/MITRE-technique interpolation — real, but built for a
+    different taxonomy than domain-hygiene findings (DNS/TLS/email-auth).
+    Forcing domain findings through it would itself be a subtle new
+    fabrication (mislabeling a missing-DMARC finding as an "RCE Sigma
+    rule"). Used the already-real, already-finding-driven
+    `mythosEnrichmentEngine.js` instead (MITRE ATT&CK mapping, CyberBrain
+    risk scoring, attack-path prediction, autonomous remediation plan, AI
+    executive narrative gated on real CRITICAL/HIGH findings) — the same
+    genuinely computed enrichment already relied on by `domain.js` and 8
+    other handlers.
+  - **Real compliance engine confirmed, and already honest:**
+    `workers/src/engine.js`'s `complianceEngine()` (used by 6 live
+    frontend pages via `compliance.js`) self-labels
+    `assessment_mode:'STATIC'`, `live_verification:false` rather than
+    claiming a false verified "ALIGNED" result — the right redirect
+    target given `handleMythosCompliance`'s input shape (a framework name
+    and an org name, no actual control-implementation data to assess
+    against). A deeper, real input-driven scorer
+    (`services/complianceEngine.js`'s `runComplianceAssessment`) also
+    exists for a future "answer a real questionnaire" product, but has no
+    frontend today and needs real input data this route doesn't collect —
+    out of scope for this fix.
+  - **Checkout/webhook path: not dead code, a live latent danger.**
+    `handleMythosCheckout`/`handleMythosWebhook` had zero frontend
+    callers — but investigation found the one page that looked like a
+    match, `frontend/index.html`'s `#mythosOverlay` modal
+    (`window.CDB_MYTHOS.open()`), is itself confirmed-unreachable dead
+    code: nothing anywhere calls `.open()` on it (every real "Buy" button
+    on the platform already goes through the separate, real
+    `window.CDB_CHECKOUT_MODAL` system). More seriously: the webhook's
+    real HMAC-SHA256-verified handler wrote `UPDATE users SET tier = ?
+    WHERE id = ?` to the **exact same column** the platform's actual
+    billing path (`payments.js` + `subscriptionPaywallEngine.js`, wired to
+    `billing-portal.html`/`upgrade.html`) uses, verified by the same
+    shared `RAZORPAY_WEBHOOK_SECRET` — a live, untested, duplicate
+    tier-grant mechanism, not inert. It only appeared harmless because (a)
+    Razorpay's dashboard likely isn't configured to call this second URL
+    and (b) `handleMythosCheckout` never actually minted a real Razorpay
+    order — neither of which is a code-enforced protection.
+  - Also confirmed via `wrangler.toml`'s `main = "src/index.js"` and the
+    single `npx wrangler deploy` step in `deploy.yml`: `workers/index.ts` +
+    `workers/webhook.ts` + `workers/health.js` + `workers/trust-center.js`
+    + `workers/cve-ingester.js` (a second, genuinely well-built HMAC +
+    replay-protected Razorpay webhook with its own `SENTINEL_DB`/
+    `SENTINEL_CACHE` bindings) are **orphaned — never bundled by the
+    actual deploy**, so they were never a live competing implementation.
+    Flagged as a follow-up decision (delete vs. wire up vs. document), not
+    touched here.
+- **Asked the owner explicitly before touching payment code** (a
+  materially different action than "redirect fabricated data" — this was
+  a live payment/tier-grant path, not just fake content): chose "remove
+  both routes and handlers entirely" over disabling-in-place or
+  documenting-only.
+- **The fix:** `handleMythosScan` now calls the real
+  `resolveDomain`/`inferTLSGrade`/`fullBlacklistCheck` chain, assembles
+  via `domain.js`'s `buildRealResult()` (falling back to the honest
+  heuristic `domainScanEngine()` only if live DNS itself throws — never to
+  fabricated content), and enriches via `enrichAssessmentWithMYTHOS` for
+  premium tiers. `handleMythosCompliance` now calls the real
+  `complianceEngine()` and the same enrichment. Free/premium gating is
+  preserved (findings capped at 2 for free tier; the deep
+  `mythos_intelligence` block — real MITRE mapping, attack paths,
+  remediation plan, AI narrative — locked behind PRO+, whole rather than
+  partially scrubbed, since every field in it is now genuinely computed
+  and none of it is safe to give away for free). `handleMythosCheckout`/
+  `handleMythosWebhook` and their 2 routes are deleted outright, along
+  with their now-dead constants/helpers (`getTxnId`, merchant/pricing/
+  crypto-wallet constants, `_processRazorpayWebhook`).
+- **Test plan:** new `workers/test/mythosRevenueEngineRealEngines.test.mjs`
+  (13 tests) — proves `resolveDomain`/`inferTLSGrade`/`fullBlacklistCheck`
+  are called with the real submitted target; proves two different targets
+  (clean vs. blacklisted) produce genuinely different risk levels/threat
+  intelligence, not a fixed template; proves none of the old fabricated
+  IOC/rule-template strings are ever emitted; proves a live-DNS failure
+  falls back honestly rather than crashing or fabricating; proves
+  free/premium gating of findings and the `mythos_intelligence` block;
+  proves `handleMythosCompliance` uses the real STATIC-labeled engine and
+  rejects unsupported frameworks; statically proves
+  `handleMythosCheckout`/`handleMythosWebhook` are gone from both the
+  handler file and the route table. Full suite green: 246 files / 2508
+  tests (`npx vitest run`, up from 245/2495). Registry validator: 0
+  failures, 0 warnings. `PRODUCTION_READINESS_REPORT.md` regenerated —
+  CAP-MYTHOS-003 moves `NOT READY`→`PILOT ONLY`; the report's aggregate
+  backend/frontend/parity and severity-gap numbers are unchanged by this
+  wave (frontend for this capability is still `missing`, so it stays in
+  the same structural bucket — this was a quality fix, not a structural
+  one).
+- **Follow-ups found, deliberately not fixed here (documented, not
+  silently dropped):** (1) `frontend/index.html`'s dead `#mythosOverlay`/
+  `CDB_MYTHOS` block (~lines 23082-23353) is confirmed-unreachable and
+  could be deleted in a future pass; (2) the orphaned
+  `workers/index.ts`/`webhook.ts`/etc. files described above need an
+  explicit decision, not silent removal, since they represent real
+  engineering effort (a second Razorpay webhook with proper replay
+  protection) that was never finished/wired up.
 
 ### 2026-07-12 — New program launched: bring all 22 paid/subscription-gated capabilities to genuine production grade — item 1 (of 22): CAP-RBAC-002 re-verified, registry corrected, zero code changes needed
 

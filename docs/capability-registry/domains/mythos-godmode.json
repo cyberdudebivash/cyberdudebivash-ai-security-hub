@@ -106,16 +106,14 @@
   {
     "id": "CAP-MYTHOS-003",
     "domain": "mythos-godmode",
-    "name": "MYTHOS Revenue Engine (multi-rail checkout + paywalled scan/compliance)",
-    "description": "A UPI/Bank-wire/Crypto/Razorpay checkout builder plus paywall-aware domain-scan and compliance-gap endpoints that scrub premium fields for non-paying tiers.",
+    "name": "MYTHOS Revenue Engine (real domain-scan + compliance-benchmark, paywall-aware)",
+    "description": "Paywall-aware domain-scan and compliance-gap endpoints. As of 2026-07-12 both are thin wrappers around this platform's real engines (live DNS/TLS/DNSBL scan; framework-benchmark compliance) instead of fabricated data. The multi-rail checkout previously in this file has been removed — see notes.",
     "backend": {
       "handlers": ["workers/src/handlers/mythosRevenueEngine.js"],
-      "entry_points": ["handleMythosCheckout", "handleMythosWebhook", "handleMythosScan", "handleMythosCompliance"],
+      "entry_points": ["handleMythosScan", "handleMythosCompliance"],
       "routes_sampled": [
-        { "path": "/api/mythos/checkout/initialize", "method": "POST", "evidence": "workers/src/index.js:5159" },
-        { "path": "/api/mythos/checkout/webhook", "method": "POST", "evidence": "workers/src/index.js:5164" },
-        { "path": "/api/mythos/scan", "method": "POST", "evidence": "workers/src/index.js:5168" },
-        { "path": "/api/mythos/compliance", "method": "POST", "evidence": "workers/src/index.js:5173" }
+        { "path": "/api/mythos/scan", "method": "POST", "evidence": "workers/src/index.js:5166" },
+        { "path": "/api/mythos/compliance", "method": "POST", "evidence": "workers/src/index.js:5171" }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
@@ -124,33 +122,33 @@
       "surface_type": "none",
       "pages": [],
       "status": "missing",
-      "evidence": "No frontend file calls /api/mythos/checkout/*, /api/mythos/scan, or /api/mythos/compliance (grepped across all frontend/*.html, including the 27 files that reference 'mythos' anywhere). frontend/upgrade.html and frontend/ciso-hub.html list 'MYTHOS AI queries' as a plan line-item, but neither was confirmed to call this specific handler — a genuinely open question flagged for a follow-up grep, not asserted as covered."
+      "evidence": "No frontend file calls /api/mythos/scan or /api/mythos/compliance (grepped across all frontend/*.html). A separate, unreachable dead-code UI (frontend/index.html's #mythosOverlay modal + window.CDB_MYTHOS, ~lines 23082-23353) called the now-removed /api/mythos/checkout/initialize; confirmed zero callers of CDB_MYTHOS.open() anywhere (grepped all onclick/JS call sites), so removing that backend route broke nothing live. Flagged as a follow-up cleanup, not fixed in this pass (out of scope — the checkout removal, not frontend deletion, was the approved change)."
     },
     "navigation": {
       "discoverable": false,
       "evidence": "No nav entry or page reaches this backend capability."
     },
-    "auth_enforced": true,
-    "rbac": { "enforced": "unknown", "permissions": [] },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
     "subscription_gated": true,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "No test file under workers/test/*.mjs imports from workers/src/handlers/mythosRevenueEngine.js (confirmed against the 15 mythos-related test files found in this audit)."
+      "has_tests": true,
+      "evidence": "workers/test/mythosRevenueEngineRealEngines.test.mjs (13 tests): proves handleMythosScan calls the real resolveDomain/inferTLSGrade/fullBlacklistCheck chain with the submitted target, that two different targets produce genuinely different results, that none of the old fabricated IOC/rule-template strings are emitted, that a live-DNS failure falls back to the honest deterministic engine (not a crash or a fabricated verdict), and that free/premium gating of findings + the mythos_intelligence block works. Proves handleMythosCompliance uses the real complianceEngine (honest STATIC/benchmark labeling, never the old fake 'ALIGNED' claim) and rejects unsupported frameworks. Also statically confirms handleMythosCheckout/handleMythosWebhook are gone from both the handler file and the route table."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "PILOT ONLY",
     "priority": "P2",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/mythosRevenueEngine.js read directly (458 lines: handleMythosCheckout:188, _processRazorpayWebhook real HMAC-SHA256 verify:138, handleMythosScan:297 with scrubPremiumFields/enforceSeverityFloor, handleMythosCompliance:395). workers/src/index.js:5159-5175 read directly for all 4 routes. frontend/*.html grepped for all 4 route paths (0 hits) and for 'mythos' broadly (27 files, none calling these specific paths)."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/handlers/mythosRevenueEngine.js rewritten and read directly in full (v31.0.0, 214 lines). workers/src/lib/dns.js (resolveDomain:208, inferTLSGrade:245), workers/src/lib/dnsbl.js (fullBlacklistCheck:216), workers/src/handlers/domain.js (buildRealResult:262, confirmed real via live DoH/HEAD-probe/DNSBL fetch calls and an honest 'unmeasurable' non-verdict when DNS doesn't resolve), workers/src/engine.js (complianceEngine:652, domainScanEngine:49, both read in full), workers/src/services/mythosEnrichmentEngine.js (enrichAssessmentWithMYTHOS:189, real MITRE mapping/CyberBrain risk scoring/attack-path prediction/AI narrative gated on CRITICAL+HIGH findings) all read directly and reused rather than re-implemented. workers/src/index.js:5161-5171 read directly for the surviving 2 routes; the checkout/webhook route block and their import lines confirmed removed. workers/test/mythosRevenueEngineRealEngines.test.mjs written and passing (13/13); full suite 246 files/2508 tests green; registry validator 0/0."
     },
     "contradicts_doc": [],
-    "notes": "Real webhook signature verification (HMAC-SHA256 against RAZORPAY_WEBHOOK_SECRET) is a genuine security-positive finding. Auth on the non-webhook routes only determines isPremium(authCtx) tier-gating of response fields, not access/denial — an intentional 'open access, paywalled content' design, consistent with several other capabilities in this codebase. Set rbac.enforced to \"unknown\" rather than false: the paywall-field-scrubbing logic wasn't traced deeply enough in this pass to confirm whether it fully prevents premium-data leakage in every response branch. Before building any frontend for this, confirm whether it's meant to be a distinct checkout flow or is superseded by the already-wired, already-tested billing/subscription flow used elsewhere on the platform — building a UI here without that check risks creating a second, parallel checkout path."
+    "notes": "2026-07-12 — CAP-MYTHOS-003 full remediation (item 2 of the 22-paid-feature production program, resumed after a usage-limit cutoff mid-investigation). Prior state (2026-07-11 audit) was worse than 'missing frontend': handleMythosScan pulled a generic KV intel cache (not target-specific) and returned 100%-hardcoded Sigma/KQL/Suricata/YARA/SOC-playbook string templates plus a fixed 4-IP IOC list, identical for any target once the KV cache was empty, branded 'CYBERDUDEBIVASH MYTHOS AI v30.0.2' — live and reachable with zero authentication (isPremium() silently treats a missing authCtx as free-tier rather than rejecting the call). handleMythosCompliance returned a static per-framework lookup table with verification_status hardcoded 'ALIGNED' for every organization. Fixed by redirecting both to this platform's real, already-proven engines: handleMythosScan now calls resolveDomain/inferTLSGrade/fullBlacklistCheck (live DNS-over-HTTPS + TLS header probe + 7-feed DNSBL check, the same chain serving paying customers on /api/scan/domain) and enriches via enrichAssessmentWithMYTHOS (real MITRE ATT&CK mapping, CyberBrain risk scoring, attack-path prediction, autonomous remediation plan, AI executive narrative) for premium tiers — genuinely computed value in place of the deleted static templates; a live-DNS failure falls back to domainScanEngine (an honest heuristic engine, not a fabricated verdict), never to the old fake content. handleMythosCompliance now calls complianceEngine (workers/src/engine.js), the same industry-benchmark engine already serving 6 live frontend pages via compliance.js — self-labeled assessment_mode:'STATIC'/live_verification:false rather than a false 'verified ALIGNED' claim. Separately, handleMythosCheckout/handleMythosWebhook (multi-rail UPI/Bank/Crypto/Razorpay checkout) were removed entirely, not redirected, after investigation (3 parallel research passes) found: (a) zero frontend callers of the real route — the one seeming match, frontend/index.html's #mythosOverlay modal calling /api/mythos/checkout/initialize via window.CDB_MYTHOS.open(), is itself unreachable dead code (nothing anywhere calls .open() on it; every real 'Buy'/'Subscribe' button on the platform already goes through the separate, real window.CDB_CHECKOUT_MODAL system wired to /api/payment/create-order+verify); (b) handleMythosCheckout's own Razorpay branch never minted a real Razorpay order, so it could not legitimately be used as-is; (c) its webhook wrote real tier upgrades (UPDATE users SET tier=... WHERE id=?) to the exact same column the platform's actual billing path (payments.js + subscriptionPaywallEngine.js) uses, verified by the same shared RAZORPAY_WEBHOOK_SECRET, through separate, never-tested logic — a live, latent, duplicate tier-grant mechanism with no product behind it. Owner explicitly chose removal over disabling-in-place or leaving as documented risk. Two follow-ups found but deliberately left alone (out of scope for this fix): (1) frontend/index.html's dead #mythosOverlay/CDB_MYTHOS block (~lines 23082-23353) still exists and could be deleted in a future pass; (2) workers/index.ts + workers/webhook.ts + workers/health.js + workers/trust-center.js + workers/cve-ingester.js are a second, fully orphaned set of files (own SENTINEL_DB/SENTINEL_CACHE bindings, a genuinely well-built HMAC+replay-protected Razorpay webhook) never bundled by the actual deploy — workers/wrangler.toml's main=\"src/index.js\" confirms only workers/src/index.js is ever deployed. Not touched here since they're inert (not part of the build), but worth an explicit decision (delete vs. document vs. actually wire up) in a future session. auth_enforced/rbac.enforced corrected to false (previously mis-recorded true): neither route ever rejects an unauthenticated caller — isPremium(authCtx) only gates response depth, an intentional design choice already used elsewhere on this platform, unchanged by this fix."
   },
   {
     "id": "CAP-MYTHOS-004",
