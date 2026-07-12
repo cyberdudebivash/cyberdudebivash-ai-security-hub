@@ -715,12 +715,31 @@ export async function handleDeveloperPortal(request, env, authCtx) {
   if (path === '/api/developer/sdk/languages' && method === 'GET') return listSDKLanguages(request, env);
   if (path.match(/^\/api\/developer\/sdk\/download\/[\w-]+$/) && method === 'GET') return downloadFullSDK(request, env);
 
-  // Webhook Catalog
+  // Webhook Catalog — /events is a static, non-tenant-specific reference
+  // catalog (deliberately public, like the API Explorer routes above). The
+  // other 4 routes manage a real org's webhook config (an arbitrary URL the
+  // server later POSTs real event payloads to) and previously had NO auth
+  // check at all — any anonymous caller could register a webhook pointing at
+  // an internal address and use /test as an SSRF oracle, tamper with any
+  // org's webhooks via a client-supplied org_id, or delete any webhook by
+  // GUID with zero ownership check.
   if (path === '/api/developer/webhooks/events' && method === 'GET') return listWebhookEvents(request, env);
-  if (path === '/api/developer/webhooks/register' && method === 'POST') return registerWebhook(request, env);
-  if (path === '/api/developer/webhooks' && method === 'GET') return listWebhooks(request, env);
-  if (path.match(/^\/api\/developer\/webhooks\/[\w-]+$/) && method === 'DELETE') return deleteWebhook(request, env);
-  if (path.match(/^\/api\/developer\/webhooks\/[\w-]+\/test$/) && method === 'POST') return testWebhook(request, env);
+  if (path === '/api/developer/webhooks/register' && method === 'POST') {
+    if (!isRealUser(authCtx)) return authRequired();
+    return registerWebhook(request, env, authCtx);
+  }
+  if (path === '/api/developer/webhooks' && method === 'GET') {
+    if (!isRealUser(authCtx)) return authRequired();
+    return listWebhooks(request, env, authCtx);
+  }
+  if (path.match(/^\/api\/developer\/webhooks\/[\w-]+$/) && method === 'DELETE') {
+    if (!isRealUser(authCtx)) return authRequired();
+    return deleteWebhook(request, env, authCtx);
+  }
+  if (path.match(/^\/api\/developer\/webhooks\/[\w-]+\/test$/) && method === 'POST') {
+    if (!isRealUser(authCtx)) return authRequired();
+    return testWebhook(request, env, authCtx);
+  }
 
   // Rate Limit Dashboard
   if (path === '/api/developer/rate-limits' && method === 'GET') return getRateLimits(request, env);
@@ -875,16 +894,37 @@ async function listWebhookEvents(request, env) {
   });
 }
 
-async function registerWebhook(request, env) {
+// SSRF guard: reject private/loopback/link-local hostnames and non-public
+// FQDNs. Mirrors the established, already-shipped pattern in
+// handlers/enterpriseAutomation.js's handleIntegrationTest — same regex,
+// same "must be a public FQDN" bar, kept consistent across the codebase.
+function validateWebhookUrl(targetUrl) {
+  if (!targetUrl || !/^https:\/\//.test(targetUrl)) return 'HTTPS url required';
+  try {
+    const parsed = new URL(targetUrl);
+    const hostname = parsed.hostname.toLowerCase();
+    const BLOCKED = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1|0\.0\.0\.0|fc00:|fd)/;
+    if (BLOCKED.test(hostname) || hostname === '[::1]') return 'Private/loopback URLs are not permitted';
+    if (!hostname.includes('.') || hostname.endsWith('.local') || hostname.endsWith('.internal')) return 'URL must point to a public FQDN';
+  } catch {
+    return 'Invalid URL';
+  }
+  return null;
+}
+
+async function registerWebhook(request, env, authCtx) {
   try {
     const body = await request.json();
     if (!body.url || !body.events?.length) return jsonResp({ error: 'url and events[] are required' }, 400);
+    const urlError = validateWebhookUrl(body.url);
+    if (urlError) return jsonResp({ error: urlError }, 400);
+    const orgId = authCtx.org_id || `u:${authCtx.user_id ?? authCtx.userId}`;
     const id = crypto.randomUUID();
     const secret = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
     const now = new Date().toISOString();
     await env.DB.prepare(`INSERT INTO developer_webhooks (id,org_id,url,events,secret,status,created_at,updated_at)
       VALUES (?,?,?,?,?,?,?,?)`)
-      .bind(id, body.org_id||'default', body.url, JSON.stringify(body.events), secret, 'ACTIVE', now, now).run();
+      .bind(id, orgId, body.url, JSON.stringify(body.events), secret, 'ACTIVE', now, now).run();
     return jsonResp({ success:true, id, url:body.url, events:body.events, status:'ACTIVE', secret,
       instructions:'Store the secret securely — it will not be shown again. Use it to verify webhook signatures: HMAC-SHA256(secret, request_body)',
       testEndpoint:`POST /api/developer/webhooks/${id}/test`
@@ -892,27 +932,35 @@ async function registerWebhook(request, env) {
   } catch (e) { return jsonResp({ error: e.message }, 500); }
 }
 
-async function listWebhooks(request, env) {
+async function listWebhooks(request, env, authCtx) {
   try {
-    const orgId = new URL(request.url).searchParams.get('org_id')||'default';
+    const orgId = authCtx.org_id || `u:${authCtx.user_id ?? authCtx.userId}`;
     const { results } = await env.DB.prepare('SELECT id,org_id,url,events,status,created_at FROM developer_webhooks WHERE org_id=? ORDER BY created_at DESC').bind(orgId).all();
     return jsonResp({ webhooks:results.map(w=>({...w,events:JSON.parse(w.events||'[]')})), total:results.length });
   } catch (e) { return jsonResp({ error: e.message }, 500); }
 }
 
-async function deleteWebhook(request, env) {
+async function deleteWebhook(request, env, authCtx) {
   const id = new URL(request.url).pathname.split('/').pop();
   try {
-    await env.DB.prepare('UPDATE developer_webhooks SET status=? WHERE id=?').bind('DELETED', id).run();
+    const orgId = authCtx.org_id || `u:${authCtx.user_id ?? authCtx.userId}`;
+    const existing = await env.DB.prepare('SELECT id FROM developer_webhooks WHERE id=? AND org_id=?').bind(id, orgId).first();
+    if (!existing) return jsonResp({ error: 'Webhook not found' }, 404);
+    await env.DB.prepare('UPDATE developer_webhooks SET status=? WHERE id=? AND org_id=?').bind('DELETED', id, orgId).run();
     return jsonResp({ success:true, message:`Webhook ${id} deleted` });
   } catch (e) { return jsonResp({ error: e.message }, 500); }
 }
 
-async function testWebhook(request, env) {
+async function testWebhook(request, env, authCtx) {
   const id = new URL(request.url).pathname.split('/').slice(-2,-1)[0];
   try {
-    const webhook = await env.DB.prepare('SELECT * FROM developer_webhooks WHERE id=?').bind(id).first();
+    const orgId = authCtx.org_id || `u:${authCtx.user_id ?? authCtx.userId}`;
+    const webhook = await env.DB.prepare('SELECT * FROM developer_webhooks WHERE id=? AND org_id=?').bind(id, orgId).first();
     if (!webhook) return jsonResp({ error: 'Webhook not found' }, 404);
+    // Re-validate at test/use time too (defense in depth — not just at
+    // registration), since this is the actual server-side fetch() call.
+    const urlError = validateWebhookUrl(webhook.url);
+    if (urlError) return jsonResp({ error: `Webhook URL no longer passes validation: ${urlError}` }, 400);
     const testPayload = {
       event: 'webhook.test', webhookId: id,
       message: 'This is a test delivery from CYBERDUDEBIVASH AI Security Hub',

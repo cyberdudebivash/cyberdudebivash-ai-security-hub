@@ -5,6 +5,7 @@
 // Implements: 60+ MITRE ATLAS techniques, adversarial prompt library,
 //             jailbreak testing, model robustness scoring, red team reports
 // =============================================================================
+import { isRealUser } from '../auth/middleware.js';
 
 // ─── MITRE ATLAS Technique Library (v2.1) ────────────────────────────────────
 const ATLAS_TECHNIQUES = [
@@ -129,7 +130,16 @@ function scoreModelRobustness(testResults) {
 }
 
 // ─── Route Dispatcher ─────────────────────────────────────────────────────────
-export async function handleAIRedTeamPro(request, env) {
+// techniques/prompts/probe/robustness-score are stateless, non-tenant-specific
+// reference data (the same MITRE ATLAS library and prompt templates for every
+// caller) — deliberately public, including for frontend/ai-security-assessment
+// .html's unauthenticated "try before you pay" demo modal. campaigns/reports
+// are different: they persist an org's confidential red-team data (target
+// models/endpoints, attack results), so those specific routes require a real
+// logged-in principal, with org_id always derived from the authenticated
+// session (authCtx.org_id, uniquely namespaced per user by withAuthAliases)
+// — never trusted from client body/query params, as it was before this fix.
+export async function handleAIRedTeamPro(request, env, authCtx) {
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method;
@@ -138,16 +148,31 @@ export async function handleAIRedTeamPro(request, env) {
   if (path === '/api/ai-redteam/techniques/search' && method === 'POST') return searchTechniques(request, env);
   if (path.match(/^\/api\/ai-redteam\/techniques\/[\w.-]+$/) && method === 'GET') return getTechnique(request, env);
   if (path === '/api/ai-redteam/prompts' && method === 'GET') return listAdversarialPrompts(request, env);
-  if (path === '/api/ai-redteam/campaigns' && method === 'POST') return createCampaign(request, env);
-  if (path === '/api/ai-redteam/campaigns' && method === 'GET') return listCampaigns(request, env);
-  if (path.match(/^\/api\/ai-redteam\/campaigns\/[\w-]+$/) && method === 'GET') return getCampaign(request, env);
-  if (path.match(/^\/api\/ai-redteam\/campaigns\/[\w-]+\/run$/) && method === 'POST') return runCampaign(request, env);
   if (path === '/api/ai-redteam/robustness-score' && method === 'POST') return calculateRobustness(request, env);
   if (path === '/api/ai-redteam/probe/jailbreak' && method === 'POST') return probeJailbreak(request, env);
   if (path === '/api/ai-redteam/probe/prompt-injection' && method === 'POST') return probePromptInjection(request, env);
   if (path === '/api/ai-redteam/probe/data-extraction' && method === 'POST') return probeDataExtraction(request, env);
-  if (path === '/api/ai-redteam/reports' && method === 'POST') return generateRedTeamReport(request, env);
-  if (path.match(/^\/api\/ai-redteam\/reports\/[\w-]+$/) && method === 'GET') return getRedTeamReport(request, env);
+
+  // Campaigns/reports persist per-org confidential data — require a real
+  // logged-in principal past this point, org_id always server-derived.
+  const isCampaignOrReportRoute =
+    (path === '/api/ai-redteam/campaigns') ||
+    path.match(/^\/api\/ai-redteam\/campaigns\/[\w-]+$/) ||
+    path.match(/^\/api\/ai-redteam\/campaigns\/[\w-]+\/run$/) ||
+    (path === '/api/ai-redteam/reports') ||
+    path.match(/^\/api\/ai-redteam\/reports\/[\w-]+$/);
+  if (isCampaignOrReportRoute) {
+    if (!isRealUser(authCtx)) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+    const orgId = authCtx.org_id || `u:${authCtx.user_id ?? authCtx.userId}`;
+    if (path === '/api/ai-redteam/campaigns' && method === 'POST') return createCampaign(request, env, orgId, authCtx);
+    if (path === '/api/ai-redteam/campaigns' && method === 'GET') return listCampaigns(request, env, orgId);
+    if (path.match(/^\/api\/ai-redteam\/campaigns\/[\w-]+$/) && method === 'GET') return getCampaign(request, env, orgId);
+    if (path.match(/^\/api\/ai-redteam\/campaigns\/[\w-]+\/run$/) && method === 'POST') return runCampaign(request, env, orgId);
+    if (path === '/api/ai-redteam/reports' && method === 'POST') return generateRedTeamReport(request, env, orgId);
+    if (path.match(/^\/api\/ai-redteam\/reports\/[\w-]+$/) && method === 'GET') return getRedTeamReport(request, env, orgId);
+  }
 
   return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
 }
@@ -202,50 +227,50 @@ async function listAdversarialPrompts(request, env) {
   return jsonResp({ prompts, total: prompts.length, categories: [...new Set(ADVERSARIAL_PROMPTS.map(p => p.category))] });
 }
 
-async function createCampaign(request, env) {
+async function createCampaign(request, env, orgId, authCtx) {
   try {
     const body = await request.json();
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
+    const createdBy = authCtx?.email || authCtx?.userId || authCtx?.user_id || 'unknown';
     const selectedTechniques = body.technique_ids
       ? ATLAS_TECHNIQUES.filter(t => body.technique_ids.includes(t.id))
       : ATLAS_TECHNIQUES.filter(t => body.tactics ? body.tactics.includes(t.tactic) : t.severity === 'CRITICAL' || t.severity === 'HIGH');
     await env.DB.prepare(`INSERT INTO ai_redteam_campaigns
       (id,org_id,name,description,target_model,target_endpoint,technique_ids,status,created_by,created_at,updated_at)
       VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
-      .bind(id, body.org_id||'default', body.name, body.description||'',
+      .bind(id, orgId, body.name, body.description||'',
         body.target_model||'unknown', body.target_endpoint||'', JSON.stringify(selectedTechniques.map(t=>t.id)),
-        'PENDING', body.created_by||'anonymous', now, now).run();
+        'PENDING', createdBy, now, now).run();
     return jsonResp({ success: true, id, name: body.name, plannedTechniques: selectedTechniques.length,
       techniques: selectedTechniques, status: 'PENDING', message: 'Campaign created. POST /api/ai-redteam/campaigns/{id}/run to execute.'
     }, 201);
   } catch (e) { return jsonResp({ error: e.message }, 500); }
 }
 
-async function listCampaigns(request, env) {
+async function listCampaigns(request, env, orgId) {
   try {
-    const orgId = new URL(request.url).searchParams.get('org_id')||'default';
     const { results } = await env.DB.prepare('SELECT * FROM ai_redteam_campaigns WHERE org_id=? ORDER BY created_at DESC').bind(orgId).all();
     return jsonResp({ campaigns: results, total: results.length });
   } catch (e) { return jsonResp({ error: e.message }, 500); }
 }
 
-async function getCampaign(request, env) {
+async function getCampaign(request, env, orgId) {
   const id = new URL(request.url).pathname.split('/').pop();
   try {
-    const campaign = await env.DB.prepare('SELECT * FROM ai_redteam_campaigns WHERE id=?').bind(id).first();
+    const campaign = await env.DB.prepare('SELECT * FROM ai_redteam_campaigns WHERE id=? AND org_id=?').bind(id, orgId).first();
     if (!campaign) return jsonResp({ error: 'Campaign not found' }, 404);
-    const results = await env.KV.get(`redteam_results:${id}`, 'json');
+    const results = await env.KV.get(`redteam_results:${orgId}:${id}`, 'json');
     return jsonResp({ campaign, results: results || null });
   } catch (e) { return jsonResp({ error: e.message }, 500); }
 }
 
-async function runCampaign(request, env) {
+async function runCampaign(request, env, orgId) {
   const id = new URL(request.url).pathname.split('/').slice(-2, -1)[0];
   try {
-    const campaign = await env.DB.prepare('SELECT * FROM ai_redteam_campaigns WHERE id=?').bind(id).first();
+    const campaign = await env.DB.prepare('SELECT * FROM ai_redteam_campaigns WHERE id=? AND org_id=?').bind(id, orgId).first();
     if (!campaign) return jsonResp({ error: 'Campaign not found' }, 404);
-    await env.DB.prepare('UPDATE ai_redteam_campaigns SET status=?,updated_at=? WHERE id=?').bind('RUNNING', new Date().toISOString(), id).run();
+    await env.DB.prepare('UPDATE ai_redteam_campaigns SET status=?,updated_at=? WHERE id=? AND org_id=?').bind('RUNNING', new Date().toISOString(), id, orgId).run();
 
     const techniqueIds = JSON.parse(campaign.technique_ids || '[]');
     const techniques = ATLAS_TECHNIQUES.filter(t => techniqueIds.includes(t.id));
@@ -292,8 +317,8 @@ async function runCampaign(request, env) {
       campaignId: id, status: 'SIMULATION_COMPLETE', mode: 'SIMULATION', summary, testResults,
       completedAt: new Date().toISOString(),
     };
-    await env.KV.put(`redteam_results:${id}`, JSON.stringify(campaignResults), { expirationTtl: 604800 });
-    await env.DB.prepare('UPDATE ai_redteam_campaigns SET status=?,updated_at=? WHERE id=?').bind('COMPLETED', new Date().toISOString(), id).run();
+    await env.KV.put(`redteam_results:${orgId}:${id}`, JSON.stringify(campaignResults), { expirationTtl: 604800 });
+    await env.DB.prepare('UPDATE ai_redteam_campaigns SET status=?,updated_at=? WHERE id=? AND org_id=?').bind('COMPLETED', new Date().toISOString(), id, orgId).run();
 
     return jsonResp(campaignResults);
   } catch (e) { return jsonResp({ error: e.message }, 500); }
@@ -368,14 +393,13 @@ async function probeDataExtraction(request, env) {
   } catch (e) { return jsonResp({ error: e.message }, 500); }
 }
 
-async function generateRedTeamReport(request, env) {
+async function generateRedTeamReport(request, env, orgId) {
   try {
     const body = await request.json();
-    const orgId = body.org_id || 'default';
     const campaignId = body.campaign_id;
     let campaignResults = null;
     if (campaignId) {
-      campaignResults = await env.KV.get(`redteam_results:${campaignId}`, 'json');
+      campaignResults = await env.KV.get(`redteam_results:${orgId}:${campaignId}`, 'json');
     }
     const reportId = crypto.randomUUID();
     const report = {
@@ -405,10 +429,9 @@ async function generateRedTeamReport(request, env) {
   } catch (e) { return jsonResp({ error: e.message }, 500); }
 }
 
-async function getRedTeamReport(request, env) {
+async function getRedTeamReport(request, env, orgId) {
   const id = new URL(request.url).pathname.split('/').pop();
   try {
-    const orgId = new URL(request.url).searchParams.get('org_id') || 'default';
     const report = await env.KV.get(`redteam_report:${orgId}:${id}`, 'json');
     if (!report) return jsonResp({ error: 'Report not found' }, 404);
     return jsonResp(report);

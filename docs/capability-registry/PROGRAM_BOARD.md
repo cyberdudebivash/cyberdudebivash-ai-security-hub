@@ -73,13 +73,13 @@ parallel tracking document.
 | Domain files | 21 | `docs/capability-registry/domains/*.json` |
 | Domains populated | 21 | see list below (all 3 former stubs now populated) |
 | Domains empty (stubs) | 0 | none remain |
-| Capabilities registered | 97 | `node scripts/registry/validate.mjs` (unchanged this wave — CAP-MSSP-005 already existed; this pass corrected its fields, not the count) |
-| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (after CAP-MSSP-005's registry update; 2 hard failures caught and fixed first — an invalid `verification.method` enum value and a bare-filename false-match on the citation regex, both self-inflicted in this same pass, neither a pre-existing issue) |
-| Worker test suite | 260 files / 2719 tests passing | `npx vitest run`, run 2026-07-12 — +28 tests this wave, new file `msspPanelTenantIsolation.test.mjs` (CAP-MSSP-005: the tenant-isolation fix proven directly, plus full behavioral coverage of all 9 entry points). Baseline going into this wave was 259 files / 2691 tests (CAP-TIH-003). |
-| Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — still NOT READY: multiple other Critical (P1) items are untouched by this session, and fixed items still count toward the historical Critical total per this file's own historical-priority convention (see below) |
-| Backend / Frontend / Parity | 89.7% / 72.2% / 68% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — unchanged by CAP-MSSP-005 itself (its `frontend.status` stayed `partial`, nothing moved); **this row is also corrected here** — it had drifted stale at the 71.6%/67% snapshot from the CAP-TIH-008 pass (item 13) and was never rolled forward after CAP-TIH-015 (item 14) explicitly bumped these to 72.2%/68%, three items before this one. Hidden features stays 19, Backend-only stays 14 (unaffected by this item). |
-| Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, all static verification) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
-| Gaps by severity | Critical 9 · High 24 · Medium 13 · Low 51 | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — unchanged this wave: `priority` fields are preserved historically rather than recomputed live (see row above), so correcting CAP-TIH-008's navigation field does not move this table. Do not hand-diff against older rows in this table — each was already flagged non-comparable; treat this run as the current baseline |
+| Capabilities registered | 97 | `node scripts/registry/validate.mjs` (unchanged this wave) |
+| Validator | 0 failures, 0 warnings | `node scripts/registry/validate.mjs`, run 2026-07-12 (Enterprise Production Certification Program pass) |
+| Worker test suite | 264 files / 2755 tests passing | `npx vitest run`, run 2026-07-12 — +4 files / +36 tests this wave (new files: `aiRedTeamProTenantIsolation.test.mjs`, `aiSecurityASPMTenantIsolation.test.mjs`, `executiveCommandCenterTenantIsolation.test.mjs`, `developerPortalWebhookSecurity.test.mjs`). Baseline going into this wave was 260 files / 2719 tests (CAP-MSSP-005). |
+| Production readiness verdict | **NOT READY** (computed) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — still NOT READY: parity (68%) is below the 80% threshold, which alone forces this verdict regardless of the Critical/P1 count |
+| Backend / Frontend / Parity | 89.7% / 72.2% / 68% | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — unchanged this wave (this session's fixes were security/correctness/registry-hygiene, not new frontend surfaces) |
+| Customer journeys browser-verified | 3/97 capabilities now carry both `verification.method: dynamic_browser` AND `customer_journey_complete: true` (CAP-IDN-001, CAP-IDN-002, CAP-IDN-003 — unchanged this wave, no new dynamic_browser session run) | Full real chain against LIVE PRODUCTION (`cyberdudebivash.in`), zero mocking: signup → MFA setup/enable (real RFC 6238 TOTP, no authenticator app) → logout → password login → MFA challenge → authenticated dashboard link — see session log |
+| Gaps by severity | Critical 3 · High 25 · Medium 13 · Low 56 (was Critical 9 · High 24 · Medium 13 · Low 51 at the start of this wave) | `PRODUCTION_READINESS_REPORT.md`, regenerated 2026-07-12 — this wave independently re-verified all 9 P1-labeled entries against source (not trusted from any prior session): 6 had no explicit priority-freeze statement recorded anywhere (CAP-IDN-001/002/003, CAP-DEVPORTAL-002, CAP-CRM-007 moved off P1 to match their confirmed-resolved state; CAP-DEVPORTAL-003 re-priortized P1→P2, a genuine partial gap, not a broken journey). 3 had an explicit, prior-session "priority stays P1, historical-severity convention, not re-litigated" statement on file (CAP-COMP-001, CAP-MSSP-001, CAP-DEVPORTAL-004) — left untouched, only re-verification evidence added to `notes`, per this file's own established convention. Do not hand-diff against older rows in this table — each was already flagged non-comparable; treat this run as the current baseline |
 
 Full structural breakdown (per-domain tables, gap definitions): regenerate
 and read `docs/capability-registry/PRODUCTION_READINESS_REPORT.md` — never
@@ -261,6 +261,197 @@ already shipped under it:
   remediation section above and today's session log entry below.
 
 ## Session log (most recent first)
+
+### 2026-07-12 — Enterprise Production Certification Program: whole-platform audit, 4 new critical/high security fixes, 9 P1 registry entries independently re-verified
+
+- **Context.** Owner requested a full enterprise-grade production certification
+  audit of the entire platform (every feature, backend, frontend, API,
+  security control, AI workflow, CI/CD pipeline), explicitly instructing to
+  never trust prior AI sessions or registry claims and to verify everything
+  directly from source. This is a certification/audit pass, not a
+  new-feature pass — scope was fixing real defects and correcting stale
+  records, not building missing frontends.
+- **Ground truth established first.** Fast-forwarded to current `main`
+  (`26760ba3`), regenerated `PRODUCTION_READINESS_REPORT.md` fresh, took a
+  real inventory (160 backend handler files, 80 frontend pages, 256 test
+  files, 15 GitHub Actions workflows, 21 registry domains / 97
+  capabilities, 143.7K lines of worker code, 258.5K lines of frontend).
+- **Meta-finding (methodology, not a single bug):** independently confirmed
+  via source (`scripts/registry/generate-report.mjs`'s `priorityCounts`/
+  `brokenJourneys` logic) that this registry's `priority` field is a
+  static, manually-set value, never recomputed from current
+  `operational_status`/`customer_journey_complete` — so the readiness
+  report's headline "Critical: N" count can and does include entries that
+  were fixed long ago but never re-labeled. This explains most of what
+  follows below.
+- **All 9 P1-labeled entries re-verified from source** (2 parallel
+  investigations, cross-checked directly against handlers/frontend/tests,
+  not trusted from registry notes): every one of the 9 turned out to be
+  already fixed. 6 had no explicit "keep this priority" statement recorded
+  anywhere (in the capability's own `notes` or in this file) — corrected to
+  match the confirmed-resolved state: `CAP-IDN-001/002/003` (login/signup/
+  MFA — re-verified via direct source read, real test execution across 6
+  test files/39 tests, and git-pickaxe provenance confirming the fix
+  commit is an ancestor of HEAD, untouched by ~19 later commits) moved
+  `PILOT ONLY`/P1 → `GA APPROVED WITH DOCUMENTED LIMITATIONS`/P6;
+  `CAP-DEVPORTAL-002` and `CAP-CRM-007` similarly moved off P1;
+  `CAP-DEVPORTAL-003` was re-priortized P1→P2 (a genuine partial gap —
+  zero frontend UI, API-first by design — not a broken journey). The other
+  3 (`CAP-COMP-001`, `CAP-MSSP-001`, `CAP-DEVPORTAL-004`) carry an explicit,
+  prior-session "priority stays P1, historical-severity convention, not
+  re-litigated" statement — respected as-is, left untouched, only
+  re-verification evidence appended to `notes`. **Critical/P1 count moved
+  9 → 3** as a result (see metrics table above); this does not flip the
+  overall verdict, since parity (68%) alone already forces `NOT READY`
+  regardless of the P1 count.
+- **Manual OWASP-style security sweep (not just CodeQL/static tools)**
+  found 5 candidate cross-tenant/unauthenticated findings; each was
+  independently re-traced through the actual request path (not trusted
+  from the sweep alone) before any fix, which caught one false positive:
+  `workers/src/middleware/security.js`'s `assertTenantAccess` reads the
+  same never-populated `authCtx.orgId` as the already-fixed CAP-MSSP-005,
+  but has zero callers anywhere — dead code, not live. Similarly,
+  `orgMemoryV2.js`'s `/api/org-memory*` routes looked unauthenticated in
+  isolation, but `workers/src/index.js:1548`'s blanket
+  `/^\/api\/(integrations|org-memory|workflows|revenue|monetize)(\/|$)/`
+  owner-only gate runs first and already covers them — confirmed by an
+  existing test's own doc-comment. **4 findings were confirmed real and
+  fixed, each with a new regression-test file:**
+  - `workers/src/handlers/aiRedTeamPro.js` (CRITICAL): the entire module
+    received no `authCtx` from the router at all; campaigns/reports routes
+    trusted a client-supplied `org_id` (default `'default'`) with zero
+    auth — any anonymous caller could create/read/run AI red-team
+    campaigns (including `target_model`/`target_endpoint`) for any org.
+    Fixed: campaigns/reports now require `isRealUser(authCtx)` and derive
+    `org_id` server-side, mirroring `aiGovernancePro.js`'s established
+    pattern; `techniques`/`prompts`/`probe/*`/`robustness-score` stay
+    deliberately public (stateless reference data —
+    `frontend/ai-security-assessment.html` has an intentional
+    unauthenticated "try before you pay" demo depending on this). Also
+    closed a same-file KV-key IDOR (`redteam_results:${id}` had no org
+    prefix). New `workers/test/aiRedTeamProTenantIsolation.test.mjs` (13
+    tests).
+  - `workers/src/handlers/aiSecurityASPM.js` (HIGH): `handleScanAIAsset`
+    required login but its asset lookup (`WHERE id=?`) had no ownership
+    check — any authenticated user, any tier, could scan/read/tamper with
+    another tenant's AI asset by ID. Fixed: both the `SELECT` and the
+    score-writing `UPDATE` now scope by `org_id` (same
+    `authCtx.orgId||authCtx.userId` derivation already used by this file's
+    sibling functions, kept internally consistent rather than
+    "corrected" to a different field that would desync from how assets
+    are already stored). New
+    `workers/test/aiSecurityASPMTenantIsolation.test.mjs` (5 tests).
+  - `workers/src/handlers/executiveCommandCenter.js` (HIGH): the router's
+    tier gate (`workers/src/index.js`'s `/api/executive/*` catch-all,
+    already covered by `executiveCommandCenterGate.test.mjs`) correctly
+    rejects anonymous/FREE callers — but resolved a real `authCtx` purely
+    to make that one decision, then called the handler with none of it, so
+    every one of its 8 sub-routes independently trusted a client-supplied
+    `org_id` — any caller who legitimately cleared the tier gate (even the
+    cheapest paying customer) could read/write any other org's FAIR risk
+    models, KRI dashboards, and board/CISO reports. Fixed: `org_id` is now
+    derived once from the authenticated session and passed to all 8
+    sub-routes. New `workers/test/executiveCommandCenterTenantIsolation.test.mjs`
+    (6 tests).
+  - `workers/src/handlers/developerPortal.js` (CRITICAL): the dispatcher
+    explicitly gates key-management routes with `isRealUser(authCtx)`
+    (`isRealUser` was even already imported) but the 4 webhook CRUD
+    routes registered two lines above had no such check —
+    `registerWebhook` took an arbitrary `body.url` with no validation and
+    `testWebhook` then did a server-side `fetch(webhook.url)`: a fully
+    unauthenticated SSRF oracle (register a webhook pointing at an
+    internal address, hit `/test`, read back status/latency/error).
+    `deleteWebhook` had no ownership check at all. Fixed: all 4 routes
+    now require `isRealUser`, `org_id` is server-derived, and
+    `registerWebhook`/`testWebhook` both validate the URL is a public
+    HTTPS FQDN (rejecting localhost/private/link-local ranges and
+    non-FQDN/`.local`/`.internal` hosts) — reusing the exact SSRF-guard
+    regex already shipped in `handlers/enterpriseAutomation.js`'s
+    `handleIntegrationTest`, kept consistent rather than inventing a
+    second variant. New `workers/test/developerPortalWebhookSecurity.test.mjs`
+    (12 tests).
+- **One small, separate, well-evidenced fix:** `CAP-MYTHOS-002`'s
+  `POST /api/mythos/run` had a narrower inline `x-admin-key`-only gate
+  registered *before* `handleMythosRun`, which then received a hardcoded
+  `{role:'admin'}` — making the handler's own, more complete auth logic
+  (broader `isValidAdminKey()` header acceptance, plus a real
+  ENTERPRISE/MSSP-tier path allowing up to 5 runs/day) permanently
+  unreachable. Fixed by resolving a real `authCtx` and letting the
+  handler's existing logic run as designed — purely additive, no existing
+  access narrowed.
+- **Navigation fix:** `frontend/customer-dashboard.html` (risk radar, asset
+  inventory, exportable report — real, fully-wired, zero bugs) was
+  reachable only via a one-time post-purchase link with no persistent nav
+  anywhere; added a real "My Risk Radar" nav item to
+  `user-dashboard.html`'s Intelligence section.
+- **CodeQL caught 2 new High-severity findings pre-merge-equivalent** on
+  the `cloudSecurityScanner.test.mjs` fetch mocks (from an earlier session
+  this same day) — confirmed false positives (test-mock routing logic, not
+  a real security boundary) but tightened to match parsed hostname instead
+  of raw substring containment anyway, per this repo's own standing
+  discipline of fixing CodeQL findings rather than arguing past them.
+- **AI-fabrication sweep (separate from the security sweep) found 3 new,
+  not-yet-fixed instances of the CAP-MYTHOS-003/CAP-TIH-014 fabrication
+  pattern**, flagged for a dedicated follow-up pass rather than rushed
+  fixes in an already-large session:
+  - `workers/src/handlers/secureDownload.js`'s `generateReportHTML()` —
+    most severe: **paid, payment-gated** downloadable "SENTINEL APEX™"
+    intelligence reports bake in fully invented trend stats (e.g. "AI-
+    Weaponized Attacks ↑ +187% YoY"), static boilerplate threat-actor
+    prose stamped with today's date to imply freshness, and a cover page
+    claiming "live intelligence" over ~90% static template. (CVE/IOC
+    sections in the same report are real D1 data with honest empty
+    states — only the landscape/actor narrative is fabricated.)
+  - `workers/src/services/revos/cisoReportEngine.js`'s
+    `generateCISOReport()` — the platform's own board-report generator
+    hardcodes `compliance_status` (SOC2/GDPR/DPDP always `ALIGNED`/
+    `COMPLIANT`/90+ score for every org, never queries the real
+    `compliance_results` table `cisoMetrics.js` correctly uses elsewhere)
+    and hardcoded MTTD/MTTR/SLA numbers — a live duplicate of the exact
+    bug already fixed in that sibling file. Also injects an uncomputed
+    "61% of scanned targets lack DNSSEC" stat into every report.
+  - `workers/src/handlers/executiveRiskHandlers.js`'s
+    `handleExecutiveRiskBrief()` — mixes 3 genuinely-derived risk signals
+    with 2 undisclosed hardcoded constants (`compliance_posture: 45`,
+    `ai_security: 65`) folded into the averaged composite risk score with
+    no indication they're placeholders.
+  - Minor: a recycled, uncited "340% YoY" jailbreak/prompt-injection stat
+    recurs as boilerplate copy in `executiveCommandCenter.js`,
+    `emailEngine.js`, and `v24/salesOS.js`.
+- **CI/CD pipeline review** (all 15 workflow files + `wrangler.toml` read
+  in full): secrets handling is clean (no hardcoded credentials found);
+  `deploy.yml`'s post-deploy smoke test and the Enterprise Release Gate /
+  CEAP Synthetic Customer Assurance workflows are all genuinely real
+  (verified their backing scripts, not just their names). Two real gaps
+  found, not fixed this pass (CI/CD infrastructure changes affecting
+  shared production systems — flagged for explicit follow-up rather than
+  changed unilaterally): **(1)** no automated rollback — a failed
+  post-deploy smoke test doesn't roll back the Worker/Pages deploy, only
+  a manual `wrangler rollback`/`git revert` recovers it; **(2)** two
+  parallel D1 schema-migration paths exist — `db-migrate.yml` is solid
+  (typed `APPLY` confirmation + mandatory pre-migration backup that aborts
+  if empty), but `automation.yml`'s `schema-migrate` job is a second,
+  weaker path to the same production DB with no typed confirmation and no
+  backup gate, wrapped in `continue-on-error`. The repo's own
+  `hardening/DR_ROLLBACK_RUNBOOK.md:73` already flags a related gap
+  (`Test & Quality Gate` not confirmed as a required branch-protection
+  status check) as an open to-do, not newly discovered here.
+- **Verification:** fresh `npm ci` + full suite from scratch (not trusted
+  from any prior claim): **264 files / 2755 tests, all green** (+4 files /
+  +36 tests this wave). Registry validator: 0 failures, 0 warnings.
+  `PRODUCTION_READINESS_REPORT.md` regenerated fresh (Backend/Frontend/
+  Parity unchanged at 89.7%/72.2%/68% — this wave's fixes were security/
+  correctness/registry-hygiene, not new frontend surfaces; Critical/P1
+  9→3, High/P2 24→25, Low/P6 37→42).
+- **What remains, sized honestly, not hidden:** the 3 new AI-fabrication
+  findings above are unfixed and flagged for a dedicated follow-up pass;
+  the 2 CI/CD gaps above are unfixed and flagged; `CAP-TIH-014`'s
+  previously-known fabrication (fake vendor-attributed zero-day headline,
+  invented catalog counts) remains open by standing owner instruction;
+  24 P2 (backend exists, frontend missing) and the 37 remaining P6/P7
+  (test-coverage/documentation) gaps were not built or written this pass
+  — building missing frontends is explicitly out of scope for a
+  certification/audit pass, not an oversight.
 
 ### 2026-07-12 — 22-paid-feature program, item 22 (of 22 real, final item): CAP-MSSP-005 — a real, currently-reachable cross-tenant data collision found and closed, not just the pre-flagged test/UI gaps
 
