@@ -1,0 +1,10 @@
+{
+  "generated_at": "2026-07-12T21:52:02.284Z",
+  "engine_file": "workers/src/engine.js",
+  "engine_function": "domainScanEngine",
+  "methodology": "Every documented risk rule (13 high-risk TLDs, 13 phishing keywords, length/digit/hyphen boundaries, additive scoring, 100-point cap) tested in isolation against purpose-built inputs, plus a clean-domain false-positive check and STATIC/live_verification honesty assertions. Source: scripts/domain-engine-rule-conformance.mjs.",
+  "assertions_passed": 59,
+  "assertions_failed": 0,
+  "assertions_total": 59,
+  "status": "ALL RULES VERIFIED"
+}
