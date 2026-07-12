@@ -54,13 +54,14 @@
     "id": "CAP-TIH-002",
     "domain": "threat-hunting-intel",
     "name": "Threat Intelligence Feed & Versioned API (Sentinel APEX v2.0)",
-    "description": "Main paginated/tiered threat-intel feed (D1 -> KV -> seed fallback), SSE stream, manual ingest, and a v1 API surface (threat-intel, IOCs, correlations, graph, hunting) — the last three of which have no frontend caller.",
+    "description": "Main paginated/tiered threat-intel feed (D1 -> KV -> seed fallback), SSE stream, manual ingest, and a v1 API surface (threat-intel, IOCs, correlations, graph, hunting). The 5 previously-uncalled handlers (iocs/correlations/graph/hunting/manual-ingest) now have a real dashboard UI — an API-key-based \"API Explorer\" tab, since /api/v1/* deliberately rejects dashboard-session auth (see notes).",
     "backend": {
       "handlers": ["workers/src/handlers/threatIntel.js"],
       "entry_points": ["handleGetThreatIntel", "handleThreatIntelStats", "handleGetThreatIntelEntry", "handleManualIngest", "handleV1ThreatIntel", "handleV1IOCs", "handleThreatIntelStream", "handleV1Correlations", "handleV1Graph", "handleV1Hunting"],
       "routes_sampled": [
         { "path": "/api/threat-intel", "method": "GET", "evidence": "workers/src/index.js:2346" },
         { "path": "/api/threat-intel/stats", "method": "GET", "evidence": "workers/src/index.js:2352" },
+        { "path": "/api/threat-intel/ingest", "method": "POST", "evidence": "workers/src/index.js:3511" },
         { "path": "/api/v1/threat-intel", "method": "GET", "evidence": "workers/src/index.js:3859" },
         { "path": "/api/v1/iocs", "method": "GET", "evidence": "workers/src/index.js:3864" },
         { "path": "/api/v1/correlations", "method": "GET", "evidence": "workers/src/index.js:3971" },
@@ -72,13 +73,13 @@
     },
     "frontend": {
       "surface_type": "dedicated_page",
-      "pages": ["frontend/intel.html", "frontend/intel-hub.html", "frontend/index.html", "frontend/soc-dashboard.html"],
-      "status": "partial",
-      "evidence": "frontend/intel.html:1424,1656 and frontend/intel-hub.html:470,522 call /api/threat-intel and /stats; frontend/index.html:8890,22234 pull the CVE feed; frontend/soc-dashboard.html calls /api/v1/threat-intel. No frontend caller found anywhere for handleV1Correlations, handleV1Graph, handleV1Hunting, handleManualIngest, or handleV1IOCs — backend-only, API-key/curl reachable, no dashboard UI for those 5."
+      "pages": ["frontend/intel.html", "frontend/intel-hub.html", "frontend/index.html", "frontend/soc-dashboard.html", "frontend/user-dashboard.html"],
+      "status": "exists",
+      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html gained a real \"API Explorer\" tab (id=\"page-v1-explorer\", Developer sidebar section) with 5 live tools, one per previously-uncalled handler: IOC Registry query (ENTERPRISE), CVE Correlation lookup (PRO/ENTERPRISE), Intel Graph Neighborhood query (PRO/ENTERPRISE), Automated Hunting Alerts (PRO/ENTERPRISE), and Manual Feed Refresh (PRO/ENTERPRISE, triggers a real live re-ingestion from CISA KEV/NVD/GitHub Advisories). Unlike CAP-TIH-009/CAP-TIH-014's tabs, this one does NOT use the session-cookie apiFetch() helper — /api/v1/* rejects session auth outright (see auth_enforced/notes), so the tab collects the customer's own previously-issued API key and calls the endpoints directly with x-api-key. Named deliberately to avoid colliding with the existing \"Threat Hunting\" (CAP-TIH-001) and \"Threat Graph\" (client-side) nav-items elsewhere in this same sidebar. Before this fix: no frontend caller found anywhere for handleV1Correlations, handleV1Graph, handleV1Hunting, handleManualIngest, or handleV1IOCs. frontend/intel.html:1424,1656 and frontend/intel-hub.html:470,522 call /api/threat-intel and /stats; frontend/index.html:8890,22234 pull the CVE feed; frontend/soc-dashboard.html calls /api/v1/threat-intel (all three unchanged by this fix)."
     },
     "navigation": {
       "discoverable": true,
-      "evidence": "frontend/intel.html and frontend/intel-hub.html linked from sitemap and homepage ('Open full Intel Hub ->', frontend/index.html:1994). The /api/v1/* endpoints are documented in frontend/api-docs.html but have no dashboard UI."
+      "evidence": "frontend/intel.html and frontend/intel-hub.html linked from sitemap and homepage ('Open full Intel Hub ->', frontend/index.html:1994). FIXED 2026-07-12: frontend/user-dashboard.html's Developer sidebar section now has a real nav-item (data-page=\"v1-explorer\") for the 5 handlers described in frontend.evidence; the /api/v1/* endpoints are also still documented in frontend/api-docs.html."
     },
     "auth_enforced": false,
     "rbac": { "enforced": true, "permissions": ["tier:PRO", "tier:ENTERPRISE"] },
@@ -86,21 +87,21 @@
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "handleGetThreatIntel/handleThreatIntelStats <- workers/test/phase2ContractDrift.test.mjs. handleV1ThreatIntel <- workers/test/threatIntelExportEntitlement.test.mjs and workers/test/v1ThreatIntelConsistency.test.mjs. No import-confirmed test for handleGetThreatIntelEntry, handleManualIngest, handleThreatIntelStream, handleV1IOCs, handleV1Correlations, handleV1Graph, or handleV1Hunting; workers/src/services/huntingEngine.js, workers/src/services/correlationEngine.js, workers/src/services/graphEngine.js have zero import-confirmed tests."
+      "evidence": "handleGetThreatIntel/handleThreatIntelStats <- workers/test/phase2ContractDrift.test.mjs. handleV1ThreatIntel <- workers/test/threatIntelExportEntitlement.test.mjs and workers/test/v1ThreatIntelConsistency.test.mjs. FIXED 2026-07-12: workers/test/threatIntelV1Explorer.test.mjs (22 tests) closes the test-coverage gap for handleV1IOCs, handleV1Correlations, handleV1Graph, handleV1Hunting, and handleManualIngest — tier-gate checks for all 5, real-DB-driven (non-fabricated) response-shape checks for the 4 GET handlers, a network-stubbed run of the real ingestion pipeline for handleManualIngest, a full-router-level proof that /api/v1/* rejects a plain unauthenticated (session-shaped) request with ERR_API_KEY_REQUIRED before any tier check runs, and frontend checks for the new tab (nav-item, endpoint calls, envelope-unwrapping correctness, naming-collision avoidance). Still no import-confirmed test for handleGetThreatIntelEntry or handleThreatIntelStream (SSE) — untouched by this fix, out of its scope. workers/src/services/huntingEngine.js, workers/src/services/correlationEngine.js, workers/src/services/graphEngine.js still have zero DIRECT import-confirmed unit tests of their own (covered only indirectly via the handler tests above)."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "PILOT ONLY",
     "priority": "P2",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/threatIntel.js read directly (739 lines, 10 entry points with line numbers); workers/src/index.js routes read directly (2346-3529, 3859-3981); frontend/*.html grepped for each v1 route path; workers/test/*.mjs matches confirmed by direct grep."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/handlers/threatIntel.js read directly (739 lines, 10 entry points with line numbers); workers/src/index.js routes read directly (2346-3529, 3859-3981, plus 3511 for /api/threat-intel/ingest, previously uncited). Critically, workers/src/index.js:3827-3852 read directly and confirmed by a live router-level test: /api/v1/* requires authCtx.method === 'api_key' (a real x-api-key: cdb_* key), rejecting any session/Bearer-authenticated request with 401 ERR_API_KEY_REQUIRED before the PRO/ENTERPRISE tier gate even runs — this is why the new tab cannot reuse the session-cookie apiFetch() pattern used by CAP-TIH-009/CAP-TIH-014, unlike what a naive port of that pattern would assume. frontend/user-dashboard.html edited directly to add the tab described in frontend.evidence; all 3 inline <script> blocks re-parsed with node --check (syntax valid). Full suite green: 252 files / 2589 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": "workers/src/services/huntingEngine.js's runHunting (behind /api/v1/hunting) is a second, separate hunting implementation unrelated to CAP-TIH-001's workers/src/handlers/threatHunting.js. workers/src/services/graphEngine.js (behind /api/v1/graph) is a fourth separate graph implementation, distinct from threatGraph.js (CAP-TIH-004) and the dashboard's client-side Threat Graph and workers/src/lib/attackGraph.js (CAP-TIH-016). workers/src/services/correlationEngine.js (behind /api/v1/correlations) is a separate engine from workers/src/lib/threatCorrelation.js (CAP-TIH-017). None of these three parallel-implementation pairs are reconciled; recorded here rather than silently merged, per instruction to flag duplication rather than build over it."
+    "notes": "Third and final item in the owner-directed dashboard cluster that began with CAP-TIH-009 and CAP-TIH-014 (see CAP-TIH-009's session-log entry for the cluster decision). workers/src/services/huntingEngine.js's runHunting (behind /api/v1/hunting) is a second, separate hunting implementation unrelated to CAP-TIH-001's workers/src/handlers/threatHunting.js (which already has its own full dashboard page, frontend/threat-hunting.html) — the new tab calls this one \"Automated Hunting Alerts\" specifically to avoid presenting two same-named, unrelated \"Threat Hunting\" features to the same customer. workers/src/services/graphEngine.js (behind /api/v1/graph) is a fourth separate graph implementation, distinct from threatGraph.js (CAP-TIH-004), the dashboard's own client-side \"Threat Graph\" tab (built entirely from the customer's own scan history, no backend call at all), and workers/src/lib/attackGraph.js (CAP-TIH-016) — called \"Intel Graph Neighborhood\" here for the same collision-avoidance reason. workers/src/services/correlationEngine.js (behind /api/v1/correlations) is a separate engine from workers/src/lib/threatCorrelation.js (CAP-TIH-017, explicitly commented 'legacy' in its own source). None of these three parallel-implementation pairs are reconciled by this fix — reconciling them (picking one canonical engine per concept and retiring the others) is a materially larger, separate undertaking than adding a UI consumer for an existing, unreconciled handler, and was out of scope here; recorded rather than silently merged, per this program's standing instruction to flag duplication rather than build over it. Separately, while reading workers/src/index.js's /api/v1/* tier-gate block (line 3850) for this fix, noticed its upgrade-URL field points to https://tools.cyberdudebivash.com/#pricing and flagged it here as a possible third instance of CAP-TIH-014's external-URL bug class. CORRECTED 2026-07-12 (found while investigating CAP-TIH-015): this was a false alarm. frontend/index.html's own \"CYBERDUDEBIVASH® Ecosystem\" footer (~line 23946 onward) explicitly and transparently lists intel.cyberdudebivash.com (\"Threat Intel Platform\") and tools.cyberdudebivash.com (\"Tools Store\") as real, separate, deliberately-cross-linked sibling properties owned by the same company, alongside cyberdudebivash.in (this platform, labeled \"AI Security Hub\") — not stale or mistaken references. This does not change the CAP-TIH-014 fix (redirecting THIS platform's own teaser-card upgrade URLs to its own /#pricing was explicit, deliberate owner instruction, independent of whether the linked-away domain was legitimate), but it does mean tools.cyberdudebivash.com in this file's own /api/v1/* gate is plausibly an intentional cross-sell to a real sibling storefront, not a leftover bug — no follow-up sweep needed on this specific URL. Left as-is; not fixed, and no longer flagged as suspected fabrication."
   },
   {
     "id": "CAP-TIH-003",
@@ -315,8 +316,8 @@
       "evidence": "frontend/index.html embeds an 'AI Threat Intel' panel (renderAIThreatIntelFlagship, auto-refresh every 90s matching the handler's own autoRefreshSec:90 contract). frontend/agent-threats.html has a dedicated 'Scan My Agent' modal (runAgentScan(), 2026-07-11) that POSTs to /api/ai-security/agents/scan — the handleScanAgent entry point specifically."
     },
     "navigation": {
-      "discoverable": "unknown",
-      "evidence": "Embedded homepage widget only; not independently confirmed to have its own nav entry distinct from the homepage itself."
+      "discoverable": true,
+      "evidence": "RESOLVED 2026-07-12 (was 'unknown'): frontend/agent-threats.html (the dedicated page hosting the 'Scan My Agent' modal) is in frontend/index.html's top-level desktop nav (line 1228, \"AI Threat Intel\"), its mobile nav (line 1271), frontend/sitemap.html (line 142, \"Agent Threats\"), and linked again from 5 separate in-page CTAs on frontend/index.html plus frontend/intel-hub.html, frontend/ai-security-assessment.html, and frontend/vibe-code-scanner.html. One of the more thoroughly-linked pages checked in this program — not a real gap, just never independently confirmed."
     },
     "auth_enforced": false,
     "rbac": { "enforced": false, "permissions": [] },
@@ -334,11 +335,11 @@
     "priority": "P3",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/aiThreatIntel.js read (1011 lines, read to line 825; core exports confirmed via import statements). workers/src/index.js routes 7700-7725 read directly. Freemium gating confirmed: FREE_LIVE_PREVIEW=3 live entries plus full curated library for anonymous callers, no isRealUser hard gate. workers/test/*.mjs matches confirmed by direct grep."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/handlers/aiThreatIntel.js read (1011 lines, read to line 825; core exports confirmed via import statements). workers/src/index.js routes 7700-7725 read directly. Freemium gating confirmed: FREE_LIVE_PREVIEW=3 live entries plus full curated library for anonymous callers, no isRealUser hard gate. workers/test/*.mjs matches confirmed by direct grep. 2026-07-12: navigation.discoverable resolved by direct grep of every frontend/*.html for 'agent-threats' (6 files reference it; desktop nav, mobile nav, and sitemap links read directly at their cited line numbers) — zero code change needed."
     },
     "contradicts_doc": [],
-    "notes": "Priority P3 (navigation partly unconfirmed) rather than lower, since this is otherwise one of the better-built and better-tested capabilities in the domain — the gap is specifically not having verified where/how a customer discovers it beyond the homepage embed. auth_enforced:false describes the feed/report/radar entry points only (confirmed genuinely public, no isRealUser gate) — it does NOT apply to handleScanAgent/handleRegisterAgent/handleListAgents, all 3 of which DO hard-require a real authenticated user (`if (!authCtx?.userId) return err('Auth required', 401)`), a nuance this single top-level field can't capture for a capability bundling entry points with different auth requirements. 2026-07-11 (Tier-2 backlog item #7): found and fixed the real consequence of that nuance — frontend/agent-threats.html's runAgentScan() sent zero auth header of any kind, so handleScanAgent always 401'd for every visitor including logged-in customers. The bug was invisible in the UI because the page has a fully-functional client-side fallback (an identical OWASP LLM Top 10 rule engine) that always produced a complete-looking report — but the real, D1-persisted assessment (real agent_id, actually retrievable via handleListAgents, actually eligible for 'Register & Save Report' / advisory alerts / rescans) never fired for anyone. Fixed by adding a getAuthToken() helper (sessionStorage['cdb_access'] first, matching the convention already established elsewhere this session) and attaching it as a Bearer Authorization header."
+    "notes": "Priority P3 (navigation partly unconfirmed) rather than lower, since this is otherwise one of the better-built and better-tested capabilities in the domain — the gap is specifically not having verified where/how a customer discovers it beyond the homepage embed. auth_enforced:false describes the feed/report/radar entry points only (confirmed genuinely public, no isRealUser gate) — it does NOT apply to handleScanAgent/handleRegisterAgent/handleListAgents, all 3 of which DO hard-require a real authenticated user (`if (!authCtx?.userId) return err('Auth required', 401)`), a nuance this single top-level field can't capture for a capability bundling entry points with different auth requirements. 2026-07-11 (Tier-2 backlog item #7): found and fixed the real consequence of that nuance — frontend/agent-threats.html's runAgentScan() sent zero auth header of any kind, so handleScanAgent always 401'd for every visitor including logged-in customers. The bug was invisible in the UI because the page has a fully-functional client-side fallback (an identical OWASP LLM Top 10 rule engine) that always produced a complete-looking report — but the real, D1-persisted assessment (real agent_id, actually retrievable via handleListAgents, actually eligible for 'Register & Save Report' / advisory alerts / rescans) never fired for anyone. Fixed by adding a getAuthToken() helper (sessionStorage['cdb_access'] first, matching the convention already established elsewhere this session) and attaching it as a Bearer Authorization header. 2026-07-12 (22-paid-feature program, item 12 of 22): the one remaining open field, navigation.discoverable, is resolved above — zero code change needed, this capability's discoverability was simply never independently checked. No further open gaps on this entry."
   },
   {
     "id": "CAP-TIH-008",
@@ -363,8 +364,8 @@
       "evidence": "frontend/intel-hub.html:604 (/api/global-intel/briefing), :611 (/api/global-intel?limit=15&sort=breaking). Real, live."
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "Not in top-level nav or sitemap; reachable only via frontend/intel-hub.html."
+      "discoverable": true,
+      "evidence": "CORRECTED 2026-07-12 (was false — inconsistent with the sibling capability on this exact page, see below): frontend/intel-hub.html is linked from frontend/sitemap.html:94 ('Intel Hub') and frontend/index.html:2042 ('Open full Intel Hub →') — the same two links CAP-TIH-002's entry already credits as making that page discoverable. On the page itself, this capability is not a buried afterthought: frontend/intel-hub.html:258-265 gives it its own prominent, live-updating section headed 'Global Threat Intel Firehose' with an animated 'live' indicator dot, auto-refreshing every 5 minutes (frontend/intel-hub.html:634). The prior 'false' was technically narrow (no *dedicated* top-level nav entry distinct from frontend/intel-hub.html) but inconsistent with how the identically-situated CAP-TIH-002 is graded — corrected to match."
     },
     "auth_enforced": false,
     "rbac": { "enforced": true, "permissions": ["owner", "admin"] },
@@ -372,7 +373,7 @@
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "handleGlobalIntelFeed/handleGlobalIntelRefresh <- workers/test/globalIntelMonetization.test.mjs. handleGlobalIntelBriefing/handleGlobalIntelSources not import-confirmed. workers/src/services/globalIntelFirehose.js <- workers/test/globalIntelFirehose.test.mjs."
+      "evidence": "handleGlobalIntelFeed/handleGlobalIntelRefresh <- workers/test/globalIntelMonetization.test.mjs. FIXED 2026-07-12: handleGlobalIntelBriefing/handleGlobalIntelSources <- new workers/test/globalIntelBriefingSources.test.mjs (4 tests) — confirms the honest 'warming_up' fallback (no fabricated briefing when no snapshot/D1 data exists), the D1-derivation path, and that the source registry response reflects the real INTEL_SOURCES catalog (not a hardcoded count). workers/src/services/globalIntelFirehose.js <- workers/test/globalIntelFirehose.test.mjs."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
@@ -382,11 +383,11 @@
     "priority": "P3",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/globalIntel.js read directly (279 lines); workers/src/index.js:7945-7955 read directly; handleGlobalIntelRefresh's isOwner(authCtx) OR ADMIN_TOKEN gate confirmed at workers/src/handlers/globalIntel.js:259-274; GI_PLANS per-tier item caps (FREE 6/no IOCs up to MSSP 200) confirmed; workers/test/*.mjs matches confirmed by direct grep."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/handlers/globalIntel.js read directly (279 lines); workers/src/index.js:7945-7955 read directly; handleGlobalIntelRefresh's isOwner(authCtx) OR ADMIN_TOKEN gate confirmed at workers/src/handlers/globalIntel.js:259-274 (timing-safe token comparison); GI_PLANS per-tier item caps (FREE 6/no IOCs up to MSSP 200) confirmed; workers/test/*.mjs matches confirmed by direct grep. 2026-07-12: navigation.discoverable corrected by direct grep of frontend/sitemap.html and frontend/index.html for 'intel-hub', and of the intel hub page (frontend/intel-hub.html) for the firehose section's actual placement/prominence — zero frontend code change needed. Also added workers/test/globalIntelBriefingSources.test.mjs closing the test_coverage gap. Full suite green: 254 files / 2607 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": "Real, deliberate protection against an anonymous caller triggering an expensive 30-source pipeline. Reachable only through frontend/intel-hub.html with no direct top-level nav entry — a real, if minor, discoverability gap (P3) for an otherwise solid capability."
+    "notes": "Real, deliberate protection against an anonymous caller triggering an expensive 30-source pipeline. 2026-07-12: the discoverability concern this note used to flag is resolved — see navigation.evidence above. The page hosting this capability (frontend/intel-hub.html) is itself linked from the sitemap and homepage, and this capability gets its own prominent, live-updating section on that page, not a buried one; graded inconsistently against its sibling CAP-TIH-002 on the same page, now corrected to match. No remaining open field on this entry."
   },
   {
     "id": "CAP-TIH-009",
@@ -405,14 +406,14 @@
       "status": "exists"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "missing",
-      "evidence": "No frontend/*.html page calls any /api/intel/{ioc,cve,actor,ttp,risk} route — a pure API-economy product for external integrators, documented in frontend/api-docs.html text only."
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/user-dashboard.html"],
+      "status": "exists",
+      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html gained a real \"Threat Intel API\" tab (id=\"page-intel-api\") with 5 live lookup tools, one per real endpoint (IOC check, CVE lookup, threat actor search, MITRE ATT&CK TTP lookup, composite risk score) — each calls the real GET /api/intel/* route and renders the real response (verdict/risk_score for IOC, CVSS/KEV/severity for CVE, actor profile or list, technique+mitigations for TTP, composite score+level+narrative for risk). A tier/quota status line at the top shows the customer's plan and today's usage. Because access is tiered per-endpoint (FREE/STARTER: ioc+cve only; PRO/ENTERPRISE: all 5) rather than an all-or-nothing gate, a 429 from any individual tool renders an inline upgrade notice for that tool specifically rather than blocking the whole page. Before this fix: no frontend/*.html page called any /api/intel/{ioc,cve,actor,ttp,risk} route — documented in frontend/api-docs.html text only, no interactive UI."
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "None — API-only product."
+      "discoverable": true,
+      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html's sidebar (same section as DPDP/Compliance/CISO Metrics) now has a real nav-item (data-page=\"intel-api\") linking to the new tab."
     },
     "auth_enforced": true,
     "rbac": { "enforced": true, "permissions": ["tier:PRO", "tier:ENTERPRISE"] },
@@ -420,21 +421,21 @@
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "handleIntelIOC only <- workers/test/intelRateLimitEnforcement.test.mjs. handleIntelCVE/handleIntelActor/handleIntelTTP/handleIntelRisk not import-confirmed."
+      "evidence": "workers/test/intelApiDashboard.test.mjs (2026-07-12, 11 tests) — closes the test-coverage gap for all 4 previously-unconfirmed handlers: handleIntelCVE (honest found_in_db:false for an unknown CVE, no hallucination), handleIntelActor (honest empty result set, not fabricated), handleIntelTTP (real embedded MITRE catalog lookup), handleIntelRisk (real composite score from real component weights), plus handleIntelIOC and a 429/upgrade-url check for a FREE-tier caller. Frontend tests confirm the new tab's nav-item, 5 tool inputs, real endpoint calls per tool, and inline (not page-blocking) 429 handling."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "PILOT ONLY",
     "priority": "P2",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/intelAPIHandlers.js read directly (661 lines, 5 entry points with line numbers, handleIntelTTP's own embedded 30-technique MITRE catalog noted as a third parallel ATT&CK representation); workers/src/index.js:5229-5245 read directly; tierLimits()/checkEntitlement()/dual rate-limiting confirmed; frontend/*.html grepped with 0 hits."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/handlers/intelAPIHandlers.js read directly (661 lines, 5 entry points with line numbers, handleIntelTTP's own embedded 30-technique MITRE catalog noted as a third parallel ATT&CK representation); workers/src/index.js:5229-5245 read directly; tierLimits()/checkEntitlement()/dual rate-limiting confirmed. FIXED 2026-07-12 (22-paid-feature program, item 8 of 22, owner-directed build): frontend/user-dashboard.html read and edited directly to add the real Threat Intel API tab described in frontend.evidence above. All 3 inline <script> blocks re-parsed with node --check (syntax valid). No backend change. Full suite green: 250 files / 2549 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": "Frontend-missing is scored here even though this is meant to be an API-only product (surface_type: none is the schema's correct way to record backend-with-no-UI, per docs/capability-registry/SCHEMA.md §3), because unlike CAP-MYTHOS-004/005 (internal ops tooling), this is a customer-purchasable product with no dashboard for a paying customer to manage/monitor their own usage of it — worth a decision on whether that's acceptable for an API-only SKU or a real gap."
+    "notes": "The prior wave's open question — 'worth a decision on whether [no dashboard] is acceptable for an API-only SKU or a real gap' — is now resolved by explicit owner direction: build a real customer-facing dashboard. Done; see frontend.evidence. handleIntelTTP's embedded 30-technique MITRE catalog remains a noted third parallel ATT&CK representation on this platform (alongside at least two others catalogued elsewhere in this domain) — not reconciled by this fix, which only added a UI consumer for the existing handler, per this wave's standing discipline to flag duplication rather than silently merge engines outside the scope of the specific fix at hand."
   },
   {
     "id": "CAP-TIH-010",
@@ -584,7 +585,7 @@
     "id": "CAP-TIH-013",
     "domain": "threat-hunting-intel",
     "name": "Enterprise Premium Intelligence API",
-    "description": "Enterprise-tier intelligence, risk, campaign, and actor endpoints built on the same radarService.js as CAP-TIH-012, gated to PRO/ENTERPRISE/MSSP/OWNER/ADMIN.",
+    "description": "Enterprise-tier intelligence, risk, campaign, and actor endpoints built on the same radarService.js as CAP-TIH-012, gated to PRO/ENTERPRISE/MSSP/OWNER/ADMIN. All 4 endpoints now have a real frontend caller and real tests; the page itself is now discoverable from the main customer dashboard.",
     "backend": {
       "handlers": ["workers/src/handlers/enterpriseIntel.js"],
       "entry_points": ["handleEnterpriseIntelligence", "handleEnterpriseRisk", "handleEnterpriseCampaigns", "handleEnterpriseActors"],
@@ -600,66 +601,66 @@
     "frontend": {
       "surface_type": "dedicated_page",
       "pages": ["frontend/enterprise-dashboard.html"],
-      "status": "partial",
-      "evidence": "frontend/enterprise-dashboard.html calls /api/enterprise/risk (319,343), /api/enterprise/actors (397), /api/enterprise/campaigns (426). /api/enterprise/intelligence itself has no frontend caller anywhere — a partially-orphaned endpoint, backend exists and is routed but unused by any UI."
+      "status": "exists",
+      "evidence": "FIXED 2026-07-12: frontend/enterprise-dashboard.html gained a real \"Full Signal Intelligence Feed\" section with industry/severity/min-risk filter controls, calling the previously-orphaned GET /api/enterprise/intelligence and rendering real enriched signals (risk_score, targeted_sectors). Wired into the page's existing refreshAll()/apiFetch() pattern so it loads automatically alongside the other 3 sections, not only on manual filter. Pre-existing: /api/enterprise/risk (319,343), /api/enterprise/actors (397), /api/enterprise/campaigns (426) — unchanged."
     },
     "navigation": {
-      "discoverable": "unknown",
-      "evidence": "frontend/enterprise-dashboard.html's own nav placement not independently confirmed in this pass."
+      "discoverable": true,
+      "evidence": "FIXED 2026-07-12: resolved from 'unknown' to a verified 'false', then fixed. Grepped frontend/sitemap.html, frontend/index.html, and every other frontend/*.html for 'enterprise-dashboard' — zero real links (only two coincidental CSS-comment mentions in frontend/decision-dashboard.html and frontend/soc-command-dashboard.html, not navigation). Added a real nav-item in frontend/user-dashboard.html's Developer sidebar section (same treatment CAP-DEVPORTAL-002 gave frontend/automation-dashboard.html)."
     },
     "auth_enforced": true,
     "rbac": { "enforced": true, "permissions": ["tier:PRO", "tier:ENTERPRISE", "tier:MSSP", "owner", "admin"] },
     "subscription_gated": true,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "No import-confirmed test for any function in workers/src/handlers/enterpriseIntel.js."
+      "has_tests": true,
+      "evidence": "FIXED 2026-07-12: workers/test/enterpriseIntelligenceDashboard.test.mjs (14 tests) — auth-gate checks (401 unauthenticated, 403 insufficient tier) for all 4 handlers; real-D1-driven checks for handleEnterpriseIntelligence (computed risk_score/targeted_sectors, industry/severity/min_risk filters against real fixtures) and handleEnterpriseRisk (real risk distribution); a real MITRE ATT&CK correlation check for handleEnterpriseActors; an honest-empty-list check for handleEnterpriseCampaigns (see notes — not a test gap, a real upstream data gap); plus frontend checks for the new section and the new nav-item's placement."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "PILOT ONLY",
     "priority": "P3",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/enterpriseIntel.js read directly (371 lines, 4 entry points); checkAuth() real tier+isRealUser gate confirmed (lines 75-83); workers/src/index.js:6428-6451 read directly; frontend/enterprise-dashboard.html read directly for 3 of 4 endpoints' call sites; workers/test/*.mjs grepped with 0 hits."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/handlers/enterpriseIntel.js read directly (371 lines, 4 entry points); checkAuth() real tier+isRealUser gate confirmed (lines 75-83); workers/src/index.js:6428-6451 read directly; frontend/enterprise-dashboard.html read and edited directly (new section + JS, node --check clean); frontend/user-dashboard.html read and edited directly for the new nav-item. Full suite green: 253 files / 2603 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": "Real, enforced RBAC (isRealUser AND tier whitelist) — one of the stronger auth stories in this domain. handleEnterpriseIntelligence being unused by any frontend despite being fully built and routed is the concrete, actionable gap here (P3: navigation/wiring, not a missing capability)."
+    "notes": "Real, enforced RBAC (isRealUser AND tier whitelist) — one of the stronger auth stories in this domain. While building real D1 fixtures for the new tests, confirmed a genuine upstream finding in the shared workers/src/services/radarService.js (not modified here, out of scope for this capability's own fix): collectFromD1()'s two SQL queries (threat_intel, ai_threat_feed) never select a campaign_name or ransomware_group column at all — only ai_threat_feed selects threat_actor. This means handleEnterpriseCampaigns can never return a real campaign today regardless of live data (verified: it honestly returns an empty list rather than fabricating one), and handleEnterpriseActors can only ever surface actors sourced from ai_threat_feed rows, never from the much larger threat_intel table. Not fixed here since radarService.js is shared infrastructure behind other capabilities too and reconciling its column selection is a materially larger change than this capability's own frontend/test gap; flagged for a dedicated follow-up rather than silently worked around."
   },
   {
     "id": "CAP-TIH-014",
     "domain": "threat-hunting-intel",
     "name": "Intelligence Preview (freemium teaser cards)",
-    "description": "A fully-built, tier-gated conversion-funnel feature (CVE/threat-actor/malware-family preview cards, IOC sample, report sample, catalog, featured, unlock) referencing an EXTERNAL storefront's pricing/upgrade URLs rather than this platform's own /pricing — and has zero frontend callers in this codebase.",
+    "description": "A tier-gated conversion-funnel feature (CVE/threat-actor/malware-family preview cards, IOC sample, report sample, catalog, featured, unlock) with a real dashboard tab and honest upgrade routing to this platform's own /pricing. A separate, deliberately-deferred content-fabrication issue remains open in the underlying data (see notes) — the routing/wiring fix below does not certify the intelligence shown as accurate.",
     "backend": {
       "handlers": ["workers/src/handlers/intelligencePreview.js"],
       "entry_points": ["handleIntelligencePreview"],
       "routes_sampled": [
-        { "path": "/api/preview/*", "method": "GET", "evidence": "workers/src/index.js:7557" }
+        { "path": "/api/preview/*", "method": "GET", "evidence": "workers/src/index.js:7585" }
       ],
       "routes_fully_enumerated": false,
       "status": "exists"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "missing",
-      "evidence": "Exhaustive grep of frontend/*.html for '/api/preview/' returns zero matches. A fully-built, tier-gated feature with no wiring into this codebase's own frontend at all — its upgrade URLs point to an external storefront (intel.cyberdudebivash.com), not this platform's own /pricing, suggesting it may have been built for a different property or channel."
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/user-dashboard.html"],
+      "status": "exists",
+      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html gained a real \"Intelligence Preview\" tab (id=\"page-intel-preview\") with 8 live tools, one per real /api/preview/* sub-action: Featured Intelligence (auto-loads on tab open), CVE Preview, Threat Actor Preview, Malware Family Preview, IOC Feed Sample, Report Sample (3 report types), Previewable Catalog, and Unlock Status. Each calls the real endpoint and renders the real response, including an inline locked-field summary (intelPreviewLockedList()) for FREE-tier teaser responses. Before this fix: exhaustive grep of frontend/*.html for '/api/preview/' returned zero matches."
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "No page, no nav entry — entirely unreachable from this codebase's frontend."
+      "discoverable": true,
+      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html's sidebar (same section as Threat Intel API/DPDP/Compliance/CISO Metrics) now has a real nav-item (data-page=\"intel-preview\") linking to the new tab."
     },
     "auth_enforced": false,
     "rbac": { "enforced": false, "permissions": [] },
     "subscription_gated": true,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "No import-confirmed test for handleIntelligencePreview."
+      "has_tests": true,
+      "evidence": "workers/test/intelligencePreviewDashboard.test.mjs (2026-07-12, 18 tests) — confirms all 14 former external-URL references (intel.cyberdudebivash.com, cyberdudebivash.gumroad.com) are gone from the source file and that every conversion/upgrade/purchase/unlock URL now resolves to '/#pricing' across FREE-tier, premium, rate-limited-429, and unlock-denied responses; also confirms unchanged honest behavior (empty IOC list when the DB has none, real catalog/featured structure, premium unlock grant) plus the new dashboard tab's nav-item, 8 tool inputs, and real endpoint calls."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
@@ -669,11 +670,11 @@
     "priority": "P2",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/intelligencePreview.js read directly (722 lines, single router dispatching 8 sub-actions); isPremium() JWT/D1-entitlement check and 10/min KV rate limit for FREE authenticated users confirmed; workers/src/index.js:7557-7558 read directly (single lazy-import prefix dispatch); frontend/*.html grepped exhaustively for '/api/preview/' (0 hits)."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/handlers/intelligencePreview.js read directly (719 lines after fix) and re-grepped for 'cyberdudebivash.com'/'gumroad.com' (0 hits, was 14); node --check on the file (syntax valid). frontend/user-dashboard.html edited directly to add the tab described in frontend.evidence; all 3 inline <script> blocks re-parsed with node --check (syntax valid). Full suite green: 251 files / 2567 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": "Before building any frontend for this, confirm with the business owner whether it targets this platform's own conversion funnel or was built for/copied from a different storefront (intel.cyberdudebivash.com) — the external upgrade URLs are a real, concrete signal this may be intentionally out of scope for this codebase's frontend, not simply an unwired backend. Do not build a UI here without that confirmation, per this wave's duplicate/orphan reconciliation-before-building discipline."
+    "notes": "22-paid-feature program, owner-directed cluster (see CAP-TIH-009's session-log entry for the 3-item cluster decision): owner chose 'build dashboards for all three' over this program's recommendation to leave TIH-002/009 API-only and hold TIH-014 pending confirmation given its external-storefront red flag. When investigation then found the deeper issue was not just a wrong URL but genuine fabricated content, owner again explicitly chose 'build the dashboard anyway, fix fabrication separately' over the recommendation to redirect to real data with honest empty states first. This entry reflects that direction precisely. FIXED: all 14 hardcoded external-storefront references (upgrade_url / purchase.url / conversion.products[].url pointing at intel.cyberdudebivash.com and cyberdudebivash.gumroad.com) now point to this platform's own /#pricing, and fake one-time-product price labels tied to those links ('$249 one-time' YARA signatures, '$499 IR Kit') were removed so free-tier teaser copy is internally consistent with the real PRO/ENTERPRISE subscription tiers actually sold here. NOT FIXED — deliberately deferred per explicit owner instruction, and the reason operational_status stays NOT READY rather than following CAP-TIH-009's PILOT ONLY precedent: this handler still fabricates substantive content and presents it as real intelligence. Concretely: (1) handleFeaturedIntelligence's defaultFeatured array includes an invented headline naming a real vendor with a fake named vulnerability ('Cisco FTD zero-day — FIRESTARTER backdoor active exploitation') that does not correspond to any real disclosed CVE, plus fabricated statistics ('surge 340%', 'surge 180%') on other entries — shown to every visitor as if it were live threat intelligence; (2) handlePreviewCatalog invents its total and per-category counts outright (previewCards.length + 46, plus hardcoded category counts of 85/30/8/74/3) with no backing query; (3) handleIOCSample's free-tier upgrade message hardcodes '784 additional IOCs locked', unrelated to the real totalAvailable computed two lines above it from the actual DB; (4) both handleCVEPreview and handleMalwarePreview fall back to templated placeholder IOCs/YARA rules (10.xx.xx.xx, c2.[REDACTED], a generic MZ-header YARA stub) for PREMIUM (paying) users when the real DB has no match for their query, presenting filler as if it were the paid product — arguably worse than the free-tier version of the same pattern since it reaches customers who already upgraded. None of this was touched in this pass, strictly per explicit owner instruction to scope this fix to the URL/routing issue only. This remains a genuine, high-priority, unresolved gap that should block calling this specific feature customer-ready or worth its price — flagged unambiguously so the URL fix cannot be mistaken for full remediation."
   },
   {
     "id": "CAP-TIH-015",
@@ -692,14 +693,14 @@
       "status": "exists"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "partial",
-      "evidence": "frontend/threat-intelligence.html:323 documents the KEV feed route in prose as an example, not as a live fetch() call."
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/ciso-hub.html", "frontend/mssp.html", "frontend/index.html", "frontend/sentinel-apex-marketplace.html", "frontend/security-assessment.html", "frontend/threat-intelligence.html"],
+      "status": "exists",
+      "evidence": "CORRECTED 2026-07-12 (was 'partial' — stale, checked only one page and wrongly generalized to the whole capability): grepped every frontend/*.html for the 8 real feed filenames directly. Real, live fetch() calls found on at least 4 separate pages: frontend/ciso-hub.html:989 (calls the v1 intel 'latest' feed with limit=6, powers the CISO Hub's live CVE/KEV stat counters), frontend/mssp.html:341 (calls the v1 intel pricing feed, powers the MSSP partner pricing/margin calculator), frontend/index.html:6399 (same pricing feed, renders the homepage's own live tier cards via renderTiers()), and frontend/sentinel-apex-marketplace.html:755,1006 (calls the v1 intel latest + pricing feeds, explicitly commented 'Real, same-origin FREE-tier feed... not the fabricated fallback below'). One page (the original citation) remains prose-only, but is not the whole picture."
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "Documented in prose only, not a live in-app UI flow."
+      "discoverable": true,
+      "evidence": "CORRECTED 2026-07-12 (was false, same stale-check root cause as frontend.evidence above): every page found actually consuming these feeds is itself well-linked — frontend/sitemap.html:96,99,109 (APEX Marketplace, CISO Hub, MSSP Platform) and frontend/index.html has a top-level nav tab straight to the marketplace (line 1301, class=\"cdb-bsp-tab\") plus direct CTAs to MSSP (line 5725) and the marketplace (lines 6320, 7764). frontend/index.html is, by definition, the most discoverable page on the whole site and itself live-renders the pricing feed."
     },
     "auth_enforced": false,
     "rbac": { "enforced": false, "permissions": [] },
@@ -717,11 +718,11 @@
     "priority": "P3",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/publicFeeds.js and workers/src/handlers/intelMonetization.js read directly; workers/src/index.js:1472-1484 read directly (single routing block for all 8 feed paths); frontend/threat-intelligence.html:323 read directly (prose reference, not a live call); all 5 workers/test/*.mjs matches confirmed by direct grep+read."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/handlers/publicFeeds.js and workers/src/handlers/intelMonetization.js read directly; workers/src/index.js:1470-1483 read directly and confirmed these 8 exact-path routes are matched (and returned) BEFORE the file's later generic /api/v1/* API-key gate (~line 3833) is ever reached — genuinely public, no key required, consistent with the capability's own name. 2026-07-12: frontend/*.html grepped for all 8 feed filenames directly (not just the one page previously checked) surfacing 4 more real live-consumer pages; each cited page/line read directly to confirm a genuine fetch(), not a prose mention. All 5 workers/test/*.mjs matches confirmed by direct grep+read."
     },
     "contradicts_doc": [],
-    "notes": "This is an API-economy product by design (external integrators pull these JSON feeds directly), so 'no live in-app UI call' is expected rather than a defect — set to P3 (navigation/discoverability of the product itself, e.g. whether customers can find and use their API key against these feeds from within the dashboard) rather than P2, since the backend+test story here is the strongest in the whole domain."
+    "notes": "This is an API-economy product by design (external integrators pull these JSON feeds directly) AND genuinely public (no auth/API key at all — confirmed these 8 paths are matched before the file's API-key gate, unlike CAP-TIH-002's /api/v1/* family). The prior note framed the open question as 'whether customers can find and use their API key against these feeds from within the dashboard' — that framing was itself slightly wrong (there is no key to use against a no-auth feed) and, more importantly, the underlying 'no live in-app UI call' premise was stale: real, live consumption already exists on frontend/ciso-hub.html, frontend/mssp.html, frontend/index.html itself, and frontend/sentinel-apex-marketplace.html, all of them well-linked pages. No code change needed; corrected the record. No further open gap on this entry."
   },
   {
     "id": "CAP-TIH-016",

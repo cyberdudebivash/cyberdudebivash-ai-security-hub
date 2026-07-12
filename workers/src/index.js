@@ -333,11 +333,10 @@ import {
 } from './handlers/mythosHandler.js';
 import { runMythosCron } from './services/mythosOrchestrator.js';
 
-// ─── MYTHOS REVENUE ENGINE v30.0.2 ───────────────────────────────────────────
-// Multi-rail checkout (UPI/Bank/Crypto/Razorpay), MYTHOS AI scan, compliance map
+// ─── MYTHOS REVENUE ENGINE v31.0.0 ───────────────────────────────────────────
+// Real-engine domain scan + compliance benchmark (paywall-aware). The
+// multi-rail checkout previously here was removed 2026-07-12 (CAP-MYTHOS-003).
 import {
-  handleMythosCheckout,
-  handleMythosWebhook,
   handleMythosScan,
   handleMythosCompliance,
 } from './handlers/mythosRevenueEngine.js';
@@ -4158,8 +4157,20 @@ export async function routeRequest(request, env, ctx, requestId) {
       return withSecurityHeaders(withCors(await handleUpgradeCheck(request, env), request));
     }
 
-    // POST /api/growth/upgrade — mark lead as upgraded (public)
+    // POST /api/growth/upgrade — mark lead as upgraded AND auto-provisions a
+    // real API key for the given email/plan (see handleUpgradeLead). Was
+    // fully unauthenticated — any caller could mint a free ENTERPRISE-tier
+    // sap_ key for any email with zero payment, via {email,plan} client
+    // input alone (the exact vulnerability class CAP-DEVPORTAL-004's own
+    // prior fix closed in handleProvisionApiKey, reopened here via this
+    // sibling route the anonymous-exposure audit missed because it targeted
+    // GET/read routes only). Closed the same way as this file's 3 sibling
+    // routes above (analytics/funnel/leads).
     if (path === '/api/growth/upgrade' && method === 'POST') {
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({}));
+      const { requireCan } = await import('./auth/rbac.js');
+      const deny = await requireCan(authCtx, env, 'admin:business:read');
+      if (deny) return withSecurityHeaders(withCors(deny, request));
       return withSecurityHeaders(withCors(await handleUpgradeLead(request, env), request));
     }
 
@@ -5158,16 +5169,11 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(await handleMythosAnalyze(request, env, authCtx || {}), request));
     }
 
-    // ── MYTHOS REVENUE ENGINE v30.0.2 ─────────────────────────────────────────
-    // POST /api/mythos/checkout/initialize — multi-rail UPI/Bank/Crypto/Razorpay
-    if (path === '/api/mythos/checkout/initialize' && method === 'POST') {
-      const authCtx = await resolveAuthV5(request, env).catch(() => null);
-      return withSecurityHeaders(withCors(await handleMythosCheckout(request, env, authCtx || {}), request));
-    }
-    // POST /api/mythos/checkout/webhook — Razorpay HMAC-verified webhook
-    if (path === '/api/mythos/checkout/webhook' && method === 'POST') {
-      return withSecurityHeaders(await handleMythosWebhook(request, env));
-    }
+    // ── MYTHOS REVENUE ENGINE v31.0.0 ─────────────────────────────────────────
+    // (checkout/webhook removed 2026-07-12 — CAP-MYTHOS-003: zero frontend
+    // callers, never minted a real Razorpay order, and its webhook wrote real
+    // tier upgrades to the same users.tier column the real billing path uses.
+    // See PROGRAM_BOARD.md session log for the full investigation.)
     // POST /api/mythos/scan — MYTHOS AI autonomous domain scan (paywall-aware)
     if (path === '/api/mythos/scan' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => null);

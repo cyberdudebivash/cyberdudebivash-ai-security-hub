@@ -902,6 +902,18 @@
       <div class="nav-item" data-page="ciso" onclick="showPage('ciso',this);loadCisoMetrics()">
         <span class="nav-icon">📈</span> CISO Metrics
       </div>
+      <div class="nav-item" data-page="compliance" onclick="showPage('compliance',this);loadComplianceAssessment()">
+        <span class="nav-icon">📋</span> Compliance
+      </div>
+      <div class="nav-item" data-page="dpdp" onclick="showPage('dpdp',this);loadDPDPOverview()">
+        <span class="nav-icon">🇮🇳</span> DPDP Act 2023
+      </div>
+      <div class="nav-item" data-page="intel-api" onclick="showPage('intel-api',this);loadIntelAPIStatus()">
+        <span class="nav-icon">🔎</span> Threat Intel API
+      </div>
+      <div class="nav-item" data-page="intel-preview" onclick="showPage('intel-preview',this);intelPreviewFeatured()">
+        <span class="nav-icon">📡</span> Intelligence Preview
+      </div>
       <div class="nav-item" data-page="ai-analysis" onclick="showPage('ai-analysis',this)">
         <span class="nav-icon">🤖</span> AI Analysis
       </div>
@@ -937,6 +949,15 @@
       <div class="sidebar-label">Developer</div>
       <div class="nav-item" data-page="apikeys" onclick="showPage('apikeys',this)">
         <span class="nav-icon">🔑</span> API Keys
+      </div>
+      <div class="nav-item" data-page="v1-explorer" onclick="showPage('v1-explorer',this)">
+        <span class="nav-icon">🧪</span> API Explorer
+      </div>
+      <div class="nav-item" onclick="location.href='/automation-dashboard.html'" title="Self-service automation API keys · webhooks · scheduled reports · team management · usage & governance">
+        <span class="nav-icon">🤖</span> Automation
+      </div>
+      <div class="nav-item" onclick="location.href='/enterprise-dashboard.html'" title="Risk-scored signal intelligence, threat actors, campaigns & sector exposure — PRO/ENTERPRISE/MSSP, own API key required">
+        <span class="nav-icon">🏢</span> Enterprise Dashboard
       </div>
     </div>
     <div class="sidebar-section">
@@ -1486,6 +1507,80 @@
       </div>
     </div>
 
+    <div id="page-v1-explorer" class="page">
+      <div class="page-title">API Explorer — v1</div>
+      <div class="page-subtitle">Try the versioned Sentinel API v1 endpoints directly from your browser. These are PRO/ENTERPRISE, API-key-only endpoints — they do not accept your dashboard login session, by design. Paste a key from the API Keys tab below to begin.</div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-body" style="padding:20px">
+          <label class="form-label">Your API key</label>
+          <input id="v1-api-key" class="form-input" type="password" placeholder="cdb_..." autocomplete="off" />
+          <div style="font-size:.78rem;color:var(--muted);margin-top:6px">Sent directly to the API with each request below. Not stored or transmitted anywhere else by this page.</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🗂️ IOC Registry <span style="font-weight:400;color:var(--muted);font-size:.78rem">(ENTERPRISE)</span></span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="v1-ioc-type" class="form-input" style="max-width:200px" placeholder="Type filter (optional, e.g. ip)" />
+            <input id="v1-ioc-limit" class="form-input" style="max-width:120px" placeholder="Limit (default 50)" />
+            <button class="btn btn-primary" onclick="v1QueryIOCs()">Query</button>
+          </div>
+          <div id="v1-ioc-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🔗 CVE Correlation <span style="font-weight:400;color:var(--muted);font-size:.78rem">(PRO/ENTERPRISE)</span></span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="v1-corr-cve" class="form-input" style="flex:1;min-width:220px" placeholder="CVE ID (optional — leave blank for top-correlated summary)" />
+            <button class="btn btn-primary" onclick="v1QueryCorrelations()">Correlate</button>
+          </div>
+          <div id="v1-corr-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🕸️ Intel Graph Neighborhood <span style="font-weight:400;color:var(--muted);font-size:.78rem">(PRO/ENTERPRISE)</span></span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Distinct from the client-side "Threat Graph" tab above — this queries the server-side CVE/IOC knowledge graph.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="v1-graph-node" class="form-input" style="flex:1;min-width:220px" placeholder="Node ID (optional — leave blank for full graph summary)" />
+            <button class="btn btn-primary" onclick="v1QueryGraph()">Query Graph</button>
+          </div>
+          <div id="v1-graph-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🚨 Automated Hunting Alerts <span style="font-weight:400;color:var(--muted);font-size:.78rem">(PRO/ENTERPRISE)</span></span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Distinct from the "Threat Hunting" tool elsewhere on this platform — this automatically scans the live feed for pattern-based alerts (vendor clustering, ransomware campaigns, zero-day clusters) rather than running a query you write.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <select id="v1-hunt-severity" class="form-input" style="max-width:180px">
+              <option value="critical">Critical only</option>
+              <option value="high" selected>High and above</option>
+              <option value="medium">Medium and above</option>
+              <option value="low">Low and above</option>
+            </select>
+            <button class="btn btn-primary" onclick="v1RunHunting()">Run</button>
+          </div>
+          <div id="v1-hunt-result"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">🔄 Manual Feed Refresh <span style="font-weight:400;color:var(--muted);font-size:.78rem">(PRO/ENTERPRISE)</span></span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Triggers a real, live re-ingestion from CISA KEV, NVD, and GitHub Advisories — not a cached refresh.</div>
+          <button class="btn btn-outline" onclick="v1RefreshFeed()">Refresh feed now</button>
+          <div id="v1-refresh-result" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- ══ INTEL REPORTS (SENTINEL APEX™) ══ -->
     <div id="page-intel-reports" class="page">
       <div class="page-title">Intel Reports — SENTINEL APEX™</div>
@@ -1999,6 +2094,385 @@
         <button class="btn btn-outline" onclick="exportCisoCSV()">⬇ Export CSV</button>
         <button class="btn btn-outline" onclick="exportCisoPDF()">📄 Export Board Report PDF</button>
         <button class="btn btn-outline" onclick="loadCisoMetrics()">↺ Refresh</button>
+      </div>
+    </div>
+
+    <div id="page-compliance" class="page">
+      <div class="page-title">Compliance Readiness Assessment</div>
+      <div class="page-subtitle">ISO 27001:2022 · NIST CSF 2.0 · GDPR gap analysis with a prioritized remediation roadmap</div>
+
+      <div class="upsell-banner" id="compliance-upsell" style="display:none">
+        <div class="upsell-text">
+          <strong>Enterprise Feature</strong> — Compliance Readiness Assessment requires Pro or Enterprise plan
+          <p>Scores 93 ISO 27001:2022 controls, all 6 NIST CSF 2.0 functions, and GDPR readiness — with a phased certification roadmap.</p>
+        </div>
+        <button class="btn-upgrade" onclick="showPage('billing',null)">Upgrade to Pro →</button>
+      </div>
+
+      <div id="compliance-form-card" class="card" style="display:none;margin-bottom:20px">
+        <div class="card-header"><span class="card-title">Run an Assessment</span></div>
+        <div class="card-body" style="padding:20px">
+          <div class="form-group">
+            <label class="form-label">Organization / Domain</label>
+            <input id="compliance-target" class="form-input" placeholder="e.g. acme.com" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Industry</label>
+            <select id="compliance-industry" class="form-input">
+              <option>General</option>
+              <option>Technology</option>
+              <option>Financial Services</option>
+              <option>Healthcare</option>
+              <option>Retail</option>
+              <option>Government</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Controls currently in place</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.85rem">
+              <label><input type="checkbox" id="cc-has_policy" /> Documented security policy</label>
+              <label><input type="checkbox" id="cc-has_isms" /> Formal ISMS in place</label>
+              <label><input type="checkbox" id="cc-has_mfa" /> MFA enforced</label>
+              <label><input type="checkbox" id="cc-has_backups" /> Tested backups</label>
+              <label><input type="checkbox" id="cc-has_monitoring" /> Security monitoring / SIEM</label>
+              <label><input type="checkbox" id="cc-has_incident_plan" /> Incident response plan</label>
+              <label><input type="checkbox" id="cc-has_training" /> Security awareness training</label>
+              <label><input type="checkbox" id="cc-has_asset_inventory" /> Asset inventory maintained</label>
+              <label><input type="checkbox" id="cc-has_dlp" /> Data loss prevention (DLP) controls</label>
+              <label><input type="checkbox" id="cc-has_vuln_mgmt" /> Vulnerability management program</label>
+            </div>
+          </div>
+          <button class="btn btn-primary" id="compliance-run-btn" onclick="runComplianceAssessment()">Run Assessment</button>
+        </div>
+      </div>
+
+      <div id="compliance-results" style="display:none">
+        <div class="ciso-kpi-grid">
+          <div class="ciso-kpi">
+            <div class="ciso-kpi-val" id="compliance-grade" style="color:#7c3aed">—</div>
+            <div class="ciso-kpi-label">Compliance Status</div>
+          </div>
+          <div class="ciso-kpi">
+            <div class="ciso-kpi-val" id="compliance-overall-pct" style="color:#00d4ff">—%</div>
+            <div class="ciso-kpi-label">ISO 27001 Score</div>
+          </div>
+          <div class="ciso-kpi">
+            <div class="ciso-kpi-val" id="compliance-nist-pct" style="color:#10b981">—%</div>
+            <div class="ciso-kpi-label">NIST CSF 2.0 Score</div>
+          </div>
+          <div class="ciso-kpi">
+            <div class="ciso-kpi-val" id="compliance-gdpr-pct" style="color:#f59e0b">—%</div>
+            <div class="ciso-kpi-label">GDPR Readiness</div>
+          </div>
+          <div class="ciso-kpi">
+            <div class="ciso-kpi-val" id="compliance-critical-ct" style="color:#ef4444">—</div>
+            <div class="ciso-kpi-label">Critical Gaps</div>
+          </div>
+          <div class="ciso-kpi">
+            <div class="ciso-kpi-val" id="compliance-timeline" style="font-size:1rem">—</div>
+            <div class="ciso-kpi-label">Est. Certification Timeline</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
+          <div class="card">
+            <div class="card-header"><span class="card-title">ISO 27001:2022 Domain Scores</span></div>
+            <div class="card-body" style="padding:20px" id="compliance-iso-domains"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">NIST CSF 2.0 Functions</span></div>
+            <div class="card-body" style="padding:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px" id="compliance-nist-functions"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header"><span class="card-title">Findings</span></div>
+          <div class="card-body">
+            <table>
+              <thead><tr><th>Severity</th><th>Finding</th><th>Control</th></tr></thead>
+              <tbody id="compliance-findings"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Certification Roadmap</span></div>
+          <div class="card-body" style="padding:20px" id="compliance-roadmap"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-dpdp" class="page">
+      <div class="page-title">DPDP Act 2023 Compliance</div>
+      <div class="page-subtitle">India's Digital Personal Data Protection Act — section-by-section gap analysis, readiness scoring, and Record of Processing Activities (RoPA) generation</div>
+
+      <div class="upsell-banner" id="dpdp-upsell" style="display:none">
+        <div class="upsell-text">
+          <strong>Enterprise Feature</strong> — DPDP Compliance Engine requires Pro, Enterprise, or MSSP plan
+          <p>Covers 9 DPDP Act sections, an AI-powered remediation roadmap, and automated RoPA generation.</p>
+        </div>
+        <button class="btn-upgrade" onclick="showPage('billing',null)">Upgrade to Pro →</button>
+      </div>
+
+      <div id="dpdp-content" style="display:none">
+        <div class="ciso-kpi-grid" id="dpdp-overview-kpis" style="margin-bottom:20px">
+          <div class="ciso-kpi">
+            <div class="ciso-kpi-val" id="dpdp-latest-score" style="color:#7c3aed">—</div>
+            <div class="ciso-kpi-label">Latest Readiness Score</div>
+          </div>
+          <div class="ciso-kpi">
+            <div class="ciso-kpi-val" id="dpdp-total-sections" style="color:#00d4ff">—</div>
+            <div class="ciso-kpi-label">Act Sections Covered</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header"><span class="card-title">Run a DPDP Gap Assessment</span></div>
+          <div class="card-body" style="padding:20px">
+            <div class="form-group">
+              <label class="form-label">Organization Name</label>
+              <input id="dpdp-org-name" class="form-input" placeholder="e.g. Acme Pvt Ltd" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Industry</label>
+              <select id="dpdp-industry" class="form-input">
+                <option>Technology</option><option>Financial Services</option><option>Healthcare</option><option>Retail</option><option>Government</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Employee Count</label>
+              <input id="dpdp-employee-count" type="number" class="form-input" placeholder="e.g. 250" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Personal data categories processed</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:.85rem">
+                <label><input type="checkbox" class="dpdp-data-cat" value="email" checked /> Email / contact</label>
+                <label><input type="checkbox" class="dpdp-data-cat" value="financial" /> Financial</label>
+                <label><input type="checkbox" class="dpdp-data-cat" value="health" /> Health</label>
+                <label><input type="checkbox" class="dpdp-data-cat" value="biometric" /> Biometric</label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label style="font-size:.85rem"><input type="checkbox" id="dpdp-has-children" /> We process children's (under-18) personal data</label>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Controls currently in place</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.85rem">
+                <label><input type="checkbox" id="dpdp-has-dpo" /> Data Protection Officer appointed</label>
+                <label><input type="checkbox" id="dpdp-has-privacy-notice" /> Privacy notice published</label>
+                <label><input type="checkbox" id="dpdp-has-consent" /> Consent management mechanism</label>
+                <label><input type="checkbox" id="dpdp-has-dsr" /> Data Subject Rights (DSR) process</label>
+                <label><input type="checkbox" id="dpdp-has-breach" /> Breach notification process</label>
+                <label><input type="checkbox" id="dpdp-has-retention" /> Data retention policy</label>
+                <label><input type="checkbox" id="dpdp-has-audit" /> Recent security audit</label>
+              </div>
+            </div>
+            <button class="btn btn-primary" id="dpdp-assess-btn" onclick="runDPDPAssessment()">Run Assessment</button>
+          </div>
+        </div>
+
+        <div id="dpdp-results" style="display:none">
+          <div class="ciso-kpi-grid" style="margin-bottom:20px">
+            <div class="ciso-kpi">
+              <div class="ciso-kpi-val" id="dpdp-overall-score" style="color:#7c3aed">—</div>
+              <div class="ciso-kpi-label">Overall Score</div>
+            </div>
+            <div class="ciso-kpi">
+              <div class="ciso-kpi-val" id="dpdp-maturity" style="font-size:1rem">—</div>
+              <div class="ciso-kpi-label">Maturity Level</div>
+            </div>
+            <div class="ciso-kpi">
+              <div class="ciso-kpi-val" id="dpdp-critical-gaps" style="color:#ef4444">—</div>
+              <div class="ciso-kpi-label">Critical Gaps</div>
+            </div>
+            <div class="ciso-kpi">
+              <div class="ciso-kpi-val" id="dpdp-high-gaps" style="color:#f59e0b">—</div>
+              <div class="ciso-kpi-label">High Gaps</div>
+            </div>
+            <div class="ciso-kpi">
+              <div class="ciso-kpi-val" id="dpdp-ready" style="font-size:1rem">—</div>
+              <div class="ciso-kpi-label">Enforcement-Ready</div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:20px">
+            <div class="card-header"><span class="card-title">Section-by-Section Gap Analysis</span></div>
+            <div class="card-body" style="padding:20px" id="dpdp-sections"></div>
+          </div>
+
+          <div class="card" style="margin-bottom:20px">
+            <div class="card-header"><span class="card-title">Remediation Roadmap</span></div>
+            <div class="card-body" style="padding:20px" id="dpdp-roadmap"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><span class="card-title">Next Steps</span></div>
+            <div class="card-body" style="padding:20px" id="dpdp-next-steps"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:20px">
+          <div class="card-header">
+            <span class="card-title">Record of Processing Activities (RoPA)</span>
+          </div>
+          <div class="card-body" style="padding:20px">
+            <button class="btn btn-outline" onclick="generateDPDPRoPA()" style="margin-bottom:16px">📄 Generate RoPA</button>
+            <div id="dpdp-ropa-output" style="color:var(--muted);font-size:.85rem">Generate a RoPA document to see your processing-activity record here.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-intel-api" class="page">
+      <div class="page-title">Threat Intelligence API</div>
+      <div class="page-subtitle">IOC enrichment, CVE lookup, threat actor profiles, MITRE ATT&CK TTPs, and composite risk scoring — live queries against the same API you can call programmatically</div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-body" style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <div style="font-size:.85rem;color:var(--muted)">Your plan: <strong id="intel-api-tier" style="color:var(--fg)">—</strong></div>
+          <div style="font-size:.85rem;color:var(--muted)">Requests used today: <strong id="intel-api-quota" style="color:var(--fg)">—</strong></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🔎 IOC Lookup</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="intel-ioc-value" class="form-input" style="flex:1;min-width:220px" placeholder="Domain, IP, or file hash (e.g. evil-domain.test)" />
+            <button class="btn btn-primary" onclick="intelLookupIOC()">Check</button>
+          </div>
+          <div id="intel-ioc-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🛡️ CVE Lookup</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="intel-cve-value" class="form-input" style="flex:1;min-width:220px" placeholder="CVE ID (e.g. CVE-2024-1234) or keyword" />
+            <button class="btn btn-primary" onclick="intelLookupCVE()">Look up</button>
+          </div>
+          <div id="intel-cve-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🕵️ Threat Actor Lookup</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="intel-actor-value" class="form-input" style="flex:1;min-width:220px" placeholder="Actor name (e.g. APT29) or leave blank + set sector" />
+            <input id="intel-actor-sector" class="form-input" style="max-width:180px" placeholder="Sector (optional)" />
+            <button class="btn btn-primary" onclick="intelLookupActor()">Search</button>
+          </div>
+          <div id="intel-actor-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">⚔️ MITRE ATT&CK TTP Lookup</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="intel-ttp-value" class="form-input" style="flex:1;min-width:220px" placeholder="Technique ID (e.g. T1566) or keyword" />
+            <button class="btn btn-primary" onclick="intelLookupTTP()">Look up</button>
+          </div>
+          <div id="intel-ttp-result"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">📊 Composite Risk Score</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="intel-risk-target" class="form-input" style="flex:1;min-width:220px" placeholder="Target domain or organization" />
+            <input id="intel-risk-sector" class="form-input" style="max-width:180px" placeholder="Sector (optional)" />
+            <button class="btn btn-primary" onclick="intelLookupRisk()">Score</button>
+          </div>
+          <div id="intel-risk-result"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-intel-preview" class="page">
+      <div class="page-title">Intelligence Preview</div>
+      <div class="page-subtitle">Live-look CVE, threat actor, malware, IOC, and report previews with real-time upgrade gating — the same feed shown on the public marketing pages, backed by your real plan entitlements</div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">⭐ Featured Intelligence</span></div>
+        <div class="card-body" style="padding:20px">
+          <div id="intel-preview-featured"><span class="spinner"></span> Loading…</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🛡️ CVE Preview</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="intel-preview-cve" class="form-input" style="flex:1;min-width:220px" placeholder="CVE ID (e.g. CVE-2024-1234)" />
+            <button class="btn btn-primary" onclick="intelPreviewCVE()">Preview</button>
+          </div>
+          <div id="intel-preview-cve-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🕵️ Threat Actor Preview</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="intel-preview-actor" class="form-input" style="flex:1;min-width:220px" placeholder="Actor name (e.g. apt29, lockbit, lazarus)" />
+            <button class="btn btn-primary" onclick="intelPreviewActor()">Preview</button>
+          </div>
+          <div id="intel-preview-actor-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🦠 Malware Family Preview</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="intel-preview-malware" class="form-input" style="flex:1;min-width:220px" placeholder="Family name (e.g. lockbit, emotet, qakbot)" />
+            <button class="btn btn-primary" onclick="intelPreviewMalware()">Preview</button>
+          </div>
+          <div id="intel-preview-malware-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">📶 IOC Feed Sample</span></div>
+        <div class="card-body" style="padding:20px">
+          <button class="btn btn-outline" style="margin-bottom:12px" onclick="intelPreviewIOCSample()">Load sample</button>
+          <div id="intel-preview-ioc-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">📄 Report Sample</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <select id="intel-preview-report-type" class="form-input" style="max-width:260px">
+              <option value="tactical_dossier">Tactical Threat Dossier</option>
+              <option value="executive_risk">Executive Risk Intelligence Report</option>
+              <option value="weekly_brief">Weekly SOC Intelligence Brief</option>
+            </select>
+            <button class="btn btn-primary" onclick="intelPreviewReportSample()">Preview</button>
+          </div>
+          <div id="intel-preview-report-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">📚 Previewable Catalog</span></div>
+        <div class="card-body" style="padding:20px">
+          <button class="btn btn-outline" style="margin-bottom:12px" onclick="intelPreviewCatalog()">Load catalog</button>
+          <div id="intel-preview-catalog-result"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">🔓 Unlock Status</span></div>
+        <div class="card-body" style="padding:20px">
+          <button class="btn btn-outline" style="margin-bottom:12px" onclick="intelPreviewUnlock()">Check my unlock status</button>
+          <div id="intel-preview-unlock-result"></div>
+        </div>
       </div>
     </div>
 
@@ -3220,6 +3694,635 @@
       : '<div style="grid-column:1/-1;color:var(--muted);text-align:center;padding:16px 0">Run a Compliance scan to see framework-level results.</div>';
 
     renderCisoTrend(data.trend);
+  }
+
+  // ── Compliance Readiness Assessment (CAP-COMP-002) ──────────────────────────
+  // Backend (POST /api/scan/compliance) requires PRO/ENTERPRISE tier or admin —
+  // see workers/src/handlers/serviceHandlers.js's handleComplianceScan. Free/
+  // Starter tiers get the honest upsell banner and never see the form, matching
+  // the same locked-state convention as loadCisoMetrics() above.
+  function loadComplianceAssessment() {
+    const plan = (_plan?.plan || 'free').toLowerCase();
+    const isPaid = plan === 'pro' || plan === 'enterprise';
+    document.getElementById('compliance-upsell').style.display = isPaid ? 'none' : 'flex';
+    document.getElementById('compliance-form-card').style.display = isPaid ? 'block' : 'none';
+    document.getElementById('compliance-results').style.display = 'none';
+  }
+
+  const COMPLIANCE_CONTROL_KEYS = [
+    'has_policy', 'has_isms', 'has_mfa', 'has_backups', 'has_monitoring',
+    'has_incident_plan', 'has_training', 'has_asset_inventory', 'has_dlp', 'has_vuln_mgmt',
+  ];
+
+  async function runComplianceAssessment() {
+    const target = document.getElementById('compliance-target').value.trim();
+    if (!target) { alert('Enter an organization name or domain first.'); return; }
+
+    const inputs = {
+      domain:   target,
+      industry: document.getElementById('compliance-industry').value,
+    };
+    COMPLIANCE_CONTROL_KEYS.forEach(k => {
+      inputs[k] = !!document.getElementById('cc-' + k).checked;
+    });
+
+    const btn = document.getElementById('compliance-run-btn');
+    btn.disabled = true; btn.textContent = 'Running…';
+    try {
+      const res = await apiFetch('/api/scan/compliance', { method: 'POST', body: JSON.stringify(inputs) });
+      if (res.status === 403) {
+        alert('Compliance assessments require a Pro or Enterprise plan.');
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        alert(data.error || 'Assessment failed. Please try again.');
+        return;
+      }
+      renderComplianceResults(data);
+    } catch (e) {
+      alert('Could not run the assessment. Please try again.');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Run Assessment';
+    }
+  }
+
+  function renderComplianceResults(data) {
+    const summary = data.executive_summary   || {};
+    const iso     = data.iso27001_assessment || {};
+    const nist    = data.nist_csf_assessment || {};
+
+    document.getElementById('compliance-results').style.display = 'block';
+
+    const gradeColor = { COMPLIANT:'#10b981', PARTIALLY_COMPLIANT:'#f59e0b', NON_COMPLIANT:'#ef4444', CRITICAL_GAPS:'#ef4444' };
+    const gradeEl = document.getElementById('compliance-grade');
+    gradeEl.textContent = (summary.compliance_status || '—').replace(/_/g, ' ');
+    gradeEl.style.color = gradeColor[summary.compliance_status] || '#7c3aed';
+
+    document.getElementById('compliance-overall-pct').textContent = (summary.overall_compliance ?? '—') + '%';
+    document.getElementById('compliance-nist-pct').textContent    = (summary.nist_csf_score ?? '—') + '%';
+    document.getElementById('compliance-gdpr-pct').textContent    = (summary.gdpr_readiness ?? '—') + '%';
+    document.getElementById('compliance-critical-ct').textContent = summary.critical_gaps ?? 0;
+    document.getElementById('compliance-timeline').textContent    = summary.estimated_certification_timeline || '—';
+
+    const isoBarColor = (score) => score >= 80 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
+    document.getElementById('compliance-iso-domains').innerHTML = (iso.domain_scores || []).length
+      ? iso.domain_scores.map(d => `
+        <div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px">
+            <span>${d.name} (${d.id})</span><span style="font-family:var(--mono);color:${isoBarColor(d.score)}">${d.score}%</span>
+          </div>
+          <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${d.score}%;background:${isoBarColor(d.score)};border-radius:3px"></div>
+          </div>
+        </div>`).join('')
+      : '<div style="color:var(--muted)">No domain data.</div>';
+
+    document.getElementById('compliance-nist-functions').innerHTML = (nist.functions || []).map(f => {
+      const color = f.score >= 75 ? '#10b981' : f.score >= 50 ? '#f59e0b' : '#ef4444';
+      return `<div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:1.2rem;font-weight:700;font-family:var(--mono);color:${color}">${f.score}%</div>
+        <div style="font-size:.72rem;color:var(--muted);margin-top:4px">${f.name}</div>
+        <div style="font-size:.68rem;color:var(--muted)">${f.tier}</div>
+      </div>`;
+    }).join('');
+
+    const findingsEl = document.getElementById('compliance-findings');
+    findingsEl.innerHTML = (data.findings || []).length
+      ? data.findings.map(f => `
+        <tr>
+          <td><span class="badge badge-${f.severity==='CRITICAL'?'red':f.severity==='HIGH'?'warn':'blue'}">${f.severity}</span></td>
+          <td>${f.title}</td>
+          <td style="font-family:var(--mono);font-size:.78rem">${f.control}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">No gaps found ✓</td></tr>';
+
+    document.getElementById('compliance-roadmap').innerHTML = (data.certification_roadmap || []).length
+      ? data.certification_roadmap.map(phase => `
+        <div style="margin-bottom:14px">
+          <div style="font-weight:700;font-size:.85rem;color:var(--accent)">${phase.phase} — ${phase.description}</div>
+          <ul style="margin:6px 0 0 18px;font-size:.82rem;color:var(--muted)">
+            ${(phase.actions || []).map(a => `<li>${a.action} <span style="opacity:.7">(${a.impact} impact, ${a.effort} effort)</span></li>`).join('')}
+          </ul>
+        </div>`).join('')
+      : '<div style="color:var(--muted)">No remediation actions — fully compliant on assessed controls.</div>';
+
+    document.getElementById('compliance-results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ── DPDP Act 2023 Compliance (CAP-COMP-004) ─────────────────────────────────
+  // Backend (GET/POST /api/compliance/dpdp*) requires PRO/ENTERPRISE/MSSP tier
+  // or admin — see workers/src/handlers/dpdpCompliance.js. Free/Starter tiers
+  // get the honest upsell banner, matching the CISO Metrics / Compliance tabs.
+  async function loadDPDPOverview() {
+    const plan = (_plan?.plan || 'free').toLowerCase();
+    const isPaid = plan === 'pro' || plan === 'enterprise' || plan === 'mssp';
+    document.getElementById('dpdp-upsell').style.display  = isPaid ? 'none' : 'flex';
+    document.getElementById('dpdp-content').style.display = isPaid ? 'block' : 'none';
+    if (!isPaid) return;
+
+    try {
+      const res = await apiFetch('/api/compliance/dpdp');
+      if (!res.ok) return;
+      const { data } = await res.json();
+      if (!data) return;
+      document.getElementById('dpdp-total-sections').textContent = data.total_sections ?? '—';
+      document.getElementById('dpdp-latest-score').textContent =
+        data.latest_assessment ? data.latest_assessment.score + '%' : '—';
+    } catch (_) {}
+  }
+
+  async function runDPDPAssessment() {
+    const orgName = document.getElementById('dpdp-org-name').value.trim();
+    if (!orgName) { alert('Enter an organization name first.'); return; }
+
+    const body = {
+      org_name: orgName,
+      industry: document.getElementById('dpdp-industry').value,
+      employee_count: parseInt(document.getElementById('dpdp-employee-count').value, 10) || null,
+      data_categories: Array.from(document.querySelectorAll('.dpdp-data-cat:checked')).map(el => el.value),
+      processing_countries: ['IN'],
+      has_children_data:          document.getElementById('dpdp-has-children').checked,
+      has_dpo:                    document.getElementById('dpdp-has-dpo').checked,
+      has_privacy_notice:         document.getElementById('dpdp-has-privacy-notice').checked,
+      has_consent_mechanism:      document.getElementById('dpdp-has-consent').checked,
+      has_dsr_process:            document.getElementById('dpdp-has-dsr').checked,
+      has_breach_process:         document.getElementById('dpdp-has-breach').checked,
+      has_data_retention_policy:  document.getElementById('dpdp-has-retention').checked,
+      has_security_audit:         document.getElementById('dpdp-has-audit').checked,
+    };
+
+    const btn = document.getElementById('dpdp-assess-btn');
+    btn.disabled = true; btn.textContent = 'Running…';
+    try {
+      const res = await apiFetch('/api/compliance/dpdp/assess', { method: 'POST', body: JSON.stringify(body) });
+      if (res.status === 403) { alert('DPDP assessments require a Pro, Enterprise, or MSSP plan.'); return; }
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.success === false) { alert(json.error || 'Assessment failed. Please try again.'); return; }
+      renderDPDPResults(json.data);
+      document.getElementById('dpdp-latest-score').textContent = json.data.overall_score + '%';
+    } catch (_) {
+      alert('Could not run the assessment. Please try again.');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Run Assessment';
+    }
+  }
+
+  function renderDPDPResults(report) {
+    document.getElementById('dpdp-results').style.display = 'block';
+
+    document.getElementById('dpdp-overall-score').textContent = report.overall_score + '%';
+    const maturityEl = document.getElementById('dpdp-maturity');
+    maturityEl.textContent = report.maturity?.label || '—';
+    maturityEl.style.color = report.maturity?.color || '#7c3aed';
+    document.getElementById('dpdp-critical-gaps').textContent = report.summary?.critical_gaps ?? 0;
+    document.getElementById('dpdp-high-gaps').textContent     = report.summary?.high_gaps ?? 0;
+    const readyEl = document.getElementById('dpdp-ready');
+    readyEl.textContent = report.ready_for_enforcement ? 'Yes' : 'Not yet';
+    readyEl.style.color = report.ready_for_enforcement ? '#10b981' : '#ef4444';
+
+    document.getElementById('dpdp-sections').innerHTML = (report.gap_analysis || []).map(s => {
+      const color = s.score >= 80 ? '#10b981' : s.score >= 50 ? '#f59e0b' : '#ef4444';
+      return `<div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:4px">
+          <span>${s.title} (${s.section_id})</span><span style="font-family:var(--mono);color:${color}">${s.score}%</span>
+        </div>
+        <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:6px">
+          <div style="height:100%;width:${s.score}%;background:${color};border-radius:3px"></div>
+        </div>
+        ${s.gaps.length ? `<ul style="margin:0 0 0 18px;font-size:.78rem;color:var(--muted)">
+          ${s.gaps.map(g => `<li><span class="badge badge-${g.priority==='CRITICAL'?'red':g.priority==='HIGH'?'warn':'blue'}">${g.priority}</span> ${g.obligation}</li>`).join('')}
+        </ul>` : `<div style="font-size:.78rem;color:#10b981">✓ Fully compliant</div>`}
+      </div>`;
+    }).join('') || '<div style="color:var(--muted)">No section data.</div>';
+
+    document.getElementById('dpdp-roadmap').innerHTML = (report.remediation_roadmap || []).map(phase => `
+      <div style="margin-bottom:14px">
+        <div style="font-weight:700;font-size:.85rem;color:var(--accent)">Phase ${phase.phase}: ${phase.title} (${phase.timeline})</div>
+        <ul style="margin:6px 0 0 18px;font-size:.82rem;color:var(--muted)">
+          ${(phase.actions || []).map(a => `<li>${a.action} <span style="opacity:.7">— ${a.impact}</span></li>`).join('') || '<li>No actions needed for this phase.</li>'}
+        </ul>
+      </div>`).join('') || '<div style="color:var(--muted)">No roadmap generated.</div>';
+
+    document.getElementById('dpdp-next-steps').innerHTML = (report.next_steps || []).length
+      ? `<ol style="margin:0 0 0 18px;font-size:.85rem;color:var(--muted);line-height:1.8">
+          ${report.next_steps.map(s => `<li>${s.action}</li>`).join('')}
+        </ol>`
+      : '<div style="color:var(--muted)">No next steps.</div>';
+
+    document.getElementById('dpdp-results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function generateDPDPRoPA() {
+    const orgName = document.getElementById('dpdp-org-name').value.trim() || 'Your Organisation';
+    try {
+      const res = await apiFetch('/api/compliance/dpdp/ropa', {
+        method: 'POST', body: JSON.stringify({ org_name: orgName }),
+      });
+      if (res.status === 403) { alert('RoPA generation requires a Pro, Enterprise, or MSSP plan.'); return; }
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.success === false) { alert(json.error || 'Could not generate RoPA.'); return; }
+      renderDPDPRoPA(json.data);
+    } catch (_) {
+      alert('Could not generate RoPA. Please try again.');
+    }
+  }
+
+  function renderDPDPRoPA(ropa) {
+    const rows = (ropa.processing_activities || []).map(a => `
+      <tr>
+        <td>${a.sr_no}</td>
+        <td>${a.activity_name}</td>
+        <td style="font-size:.78rem">${a.purpose}</td>
+        <td style="font-size:.78rem">${(a.data_categories || []).join(', ')}</td>
+        <td style="font-size:.78rem">${a.legal_basis}</td>
+        <td style="font-size:.78rem">${a.retention}</td>
+        <td>${a.cross_border_transfer ? '⚠️ Yes' : 'No'}</td>
+      </tr>`).join('');
+
+    document.getElementById('dpdp-ropa-output').innerHTML = `
+      <div style="font-size:.85rem;color:var(--muted);margin-bottom:12px">
+        Prepared for <strong style="color:var(--fg)">${ropa.prepared_for}</strong> · Generated ${fmtDate(ropa.generated_at)} · Review due ${ropa.review_due}
+      </div>
+      <table>
+        <thead><tr><th>#</th><th>Activity</th><th>Purpose</th><th>Data Categories</th><th>Legal Basis</th><th>Retention</th><th>Cross-border</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">No processing activities.</td></tr>'}</tbody>
+      </table>`;
+  }
+
+  // ── Threat Intelligence API (CAP-TIH-009) ───────────────────────────────────
+  // Live customer-facing UI for the same /api/intel/* endpoints available for
+  // programmatic use. Tiered per-endpoint access (FREE/STARTER: ioc+cve only;
+  // PRO/ENTERPRISE: all 5) is enforced server-side — a 429 with an upgrade_url
+  // is rendered inline rather than blocking the whole page behind one gate.
+  function loadIntelAPIStatus() {
+    const plan = (_plan?.plan || 'free').toUpperCase();
+    document.getElementById('intel-api-tier').textContent = plan;
+  }
+
+  function intelQuotaLine(quota) {
+    if (!quota) return;
+    document.getElementById('intel-api-quota').textContent =
+      quota.remaining === 'unlimited' ? 'Unlimited' :
+      (quota.used != null && quota.limit != null) ? `${quota.used} / ${quota.limit}` : '—';
+  }
+
+  function intelUpgradeNotice(msg, upgradeUrl) {
+    return `<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:12px 14px;font-size:.85rem">
+      ⚠️ ${msg}${upgradeUrl ? ` <a href="${upgradeUrl}" target="_blank" style="color:var(--accent)">Upgrade →</a>` : ''}
+    </div>`;
+  }
+
+  async function intelApiGet(path, params) {
+    const qs = new URLSearchParams(params).toString();
+    const res = await apiFetch(`${path}?${qs}`);
+    const data = await res.json().catch(() => ({}));
+    return { res, data };
+  }
+
+  async function intelLookupIOC() {
+    const value = document.getElementById('intel-ioc-value').value.trim();
+    const out = document.getElementById('intel-ioc-result');
+    if (!value) { alert('Enter a domain, IP, or hash first.'); return; }
+    out.innerHTML = '<span class="spinner"></span> Checking…';
+    const { res, data } = await intelApiGet('/api/intel/ioc', { value });
+    if (res.status === 429) { out.innerHTML = intelUpgradeNotice(data.error, data.upgrade); return; }
+    if (!data.success) { out.innerHTML = `<div style="color:var(--muted)">${data.error || 'Lookup failed.'}</div>`; return; }
+    intelQuotaLine(data.quota);
+    const verdictColor = { MALICIOUS: '#ef4444', SUSPICIOUS: '#f59e0b', SAFE: '#10b981' }[data.analysis.verdict] || '#94a3b8';
+    out.innerHTML = `
+      <div style="display:flex;gap:16px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+        <span class="badge" style="background:${verdictColor}22;color:${verdictColor};border:1px solid ${verdictColor}55">${data.analysis.verdict}</span>
+        <span style="font-size:.82rem;color:var(--muted)">Risk score: <strong style="color:var(--fg)">${data.analysis.risk_score}</strong></span>
+        <span style="font-size:.82rem;color:var(--muted)">Type: ${data.query.type}</span>
+        <span style="font-size:.82rem;color:var(--muted)">Confidence: ${data.analysis.confidence}</span>
+      </div>
+      <div style="font-size:.85rem;color:var(--muted)">Recommended action: <strong style="color:var(--fg)">${data.context.recommended_action}</strong></div>
+      ${data.context.ai_assessment ? `<div style="margin-top:10px;font-size:.85rem;color:var(--muted);border-left:3px solid var(--accent);padding-left:10px">${data.context.ai_assessment}</div>` : ''}`;
+  }
+
+  async function intelLookupCVE() {
+    const value = document.getElementById('intel-cve-value').value.trim();
+    const out = document.getElementById('intel-cve-result');
+    if (!value) { alert('Enter a CVE ID or keyword first.'); return; }
+    out.innerHTML = '<span class="spinner"></span> Looking up…';
+    const isId = /^CVE-\d{4}-\d+$/i.test(value);
+    const { res, data } = await intelApiGet('/api/intel/cve', isId ? { cve_id: value } : { q: value });
+    if (res.status === 429) { out.innerHTML = intelUpgradeNotice(data.error, data.upgrade); return; }
+    if (!data.success) { out.innerHTML = `<div style="color:var(--muted)">${data.error || 'Lookup failed.'}</div>`; return; }
+    intelQuotaLine(data.quota);
+    const r = data.result;
+    if (!r.found_in_db) { out.innerHTML = `<div style="color:var(--muted)">${r.note}</div>`; return; }
+    const sevColor = { CRITICAL: '#ef4444', HIGH: '#f97316', MEDIUM: '#eab308', LOW: '#10b981' }[r.severity] || '#94a3b8';
+    out.innerHTML = `
+      <div style="font-weight:700;margin-bottom:6px">${r.title || r.cve_id}</div>
+      <div style="display:flex;gap:16px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+        <span class="badge" style="background:${sevColor}22;color:${sevColor};border:1px solid ${sevColor}55">${r.severity || data.result?.severity || '—'}</span>
+        <span style="font-size:.82rem;color:var(--muted)">CVSS: <strong style="color:var(--fg)">${r.cvss_score ?? '—'}</strong></span>
+        ${r.kev_listed ? '<span class="badge badge-red">CISA KEV</span>' : ''}
+      </div>
+      <div style="font-size:.85rem;color:var(--muted);margin-bottom:8px">${r.description || ''}</div>
+      ${data.ai_enrichment ? `<div style="font-size:.85rem;color:var(--muted);border-left:3px solid var(--accent);padding-left:10px;margin-bottom:8px">${data.ai_enrichment}</div>` : ''}
+      <div style="font-size:.8rem;color:var(--muted)">Recommended: ${(data.recommended_actions || []).join(', ')}</div>`;
+  }
+
+  async function intelLookupActor() {
+    const actorId = document.getElementById('intel-actor-value').value.trim();
+    const sector  = document.getElementById('intel-actor-sector').value.trim();
+    const out = document.getElementById('intel-actor-result');
+    if (!actorId && !sector) { alert('Enter an actor name or a sector.'); return; }
+    out.innerHTML = '<span class="spinner"></span> Searching…';
+    const { res, data } = await intelApiGet('/api/intel/actor', { actor_id: actorId, sector });
+    if (res.status === 429) { out.innerHTML = intelUpgradeNotice(data.error, data.upgrade); return; }
+    if (!data.success) { out.innerHTML = `<div style="color:var(--muted)">${data.error || 'Lookup failed.'}</div>`; return; }
+    intelQuotaLine(data.quota);
+    if (data.result) {
+      out.innerHTML = `
+        <div style="font-weight:700;margin-bottom:6px">${data.result.name} <span class="badge badge-red">${data.result.risk_rating}</span></div>
+        <div style="font-size:.82rem;color:var(--muted);margin-bottom:6px">Nation-state: ${data.result.nation_state || '—'} · Motivation: ${data.result.motivation || '—'}</div>
+        <div style="font-size:.82rem;color:var(--muted)">Targets: ${(data.result.target_sectors || []).join(', ') || '—'}</div>
+        ${data.ai_profile ? `<div style="margin-top:10px;font-size:.85rem;color:var(--muted);border-left:3px solid var(--accent);padding-left:10px">${data.ai_profile}</div>` : ''}`;
+    } else if (data.actors_list?.length) {
+      out.innerHTML = `<table><thead><tr><th>Name</th><th>Nation-state</th><th>Motivation</th></tr></thead><tbody>
+        ${data.actors_list.map(a => `<tr><td>${a.name}</td><td>${a.nation_state || '—'}</td><td>${a.motivation || '—'}</td></tr>`).join('')}
+      </tbody></table>`;
+    } else {
+      out.innerHTML = '<div style="color:var(--muted)">No matching threat actors found.</div>';
+    }
+  }
+
+  async function intelLookupTTP() {
+    const value = document.getElementById('intel-ttp-value').value.trim();
+    const out = document.getElementById('intel-ttp-result');
+    if (!value) { alert('Enter a technique ID or keyword first.'); return; }
+    out.innerHTML = '<span class="spinner"></span> Looking up…';
+    const isId = /^T\d{4}/i.test(value);
+    const { res, data } = await intelApiGet('/api/intel/ttp', isId ? { ttp_id: value } : { q: value });
+    if (res.status === 429) { out.innerHTML = intelUpgradeNotice(data.error, data.upgrade); return; }
+    if (!data.success) { out.innerHTML = `<div style="color:var(--muted)">${data.error || 'Lookup failed.'}</div>`; return; }
+    intelQuotaLine(data.quota);
+    const r = data.result || data.technique || data;
+    if (!r || (!r.name && !data.techniques)) { out.innerHTML = '<div style="color:var(--muted)">No matching technique found.</div>'; return; }
+    if (r.name) {
+      out.innerHTML = `
+        <div style="font-weight:700;margin-bottom:6px">${r.name}${r.tactic ? ` <span style="font-size:.75rem;color:var(--muted)">(${r.tactic})</span>` : ''}</div>
+        ${(r.mitigations || []).length ? `<div style="font-size:.82rem;color:var(--muted)">Mitigations: ${r.mitigations.join(', ')}</div>` : ''}`;
+    } else if (data.techniques?.length) {
+      out.innerHTML = `<ul style="margin:0 0 0 18px;font-size:.85rem;color:var(--muted)">${data.techniques.map(t => `<li>${t.id || ''} — ${t.name || ''}</li>`).join('')}</ul>`;
+    } else {
+      out.innerHTML = '<div style="color:var(--muted)">No matching technique found.</div>';
+    }
+  }
+
+  async function intelLookupRisk() {
+    const target = document.getElementById('intel-risk-target').value.trim();
+    const sector = document.getElementById('intel-risk-sector').value.trim();
+    const out = document.getElementById('intel-risk-result');
+    if (!target) { alert('Enter a target domain or organization first.'); return; }
+    out.innerHTML = '<span class="spinner"></span> Scoring…';
+    const { res, data } = await intelApiGet('/api/intel/risk', { target, sector });
+    if (res.status === 429) { out.innerHTML = intelUpgradeNotice(data.error, data.upgrade); return; }
+    if (!data.success) { out.innerHTML = `<div style="color:var(--muted)">${data.error || 'Lookup failed.'}</div>`; return; }
+    intelQuotaLine(data.quota);
+    const ra = data.risk_assessment;
+    const color = { CRITICAL: '#ef4444', HIGH: '#f97316', MEDIUM: '#eab308', LOW: '#10b981' }[ra.risk_level] || '#94a3b8';
+    out.innerHTML = `
+      <div style="display:flex;gap:16px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+        <span style="font-size:1.4rem;font-weight:800;font-family:var(--mono);color:${color}">${ra.composite_score}/100</span>
+        <span class="badge" style="background:${color}22;color:${color};border:1px solid ${color}55">${ra.risk_level}</span>
+      </div>
+      ${data.executive_narrative ? `<div style="font-size:.85rem;color:var(--muted);border-left:3px solid var(--accent);padding-left:10px;margin-bottom:8px">${data.executive_narrative}</div>` : ''}
+      <div style="font-size:.8rem;color:var(--muted)">Immediate actions: ${(data.recommendations?.immediate || []).join(', ')}</div>`;
+  }
+
+  async function intelPreviewGet(path) {
+    const res = await apiFetch(path);
+    const data = await res.json().catch(() => ({}));
+    return { res, data };
+  }
+
+  function intelPreviewLockedList(card) {
+    const locked = Object.keys(card).filter(k => card[k] && typeof card[k] === 'object' && card[k].locked === true);
+    if (!locked.length) return '';
+    const first = card[locked[0]];
+    const names = locked.map(k => card[k].feature || k).join(', ');
+    return `<div style="margin-top:10px">${intelUpgradeNotice(`${locked.length} field${locked.length > 1 ? 's' : ''} locked on your plan (${names}).`, first.upgrade_url)}</div>`;
+  }
+
+  async function intelPreviewFeatured() {
+    const out = document.getElementById('intel-preview-featured');
+    out.innerHTML = '<span class="spinner"></span> Loading…';
+    const { data } = await intelPreviewGet('/api/preview/featured');
+    if (!data.items?.length) { out.innerHTML = '<div style="color:var(--muted)">No featured intelligence right now.</div>'; return; }
+    const sevColor = s => ({ CRITICAL: '#ef4444', HIGH: '#f97316', MEDIUM: '#eab308', LOW: '#10b981' }[s] || '#94a3b8');
+    out.innerHTML = `<table><thead><tr><th>Severity</th><th>Title</th><th>Source</th></tr></thead><tbody>
+      ${data.items.map(i => `<tr><td><span class="badge" style="background:${sevColor(i.severity)}22;color:${sevColor(i.severity)};border:1px solid ${sevColor(i.severity)}55">${i.severity || '—'}</span></td><td>${i.title || ''}</td><td>${i.source || '—'}</td></tr>`).join('')}
+    </tbody></table>`;
+  }
+
+  async function intelPreviewCVE() {
+    const cveId = document.getElementById('intel-preview-cve').value.trim();
+    const out = document.getElementById('intel-preview-cve-result');
+    if (!cveId) { alert('Enter a CVE ID first.'); return; }
+    out.innerHTML = '<span class="spinner"></span> Loading…';
+    const { res, data } = await intelPreviewGet(`/api/preview/cve/${encodeURIComponent(cveId)}`);
+    if (!res.ok) { out.innerHTML = `<div style="color:var(--muted)">${data.error || 'Lookup failed.'}</div>`; return; }
+    const sevColor = { CRITICAL: '#ef4444', HIGH: '#f97316', MEDIUM: '#eab308', LOW: '#10b981' }[data.severity] || '#94a3b8';
+    out.innerHTML = `
+      <div style="font-weight:700;margin-bottom:6px">${data.title}</div>
+      <div style="display:flex;gap:16px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+        <span class="badge" style="background:${sevColor}22;color:${sevColor};border:1px solid ${sevColor}55">${data.severity}</span>
+        <span style="font-size:.82rem;color:var(--muted)">CVSS: <strong style="color:var(--fg)">${data.cvss_score}</strong></span>
+        <span class="badge" style="background:var(--accent)22;color:var(--accent)">${data.preview_tier}</span>
+      </div>
+      <div style="font-size:.85rem;color:var(--muted);margin-bottom:6px">${data.summary}</div>
+      ${intelPreviewLockedList(data)}`;
+  }
+
+  async function intelPreviewActor() {
+    const actorId = document.getElementById('intel-preview-actor').value.trim();
+    const out = document.getElementById('intel-preview-actor-result');
+    if (!actorId) { alert('Enter a threat actor name first.'); return; }
+    out.innerHTML = '<span class="spinner"></span> Loading…';
+    const { res, data } = await intelPreviewGet(`/api/preview/threat/${encodeURIComponent(actorId)}`);
+    if (!res.ok) { out.innerHTML = `<div style="color:var(--muted)">${data.error || 'Lookup failed.'}</div>`; return; }
+    out.innerHTML = `
+      <div style="font-weight:700;margin-bottom:6px">${data.name}</div>
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:8px">Nation-state: ${data.nation_state} · Sophistication: ${data.sophistication_level}</div>
+      <div style="font-size:.85rem;color:var(--muted)">${data.summary_preview}</div>
+      ${intelPreviewLockedList(data)}`;
+  }
+
+  async function intelPreviewMalware() {
+    const familyId = document.getElementById('intel-preview-malware').value.trim();
+    const out = document.getElementById('intel-preview-malware-result');
+    if (!familyId) { alert('Enter a malware family name first.'); return; }
+    out.innerHTML = '<span class="spinner"></span> Loading…';
+    const { res, data } = await intelPreviewGet(`/api/preview/malware/${encodeURIComponent(familyId)}`);
+    if (!res.ok) { out.innerHTML = `<div style="color:var(--muted)">${data.error || 'Lookup failed.'}</div>`; return; }
+    out.innerHTML = `
+      <div style="font-weight:700;margin-bottom:6px">${data.name} <span style="font-size:.75rem;color:var(--muted)">(${data.malware_type})</span></div>
+      <div style="font-size:.85rem;color:var(--muted);margin-bottom:6px">${data.summary}</div>
+      ${intelPreviewLockedList(data)}`;
+  }
+
+  async function intelPreviewIOCSample() {
+    const out = document.getElementById('intel-preview-ioc-result');
+    out.innerHTML = '<span class="spinner"></span> Loading…';
+    const { data } = await intelPreviewGet('/api/preview/ioc-sample');
+    if (!data.iocs?.length) {
+      out.innerHTML = '<div style="color:var(--muted)">No IOCs available yet — feed ingestion pending.</div>';
+    } else {
+      out.innerHTML = `<table><thead><tr><th>Type</th><th>Value</th><th>Confidence</th><th>TLP</th></tr></thead><tbody>
+        ${data.iocs.map(i => `<tr><td>${i.type || ''}</td><td style="font-family:var(--mono);font-size:.78rem">${i.value || ''}</td><td>${i.confidence ?? '—'}</td><td>${i.tlp || '—'}</td></tr>`).join('')}
+      </tbody></table>`;
+    }
+    if (data.upgrade) out.innerHTML += intelUpgradeNotice(data.upgrade.message, data.upgrade.upgrade_url);
+  }
+
+  async function intelPreviewReportSample() {
+    const type = document.getElementById('intel-preview-report-type').value;
+    const out = document.getElementById('intel-preview-report-result');
+    out.innerHTML = '<span class="spinner"></span> Loading…';
+    const { data } = await intelPreviewGet(`/api/preview/report-sample?type=${encodeURIComponent(type)}`);
+    out.innerHTML = `
+      <div style="font-weight:700;margin-bottom:6px">${data.report_meta?.name || ''}</div>
+      <div style="font-size:.85rem;color:var(--muted);white-space:pre-wrap;border-left:3px solid var(--accent);padding-left:10px;margin-bottom:8px">${data.sample_section?.sample_content || ''}</div>
+      <div style="font-size:.8rem;color:var(--muted)">${data.locked_sections?.length ? `${data.locked_sections.length} sections locked — ` : 'All sections unlocked. '}<a href="${data.purchase?.url || '/#pricing'}" style="color:var(--accent)">View plans →</a></div>`;
+  }
+
+  async function intelPreviewCatalog() {
+    const out = document.getElementById('intel-preview-catalog-result');
+    out.innerHTML = '<span class="spinner"></span> Loading…';
+    const { data } = await intelPreviewGet('/api/preview/catalog');
+    const cats = data.categories || {};
+    out.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+      ${Object.entries(cats).map(([, v]) => `<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:10px"><div style="font-size:1.2rem;font-weight:800">${v.count}</div><div style="font-size:.75rem;color:var(--muted)">${v.description}</div></div>`).join('')}
+    </div>`;
+  }
+
+  async function intelPreviewUnlock() {
+    const out = document.getElementById('intel-preview-unlock-result');
+    out.innerHTML = '<span class="spinner"></span> Checking…';
+    const res = await apiFetch('/api/preview/unlock', { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+    if (data.unlocked) {
+      out.innerHTML = `<div style="color:#10b981;font-weight:600">✅ Full intelligence access unlocked (${data.tier} plan).</div>`;
+    } else if (data.upgrade_url) {
+      out.innerHTML = intelUpgradeNotice(`Locked — your plan is ${data.current_tier}, ${data.required_tier} required.`, data.upgrade_url);
+    } else {
+      out.innerHTML = `<div style="color:var(--muted)">${data.error || 'Sign in to check unlock status.'}</div>`;
+    }
+  }
+
+  async function v1ApiFetch(path, opts = {}) {
+    const key = document.getElementById('v1-api-key').value.trim();
+    if (!key) { alert('Paste your API key first (see the API Keys tab).'); return null; }
+    const headers = { 'x-api-key': key, ...(opts.headers || {}) };
+    const res = await fetch(API_BASE + path, { ...opts, headers });
+    const data = await res.json().catch(() => ({}));
+    return { res, data };
+  }
+
+  function v1ErrorLine(res, data) {
+    if (res.status === 401) return `<div style="color:var(--muted)">${data.error || 'Invalid or missing API key.'}</div>`;
+    if (res.status === 403) return `<div style="color:var(--muted)">${data.error || 'Your key\'s plan does not include this endpoint.'} ${data.upgrade ? `<a href="/#pricing" style="color:var(--accent)">Upgrade →</a>` : ''}</div>`;
+    return `<div style="color:var(--muted)">${data.error || `Request failed (${res.status}).`}</div>`;
+  }
+
+  async function v1QueryIOCs() {
+    const type = document.getElementById('v1-ioc-type').value.trim();
+    const limit = document.getElementById('v1-ioc-limit').value.trim() || '50';
+    const out = document.getElementById('v1-ioc-result');
+    out.innerHTML = '<span class="spinner"></span> Querying…';
+    const qs = new URLSearchParams({ ...(type ? { type } : {}), limit }).toString();
+    const r = await v1ApiFetch(`/api/v1/iocs?${qs}`);
+    if (!r) { out.innerHTML = ''; return; }
+    const { res, data } = r;
+    if (!res.ok) { out.innerHTML = v1ErrorLine(res, data); return; }
+    const p = data.data || {};
+    if (!p.iocs?.length) { out.innerHTML = '<div style="color:var(--muted)">No IOCs found.</div>'; return; }
+    out.innerHTML = `<div style="font-size:.8rem;color:var(--muted);margin-bottom:6px">${p.total} total, showing ${p.iocs.length}</div>
+      <table><thead><tr><th>Type</th><th>Value</th><th>Confidence</th><th>Severity</th></tr></thead><tbody>
+        ${p.iocs.map(i => `<tr><td>${i.type || ''}</td><td style="font-family:var(--mono);font-size:.78rem">${i.value || ''}</td><td>${i.confidence ?? '—'}</td><td>${i.severity || '—'}</td></tr>`).join('')}
+      </tbody></table>`;
+  }
+
+  async function v1QueryCorrelations() {
+    const cve = document.getElementById('v1-corr-cve').value.trim();
+    const out = document.getElementById('v1-corr-result');
+    out.innerHTML = '<span class="spinner"></span> Correlating…';
+    const qs = cve ? `?cve=${encodeURIComponent(cve)}` : '';
+    const r = await v1ApiFetch(`/api/v1/correlations${qs}`);
+    if (!r) { out.innerHTML = ''; return; }
+    const { res, data } = r;
+    if (!res.ok) { out.innerHTML = v1ErrorLine(res, data); return; }
+    const p = data.data || {};
+    if (p.correlation) {
+      const c = p.correlation;
+      out.innerHTML = `
+        <div style="font-weight:700;margin-bottom:6px">${c.cve_id}</div>
+        <div style="font-size:.82rem;color:var(--muted);margin-bottom:6px">Threat actor: ${c.threat_actor || 'None matched'} ${c.campaign ? `· Campaign: ${c.campaign}` : ''} · Confidence: ${c.confidence}%</div>
+        <div style="font-size:.82rem;color:var(--muted)">Related CVEs: ${(c.related_cves || []).join(', ') || 'None'}</div>
+        <div style="font-size:.82rem;color:var(--muted)">Related IOCs: ${(c.related_iocs || []).length}</div>`;
+      return;
+    }
+    const s = p.summary || {};
+    out.innerHTML = `
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:8px">${p.total || 0} correlated high-severity entries</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><div style="font-size:.78rem;color:var(--muted);margin-bottom:4px">Top threat actors</div>${(s.top_threat_actors || []).map(a => `<div style="font-size:.82rem">${a.actor} <span style="color:var(--muted)">(${a.count})</span></div>`).join('') || '<div style="color:var(--muted);font-size:.82rem">None matched</div>'}</div>
+        <div><div style="font-size:.78rem;color:var(--muted);margin-bottom:4px">Top vendor families</div>${(s.top_vendor_families || []).map(f => `<div style="font-size:.82rem">${f.family} <span style="color:var(--muted)">(${f.count})</span></div>`).join('') || '<div style="color:var(--muted);font-size:.82rem">None matched</div>'}</div>
+      </div>`;
+  }
+
+  async function v1QueryGraph() {
+    const node = document.getElementById('v1-graph-node').value.trim();
+    const out = document.getElementById('v1-graph-result');
+    out.innerHTML = '<span class="spinner"></span> Querying…';
+    const qs = node ? `?node=${encodeURIComponent(node)}` : '';
+    const r = await v1ApiFetch(`/api/v1/graph${qs}`);
+    if (!r) { out.innerHTML = ''; return; }
+    const { res, data } = r;
+    if (!res.ok) { out.innerHTML = v1ErrorLine(res, data); return; }
+    const p = data.data || {};
+    const g = p.graph || { nodes: [], edges: [] };
+    if (!g.nodes?.length) { out.innerHTML = '<div style="color:var(--muted)">No graph data found.</div>'; return; }
+    out.innerHTML = `
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">${g.nodes.length} nodes, ${g.edges.length} edges${p.root_node ? ` (neighborhood of ${p.root_node})` : ''}</div>
+      <table><thead><tr><th>Type</th><th>Label</th><th>Severity</th></tr></thead><tbody>
+        ${g.nodes.slice(0, 30).map(n => `<tr><td>${n.type || ''}</td><td>${n.label || n.value || ''}</td><td>${n.severity || '—'}</td></tr>`).join('')}
+      </tbody></table>`;
+  }
+
+  async function v1RunHunting() {
+    const minSev = document.getElementById('v1-hunt-severity').value;
+    const out = document.getElementById('v1-hunt-result');
+    out.innerHTML = '<span class="spinner"></span> Hunting…';
+    const r = await v1ApiFetch(`/api/v1/hunting?min_severity=${encodeURIComponent(minSev)}`);
+    if (!r) { out.innerHTML = ''; return; }
+    const { res, data } = r;
+    if (!res.ok) { out.innerHTML = v1ErrorLine(res, data); return; }
+    const p = data.data || {};
+    if (!p.alerts?.length) { out.innerHTML = '<div style="color:var(--muted)">No alerts at this severity threshold — feed looks clean.</div>'; return; }
+    const sevColor = { critical: '#ef4444', high: '#f97316', medium: '#eab308', low: '#10b981' };
+    out.innerHTML = `
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">${p.hunting_summary?.total_alerts ?? p.alerts.length} alert(s) across ${p.entry_count || 0} feed entries · Risk posture: <strong style="color:var(--fg)">${p.risk_posture?.level || '—'}</strong> (${p.risk_posture?.score ?? '—'})</div>
+      ${p.alerts.map(a => `<div style="border-left:3px solid ${sevColor[a.severity] || '#94a3b8'};padding-left:10px;margin-bottom:8px">
+        <span class="badge" style="background:${sevColor[a.severity] || '#94a3b8'}22;color:${sevColor[a.severity] || '#94a3b8'}">${a.severity}</span>
+        <span style="font-size:.85rem;margin-left:6px">${a.message}</span>
+      </div>`).join('')}`;
+  }
+
+  async function v1RefreshFeed() {
+    const out = document.getElementById('v1-refresh-result');
+    out.innerHTML = '<span class="spinner"></span> Refreshing from live sources (this may take a few seconds)…';
+    const r = await v1ApiFetch('/api/threat-intel/ingest', { method: 'POST' });
+    if (!r) { out.innerHTML = ''; return; }
+    const { res, data } = r;
+    if (!res.ok) { out.innerHTML = v1ErrorLine(res, data); return; }
+    const ing = data.data?.ingestion || {};
+    out.innerHTML = `<div style="color:#10b981;font-size:.85rem">✅ Refreshed. Sources: ${(ing.sources || []).join(', ') || '—'}${ing.errors?.length ? ` · ${ing.errors.length} source error(s)` : ''}</div>`;
   }
 
   function renderCisoTrend(trend) {

@@ -261,6 +261,27 @@ a{color:var(--accent);text-decoration:none}
         <div id="campaigns-wrap"><div class="loading"><div class="spinner"></div>Loading...</div></div>
       </div>
     </div>
+
+    <!-- Full intelligence feed -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title"><span class="icon icon-blue">◆</span>Full Signal Intelligence Feed</div>
+        <span class="section-meta" id="feed-ts">–</span>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+        <input id="feed-industry" placeholder="Industry (optional)" style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:12px;outline:none;max-width:160px">
+        <select id="feed-severity" style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:12px;outline:none">
+          <option value="">Any severity</option>
+          <option value="CRITICAL">Critical</option>
+          <option value="HIGH">High</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="LOW">Low</option>
+        </select>
+        <input id="feed-min-risk" type="number" min="0" max="100" placeholder="Min risk score" style="background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;color:var(--text);font-size:12px;outline:none;max-width:140px">
+        <button class="btn btn-sm btn-outline" onclick="loadFeed()">Apply filters</button>
+      </div>
+      <div id="feed-wrap"><div class="loading"><div class="spinner"></div>Loading...</div></div>
+    </div>
   </div>
 </div>
 
@@ -334,7 +355,7 @@ document.getElementById('api-key-input').addEventListener('keydown', e => {
 });
 
 async function refreshAll() {
-  await Promise.allSettled([loadRisk(), loadSectors(), loadActors(), loadCampaigns()]);
+  await Promise.allSettled([loadRisk(), loadSectors(), loadActors(), loadCampaigns(), loadFeed()]);
   document.getElementById('last-updated').textContent = fmtTs(new Date().toISOString());
 }
 
@@ -419,6 +440,39 @@ function renderActors(actors) {
         <td>${(a.att_ck_techniques||[]).slice(0,2).map(t=>`<span class="technique-tag">${t}</span>`).join('')}</td>
       </tr>`).join('')}
     </tbody></table>`;
+}
+
+async function loadFeed() {
+  try {
+    const industry = document.getElementById('feed-industry').value.trim();
+    const severity = document.getElementById('feed-severity').value;
+    const minRisk  = document.getElementById('feed-min-risk').value;
+    const params = new URLSearchParams({ limit: '25' });
+    if (industry) params.set('industry', industry);
+    if (severity) params.set('severity', severity);
+    if (minRisk)  params.set('min_risk', minRisk);
+    const data = await apiFetch(`/api/enterprise/intelligence?${params.toString()}`);
+    document.getElementById('feed-ts').textContent = fmtDate(data.timestamp);
+    document.getElementById('feed-wrap').innerHTML = renderFeedTable(data.signals || [], data.total_signals, data.count);
+  } catch(e) {
+    document.getElementById('feed-wrap').innerHTML = '<div class="empty"><div class="empty-icon">◆</div>Unavailable</div>';
+  }
+}
+
+function renderFeedTable(signals, totalSignals, count) {
+  if (!signals.length) return '<div class="empty"><div class="empty-icon">✓</div>No signals match these filters</div>';
+  const meta = `<div style="font-size:11px;color:var(--text-dim);margin-bottom:8px">Showing ${count ?? signals.length} of ${totalSignals ?? signals.length} total signals</div>`;
+  const rows = signals.slice(0, 25).map(s => `
+    <tr>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s.title||''}">${s.id||'–'}</td>
+      <td><span class="sev-badge ${sevClass(s.severity)}">${s.severity||'–'}</span></td>
+      <td>${(s.cvss||0).toFixed(1)}</td>
+      <td><span class="risk-pill ${riskClass(s.risk_score)}">${s.risk_score}</span></td>
+      <td>${(s.targeted_sectors||[]).slice(0,2).map(sec=>`<span class="technique-tag">${sec}</span>`).join('') || '–'}</td>
+    </tr>`).join('');
+  return meta + `<table class="intel-table">
+    <thead><tr><th>CVE / ID</th><th>Sev</th><th>CVSS</th><th>Risk</th><th>Sectors</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
 }
 
 async function loadCampaigns() {

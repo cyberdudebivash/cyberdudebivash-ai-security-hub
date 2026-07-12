@@ -60,8 +60,8 @@ function upgradePrompt(feature, price = '$49/month') {
     upgrade_required: true,
     feature,
     unlock_price: price,
-    upgrade_url: 'https://intel.cyberdudebivash.com/pricing.html',
-    cta: `Unlock ${feature} — ${price}`,
+    upgrade_url: '/#pricing',
+    cta: `Unlock ${feature} — upgrade to PRO or ENTERPRISE`,
     preview_available: true,
   };
 }
@@ -132,11 +132,10 @@ async function handleCVEPreview(request, env, authCtx) {
       // Conversion hook
       conversion: {
         message: `${cveId} is actively exploited. Your organization may be at risk.`,
-        unlock_url: 'https://intel.cyberdudebivash.com/pricing.html',
+        unlock_url: '/#pricing',
         products: [
-          { name: 'Tactical Threat Dossier', price: '$49', url: 'https://intel.cyberdudebivash.com/store.html#reports' },
-          { name: 'PRO API Subscription', price: '$49/month', url: 'https://intel.cyberdudebivash.com/get-api-key.html?plan=pro' },
-          { name: 'CVE/KEV Detection Pack', price: '$199 one-time', url: 'https://cyberdudebivash.gumroad.com/l/pwynns' },
+          { name: 'PRO plan', price: 'from ₹1,499/month', url: '/#pricing' },
+          { name: 'ENTERPRISE plan', price: 'from ₹4,999/month', url: '/#pricing' },
         ],
       },
     });
@@ -200,9 +199,8 @@ async function handleCVEPreview(request, env, authCtx) {
     report_available: {
       product: 'Tactical Threat Dossier',
       format: 'PDF + JSON',
-      price: '$49',
       sections: 20,
-      purchase_url: 'https://intel.cyberdudebivash.com/store.html#reports',
+      purchase_url: '/#pricing',
     },
   });
 }
@@ -263,14 +261,14 @@ async function handleThreatActorPreview(request, env, authCtx) {
       full_ttp_matrix: upgradePrompt('Full TTP/MITRE ATT&CK Matrix', '$49/month'),
       campaign_timeline: upgradePrompt('Campaign Timeline & Kill Chain', '$49/month'),
       infrastructure_map: upgradePrompt('C2 Infrastructure Map', '$49/month'),
-      yara_signatures: upgradePrompt('Actor-Specific YARA Signatures', '$249 one-time'),
+      yara_signatures: upgradePrompt('Actor-Specific YARA Signatures'),
       sector_impact_analysis: upgradePrompt('Sector-Specific Impact Analysis', '$49/month'),
       conversion: {
         message: `${actorName} is actively targeting organizations in your region.`,
+        unlock_url: '/#pricing',
         products: [
-          { name: 'APT Malware YARA Pack', price: '$249', url: 'https://cyberdudebivash.gumroad.com/l/ytqra' },
-          { name: 'APT Intel Bundle', price: '$499', url: '#' },
-          { name: 'PRO API', price: '$49/month', url: 'https://intel.cyberdudebivash.com/get-api-key.html?plan=pro' },
+          { name: 'PRO plan', price: 'from ₹1,499/month', url: '/#pricing' },
+          { name: 'ENTERPRISE plan', price: 'from ₹4,999/month', url: '/#pricing' },
         ],
       },
     });
@@ -355,17 +353,17 @@ async function handleMalwarePreview(request, env, authCtx) {
   if (!premium) {
     return Response.json({
       ...baseCard,
-      full_yara_library: upgradePrompt('300+ YARA Signatures for this Family', '$249 one-time'),
+      full_yara_library: upgradePrompt('300+ YARA Signatures for this Family'),
       network_iocs: upgradePrompt('Network IOCs (C2 IPs, Domains, URLs)', '$49/month'),
       behavioral_analysis: upgradePrompt('Full Behavioral Analysis Report', '$49/month'),
       decryption_resources: upgradePrompt('Decryption Tools & Keys (if available)', '$49/month'),
-      ir_playbook: upgradePrompt('Incident Response Playbook', '$499 IR Kit'),
+      ir_playbook: upgradePrompt('Incident Response Playbook'),
       conversion: {
         message: `Protect your organization against ${known.name} with SENTINEL APEX PRO detection rules.`,
+        unlock_url: '/#pricing',
         products: [
-          { name: 'APT Malware YARA Pack', price: '$249', url: 'https://cyberdudebivash.gumroad.com/l/ytqra' },
-          { name: 'IR Defense Kit', price: '$499', url: 'https://intel.cyberdudebivash.com/store.html#kits' },
-          { name: 'PRO API', price: '$49/month', url: 'https://intel.cyberdudebivash.com/get-api-key.html?plan=pro' },
+          { name: 'PRO plan', price: 'from ₹1,499/month', url: '/#pricing' },
+          { name: 'ENTERPRISE plan', price: 'from ₹4,999/month', url: '/#pricing' },
         ],
       },
     });
@@ -464,7 +462,7 @@ async function handleIOCSample(request, env, authCtx) {
     response.upgrade = {
       message: '784 additional IOCs locked. Upgrade to PRO for full feed + STIX 2.1 + CSV export.',
       pro_price: '$49/month',
-      upgrade_url: 'https://intel.cyberdudebivash.com/get-api-key.html?plan=pro',
+      upgrade_url: '/#pricing',
       formats_locked: ['STIX 2.1', 'CSV bulk export', 'MISP format', 'SIEM webhook push'],
     };
   }
@@ -546,7 +544,7 @@ SEVERITY: CRITICAL | CVSS: 9.8 | EPSS: 0.847 | CISA KEV: YES
       locked: true,
     })),
     purchase: {
-      url: 'https://intel.cyberdudebivash.com/store.html#reports',
+      url: '/#pricing',
       price: reportMeta.price,
       formats: ['PDF', 'JSON'],
       delivery: 'Instant',
@@ -663,10 +661,10 @@ async function handlePreviewUnlock(request, env, authCtx) {
       unlocked: false,
       current_tier: userTier(authCtx),
       required_tier: 'PRO',
-      upgrade_url: 'https://intel.cyberdudebivash.com/pricing.html',
+      upgrade_url: '/#pricing',
       upgrade_products: [
-        { name: 'PRO API Subscription', price: '$49/month', url: 'https://intel.cyberdudebivash.com/get-api-key.html?plan=pro' },
-        { name: 'TEAM API Subscription', price: '$149/month', url: 'https://intel.cyberdudebivash.com/get-api-key.html?plan=team' },
+        { name: 'PRO plan', price: 'from ₹1,499/month', url: '/#pricing' },
+        { name: 'ENTERPRISE plan', price: 'from ₹4,999/month', url: '/#pricing' },
       ],
     }, { status: 402 });
   }
@@ -695,8 +693,8 @@ export async function handleIntelligencePreview(request, env, authCtx) {
         limit: rl.limit,
         window_seconds: 60,
         retry_after: 60,
-        upgrade_url: 'https://intel.cyberdudebivash.com/pricing.html',
-        cta: 'Upgrade to PRO for unlimited intelligence access — from $49/month',
+        upgrade_url: '/#pricing',
+        cta: 'Upgrade to PRO for unlimited intelligence access — from ₹1,499/month',
       }, {
         status: 429,
         headers: {

@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-12T03:02:07.234Z
+Generated: 2026-07-12T12:44:59.226Z
 Capabilities catalogued: 97
 
 ## Overall Completion
@@ -18,8 +18,8 @@ Capabilities catalogued: 97
 | Dimension | % |
 |---|---|
 | Backend | 89.7% |
-| Frontend | 66.5% |
-| Parity (backend **and** frontend both exist) | 60.8% |
+| Frontend | 72.2% |
+| Parity (backend **and** frontend both exist) | 68% |
 | Customer Journeys complete (dynamic_browser-verified) | 3.1% |
 
 ## Gaps by Priority
@@ -40,8 +40,8 @@ Capabilities catalogued: 97
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 25 | Backend exists, but not discoverable via navigation |
-| Backend-only features | 18 | Backend exists, zero frontend surface |
+| Hidden features | 19 | Backend exists, but not discoverable via navigation |
+| Backend-only features | 14 | Backend exists, zero frontend surface |
 | Duplicate systems | 4 | Backend marked `duplicate` (two implementations of one capability) |
 | Broken journeys | 9 | Priority P1 |
 
@@ -91,9 +91,9 @@ complete", "bug free", or "guaranteed".
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
 | CAP-COMP-001 | Global Compliance Packs Store | ✓ | ✓ | ✓ | PILOT ONLY | P1 |
-| CAP-COMP-002 | Compliance Assessment / Readiness Engine (CDB-COMP-001) | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-COMP-002 | Compliance Assessment / Readiness Engine (CDB-COMP-001) | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
 | CAP-COMP-003 | Tools Marketplace Compliance Toolkits | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
-| CAP-COMP-004 | DPDP Act 2023 Compliance Management Engine | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-COMP-004 | DPDP Act 2023 Compliance Management Engine | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
 | CAP-COMP-005 | Trust Center Compliance Framework Alignment | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
 
 ### customer-portal (4 capabilities)
@@ -153,7 +153,7 @@ complete", "bug free", or "guaranteed".
 |---|---|---|---|---|---|---|
 | CAP-MYTHOS-001 | MYTHOS GOD MODE — 16-Phase Autonomous Security Orchestrator | ✓ | ✓ | ✓ | PILOT ONLY | P4 |
 | CAP-MYTHOS-002 | MYTHOS Orchestrator Core (legacy v1.0 defense-tool generation pipeline) | ✓ | ✓ | ✓ | PILOT ONLY | P4 |
-| CAP-MYTHOS-003 | MYTHOS Revenue Engine (multi-rail checkout + paywalled scan/compliance) | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-MYTHOS-003 | MYTHOS Revenue Engine (real domain-scan + compliance-benchmark, paywall-aware) | ✓ | ✗ | ✗ | PILOT ONLY | P2 |
 | CAP-MYTHOS-004 | MYTHOS Platform Governor (autonomous health monitor + auto-repair) | ✓ | ✗ | ✗ | PILOT ONLY | P6 |
 | CAP-MYTHOS-005 | MYTHOS AI Provider / "APEX NEXUS" (multi-provider AI routing library) | ✓ | ✗ | ✗ | PILOT ONLY | P7 |
 | CAP-MYTHOS-006 | MYTHOS AI Enrichment Engine (cross-cutting scan-report enrichment) | ✓ | ◐ | ✓ | PILOT ONLY | P6 |
@@ -194,7 +194,7 @@ complete", "bug free", or "guaranteed".
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
 | CAP-RBAC-001 | Platform Staff Role Management | ✓ | ✓ | ✗ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
-| CAP-RBAC-002 | Role/Plan-Based Frontend Feature Gating | ◐ | ◐ | ✓ | PILOT ONLY | P4 |
+| CAP-RBAC-002 | Role/Plan-Based Frontend Feature Gating | ◐ | ◐ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P4 |
 
 ### sales-crm (8 capabilities)
 
@@ -240,20 +240,20 @@ complete", "bug free", or "guaranteed".
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
 | CAP-TIH-001 | Threat Hunting Engine (KQL/Sigma/YARA) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
-| CAP-TIH-002 | Threat Intelligence Feed & Versioned API (Sentinel APEX v2.0) | ✓ | ◐ | ✓ | NOT READY | P2 |
+| CAP-TIH-002 | Threat Intelligence Feed & Versioned API (Sentinel APEX v2.0) | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
 | CAP-TIH-003 | Threat Intel Pro Workbench (MITRE ATT&CK, APT Actors, STIX/TAXII, AI Analyst) | ✓ | ✓ | ✓ | NOT READY | P6 |
 | CAP-TIH-004 | Threat Intelligence Graph (backend) — distinct from the dashboard's client-side Threat Graph | ✓ | ✗ | ✗ | NOT READY | P2 |
 | CAP-TIH-005 | AI Attack Library (MITRE ATLAS / OWASP LLM techniques) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-TIH-006 | Agent Threat Advisories (AI agent framework CVEs/advisories) | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 | CAP-TIH-007 | AI Threat Intelligence Feed & Agent Security (Pillar 4/5) | ✓ | ✓ | ✓ | PILOT ONLY | P3 |
-| CAP-TIH-008 | Global Threat Intel Firehose (worldwide OSINT) | ✓ | ✓ | ✗ | PILOT ONLY | P3 |
-| CAP-TIH-009 | Threat Intelligence API Economy (monetized IOC/CVE/Actor/TTP/Risk) | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-TIH-008 | Global Threat Intel Firehose (worldwide OSINT) | ✓ | ✓ | ✓ | PILOT ONLY | P3 |
+| CAP-TIH-009 | Threat Intelligence API Economy (monetized IOC/CVE/Actor/TTP/Risk) | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
 | CAP-TIH-010 | Production IOC Enrichment | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-TIH-011 | Threat Confidence & Exploitability Engine | ✓ | ✓ | ✗ | NOT READY | P6 |
 | CAP-TIH-012 | Customer/MSSP Personalized Intelligence | ✓ | ✓ | ✗ | NOT READY | P3 |
-| CAP-TIH-013 | Enterprise Premium Intelligence API | ✓ | ◐ | ✓ | NOT READY | P3 |
-| CAP-TIH-014 | Intelligence Preview (freemium teaser cards) | ✓ | ✗ | ✗ | NOT READY | P2 |
-| CAP-TIH-015 | Public Threat-Intel Feeds & Monetization Tier Matrix | ✓ | ◐ | ✗ | PILOT ONLY | P3 |
+| CAP-TIH-013 | Enterprise Premium Intelligence API | ✓ | ✓ | ✓ | PILOT ONLY | P3 |
+| CAP-TIH-014 | Intelligence Preview (freemium teaser cards) | ✓ | ✓ | ✓ | NOT READY | P2 |
+| CAP-TIH-015 | Public Threat-Intel Feeds & Monetization Tier Matrix | ✓ | ✓ | ✓ | PILOT ONLY | P3 |
 | CAP-TIH-016 | Attack Graph from Scan Results | ✓ | ◐ | ✓ | NOT READY | P6 |
 | CAP-TIH-017 | Scan-Finding to CVE Correlation (legacy) | ✓ | ✗ | ✗ | NOT READY | P7 |
 

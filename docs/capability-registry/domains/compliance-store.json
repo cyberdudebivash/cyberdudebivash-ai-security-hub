@@ -64,36 +64,36 @@
       "status": "exists"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "missing",
-      "evidence": "grep -rn \"scan/compliance\\b\" frontend/*.html returns 0 matches; no frontend file calls POST /api/services/orders with a compliance-engine reference. (A structurally distinct product-catalog entry point into the same runComplianceAssessment() engine does have a frontend caller — workers/src/handlers/marketplaceCheckoutHandler.js's Sentinel APEX 'compliance_pack' category, cp-nist-csf-2/cp-iso27001-2022 — but that belongs to the already-populated sentinel-apex-marketplace domain, not here; see notes.)"
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/user-dashboard.html"],
+      "status": "exists",
+      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html gained a real \"Compliance\" tab (id=\"page-compliance\") — a 10-checkbox control-inputs form (matching scoreOrganization()'s real input keys exactly: has_policy/has_isms/has_mfa/has_backups/has_monitoring/has_incident_plan/has_training/has_asset_inventory/has_dlp/has_vuln_mgmt) plus a domain/industry field, POSTing to the real POST /api/scan/compliance and rendering the real response (executive_summary KPIs, iso27001_assessment.domain_scores as progress bars, nist_csf_assessment.functions as a 6-function grid, findings table, certification_roadmap). Gated to PRO/ENTERPRISE (loadComplianceAssessment(), matching the backend's own tier check exactly) with an honest upsell banner for FREE/STARTER — same locked-state convention already used for the CISO Metrics tab. Before this fix: grep -rn \"scan/compliance\\b\" frontend/*.html returned 0 matches; no frontend file called POST /api/services/orders with a compliance-engine reference either. (A structurally distinct, cheaper product-catalog entry point into the same runComplianceAssessment() engine has its own separate frontend caller — workers/src/handlers/marketplaceCheckoutHandler.js's Sentinel APEX 'compliance_pack' category, cp-nist-csf-2/cp-iso27001-2022 — that belongs to the already-populated sentinel-apex-marketplace domain, not here; see notes.)"
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "No nav entry or page links to /api/scan/compliance or a compliance-flavored /api/services/orders flow anywhere in frontend/."
+      "discoverable": true,
+      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html's sidebar (the same section as CISO Metrics/Threat Graph/AI Analysis) now has a real nav-item (data-page=\"compliance\") linking to the new tab."
     },
     "auth_enforced": true,
     "rbac": { "enforced": true, "permissions": ["tier:PRO", "tier:ENTERPRISE", "admin"] },
     "subscription_gated": true,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "grep -rn \"handleComplianceScan\" workers/test/*.mjs returns 0 matches. workers/test/serviceOrderPaymentGate.test.mjs imports createServiceOrder for real and tests the payment-gate logic generically, but its fixture services map (lines 24-33) only defines CDB-SSL-001 and CDB-CONSULT-001 — the compliance engine dispatch path itself is untested."
+      "has_tests": true,
+      "evidence": "workers/test/complianceAssessmentDashboard.test.mjs (2026-07-12, 10 tests): handleComplianceScan still correctly 403s FREE tier and returns a real, input-driven report for PRO; two different control-input sets produce different real overall_compliance scores (proves it's not a fixed template); the new frontend/user-dashboard.html tab has a real nav-item, a real page section, a 10-field form matching scoreOrganization()'s exact real input keys, a tier gate matching the backend's own check exactly, a submit handler posting to the real route, and a render function reading the real response field names (executive_summary/iso27001_assessment/nist_csf_assessment/certification_roadmap) rather than placeholders."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "PILOT ONLY",
     "priority": "P2",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/services/complianceEngine.js:238 (runComplianceAssessment, header comment line 3 labels it 'CDB-COMP-001 (₹24,999)'), workers/src/handlers/serviceHandlers.js:218-227 (handleComplianceScan, hard 403 unless authCtx.isAdmin or tier in ['PRO','ENTERPRISE']), workers/src/services/serviceOrderEngine.js:31,68,103-105,155,324 (ENGINE_DISPATCH.compliance, auto-dispatch tier gate) all read directly. frontend/*.html and workers/test/*.mjs grepped with the results in the fields above."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/services/complianceEngine.js:238 (runComplianceAssessment, header comment line 3 labels it 'CDB-COMP-001 (₹24,999)'), workers/src/handlers/serviceHandlers.js:218-227 (handleComplianceScan, hard 403 unless authCtx.isAdmin or tier in ['PRO','ENTERPRISE']), workers/src/services/serviceOrderEngine.js:31,68,103-105,155,324 (ENGINE_DISPATCH.compliance, auto-dispatch tier gate) all read directly. FIXED 2026-07-12 (22-paid-feature program, item 5 of 22): frontend/user-dashboard.html read and edited directly to add the real Compliance tab described in frontend.evidence above; all 3 inline <script> blocks in that file re-parsed with node --check after the edit (syntax valid). No backend change — handleComplianceScan/runComplianceAssessment were already correct, just unreachable by any customer. Full suite green: 248 files / 2526 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": "Real naming collision worth tracking: this file's runComplianceAssessment() is a completely different, much deeper engine than the one CAP-SCAN-005 uses (workers/src/engine.js), despite both domains using the word 'compliance' throughout. A shipped, tier-gated, ₹24,999 paid capability with zero frontend caller and zero test coverage is invisible to every customer today regardless of what they pay for. Cross-domain note (not claimed here): workers/src/handlers/marketplaceCheckoutHandler.js's MARKETPLACE_CATALOG has a 'compliance_pack' category (cp-nist-csf-2 ₹2,499, cp-iso27001-2022 ₹3,499) that also calls runComplianceAssessment() on delivery (line ~637) and DOES have a real frontend caller (frontend/index.html, frontend/marketplace-checkout.html) and real test coverage (workers/test/marketplaceCheckoutHandler.test.mjs:306). docs/capability-registry/domains/sentinel-apex-marketplace.json was checked directly for 'compliance_pack'/'NIST CSF'/'cp-nist' — zero matches, meaning that specific line item isn't itemized in that domain's registry entry either. Recommend a follow-up pass on the sentinel-apex-marketplace domain to add that line item's evidence, rather than duplicating it here."
+    "notes": "Real naming collision worth tracking: this file's runComplianceAssessment() is a completely different, much deeper engine than the one CAP-SCAN-005 uses (workers/src/engine.js), despite both domains using the word 'compliance' throughout. Cross-domain note (not claimed here): workers/src/handlers/marketplaceCheckoutHandler.js's MARKETPLACE_CATALOG has a 'compliance_pack' category (cp-nist-csf-2 ₹2,499, cp-iso27001-2022 ₹3,499) that also calls runComplianceAssessment() on delivery (line ~637) and DOES have a real frontend caller (frontend/index.html, frontend/marketplace-checkout.html) and real test coverage (workers/test/marketplaceCheckoutHandler.test.mjs:306). docs/capability-registry/domains/sentinel-apex-marketplace.json was checked directly for 'compliance_pack'/'NIST CSF'/'cp-nist' — zero matches, meaning that specific line item isn't itemized in that domain's registry entry either. Recommend a follow-up pass on the sentinel-apex-marketplace domain to add that line item's evidence, rather than duplicating it here. 2026-07-12 (22-paid-feature program, item 5): the ₹24,999 pricing in this engine's own file header is aspirational/historical — the actual live gate on the direct route (handleComplianceScan) is just PRO/ENTERPRISE subscription tier, not a separate one-time purchase, meaning this is a genuine subscriber perk/differentiator (bundled value for the higher tiers) rather than a mispriced bug — treated it as such rather than second-guessing the business's own pricing model. Built the missing frontend on that basis: a dashboard tab for existing PRO/ENTERPRISE subscribers, not a new paid checkout flow (that already exists separately via the marketplace compliance_pack line items noted above). The /api/services/orders order-based path (a ₹24,999 one-time-purchase line item dispatched through serviceOrderEngine.js's ENGINE_DISPATCH.compliance, distinct from the direct subscription-gated route) remains genuinely without a frontend caller — out of scope for this fix, which targeted the subscriber-perk access path specifically; flagged here for whoever picks up the broader serviceOrderEngine.js/service-catalog frontend gap (all 18 dispatched engines, not just compliance, appear to share this same zero-frontend condition per a grep of /api/services/orders across frontend/*.html — worth its own dedicated pass, not assumed-fixed by this one)."
   },
   {
     "id": "CAP-COMP-003",
@@ -162,36 +162,36 @@
       "status": "exists"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "missing",
-      "evidence": "frontend/compliance-management.html — the page whose marketing copy most resembles this feature ('Multi-framework compliance management', 'automated evidence collection', lines 7-8) — was checked explicitly for 'dpdp' (case-insensitive) and for every fetch/axios/XHR call: its only live API call (line 146) hits /api/generate/compliance, the already-catalogued CAP-SCAN-005 route. No frontend file anywhere calls any /api/compliance/dpdp/* route."
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/user-dashboard.html"],
+      "status": "exists",
+      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html gained a real \"DPDP Act 2023\" tab (id=\"page-dpdp\") — an assessment questionnaire (org name/industry/employee count/data categories/children's-data flag plus 7 real control checkboxes matching handleDPDPAssess's exact input keys) posting to the real POST /api/compliance/dpdp/assess and rendering the real report (overall score, maturity level, critical/high gap counts, enforcement-readiness, all 9 real DPDP Act section scores with gap lists, the 3-phase remediation roadmap, next steps); plus a \"Generate RoPA\" action posting to the real POST /api/compliance/dpdp/ropa and rendering the real processing-activities table. Gated to PRO/ENTERPRISE/MSSP matching the backend's own tier check exactly, with the same honest upsell-banner convention as the CISO Metrics and Compliance tabs. Before this fix: frontend/compliance-management.html — the page whose marketing copy most resembles this feature ('Multi-framework compliance management', 'automated evidence collection', lines 7-8) — was checked explicitly for 'dpdp' (case-insensitive) and for every fetch/axios/XHR call: its only live API call (line 146) hit /api/generate/compliance, the already-catalogued CAP-SCAN-005 route. No frontend file anywhere called any /api/compliance/dpdp/* route."
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "Not applicable — no frontend page reaches this backend at all, so there is nothing to navigate to."
+      "discoverable": true,
+      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html's sidebar (same section as Compliance/CISO Metrics) now has a real nav-item (data-page=\"dpdp\") linking to the new tab."
     },
     "auth_enforced": true,
     "rbac": { "enforced": true, "permissions": ["tier:PRO", "tier:ENTERPRISE", "tier:MSSP"] },
     "subscription_gated": true,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "grep -rn \"dpdpCompliance\" workers/test/*.mjs returns 0 matches."
+      "has_tests": true,
+      "evidence": "workers/test/dpdpComplianceDashboard.test.mjs (2026-07-12, 12 tests): backend handlers still correctly tier-gate (FREE 403) and produce real, input-driven reports (9 real sections, scores that genuinely differ by control-input strength, a real structured RoPA document); the new frontend/user-dashboard.html tab has a real nav-item, a real page section with the upsell banner and assessment form, a tier gate matching the backend's own check exactly, a submit handler posting the real questionnaire fields to the real route, a render function reading real report field names (gap_analysis/remediation_roadmap/next_steps), a RoPA-generation action hitting the real RoPA route, and confirms the pre-existing Compliance/CISO Metrics tabs are untouched."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "PILOT ONLY",
     "priority": "P2",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/dpdpCompliance.js read directly in full: tier gate confirmed real (not just a doc-comment claim) at lines 156-157 (handleDPDPOverview), 198-199 (handleDPDPAssess), 331-332 (handleDPDPSections), 354-355 (handleDPDPRoPA) — all hard-403 unless tier is PRO/ENTERPRISE/MSSP; handleDPDPReports/handleDPDPReport (lines 426,446) require only authentication (any tier), scoped by user_id, which is correctly safe since a sub-PRO user can never have created a report to list. workers/src/index.js:3776-3798 read directly for all 6 routes. frontend/compliance-management.html read directly and grepped for 'dpdp' and for fetch/axios calls (0 matches for either). workers/test/*.mjs grepped with 0 hits."
+      "last_verified": "2026-07-12",
+      "evidence": "workers/src/handlers/dpdpCompliance.js read directly in full: tier gate confirmed real (not just a doc-comment claim) at lines 156-157 (handleDPDPOverview), 198-199 (handleDPDPAssess), 331-332 (handleDPDPSections), 354-355 (handleDPDPRoPA) — all hard-403 unless tier is PRO/ENTERPRISE/MSSP; handleDPDPReports/handleDPDPReport (lines 426,446) require only authentication (any tier), scoped by user_id, which is correctly safe since a sub-PRO user can never have created a report to list. workers/src/index.js:3776-3798 read directly for all 6 routes. FIXED 2026-07-12 (22-paid-feature program, item 6 of 22): frontend/user-dashboard.html read and edited directly to add the real DPDP tab described in frontend.evidence above, covering 3 of the 6 routes with direct customer value (overview, assess, ropa) — sections is folded into the assessment results view rather than a separate call, and reports/report/:id (history/retrieval of past assessments) were not built in this pass, a smaller, lower-priority follow-up (see notes). All 3 inline <script> blocks in that file re-parsed with node --check after the edit (syntax valid). No backend change. Full suite green: 249 files / 2538 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": "Fully backend-only today: a real, tier-gated, non-trivial engine (RoPA generation, section-level gap analysis) that no customer can reach through any UI. frontend/compliance-management.html's marketing copy ('automated evidence collection', 'continuous compliance monitoring', 'compliance as code') overstates what any backend capability in this domain actually does — every engine found in this audit (this one, CAP-COMP-002, and CAP-SCAN-005) is a one-off, on-demand gap assessment, not continuous monitoring or automated evidence collection. That page is linked from frontend/sitemap.html (lines 122, 208) and cross-linked from several other marketing pages, so the overclaim is genuinely customer-facing, not dead content. Precedent: workers/test/proposalGeneratorHonestClaims.test.mjs documents a prior, since-fixed incident of the proposal generator falsely claiming in-progress SOC 2/ISO 27001 certification — the same category of risk."
+    "notes": "frontend/compliance-management.html's marketing copy ('automated evidence collection', 'continuous compliance monitoring', 'compliance as code') overstates what any backend capability in this domain actually does — every engine in this audit (this one, CAP-COMP-002, and CAP-SCAN-005) is a one-off, on-demand gap assessment, not continuous monitoring or automated evidence collection. That page is linked from frontend/sitemap.html (lines 122, 208) and cross-linked from several other marketing pages, so the overclaim is genuinely customer-facing, not dead content. Precedent: workers/test/proposalGeneratorHonestClaims.test.mjs documents a prior, since-fixed incident of the proposal generator falsely claiming in-progress SOC 2/ISO 27001 certification — the same category of risk. Not fixed in this pass (deliberately, to keep this fix bounded to the frontend-access gap it targeted) — flagged as a real, separate finding for a future wave, ideally paired with actually wiring compliance-management.html's copy to the real engines it describes rather than just softening the claims. Also not built in this pass: a \"past assessments\" history view (GET /api/compliance/dpdp/reports and /report/:id) — each assessment IS persisted server-side (report_jobs table) and could be surfaced later without any backend change; the current tab always runs a fresh assessment rather than listing history. 2026-07-12 (22-paid-feature program, item 6): the fourth of the 22 paid features found to be a genuine no-frontend gap on an otherwise-real, well-built backend, not a bug — same root cause and same fix shape as CAP-COMP-002 immediately prior."
   },
   {
     "id": "CAP-COMP-005",
