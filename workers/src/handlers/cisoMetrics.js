@@ -99,6 +99,16 @@ async function fetchRealMetricsFromD1(env, userId) {
   }
 }
 
+// ─── Risk-reduction factor from real platform usage ───────────────────────────
+// Exported so other modules that need a risk-reduction estimate (e.g.
+// v24/salesOS.js's proposal ROI scenarios) reuse this one real, audited
+// formula instead of hand-copying or inventing a separate one. Floor (0.2 at
+// zero usage) and cap (0.85 at scanCount>=500 & mythosTools>=100) are this
+// formula's own documented bounds — not independently invented numbers.
+export function estimateRiskReductionFactor(scanCount, mythosTools) {
+  return Math.min(0.85, 0.2 + (scanCount / 500) * 0.4 + (mythosTools / 100) * 0.25);
+}
+
 // ─── Security ROI calculator ──────────────────────────────────────────────────
 function calculateSecurityROI(d1Metrics, incidents, complianceStatus) {
   // Average breach cost (IBM 2023 global avg + India adjustment)
@@ -111,7 +121,7 @@ function calculateSecurityROI(d1Metrics, incidents, complianceStatus) {
   const incidents30d = incidents.filter(i => new Date(i.created_at) > new Date(Date.now() - 30 * 86400000)).length;
 
   // Risk reduction from active scanning (each scan reduces breach probability)
-  const riskReductionFactor = Math.min(0.85, 0.2 + (scanCount / 500) * 0.4 + (mythosTools / 100) * 0.25);
+  const riskReductionFactor = estimateRiskReductionFactor(scanCount, mythosTools);
   const breachProbReduced   = parseFloat((BREACH_PROBABILITY_PCT * (1 - riskReductionFactor)).toFixed(1));
   const expectedLossAverted = Math.round(AVG_BREACH_COST_USD * (BREACH_PROBABILITY_PCT - breachProbReduced) / 100);
   const roi_multiple        = PLATFORM_COST_USD > 0 ? Math.round(expectedLossAverted / PLATFORM_COST_USD) : 0;

@@ -2,6 +2,7 @@
  * CYBERDUDEBIVASH AI Security Hub — v24 Enterprise Sales OS
  * Full opportunity scoring, enhanced ICP engine, proposal factory
  */
+import { estimateRiskReductionFactor } from '../../handlers/cisoMetrics.js';
 
 // ─── Enhanced ICP + Opportunity Scoring Engine ────────────────────────────────
 // Scores 0-100: weighted across 7 dimensions
@@ -156,13 +157,40 @@ export function generateProposal(deal, type = 'enterprise', options = {}) {
   const gstAmount = Math.round(priceInr * 0.18);
   const totalInr = priceInr + gstAmount;
 
+  // A new prospect has no usage history — there is nothing to measure yet, so
+  // this is explicitly an illustrative scenario model, not a single number
+  // implied to be computed for this specific prospect. Reuses the real,
+  // audited risk-reduction formula cisoMetrics.js already applies to active
+  // customers (estimateRiskReductionFactor) rather than inventing separate
+  // scenario percentages: "conservative"/"best case" are that formula's own
+  // documented floor (day-one, zero usage) and cap (full adoption); "expected"
+  // is the midpoint of that same real range.
+  const AVG_BREACH_COST_INR = 5400000; // IBM Cost of a Data Breach Report 2024 — India average
+  const conservativeFactor = estimateRiskReductionFactor(0, 0);
+  const bestCaseFactor     = estimateRiskReductionFactor(500, 100);
+  const expectedFactor     = (conservativeFactor + bestCaseFactor) / 2;
+
+  function roiScenario(label, factor) {
+    const annualRiskPreventedInr = Math.round(AVG_BREACH_COST_INR * factor);
+    return {
+      label,
+      risk_reduction_pct:        Math.round(factor * 100),
+      annual_risk_prevented_inr: annualRiskPreventedInr,
+      roi_multiplier:            Math.round(annualRiskPreventedInr / priceInr),
+      payback_months:            Math.round(priceInr / (annualRiskPreventedInr / 12)),
+    };
+  }
+
   const roi = {
-    platform_cost_inr:    priceInr,
-    avg_breach_cost_inr:  5400000, // ₹54L IBM Cost of Breach India avg
-    risk_reduction_pct:   78,
-    roi_multiplier:       Math.round(5400000 / priceInr),
-    payback_months:       Math.round(priceInr / (5400000 / 12)),
-    annual_risk_prevented: Math.round(5400000 * 0.78),
+    disclosure: 'Illustrative scenario model, not a measured or personalized calculation — a new prospect has no usage history yet. Scenarios reuse the same risk-reduction formula applied to real, active customers, scaled by platform usage.',
+    methodology_source:  'IBM Cost of a Data Breach Report 2024 (India average) + this platform’s own usage-scaled risk-reduction model',
+    platform_cost_inr:   priceInr,
+    avg_breach_cost_inr: AVG_BREACH_COST_INR,
+    scenarios: {
+      conservative: roiScenario('Conservative (day-one, minimal usage)', conservativeFactor),
+      expected:     roiScenario('Expected (typical adoption)', expectedFactor),
+      best_case:    roiScenario('Best Case (full platform adoption)', bestCaseFactor),
+    },
   };
 
   const sections = {
@@ -381,9 +409,12 @@ function renderProposalHTML(params) {
     <tfoot><tr class="total"><td><strong>Total Investment</strong></td><td><strong>₹${totalInr.toLocaleString('en-IN')}</strong></td></tr></tfoot>
   </table>
   <div class="highlight-box" style="margin-top:20px">
-    <strong>ROI: ${sections.roi?.roi_multiplier || 36}× return</strong><br>
-    Platform cost vs. ₹54L average breach cost in India.<br>
-    Annual risk prevented: ₹${(sections.roi?.annual_risk_prevented || 4200000).toLocaleString('en-IN')}
+    <strong>Illustrative ROI Scenarios</strong> — not a measured or personalized calculation; based on IBM Cost of a Data Breach Report 2024 (India average) and this platform's usage-scaled risk-reduction model.<br><br>
+    ${['conservative', 'expected', 'best_case'].map(key => {
+      const s = sections.roi?.scenarios?.[key];
+      if (!s) return '';
+      return `${s.label}: ${s.roi_multiplier}× return · ₹${s.annual_risk_prevented_inr.toLocaleString('en-IN')} annual risk prevented · ${s.payback_months}mo payback<br>`;
+    }).join('')}
   </div>
 </div>
 
