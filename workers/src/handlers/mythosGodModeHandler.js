@@ -19,6 +19,7 @@ import {
 } from '../services/mythosGodMode.js';
 import { buildFreshnessContract } from '../lib/contracts.js';
 import { isValidAdminKey } from '../auth/middleware.js';
+import { can } from '../auth/rbac.js';
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status,
@@ -27,8 +28,13 @@ const json = (data, status = 200) => new Response(JSON.stringify(data), {
 
 // ── POST /api/mythos/god-mode/run ─────────────────────────────────────────────
 export async function handleGodModeRun(request, env, authCtx, ctx) {
-  // Auth: accept ADMIN_KEY directly or ENTERPRISE tier
-  const isAdmin = isValidAdminKey(request, env) || authCtx?.tier === 'ENTERPRISE';
+  // Auth: ADMIN_KEY, ENTERPRISE tier, or the admin:infra:operate RBAC
+  // permission (SUPERADMIN role / isOwner) — added as an additional valid
+  // path alongside the two pre-existing ones, not a replacement, so no
+  // existing ADMIN_KEY/ENTERPRISE access is narrowed.
+  const isAdmin = isValidAdminKey(request, env)
+    || authCtx?.tier === 'ENTERPRISE'
+    || await can(authCtx, env, 'admin:infra:operate');
   if (!isAdmin) {
     return json({ success: false, error: 'Admin access required' }, 403);
   }
