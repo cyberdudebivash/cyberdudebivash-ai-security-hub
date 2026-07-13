@@ -10,6 +10,8 @@
  *   POST /api/notifications/send           internal send (admin)
  */
 
+import { isRealUser } from '../auth/middleware.js';
+
 const DEFAULT_PREFS = {
   email_enabled: 1,
   inapp_enabled: 1,
@@ -64,8 +66,11 @@ async function deliverNotification({ userId, orgId, eventType, subject, body, ch
     ? JSON.parse(cfg.event_subscriptions)
     : (cfg.event_subscriptions || []);
 
-  // Check subscription
-  if (!subs.includes(eventType) && !subs.includes('*')) return [];
+  // Check subscription. eventType === '*' is a broadcast sentinel (welcome
+  // emails, recovery emails, test notifications) that must always deliver —
+  // comparing it against the user's own subs list is a no-op since no
+  // subscriber ever has the literal string '*' in their subscription array.
+  if (eventType !== '*' && !subs.includes(eventType) && !subs.includes('*')) return [];
 
   const deliveredChannels = [];
   const reqChannels = channels || ['INAPP'];
@@ -132,7 +137,7 @@ async function deliverNotification({ userId, orgId, eventType, subject, body, ch
 }
 
 export async function handleGetPreferences(req, env) {
-  if (!req.user) return Response.json({ error: 'Authentication required' }, { status: 401 });
+  if (!isRealUser(req.user)) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
   const userId = req.user.id || 'unknown';
   const row = await env.DB.prepare(
@@ -149,7 +154,7 @@ export async function handleGetPreferences(req, env) {
 }
 
 export async function handleUpdatePreferences(req, env) {
-  if (!req.user) return Response.json({ error: 'Authentication required' }, { status: 401 });
+  if (!isRealUser(req.user)) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
   let body;
   try { body = await req.json(); } catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
@@ -174,7 +179,7 @@ export async function handleUpdatePreferences(req, env) {
 }
 
 export async function handleNotificationLog(req, env) {
-  if (!req.user) return Response.json({ error: 'Authentication required' }, { status: 401 });
+  if (!isRealUser(req.user)) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
   const url = new URL(req.url);
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
@@ -190,7 +195,7 @@ export async function handleNotificationLog(req, env) {
 }
 
 export async function handleTestNotification(req, env) {
-  if (!req.user) return Response.json({ error: 'Authentication required' }, { status: 401 });
+  if (!isRealUser(req.user)) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
   let body;
   try { body = await req.json(); } catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }

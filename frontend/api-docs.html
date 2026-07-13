@@ -215,6 +215,7 @@ footer a{color:var(--accent);margin:0 8px}
   <aside class="sidebar">
     <div class="sidebar-section">Getting Started</div>
     <a class="sidebar-link active" onclick="scrollTo('auth')">Authentication</a>
+    <a class="sidebar-link" onclick="scrollTo('devkeys')">Developer API Keys</a>
     <a class="sidebar-link" onclick="scrollTo('rate-limits')">Rate Limits</a>
     <a class="sidebar-link" onclick="scrollTo('errors')">Error Codes</a>
 
@@ -263,7 +264,7 @@ footer a{color:var(--accent);margin:0 8px}
           <span class="auth-icon">🗝</span>
           <div>
             <div class="auth-name">API Key (cdb_*)</div>
-            <div class="auth-detail">Generated in dashboard — include as <code>X-API-Key: cdb_your_key</code></div>
+            <div class="auth-detail">Generated in the <a href="/user-dashboard?tab=apikeys">API Keys tab of your dashboard</a> — include as <code>X-API-Key: cdb_your_key</code>. <code>POST /api/developer/keys</code> below is the same key system under a developer-portal-branded URL — same key, same limits, same account, either path works.</div>
           </div>
         </div>
         <div class="auth-method">
@@ -304,6 +305,84 @@ footer a{color:var(--accent);margin:0 8px}
             <span class="status-chip s200">200 OK</span>
             <span class="status-chip s400">400 Invalid credentials</span>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEVELOPER API KEYS -->
+    <div class="section" id="devkeys">
+      <div class="section-title">Developer API Keys</div>
+      <p style="color:var(--text-dim,#94a3b8);margin-bottom:16px">Create and manage keys programmatically. Session auth required (log in first) — these endpoints manage the same keys shown in your <a href="/user-dashboard?tab=apikeys">dashboard's API Keys tab</a>, just reachable under a developer-portal-branded URL.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge method-post">POST</span>
+          <span class="endpoint-path">/api/developer/keys</span>
+          <span class="tier-badge tier-free">SESSION</span>
+          <span class="endpoint-desc">Generate a new API key</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-subtitle">Request Body</div>
+          <div class="code-block">
+            <button class="copy-code" onclick="copyBlock(this)">Copy</button>
+            <pre>{
+  <span class="key">"label"</span>: <span class="str">"My Integration"</span>
+}</pre>
+          </div>
+          <div class="endpoint-subtitle">Response</div>
+          <div class="code-block">
+            <pre>{
+  <span class="key">"success"</span>: <span class="key">true</span>,
+  <span class="key">"key"</span>: <span class="str">"cdb_..."</span>,
+  <span class="key">"prefix"</span>: <span class="str">"cdb_ab12"</span>,
+  <span class="key">"label"</span>: <span class="str">"My Integration"</span>,
+  <span class="key">"tier"</span>: <span class="str">"FREE"</span>,
+  <span class="key">"warning"</span>: <span class="str">"Store this key securely. It cannot be retrieved after this response."</span>
+}</pre>
+          </div>
+          <div class="endpoint-subtitle">Status Codes</div>
+          <div class="response-status">
+            <span class="status-chip s200">201 Created</span>
+            <span class="status-chip s400">401 Authentication required</span>
+            <span class="status-chip s400">409 Key limit reached for your tier</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge">GET</span>
+          <span class="endpoint-path">/api/developer/keys</span>
+          <span class="tier-badge tier-free">SESSION</span>
+          <span class="endpoint-desc">List your active API keys</span>
+        </div>
+        <div class="endpoint-body">
+          <div class="endpoint-subtitle">Response</div>
+          <div class="code-block">
+            <pre>{
+  <span class="key">"keys"</span>: [ { <span class="key">"key_prefix"</span>: <span class="str">"cdb_ab12"</span>, <span class="key">"label"</span>: <span class="str">"My Integration"</span>, <span class="key">"active"</span>: <span class="key">true</span> } ],
+  <span class="key">"count"</span>: <span class="num">1</span>,
+  <span class="key">"max_keys"</span>: <span class="num">1</span>
+}</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge">DELETE</span>
+          <span class="endpoint-path">/api/developer/keys/{id}</span>
+          <span class="tier-badge tier-free">SESSION</span>
+          <span class="endpoint-desc">Revoke a key</span>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-header" onclick="toggleEndpoint(this)">
+          <span class="method-badge method-post">POST</span>
+          <span class="endpoint-path">/api/developer/keys/{id}/rotate</span>
+          <span class="tier-badge tier-free">SESSION</span>
+          <span class="endpoint-desc">Revoke and reissue a key, same label and tier</span>
         </div>
       </div>
     </div>

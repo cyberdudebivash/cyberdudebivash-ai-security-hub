@@ -25,6 +25,9 @@ const PUBLIC_PAGES = [
   'intel', 'soc-dashboard', 'god-mode', 'ai-security-scorecard',
   'cyber-signal-radar', 'ai-security-services', 'developer-onboarding',
   'vibe-code-scanner',
+  // 2026-07-12: AI Trust Suite (EPIS #3) — new page tying together
+  // ai-governance, ai-red-team, prompt-injection-defense, owasp-llm-security.
+  'ai-trust-suite',
 ];
 
 let failures = 0;

@@ -911,8 +911,11 @@
       <div class="nav-item" data-page="intel-api" onclick="showPage('intel-api',this);loadIntelAPIStatus()">
         <span class="nav-icon">🔎</span> Threat Intel API
       </div>
-      <div class="nav-item" data-page="intel-preview" onclick="showPage('intel-preview',this);intelPreviewFeatured()">
+      <div class="nav-item" data-page="intel-preview" onclick="showPage('intel-preview',this)">
         <span class="nav-icon">📡</span> Intelligence Preview
+      </div>
+      <div class="nav-item" data-page="intel-graph" onclick="showPage('intel-graph',this)">
+        <span class="nav-icon">🌐</span> Global Intel Graph
       </div>
       <div class="nav-item" data-page="ai-analysis" onclick="showPage('ai-analysis',this)">
         <span class="nav-icon">🤖</span> AI Analysis
@@ -1931,6 +1934,42 @@
         </div>
       </div>
 
+      <div class="card" style="max-width:560px;margin-top:24px">
+        <div class="card-header"><span class="card-title">🔔 Team Alert Channels (Slack / Teams / Webhook)</span></div>
+        <div class="card-body" style="padding:24px">
+          <p style="font-size:.8rem;color:var(--muted);margin-bottom:16px">Separate from Alert Notifications above (which is email/Telegram CVE-risk alerts). This routes platform events — critical scan findings, case escalations, churn-risk flags — to your team's own Slack, Teams, or custom webhook.</p>
+          <div id="notif-channels-err" class="alert alert-error" style="display:none"></div>
+          <div id="notif-channels-ok"  class="alert alert-ok"    style="display:none"></div>
+          <div class="form-group">
+            <label class="form-label">Slack Webhook URL</label>
+            <input id="notif-slack" class="form-input" placeholder="https://hooks.slack.com/services/…" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Microsoft Teams Webhook URL</label>
+            <input id="notif-teams" class="form-input" placeholder="https://outlook.office.com/webhook/…" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Custom Webhook URL</label>
+            <input id="notif-custom" class="form-input" placeholder="https://your-server.com/hook" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Events to Deliver</label>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:.85rem">
+              <label style="display:flex;align-items:center;gap:5px"><input type="checkbox" id="notif-ev-critical" checked/> Critical scan finding</label>
+              <label style="display:flex;align-items:center;gap:5px"><input type="checkbox" id="notif-ev-case-created" checked/> Case created</label>
+              <label style="display:flex;align-items:center;gap:5px"><input type="checkbox" id="notif-ev-case-escalated" checked/> Case escalated</label>
+              <label style="display:flex;align-items:center;gap:5px"><input type="checkbox" id="notif-ev-churn" checked/> Churn-risk alert</label>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="saveNotifChannels()">Save Channels</button>
+            <button class="btn btn-outline" onclick="testNotifChannels()">Send Test Notification</button>
+          </div>
+          <div style="font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:20px 0 8px">Recent Delivery Log</div>
+          <div id="notif-log-result"><span class="spinner"></span> Loading…</div>
+        </div>
+      </div>
+
       <div class="card" style="max-width:560px;margin-top:24px;border-color:rgba(239,68,68,.3)">
         <div class="card-header"><span class="card-title" style="color:var(--danger)">Danger Zone</span></div>
         <div class="card-body" style="padding:24px">
@@ -2479,6 +2518,62 @@
       </div>
     </div>
 
+    <div id="page-intel-graph" class="page">
+      <div class="page-title">Global Intel Graph</div>
+      <div class="page-subtitle">A curated knowledge graph linking APT groups, malware, CVEs, and MITRE ATT&amp;CK techniques — live-enriched with CISA KEV and your own D1 threat intel. Distinct from "Threat Graph" above, which is built entirely from your own scan history.</div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">📊 Threat Landscape Summary</span></div>
+        <div class="card-body" style="padding:20px">
+          <div id="intel-graph-summary"><span class="spinner"></span> Loading…</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🔎 Browse Nodes</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <select id="intel-graph-node-type" class="form-input" style="max-width:200px">
+              <option value="">All types</option>
+              <option value="apt_group">APT Group</option>
+              <option value="malware">Malware</option>
+              <option value="cve">CVE</option>
+              <option value="technique">MITRE Technique</option>
+              <option value="sector">Sector</option>
+            </select>
+            <input id="intel-graph-node-search" class="form-input" style="flex:1;min-width:180px" placeholder="Search (e.g. apt29, log4shell, T1190)" />
+            <button class="btn btn-primary" onclick="intelGraphNodes()">Search</button>
+          </div>
+          <div id="intel-graph-nodes-result"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><span class="card-title">🛤️ Attack Path Finder</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="font-size:.8rem;color:var(--muted);margin-bottom:10px">Find the shortest attributed path between two graph nodes — e.g. from an APT group to a sector, or a CVE to a technique. Use node IDs from the Browse Nodes search above (shown under each result).</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="intel-graph-path-from" class="form-input" style="flex:1;min-width:160px" placeholder="From node ID (e.g. apt29)" />
+            <input id="intel-graph-path-to" class="form-input" style="flex:1;min-width:160px" placeholder="To node ID (e.g. sec_government)" />
+            <button class="btn btn-primary" onclick="intelGraphPath()">Find Path</button>
+          </div>
+          <div id="intel-graph-path-result"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">🕸️ Node Neighborhood</span></div>
+        <div class="card-body" style="padding:20px">
+          <div style="font-size:.8rem;color:var(--muted);margin-bottom:10px">Explore everything connected to a single node up to 2 hops out.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="intel-graph-query-node" class="form-input" style="flex:1;min-width:220px" placeholder="Node ID (e.g. lockbit3)" />
+            <button class="btn btn-primary" onclick="intelGraphQuery()">Explore</button>
+          </div>
+          <div id="intel-graph-query-result"></div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -2870,6 +2965,15 @@
     // Init feature pages after data loaded
     initAiPage();
     syncPlanCards();
+
+    // Deep-link support: ?tab=apikeys lands directly on the API Keys page —
+    // used by api-docs.html's "Generated in dashboard" auth note and by the
+    // developer-portal quickstart, which previously had no working pointer
+    // to where a key actually gets created.
+    const deepLinkTab = new URLSearchParams(location.search).get('tab');
+    if (deepLinkTab && document.getElementById('page-' + deepLinkTab)) {
+      showPage(deepLinkTab, null);
+    }
   }
 
   // ── Plan / Stats ─────────────────────────────────────────────────────────────
@@ -4218,6 +4322,96 @@
     }
   }
 
+  // threat-graph.js responds via lib/response.js's ok()/fail() helpers, which
+  // wrap every body as { success, data, error } — unlike /api/preview/* used
+  // above, which returns a flat body. Unwrap once here so every caller below
+  // reads real data, not the envelope.
+  async function intelGraphGet(path) {
+    const { res, data: body } = await intelPreviewGet(path);
+    return { res, data: body?.data || {}, error: body?.error };
+  }
+
+  // CodeQL js/xss-through-dom: intelGraphQuery() falls back to the raw
+  // node-ID input when data.center is missing, so an unescaped value read
+  // straight from a text box could reach innerHTML.
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function intelGraphSevColor(n) {
+    if (n.type === 'cve') return (n.properties?.cvss ?? 0) >= 9 ? '#ef4444' : (n.properties?.cvss ?? 0) >= 7 ? '#f97316' : '#eab308';
+    return { apt_group: '#f97316', malware: '#8b5cf6', technique: '#06b6d4', sector: '#10b981', indicator: '#94a3b8' }[n.type] || '#94a3b8';
+  }
+
+  async function intelGraphSummary() {
+    const out = document.getElementById('intel-graph-summary');
+    out.innerHTML = '<span class="spinner"></span> Loading…';
+    const { res, data, error } = await intelGraphGet('/api/threat-graph/summary');
+    if (!res.ok) { out.innerHTML = `<div style="color:var(--muted)">${escapeHtml(error || 'Could not load summary.')}</div>`; return; }
+    const land = data.threat_landscape || {};
+    out.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px">
+        <div style="background:rgba(255,255,255,.03);border-radius:8px;padding:10px"><div style="font-size:1.2rem;font-weight:800">${land.active_nation_state_groups ?? 0}</div><div style="font-size:.75rem;color:var(--muted)">Active nation-state groups</div></div>
+        <div style="background:rgba(255,255,255,.03);border-radius:8px;padding:10px"><div style="font-size:1.2rem;font-weight:800">${land.critical_unpatched_cves ?? 0}</div><div style="font-size:.75rem;color:var(--muted)">Critical CVEs (CVSS ≥ 9)</div></div>
+        <div style="background:rgba(255,255,255,.03);border-radius:8px;padding:10px"><div style="font-size:1.2rem;font-weight:800">${land.active_malware_families ?? 0}</div><div style="font-size:.75rem;color:var(--muted)">Active malware families</div></div>
+        <div style="background:rgba(255,255,255,.03);border-radius:8px;padding:10px"><div style="font-size:1.2rem;font-weight:800">${land.high_risk_sectors ?? 0}</div><div style="font-size:.75rem;color:var(--muted)">Critical-risk sectors</div></div>
+      </div>
+      <div style="font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px">Most active APT groups</div>
+      <table><thead><tr><th>Group</th><th>Nation</th><th>Campaigns</th></tr></thead><tbody>
+        ${(data.top_active_apts || []).map(a => `<tr><td>${a.label}</td><td>${a.nation}</td><td>${a.campaigns}</td></tr>`).join('') || '<tr><td colspan="3" style="color:var(--muted)">No data.</td></tr>'}
+      </tbody></table>`;
+  }
+
+  async function intelGraphNodes() {
+    const type = document.getElementById('intel-graph-node-type').value;
+    const q = document.getElementById('intel-graph-node-search').value.trim();
+    const out = document.getElementById('intel-graph-nodes-result');
+    out.innerHTML = '<span class="spinner"></span> Loading…';
+    const params = new URLSearchParams();
+    if (type) params.set('type', type);
+    if (q) params.set('q', q);
+    const { res, data, error } = await intelGraphGet(`/api/threat-graph/nodes?${params.toString()}`);
+    if (!res.ok) { out.innerHTML = `<div style="color:var(--muted)">${escapeHtml(error || 'Search failed.')}</div>`; return; }
+    if (!data.nodes?.length) { out.innerHTML = '<div style="color:var(--muted)">No matching nodes.</div>'; return; }
+    out.innerHTML = `<table><thead><tr><th>Type</th><th>Label</th><th>Node ID</th></tr></thead><tbody>
+      ${data.nodes.map(n => `<tr><td><span class="badge" style="background:${intelGraphSevColor(n)}22;color:${intelGraphSevColor(n)};border:1px solid ${intelGraphSevColor(n)}55">${n.type}</span></td><td>${n.label}</td><td style="font-family:var(--mono);font-size:.78rem;color:var(--muted)">${n.id}</td></tr>`).join('')}
+    </tbody></table>
+    <div style="font-size:.78rem;color:var(--muted);margin-top:8px">${data.total} result${data.total === 1 ? '' : 's'}${data.total > data.nodes.length ? ` (showing ${data.nodes.length})` : ''}</div>`;
+  }
+
+  async function intelGraphPath() {
+    const from = document.getElementById('intel-graph-path-from').value.trim();
+    const to = document.getElementById('intel-graph-path-to').value.trim();
+    const out = document.getElementById('intel-graph-path-result');
+    if (!from || !to) { alert('Enter both a from and to node ID.'); return; }
+    out.innerHTML = '<span class="spinner"></span> Loading…';
+    const { res, data, error } = await intelGraphGet(`/api/threat-graph/paths?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+    // handleGetGraphPaths (workers/src/handlers/threatGraph.js) echoes the raw
+    // from/to query params straight back in its 404 error text ("Source node
+    // '${from}' not found") — escape before rendering, or a crafted node-ID
+    // input round-trips through the server and back into innerHTML unescaped.
+    if (!res.ok) { out.innerHTML = `<div style="color:var(--muted)">${escapeHtml(error || 'Lookup failed.')}</div>`; return; }
+    out.innerHTML = `
+      <div style="font-size:.85rem;margin-bottom:8px">${escapeHtml(data.attack_narrative)}</div>
+      ${data.found ? `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">${data.path_nodes.map((n, i) => `${i > 0 ? '<span style="color:var(--muted)">→</span>' : ''}<span class="badge" style="background:${intelGraphSevColor(n)}22;color:${intelGraphSevColor(n)};border:1px solid ${intelGraphSevColor(n)}55">${n.label}</span>`).join('')}</div>` : ''}`;
+  }
+
+  async function intelGraphQuery() {
+    const nodeId = document.getElementById('intel-graph-query-node').value.trim();
+    const out = document.getElementById('intel-graph-query-result');
+    if (!nodeId) { alert('Enter a node ID first.'); return; }
+    out.innerHTML = '<span class="spinner"></span> Loading…';
+    const res = await apiFetch('/api/threat-graph/query', { method: 'POST', body: JSON.stringify({ node_id: nodeId, depth: 2 }) });
+    const body = await res.json().catch(() => ({}));
+    const data = body?.data || {};
+    if (!res.ok) { out.innerHTML = `<div style="color:var(--muted)">${body.error || 'Lookup failed.'}</div>`; return; }
+    out.innerHTML = `
+      <div style="font-weight:700;margin-bottom:8px">${data.center?.label || escapeHtml(nodeId)} — ${data.nodes.length} connected node${data.nodes.length === 1 ? '' : 's'}, ${data.edges.length} edge${data.edges.length === 1 ? '' : 's'}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${data.nodes.filter(n => n.id !== nodeId).map(n => `<span class="badge" style="background:${intelGraphSevColor(n)}22;color:${intelGraphSevColor(n)};border:1px solid ${intelGraphSevColor(n)}55">${n.label}</span>`).join('') || '<span style="color:var(--muted)">No connections found.</span>'}
+      </div>`;
+  }
+
   async function v1ApiFetch(path, opts = {}) {
     const key = document.getElementById('v1-api-key').value.trim();
     if (!key) { alert('Paste your API key first (see the API Keys tab).'); return null; }
@@ -5018,6 +5212,98 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     } catch (e) { showToast(e.message, 'err'); }
   }
 
+  // CAP-NOTIF-001 — distinct backend (workers/src/handlers/notificationPlatform.js,
+  // /api/notifications/*) from saveAlerts()/loadAlerts() above (workers/src/handlers/auth.js,
+  // /api/auth/alerts). That system is per-user email/Telegram CVE-risk alerts;
+  // this one is team Slack/Teams/webhook delivery for platform events.
+  const NOTIF_EVENT_MAP = {
+    'notif-ev-critical':       'scan.critical',
+    'notif-ev-case-created':   'case.created',
+    'notif-ev-case-escalated': 'case.escalated',
+    'notif-ev-churn':          'health.churn',
+  };
+
+  async function loadNotifChannels() {
+    try {
+      const res = await apiFetch('/api/notifications/preferences');
+      if (!res.ok) return;
+      const { preferences: p } = await res.json();
+      if (!p) return;
+      const slack = document.getElementById('notif-slack');
+      const teams = document.getElementById('notif-teams');
+      const custom = document.getElementById('notif-custom');
+      if (slack) slack.value = p.slack_webhook || '';
+      if (teams) teams.value = p.teams_webhook || '';
+      if (custom) custom.value = p.custom_webhook || '';
+      const subs = p.event_subscriptions || [];
+      for (const [elId, eventName] of Object.entries(NOTIF_EVENT_MAP)) {
+        const cb = document.getElementById(elId);
+        if (cb) cb.checked = subs.includes(eventName) || subs.includes('*');
+      }
+    } catch (e) { /* leave the form's default state on load failure */ }
+  }
+
+  function notifSelectedEvents() {
+    return Object.entries(NOTIF_EVENT_MAP)
+      .filter(([elId]) => document.getElementById(elId)?.checked)
+      .map(([, eventName]) => eventName);
+  }
+
+  async function saveNotifChannels() {
+    const errEl = document.getElementById('notif-channels-err');
+    const okEl  = document.getElementById('notif-channels-ok');
+    errEl.style.display = 'none'; okEl.style.display = 'none';
+    const toUrlOrNull = v => { const t = v.trim(); return t ? t : null; };
+    try {
+      const res = await apiFetch('/api/notifications/preferences', {
+        method: 'PUT',
+        body: JSON.stringify({
+          slack_webhook:       toUrlOrNull(document.getElementById('notif-slack').value),
+          teams_webhook:       toUrlOrNull(document.getElementById('notif-teams').value),
+          custom_webhook:      toUrlOrNull(document.getElementById('notif-custom').value),
+          event_subscriptions: notifSelectedEvents(),
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Save failed — check webhook URLs are https:// and try again.');
+      okEl.textContent = 'Channels saved.'; okEl.style.display = 'block';
+    } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+  }
+
+  async function testNotifChannels() {
+    const errEl = document.getElementById('notif-channels-err');
+    const okEl  = document.getElementById('notif-channels-ok');
+    errEl.style.display = 'none'; okEl.style.display = 'none';
+    const channels = ['INAPP'];
+    if (document.getElementById('notif-slack').value.trim())  channels.push('SLACK');
+    if (document.getElementById('notif-teams').value.trim())  channels.push('TEAMS');
+    if (document.getElementById('notif-custom').value.trim()) channels.push('WEBHOOK');
+    try {
+      const res = await apiFetch('/api/notifications/test', { method: 'POST', body: JSON.stringify({ channels }) });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Test failed.');
+      const summary = (d.delivered || []).map(c => `${c.channel}: ${c.status}`).join(', ') || 'sent';
+      okEl.textContent = `Test notification — ${summary}`; okEl.style.display = 'block';
+      loadNotifLog();
+    } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+  }
+
+  async function loadNotifLog() {
+    const out = document.getElementById('notif-log-result');
+    if (!out) return;
+    out.innerHTML = '<span class="spinner"></span> Loading…';
+    try {
+      const res = await apiFetch('/api/notifications/log?limit=10');
+      const d = await res.json();
+      if (!res.ok) { out.innerHTML = `<div style="color:var(--muted)">${d.error || 'Could not load delivery log.'}</div>`; return; }
+      if (!d.log?.length) { out.innerHTML = '<div style="color:var(--muted);font-size:.85rem">No notifications sent yet.</div>'; return; }
+      const statusColor = s => ({ SENT: '#10b981', FAILED: '#ef4444', SKIPPED: '#94a3b8' }[s] || '#94a3b8');
+      out.innerHTML = `<table><thead><tr><th>Channel</th><th>Event</th><th>Status</th><th>When</th></tr></thead><tbody>
+        ${d.log.map(l => `<tr><td>${l.channel}</td><td style="font-size:.78rem;color:var(--muted)">${l.event_type}</td><td><span class="badge" style="background:${statusColor(l.status)}22;color:${statusColor(l.status)};border:1px solid ${statusColor(l.status)}55">${l.status}</span></td><td style="font-size:.78rem;color:var(--muted)">${l.sent_at || l.created_at || ''}</td></tr>`).join('')}
+      </tbody></table>`;
+    } catch (e) { out.innerHTML = `<div style="color:var(--muted)">Could not load delivery log.</div>`; }
+  }
+
   function confirmDelete() {
     if (confirm('⚠️ This will permanently delete your account and all data. Type DELETE to confirm, then click OK.')) {
       const confirmText = prompt('Type DELETE to confirm:');
@@ -5338,6 +5624,14 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     if (id === 'settings' && typeof loadMFAStatus === 'function') loadMFAStatus();
     if (id === 'settings' && typeof loadSessions === 'function') loadSessions();
     if (id === 'settings' && typeof loadAlerts === 'function') loadAlerts();
+    if (id === 'settings' && typeof loadNotifChannels === 'function') loadNotifChannels();
+    if (id === 'settings' && typeof loadNotifLog === 'function') loadNotifLog();
+    // Moved off the nav-item onclick (2026-07-13): a deep link (?tab=intel-preview
+    // or ?tab=intel-graph, see initDashboard()) calls showPage() directly and never
+    // executes the nav item's onclick, so the auto-load has to live here to fire on
+    // every path that shows the page, not just a direct sidebar click.
+    if (id === 'intel-preview' && typeof intelPreviewFeatured === 'function') intelPreviewFeatured();
+    if (id === 'intel-graph' && typeof intelGraphSummary === 'function') intelGraphSummary();
   }
 
   // ── Modals ───────────────────────────────────────────────────────────────────
