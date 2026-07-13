@@ -4331,6 +4331,13 @@
     return { res, data: body?.data || {}, error: body?.error };
   }
 
+  // CodeQL js/xss-through-dom: intelGraphQuery() falls back to the raw
+  // node-ID input when data.center is missing, so an unescaped value read
+  // straight from a text box could reach innerHTML.
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
   function intelGraphSevColor(n) {
     if (n.type === 'cve') return (n.properties?.cvss ?? 0) >= 9 ? '#ef4444' : (n.properties?.cvss ?? 0) >= 7 ? '#f97316' : '#eab308';
     return { apt_group: '#f97316', malware: '#8b5cf6', technique: '#06b6d4', sector: '#10b981', indicator: '#94a3b8' }[n.type] || '#94a3b8';
@@ -4340,7 +4347,7 @@
     const out = document.getElementById('intel-graph-summary');
     out.innerHTML = '<span class="spinner"></span> Loading…';
     const { res, data, error } = await intelGraphGet('/api/threat-graph/summary');
-    if (!res.ok) { out.innerHTML = `<div style="color:var(--muted)">${error || 'Could not load summary.'}</div>`; return; }
+    if (!res.ok) { out.innerHTML = `<div style="color:var(--muted)">${escapeHtml(error || 'Could not load summary.')}</div>`; return; }
     const land = data.threat_landscape || {};
     out.innerHTML = `
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px">
@@ -4364,7 +4371,7 @@
     if (type) params.set('type', type);
     if (q) params.set('q', q);
     const { res, data, error } = await intelGraphGet(`/api/threat-graph/nodes?${params.toString()}`);
-    if (!res.ok) { out.innerHTML = `<div style="color:var(--muted)">${error || 'Search failed.'}</div>`; return; }
+    if (!res.ok) { out.innerHTML = `<div style="color:var(--muted)">${escapeHtml(error || 'Search failed.')}</div>`; return; }
     if (!data.nodes?.length) { out.innerHTML = '<div style="color:var(--muted)">No matching nodes.</div>'; return; }
     out.innerHTML = `<table><thead><tr><th>Type</th><th>Label</th><th>Node ID</th></tr></thead><tbody>
       ${data.nodes.map(n => `<tr><td><span class="badge" style="background:${intelGraphSevColor(n)}22;color:${intelGraphSevColor(n)};border:1px solid ${intelGraphSevColor(n)}55">${n.type}</span></td><td>${n.label}</td><td style="font-family:var(--mono);font-size:.78rem;color:var(--muted)">${n.id}</td></tr>`).join('')}
@@ -4379,9 +4386,13 @@
     if (!from || !to) { alert('Enter both a from and to node ID.'); return; }
     out.innerHTML = '<span class="spinner"></span> Loading…';
     const { res, data, error } = await intelGraphGet(`/api/threat-graph/paths?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
-    if (!res.ok) { out.innerHTML = `<div style="color:var(--muted)">${error || 'Lookup failed.'}</div>`; return; }
+    // handleGetGraphPaths (workers/src/handlers/threatGraph.js) echoes the raw
+    // from/to query params straight back in its 404 error text ("Source node
+    // '${from}' not found") — escape before rendering, or a crafted node-ID
+    // input round-trips through the server and back into innerHTML unescaped.
+    if (!res.ok) { out.innerHTML = `<div style="color:var(--muted)">${escapeHtml(error || 'Lookup failed.')}</div>`; return; }
     out.innerHTML = `
-      <div style="font-size:.85rem;margin-bottom:8px">${data.attack_narrative}</div>
+      <div style="font-size:.85rem;margin-bottom:8px">${escapeHtml(data.attack_narrative)}</div>
       ${data.found ? `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">${data.path_nodes.map((n, i) => `${i > 0 ? '<span style="color:var(--muted)">→</span>' : ''}<span class="badge" style="background:${intelGraphSevColor(n)}22;color:${intelGraphSevColor(n)};border:1px solid ${intelGraphSevColor(n)}55">${n.label}</span>`).join('')}</div>` : ''}`;
   }
 
@@ -4395,7 +4406,7 @@
     const data = body?.data || {};
     if (!res.ok) { out.innerHTML = `<div style="color:var(--muted)">${body.error || 'Lookup failed.'}</div>`; return; }
     out.innerHTML = `
-      <div style="font-weight:700;margin-bottom:8px">${data.center?.label || nodeId} — ${data.nodes.length} connected node${data.nodes.length === 1 ? '' : 's'}, ${data.edges.length} edge${data.edges.length === 1 ? '' : 's'}</div>
+      <div style="font-weight:700;margin-bottom:8px">${data.center?.label || escapeHtml(nodeId)} — ${data.nodes.length} connected node${data.nodes.length === 1 ? '' : 's'}, ${data.edges.length} edge${data.edges.length === 1 ? '' : 's'}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${data.nodes.filter(n => n.id !== nodeId).map(n => `<span class="badge" style="background:${intelGraphSevColor(n)}22;color:${intelGraphSevColor(n)};border:1px solid ${intelGraphSevColor(n)}55">${n.label}</span>`).join('') || '<span style="color:var(--muted)">No connections found.</span>'}
       </div>`;

@@ -114,4 +114,40 @@ describe('user-dashboard.html — Global Intel Graph tab (CAP-TIH-004)', () => {
     const section = dash.slice(start, start + 800);
     expect(section).toMatch(/distinct from .Threat Graph./i);
   });
+
+  // CodeQL js/xss-through-dom (PR #218): intelGraphQuery()'s data.center-missing
+  // fallback rendered the raw node-ID input into innerHTML unescaped. The real
+  // backend (handleGetGraphPaths) also echoes raw from/to query params straight
+  // back in its 404 error text, which intelGraphPath() renders — same sink.
+  // Live payload-execution proof of this fix lives in a Playwright pass (not
+  // committed here, no browser runtime in this suite); this locks the escaping
+  // calls themselves so a future edit can't silently drop them.
+  describe('XSS hardening — CodeQL alert #144 (PR #218)', () => {
+    it('defines an escapeHtml() helper', () => {
+      expect(dash).toMatch(/function escapeHtml\(s\)\s*\{/);
+    });
+
+    it('intelGraphQuery() escapes the node-ID fallback before it can reach innerHTML', () => {
+      const start = dash.indexOf('async function intelGraphQuery');
+      const fn = dash.slice(start, dash.indexOf('\n  }', start) + 4);
+      expect(fn).toContain('data.center?.label || escapeHtml(nodeId)');
+    });
+
+    it('intelGraphPath() escapes both the server-echoed error and the attack narrative', () => {
+      const start = dash.indexOf('async function intelGraphPath');
+      const fn = dash.slice(start, dash.indexOf('\n  }', start) + 4);
+      expect(fn).toContain('escapeHtml(error ||');
+      expect(fn).toContain('escapeHtml(data.attack_narrative)');
+    });
+
+    it('intelGraphNodes() and intelGraphSummary() escape their error fallbacks too (defense in depth)', () => {
+      const nodesStart = dash.indexOf('async function intelGraphNodes');
+      const nodesFn = dash.slice(nodesStart, dash.indexOf('\n  }', nodesStart) + 4);
+      expect(nodesFn).toContain('escapeHtml(error ||');
+
+      const summaryStart = dash.indexOf('async function intelGraphSummary');
+      const summaryFn = dash.slice(summaryStart, dash.indexOf('\n  }', summaryStart) + 4);
+      expect(summaryFn).toContain('escapeHtml(error ||');
+    });
+  });
 });
