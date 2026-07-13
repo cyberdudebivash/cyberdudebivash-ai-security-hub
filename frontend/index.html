@@ -1150,7 +1150,7 @@ a{color:var(--accent);text-decoration:none}
      (GA4, Microsoft Clarity) do not load until "Accept" is clicked. -->
 <div aria-label="Cookie consent" id="cdb-cookie-consent" role="dialog" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:2147483000;background:#0f1420;border-top:1px solid rgba(0,212,255,.25);padding:16px 20px;box-shadow:0 -4px 24px rgba(0,0,0,.4);flex-wrap:wrap;align-items:center;gap:16px;justify-content:space-between">
 <div style="flex:1;min-width:240px;font-size:13px;line-height:1.5;color:#cbd5e1">
-🍪 We use essential cookies to run this platform. With your consent, we also use analytics cookies (Google Analytics, Microsoft Clarity) to understand usage. See our <a href="#" onclick="CDB_LEGAL.show('cookies');return false;" style="color:#00d4ff">Cookie Policy</a>.
+🍪 We use essential cookies to run this platform. With your consent, we also use analytics cookies (Google Analytics, Microsoft Clarity) and advertising cookies (Google AdSense) to understand usage. See our <a href="#" onclick="cdbOpenLegal('cookies');return false;" style="color:#00d4ff">Cookie Policy</a>.
 </div>
 <div style="display:flex;gap:10px;flex-shrink:0">
 <button onclick="cdbSetCookieConsent('rejected')" style="padding:9px 16px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:transparent;color:#cbd5e1;font-size:13px;font-weight:600;cursor:pointer">Reject non-essential</button>
@@ -4126,7 +4126,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <div>✅ Scan history stays under your account — permanently erased on account deletion (GDPR/DPDP)</div>
 <div>✅ Deterministic scan scoring — AI chat &amp; verdicts use LLM providers disclosed in our <a href="/trust-center#sub-processors" style="color:inherit;text-decoration:underline">Sub-Processor List</a></div>
 <div>✅ Cloudflare edge network — TLS in transit, encrypted at rest</div>
-<div>✅ Google Analytics 4 only (ad personalization off) — no session recording, no ad trackers</div>
+<div>✅ Google Analytics 4, Google Tag Manager, Microsoft Clarity (session replay) &amp; Google AdSense (non-personalized ads only) — none load until you accept in the cookie banner</div>
 <div>✅ Full audit log available on Enterprise plan</div>
 <div>✅ Open API — inspect every call/response</div>
 <div>✅ Vendor security questionnaire (CAIQ-lite) — <a href="https://github.com/cyberdudebivash/cyberdudebivash-ai-security-hub/blob/main/docs/SECURITY_QUESTIONNAIRE_PACK.md" target="_blank" rel="noopener" style="color:var(--accent)">pre-answered pack for procurement</a></div>
@@ -7879,8 +7879,8 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 <a class="v14-footer-link-dim" href="/privacy-policy.html">🔒 Privacy Policy</a>
 <a class="v14-footer-link-dim" href="/terms-of-service.html">📋 Terms of Service</a>
 <a class="v14-footer-link-dim" href="/refund-policy.html">💳 Refund Policy</a>
-<a class="v14-footer-link-dim" href="#" onclick="CDB_LEGAL.show('dpdp');return false">🇮🇳 DPDP Compliance</a>
-<a class="v14-footer-link-dim" href="#" onclick="CDB_LEGAL.show('cookies');return false">🍪 Cookie Policy</a>
+<a class="v14-footer-link-dim" href="#" onclick="cdbOpenLegal('dpdp');return false">🇮🇳 DPDP Compliance</a>
+<a class="v14-footer-link-dim" href="#" onclick="cdbOpenLegal('cookies');return false">🍪 Cookie Policy</a>
 </div>
 <!-- Sentinel APEX CTA -->
 <a class="tg-community-card" href="https://t.me/cyberdudebivashSentinelApex" style="margin-top:16px;display:flex;align-items:center;gap:10px;background:rgba(0,136,204,.1);border:1px solid rgba(0,136,204,.3);border-radius:10px;padding:10px 12px;text-decoration:none" target="_blank">
@@ -8355,82 +8355,25 @@ function trackAffiliate(program, linkId) {
       keepalive: true,
     }).catch(() => {});
   } catch {}
-  // Also send to GA4 if gtag is loaded
+  // Also send to GA4 if the visitor has actually consented. window.gtag is
+  // now always defined (Consent Mode v2's default signal needs it before any
+  // consent decision), so `typeof gtag` can no longer be used as a consent
+  // proxy — check real consent state instead, or a pre-consent dataLayer
+  // backlog would get flushed to GA4 the moment a visitor later accepts.
   try {
-    if (typeof gtag !== 'undefined') {
+    if (typeof window.cdbHasConsent === 'function' && window.cdbHasConsent()) {
       gtag('event', 'affiliate_click', { event_category: 'monetization', event_label: linkId, value: program });
     }
   } catch {}
 }
 
-// ─── Google Analytics 4 + Microsoft Clarity — consent-gated ──────────────────
-// The Cookie Policy modal (CDB_LEGAL 'cookies' body, below) states: "We use
-// essential cookies for authentication only. No third-party advertising
-// cookies." Both of these are third-party analytics/session-replay scripts —
-// they must not load until the visitor has actually accepted them via the
-// consent banner (#cdb-cookie-consent). See cdbInitConsentGate() below.
-function cdbLoadGA4() {
-  const GA4_ID = 'G-E78VH3NJS6';
-  if (!GA4_ID || GA4_ID === 'G-XXXXXXXXXX') return; // skip if not configured
-  const s = document.createElement('script');
-  s.async = true;
-  s.src = `https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`;
-  document.head.appendChild(s);
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){ dataLayer.push(arguments); }
-  window.gtag = gtag;
-  gtag('js', new Date());
-  gtag('config', GA4_ID, {
-    page_title: 'CYBERDUDEBIVASH AI Security Hub',
-    send_page_view: true,
-    allow_ad_personalization_signals: false, // GDPR-friendly default
-  });
-}
-
-function cdbLoadClarity() {
-  (function(c,l,a,r,i,t,y){
-    c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-    t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-    y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-  })(window, document, "clarity", "script", "xf1wpk7u1x");
-}
-
-// ─── Cookie consent gate ──────────────────────────────────────────────────────
-const CDB_CONSENT_KEY = 'cdb_cookie_consent'; // 'accepted' | 'rejected'
-
-function cdbLoadAnalyticsIfConsented() {
-  try {
-    if (localStorage.getItem(CDB_CONSENT_KEY) === 'accepted') {
-      cdbLoadGA4();
-      cdbLoadClarity();
-    }
-  } catch {}
-}
-
-function cdbSetCookieConsent(choice) {
-  try { localStorage.setItem(CDB_CONSENT_KEY, choice); } catch {}
-  const banner = document.getElementById('cdb-cookie-consent');
-  if (banner) banner.style.display = 'none';
-  if (choice === 'accepted') { cdbLoadGA4(); cdbLoadClarity(); }
-}
-window.cdbSetCookieConsent = cdbSetCookieConsent;
-
-function cdbInitConsentGate() {
-  let stored = null;
-  try { stored = localStorage.getItem(CDB_CONSENT_KEY); } catch {}
-  if (!stored) {
-    const banner = document.getElementById('cdb-cookie-consent');
-    if (banner) banner.style.display = 'flex';
-  } else if (stored === 'accepted') {
-    cdbLoadGA4();
-    cdbLoadClarity();
-  }
-}
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', cdbInitConsentGate);
-} else {
-  cdbInitConsentGate();
-}
+// ─── Google Analytics 4 + GTM + Microsoft Clarity + AdSense ──────────────────
+// Centralized in /assets/js/seo-schema.js (loaded by every page including
+// this one) — that single copy defines window.cdbSetCookieConsent and boots
+// the consent gate for the static banner below. Kept here previously as a
+// second, independent copy of the same logic; that duplication is exactly
+// how the other 22 pages ended up firing GA4/Clarity unconditionally while
+// this page's copy stayed consent-gated — one implementation to maintain now.
 
 // ─── Version Init — version.json first, /api/version fallback ───────────────
 // Priority order:
@@ -15095,7 +15038,7 @@ function _liveVersion() {
 const CDB_LEGAL = {
   privacy: {
     title: '🔒 Privacy Policy',
-    body: '<p><strong>Last updated: April 2026</strong></p><h3>1. What We Collect</h3><p>We collect information you provide when using our platform — email addresses, domain names submitted for scanning, API usage logs, and payment information processed securely via our manual verification system. We also collect usage analytics to improve service quality.</p><h3>2. How We Use It</h3><p>Data is used to provide security scanning services, send threat intelligence alerts, process payments, and improve our platform. We never sell your personal data to third parties for advertising.</p><h3>3. Data Security</h3><p>All data is encrypted in transit (TLS 1.3) and at rest. Our platform is protected by the same security tools we sell — we follow OWASP guidelines and conduct regular penetration tests.</p><h3>4. Data Retention</h3><p>Scan results are retained for 90 days. Email subscriptions are maintained until unsubscription. Payment records are retained as required by the Indian Income Tax Act.</p><h3>5. Your Rights (DPDP Act 2023)</h3><p>You have the right to access, correct, and erase your personal data. Submit requests to <a href="mailto:privacy@cyberdudebivash.com" style="color:var(--accent)">privacy@cyberdudebivash.com</a>.</p><h3>6. Cookies</h3><p>We use essential cookies for authentication only. No third-party advertising cookies.</p><h3>7. Contact</h3><p>CYBERDUDEBIVASH PRIVATE LIMITED | 29, Korai-Sukinda-Ramchandrapur Rd, Ragadi, Odisha 755019 | <a href="mailto:bivash@cyberdudebivash.com" style="color:var(--accent)">bivash@cyberdudebivash.com</a></p>'
+    body: '<p><strong>Last updated: April 2026</strong></p><h3>1. What We Collect</h3><p>We collect information you provide when using our platform — email addresses, domain names submitted for scanning, API usage logs, and payment information processed securely via our manual verification system. We also collect usage analytics to improve service quality.</p><h3>2. How We Use It</h3><p>Data is used to provide security scanning services, send threat intelligence alerts, process payments, and improve our platform. We never sell your personal data to third parties for advertising.</p><h3>3. Data Security</h3><p>All data is encrypted in transit (TLS 1.3) and at rest. Our platform is protected by the same security tools we sell — we follow OWASP guidelines and conduct regular penetration tests.</p><h3>4. Data Retention</h3><p>Scan results are retained for 90 days. Email subscriptions are maintained until unsubscription. Payment records are retained as required by the Indian Income Tax Act.</p><h3>5. Your Rights (DPDP Act 2023)</h3><p>You have the right to access, correct, and erase your personal data. Submit requests to <a href="mailto:privacy@cyberdudebivash.com" style="color:var(--accent)">privacy@cyberdudebivash.com</a>.</p><h3>6. Cookies</h3><p>We use essential cookies for authentication only. With your consent, we also use analytics cookies (Google Analytics, Microsoft Clarity) and Google AdSense may set advertising cookies per its own policy — see our <a href="#" onclick="cdbOpenLegal(\'cookies\');return false;" style="color:var(--accent)">Cookie Policy</a> for details.</p><h3>7. Contact</h3><p>CYBERDUDEBIVASH PRIVATE LIMITED | 29, Korai-Sukinda-Ramchandrapur Rd, Ragadi, Odisha 755019 | <a href="mailto:bivash@cyberdudebivash.com" style="color:var(--accent)">bivash@cyberdudebivash.com</a></p>'
   },
   terms: {
     title: '📋 Terms of Service',

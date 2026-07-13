@@ -1,0 +1,23 @@
+/* TEAM */
+
+	Founder & CEO: Bivash Kumar Nayak
+	Site: https://linkedin.com/in/cyberdudebivash
+	Location: Odisha, India
+
+/* SITE */
+
+	Last update: 2026/07/13
+	Language: English
+	Doctype: HTML5
+	Standards: WCAG 2.1 AA, Schema.org JSON-LD
+
+/* THANKS */
+
+	OWASP, MITRE ATT&CK, MITRE ATLAS, CISA KEV, NVD/NIST, FIRST.org (EPSS)
+
+/* TECHNOLOGY COLOPHON */
+
+	Frontend: HTML5, CSS3, vanilla JavaScript
+	Backend: Cloudflare Workers, D1, R2, KV, Queues
+	Hosting: Cloudflare Pages + Cloudflare Workers
+	Analytics: Google Analytics 4, Google Tag Manager, Microsoft Clarity (consent-gated)
