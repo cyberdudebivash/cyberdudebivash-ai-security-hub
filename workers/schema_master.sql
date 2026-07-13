@@ -4,6 +4,33 @@
 -- Generated from 40 schema files
 -- Run: npx wrangler d1 execute cyberdudebivash-security-hub --file=./schema_master.sql
 -- ============================================================
+--
+-- KNOWN GAP (documented 2026-07-13, not yet reconciled): this file's coverage
+-- stops at schema_v38_governor.sql. schema_v39_marketplace.sql through
+-- schema_v48_generated_rules.sql (10 files, applied individually to
+-- production since then) were never folded in. This file is idempotent and
+-- still safe to run as-is — it just under-represents the current schema.
+-- Confirmed missing tables (present in v39-v48, absent here):
+--   agent_threat_advisories, attack_library_techniques, customer_entitlements,
+--   customer_tenants, generated_rules, intel_subscriptions, marketplace_orders,
+--   mssp_revenue_ledger, provisioning_log, referral_attribution,
+--   report_catalog, scan_results
+--
+-- Reconciliation is NOT a safe mechanical concat — verified per-file:
+--   • Clean to fold in as-is (fully "IF NOT EXISTS", additive):
+--       v39, v40, v41, v42, v43, v44, v46, v47, v48
+--   • Needs manual review before folding in (each has exactly one
+--     unconditional, non-idempotent CREATE TABLE alongside otherwise-safe
+--     statements): v44b, v45
+--   • Do NOT fold into this file: v45b (schema_v45b_repair_dangling_fk.sql)
+--     — a one-time SQLite create/copy/drop/rename FK-repair migration with
+--     10 unconditional CREATE TABLE statements. It is not idempotent; adding
+--     it here would break this file's "safe to re-run" guarantee and could
+--     corrupt data if ever re-applied. Track and apply it separately, once.
+--
+-- Until reconciled, an operator relying on this file alone for a from-scratch
+-- convergence should also apply v39,v40,v41,v42,v43,v44,v46,v47,v48 (and
+-- v44b/v45 after review) via the same gated db-migrate.yml workflow.
 
 PRAGMA foreign_keys = OFF;
 

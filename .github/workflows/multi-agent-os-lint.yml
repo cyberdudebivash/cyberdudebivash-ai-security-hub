@@ -1,0 +1,76 @@
+# =============================================================================
+# CYBERDUDEBIVASH® MACOS (multi-agent-os) — Static Analysis
+# =============================================================================
+# multi-agent-os is not deployed anywhere in production today (no docker
+# build/push step exists in deploy.yml; the real production backend is the
+# Cloudflare Worker under workers/). Its own CI/CD file
+# (multi-agent-os/.github/workflows/ci-cd.yml) can never execute — GitHub
+# Actions only scans workflows under the repo-root .github/workflows/, not
+# nested ones — so that subsystem had zero real CI coverage while looking
+# like it had a full pipeline.
+#
+# This workflow promotes only the parts of that nested file that can
+# meaningfully run today: ruff (lint) and bandit (security static analysis),
+# which need nothing but the existing source. The nested file's test/build/
+# deploy jobs assume infrastructure that doesn't exist for this project
+# (a multi-agent-os/tests/ suite, a .safety-policy.yml, a Kubernetes cluster,
+# a ghcr.io registry) and were left as-is rather than resurrected — promoting
+# them unchanged would just produce permanently-failing, confusing CI noise
+# instead of real signal. Build a real test suite and deploy target first if
+# multi-agent-os is ever activated, then wire up equivalents of those jobs.
+#
+# Advisory-first (continue-on-error), matching how this repo already
+# graduates new day-one tooling (see ci.yml's registry-validate job) —
+# earns required status over real cycles rather than claiming it immediately.
+# =============================================================================
+name: Multi-Agent-OS Static Analysis (Advisory)
+
+on:
+  push:
+    branches: [main]
+    paths: ["multi-agent-os/**"]
+  pull_request:
+    branches: [main]
+    paths: ["multi-agent-os/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint & Security Scan (ruff + bandit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: multi-agent-os
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install lint tools
+        run: pip install ruff bandit
+
+      - name: Ruff lint
+        run: ruff check . --output-format=github
+
+      - name: Bandit security scan
+        run: bandit -r . -ll -x tests/ -f json -o bandit-report.json
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: multi-agent-os-bandit-report
+          path: multi-agent-os/bandit-report.json
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Multi-Agent-OS Static Analysis (Advisory)" >> "$GITHUB_STEP_SUMMARY"
+          echo "This subsystem is not deployed to production. This check is advisory only." >> "$GITHUB_STEP_SUMMARY"
