@@ -4,14 +4,17 @@
 # ============================================================
 
 # ── Core Framework ────────────────────────────────────────────
-# fastapi 0.115.3 is the minimal release whose starlette pin
-# (>=0.40.0,<0.42.0) is compatible with the pinned starlette below.
-# 0.115.0 required starlette<0.39.0, which made this file unresolvable
-# and broke `pip install -r requirements.txt` (Docker build failure).
-fastapi==0.115.3
+# fastapi 0.139.0 requires starlette>=0.46.0 (verified via `pip install
+# fastapi==0.139.0` in a clean venv). Pinned to exactly 0.46.0, the minimum
+# satisfying version, rather than latest, to keep this bump as small as
+# possible — same rationale as the fastapi 0.115.3 pin below it used to
+# carry. An earlier mismatch here (fastapi requiring a starlette range
+# the pin below didn't satisfy) broke `pip install -r requirements.txt`
+# (Docker build failure); keep these two in lockstep on any future bump.
+fastapi==0.139.0
 uvicorn[standard]==0.30.6
 python-multipart==0.0.32
-starlette==0.41.3
+starlette==0.46.0
 
 # ── AI / LLM ─────────────────────────────────────────────────
 openai==2.45.0
