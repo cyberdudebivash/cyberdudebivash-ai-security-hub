@@ -525,7 +525,7 @@ if (document.readyState === 'loading') {
   initSEOSchemas();
 }
 
-// ─── Consent-gated tracking: GA4, GTM, Microsoft Clarity, AdSense ────────────
+// ─── Consent-gated tracking: GA4, GTM, Microsoft Clarity, AdSense, Google Ads ─
 // Single source of truth for every tracking script on the platform (loaded by
 // every page, including index.html — which used to carry its own duplicate
 // copy of this same logic; that duplication is exactly how GA4/Clarity ended
@@ -540,6 +540,12 @@ const CDB_CONSENT_KEY = 'cdb_cookie_consent'; // 'accepted' | 'rejected'
 const GA4_ID          = 'G-BDRWV1DDC5';
 const GTM_ID          = 'GT-K54PF9KB';
 const ADSENSE_CLIENT  = 'ca-pub-8343951291888650';
+// Google Ads conversion ID — the "140-904-7270" account number with dashes
+// removed and the required AW- prefix (Google Ads' own display format for
+// this same identifier). No conversion action label has been issued yet, so
+// only the base site tag (remarketing-eligible, no event-level conversions)
+// loads here — see cdbLoadGoogleAds()'s comment.
+const GOOGLE_ADS_ID   = 'AW-1409047270';
 
 window.dataLayer = window.dataLayer || [];
 function gtag() { window.dataLayer.push(arguments); }
@@ -572,6 +578,22 @@ function cdbLoadGTM() {
   gtag('config', GTM_ID);
 }
 
+function cdbLoadGoogleAds() {
+  // Reuses the gtag.js bootstrap cdbLoadGA4() already loads (same pattern as
+  // cdbLoadGTM() above) — a second gtag/js?id=... script tag isn't needed,
+  // gtag.js accepts multiple 'config' calls for different product IDs.
+  // NOTE: this only enables the base Google Ads site tag (page-view/visit
+  // tracking, remarketing audiences). It does NOT fire event-level
+  // conversions (e.g. "Purchase") — that requires a Conversion Action to be
+  // created in the Google Ads UI first, which issues a per-action label
+  // (gtag('event', 'conversion', { send_to: 'AW-1409047270/LABEL' })).
+  // Wire that up once real conversion labels exist; fabricating a label here
+  // would silently report zero/broken conversions.
+  if (window.__cdbGoogleAdsLoaded) return;
+  window.__cdbGoogleAdsLoaded = true;
+  gtag('config', GOOGLE_ADS_ID);
+}
+
 function cdbLoadClarity() {
   if (window.clarity) return; // already loaded
   (function(c,l,a,r,i,t,y){
@@ -602,6 +624,7 @@ function cdbGrantConsent() {
   });
   cdbLoadGA4();
   cdbLoadGTM();
+  cdbLoadGoogleAds();
   cdbLoadClarity();
   cdbLoadAdSense();
 }
@@ -623,6 +646,20 @@ function cdbHasConsent() {
 }
 window.cdbHasConsent = cdbHasConsent;
 
+// Re-opens the consent banner so a visitor can change an earlier choice —
+// the Cookie Policy promises this is possible "at any time", so the
+// mechanism has to actually exist, not just the promise. Does not revoke
+// already-granted consent by itself; re-choosing "Reject" pushes the
+// Consent Mode v2 denied signal again, but scripts already loaded this page
+// view (e.g. gtag.js) stay loaded — a full revoke takes effect from the
+// next page view, same as clearing cookies would.
+function cdbReopenCookieChoice() {
+  cdbEnsureConsentBanner();
+  const banner = document.getElementById('cdb-cookie-consent');
+  if (banner) banner.style.display = 'flex';
+}
+window.cdbReopenCookieChoice = cdbReopenCookieChoice;
+
 // Injects the consent banner for any page that doesn't already carry a
 // static copy (index.html ships its own inline banner; every other page
 // gets it from here) — avoids duplicating the same banner markup across
@@ -636,7 +673,7 @@ function cdbEnsureConsentBanner() {
   div.style.cssText = 'display:none;position:fixed;left:0;right:0;bottom:0;z-index:2147483000;background:#0f1420;border-top:1px solid rgba(0,212,255,.25);padding:16px 20px;box-shadow:0 -4px 24px rgba(0,0,0,.4);flex-wrap:wrap;align-items:center;gap:16px;justify-content:space-between';
   div.innerHTML =
     '<div style="flex:1;min-width:240px;font-size:13px;line-height:1.5;color:#cbd5e1">' +
-    '🍪 We use essential cookies to run this platform. With your consent, we also use analytics cookies (Google Analytics, Microsoft Clarity) and advertising cookies (Google AdSense) to understand usage. See our <a href="/privacy-policy" style="color:#00d4ff">Cookie Policy</a>.' +
+    '🍪 We use essential cookies to run this platform. With your consent, we also use analytics cookies (Google Analytics, Microsoft Clarity) and advertising cookies (Google AdSense, Google Ads) to understand usage. See our <a href="/privacy-policy" style="color:#00d4ff">Cookie Policy</a>.' +
     '</div>' +
     '<div style="display:flex;gap:10px;flex-shrink:0">' +
     '<button onclick="cdbSetCookieConsent(\'rejected\')" style="padding:9px 16px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:transparent;color:#cbd5e1;font-size:13px;font-weight:600;cursor:pointer">Reject non-essential</button>' +
@@ -661,6 +698,65 @@ if (document.readyState === 'loading') {
 } else {
   cdbInitConsentGate();
 }
+
+// ─── Google Customer Reviews — post-purchase opt-in survey ───────────────────
+// Call this from a checkout success handler only, right after a payment is
+// verified server-side — never on page load. Consent-gated like every other
+// Google integration here: a visitor who rejected cookies still completes
+// their purchase normally, they just won't see the opt-in survey.
+const GCR_MERCHANT_ID = 5803888991;
+function cdbGoogleCustomerReviewsOptIn(opts) {
+  try {
+    const { orderId, email, deliveryCountry, estimatedDeliveryDate } = opts || {};
+    if (!cdbHasConsent() || !orderId || !email || !estimatedDeliveryDate) return;
+    const render = () => {
+      window.gapi.load('surveyoptin', function () {
+        window.gapi.surveyoptin.render({
+          merchant_id:             GCR_MERCHANT_ID,
+          order_id:                String(orderId),
+          email,
+          delivery_country:        deliveryCountry || 'IN',
+          estimated_delivery_date: estimatedDeliveryDate, // 'YYYY-MM-DD'
+        });
+      });
+    };
+    if (window.gapi) { render(); return; }
+    // Two purchases in one page view (realistic on the homepage tools/
+    // compliance grids, which have several "Buy" buttons on one page) could
+    // otherwise both find window.gapi still unset and each append their own
+    // platform.js — queue instead of loading it twice.
+    if (window.__cdbGCRLoading) {
+      (window.__cdbGCRQueue = window.__cdbGCRQueue || []).push(render);
+      return;
+    }
+    window.__cdbGCRLoading = true;
+    const s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://apis.google.com/js/platform.js';
+    s.onload = () => {
+      render();
+      (window.__cdbGCRQueue || []).splice(0).forEach(fn => fn());
+    };
+    s.onerror = () => { console.error('[CYBERDUDEBIVASH] Google Customer Reviews: platform.js failed to load'); };
+    document.head.appendChild(s);
+  } catch (e) {
+    console.error('[CYBERDUDEBIVASH] Google Customer Reviews opt-in failed', e);
+  }
+}
+window.cdbGoogleCustomerReviewsOptIn = cdbGoogleCustomerReviewsOptIn;
+
+// Small helper so call sites don't hand-roll date math: 'YYYY-MM-DD', N days
+// from today, for the estimated_delivery_date field above. Deliberately does
+// all arithmetic in UTC (Date.UTC / getUTCFullYear etc.) rather than mixing
+// local-time getDate()/setDate() with UTC-based toISOString() — that mix
+// shifts the result by a day for part of every 24h for any non-UTC visitor
+// (e.g. IST visitors between local midnight and 5:30am).
+function cdbEstimatedDeliveryDate(daysFromNow) {
+  const d = new Date();
+  const utc = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + (daysFromNow || 0));
+  return new Date(utc).toISOString().slice(0, 10);
+}
+window.cdbEstimatedDeliveryDate = cdbEstimatedDeliveryDate;
 
 // ─── IndexNow ping on page load (tells Bing/Yandex about new content) ────────
 async function pingIndexNow() {

@@ -6,6 +6,7 @@
 <title>Marketplace Checkout — CYBERDUDEBIVASH® SENTINEL APEX</title>
 <meta name="description" content="Purchase detection packs, AI security agents, intelligence reports, compliance kits and playbooks from CYBERDUDEBIVASH® SENTINEL APEX marketplace.">
 <meta name="robots" content="noindex">
+<script type="module" src="/assets/js/seo-schema.js"></script>
 <style>
   :root {
     --bg: #060b14; --surface: #0c1422; --surface2: #111827;
@@ -102,7 +103,10 @@
   .sk-p.w60 { width: 60%; }
   .sk-p.w80 { width: 80%; }
 
-  .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 0.75rem 1.25rem; border-radius: 8px; font-size: 0.82rem; z-index: 999; transform: translateY(60px); opacity: 0; transition: all 0.3s; }
+  /* z-index above the consent banner seo-schema.js injects (2147483000) —
+     an error toast (e.g. "Payment SDK failed to load") must stay visible
+     even while the full-width, bottom-anchored cookie banner is showing. */
+  .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 0.75rem 1.25rem; border-radius: 8px; font-size: 0.82rem; z-index: 2147483001; transform: translateY(60px); opacity: 0; transition: all 0.3s; }
   .toast.show { transform: translateY(0); opacity: 1; }
 
   @media (max-width: 768px) {
@@ -171,6 +175,7 @@ const productId = urlParams.get('product');
 let productData = null;
 let purchaseId = null;
 let razorOrderId = null;
+let checkoutEmail = null;
 
 async function loadProduct() {
   if (!productId) {
@@ -191,6 +196,21 @@ async function loadProduct() {
 
 function fmt(n) { return (n / 100).toLocaleString('en-IN'); }
 
+// The catalog's own `delivery: 'instant'` field is aspirational, not real,
+// for detection_pack/playbook — the actual /api/marketplace/download handler
+// (workers/src/handlers/marketplaceCheckoutHandler.js) has no rule/playbook-
+// authoring engine yet and routes those two categories to manual fulfillment
+// within 24h regardless of what the catalog's `delivery` field says.
+// Checked by `category` only (not `delivery`) because the two callers of
+// this function see different response shapes: productData (from
+// /api/marketplace/catalog/:id) has both `category` and `delivery`, but the
+// verify response's `product` field only ever includes `category` — and
+// category maps 1:1 with delivery in this catalog anyway (ai_agent is
+// always delivery:'api_key').
+function isInstantDelivery(p) {
+  return p.category === 'ai_agent' || p.category === 'intelligence_report' || p.category === 'compliance_pack';
+}
+
 function renderProduct() {
   const p = productData;
   const catColors = {
@@ -202,7 +222,9 @@ function renderProduct() {
   let statsHtml = '';
   if (p.rule_count) statsHtml += `<div class="stat-item"><div class="stat-num">${p.rule_count}</div><div class="stat-label">Detection Rules</div></div>`;
   if (p.license_days) statsHtml += `<div class="stat-item"><div class="stat-num">${p.license_days}</div><div class="stat-label">Day License</div></div>`;
-  statsHtml += `<div class="stat-item"><div class="stat-num">${p.delivery === 'instant' ? '⚡' : '🔑'}</div><div class="stat-label">${p.delivery === 'instant' ? 'Instant' : 'API Key'} Delivery</div></div>`;
+  const deliveryIcon  = p.delivery === 'api_key' ? '🔑' : isInstantDelivery(p) ? '⚡' : '📧';
+  const deliveryLabel = p.delivery === 'api_key' ? 'API Key' : isInstantDelivery(p) ? 'Instant' : '24-Hour';
+  statsHtml += `<div class="stat-item"><div class="stat-num">${deliveryIcon}</div><div class="stat-label">${deliveryLabel} Delivery</div></div>`;
 
   const mitreHtml = p.mitre_coverage?.length
     ? `<div class="product-section"><h4>MITRE ATT&CK Coverage</h4><div class="mitre-chips">${p.mitre_coverage.map(t => `<span class="mitre-chip">${t}</span>`).join('')}</div></div>` : '';
@@ -242,7 +264,7 @@ function renderCheckout() {
       <span class="price-inr">₹${fmt(p.amount)}</span>
       <span class="price-usd">/ $${(p.amount_usd / 100).toFixed(0)}</span>
     </div>
-    <div class="price-one-time">One-time purchase · Instant delivery</div>
+    <div class="price-one-time">One-time purchase · ${isInstantDelivery(p) ? 'Instant delivery' : 'Delivered within 24 hours'}</div>
   `;
   document.getElementById('checkoutBody').innerHTML = `
     <label for="c-name">Full name <span style="color:var(--red)">*</span></label>
@@ -305,6 +327,7 @@ async function initiatePayment() {
 
     purchaseId = data.purchase_id;
     razorOrderId = data.order_id;
+    checkoutEmail = email;
 
     if (!window.Razorpay) {
       showToast('❌ Payment SDK failed to load. Please refresh.', 'red');
@@ -362,15 +385,35 @@ async function verifyPayment(rzpResponse) {
       return;
     }
 
+    // handleMarketplaceVerify's "already verified" branch (a legitimate,
+    // reachable response if Razorpay's handler fires twice, or a client
+    // retries after a dropped response for a payment the server already
+    // processed) returns only {message, access_token, download_url} — no
+    // `product`/`access_expires_at`. Fall back to the product already
+    // fetched by loadProduct() rather than assume the richer shape.
+    const product = data.product || productData;
+
     // Show success state
     document.getElementById('checkoutBody').style.display = 'none';
     document.getElementById('checkoutHeader').style.display = 'none';
     const sp = document.getElementById('successPanel');
     sp.classList.add('show');
     document.getElementById('accessTokenDisplay').textContent = data.access_token;
-    document.getElementById('successMsg').textContent =
-      `Your ${data.product.name} is ready. Access expires ${new Date(data.access_expires_at).toLocaleDateString()}.`;
+    const readyNow = isInstantDelivery(product);
+    const expiryText = data.access_expires_at ? ` Access expires ${new Date(data.access_expires_at).toLocaleDateString()}.` : '';
+    document.getElementById('successMsg').textContent = readyNow
+      ? `Your ${product.name} is ready.${expiryText}`
+      : `Your order for ${product.name} is confirmed — our research team will finalize and email it to you within 24 hours.${expiryText}`;
     document.getElementById('downloadBtn').href = data.download_url;
+
+    try {
+      window.cdbGoogleCustomerReviewsOptIn && window.cdbGoogleCustomerReviewsOptIn({
+        orderId: rzpResponse.razorpay_payment_id, email: checkoutEmail,
+        // See isInstantDelivery() above — detection_pack/playbook are
+        // manually fulfilled within 24h regardless of catalog metadata.
+        estimatedDeliveryDate: window.cdbEstimatedDeliveryDate(isInstantDelivery(product) ? 0 : 1),
+      });
+    } catch (e) {}
 
   } catch (e) {
     showToast('⚠ Verification error. Contact support@cyberdudebivash.in with order ID: ' + razorOrderId, 'yellow');
