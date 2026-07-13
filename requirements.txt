@@ -46,4 +46,4 @@ prometheus-client==0.21.0
 
 # ── Utilities ────────────────────────────────────────────────
 python-dateutil==2.9.0.post0
-requests==2.32.3
+requests==2.34.2
