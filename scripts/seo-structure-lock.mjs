@@ -28,6 +28,15 @@ const PUBLIC_PAGES = [
   // 2026-07-12: AI Trust Suite (EPIS #3) — new page tying together
   // ai-governance, ai-red-team, prompt-injection-defense, owasp-llm-security.
   'ai-trust-suite',
+  // 2026-07-13: the 23 canonical service pages (Google Business Ecosystem
+  // integration pass) — previously entirely unprotected by this gate.
+  'ai-security', 'threat-intelligence', 'soc-operations', 'soc-agents',
+  'mssp', 'owasp-llm-security', 'ai-governance', 'ai-red-team',
+  'prompt-injection-defense', 'attack-surface-management', 'cloud-security',
+  'threat-hunting', 'incident-response', 'devsecops', 'zero-trust-security',
+  'compliance-management', 'ai-risk-management', 'enterprise-security',
+  'vulnerability-management', 'cyber-defense', 'security-automation',
+  'trust-center', 'press',
 ];
 
 let failures = 0;

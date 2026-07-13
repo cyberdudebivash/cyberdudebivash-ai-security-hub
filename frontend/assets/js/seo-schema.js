@@ -388,9 +388,27 @@ function buildCVESchema(cveId, description) {
 }
 
 // ─── Inject JSON-LD into page <head> ─────────────────────────────────────────
+// Several service pages now carry static JSON-LD (Organization, Service,
+// BreadcrumbList) directly in their HTML for non-JS crawlers/link-unfurl
+// bots. Collect those types once at load so this injector never adds a
+// second, duplicate copy of a type the page already declares statically.
+const STATIC_SCHEMA_TYPES = (function collectStaticSchemaTypes() {
+  const types = new Set();
+  document.querySelectorAll('script[type="application/ld+json"]').forEach(el => {
+    try {
+      const t = JSON.parse(el.textContent)['@type'];
+      (Array.isArray(t) ? t : [t]).forEach(x => x && types.add(x));
+    } catch { /* not our concern here — malformed static JSON-LD is caught by seo-structure-lock.mjs */ }
+  });
+  return types;
+})();
+
 function injectSchema(schemas) {
   const arr = Array.isArray(schemas) ? schemas : [schemas];
   arr.forEach(schema => {
+    const t = schema['@type'];
+    const types = Array.isArray(t) ? t : [t];
+    if (types.some(x => STATIC_SCHEMA_TYPES.has(x))) return; // already present statically
     const el = document.createElement('script');
     el.type = 'application/ld+json';
     el.textContent = JSON.stringify(schema, null, 0);
@@ -507,35 +525,130 @@ if (document.readyState === 'loading') {
   initSEOSchemas();
 }
 
-// ─── GA4 — fire page_view on landing pages (skips pages that already load it,
-// e.g. index.html, to avoid double-counting) ──────────────────────────────────
-(function initGA4() {
-  if (window.gtag || window.dataLayer) return; // already loaded by this page
-  const GA4_ID = 'G-E78VH3NJS6';
+// ─── Consent-gated tracking: GA4, GTM, Microsoft Clarity, AdSense ────────────
+// Single source of truth for every tracking script on the platform (loaded by
+// every page, including index.html — which used to carry its own duplicate
+// copy of this same logic; that duplication is exactly how GA4/Clarity ended
+// up firing unconditionally here while the homepage's inline copy stayed
+// consent-gated). Nothing below loads until the visitor has explicitly
+// accepted via the cookie consent banner (#cdb-cookie-consent) — fail-safe:
+// no stored consent choice means no tracking. Also pushes Google Consent
+// Mode v2 default-denied signals immediately, so any tag Google's own
+// scripts add later (e.g. via the GTM container) inherits a safe default
+// before the visitor has made a choice.
+const CDB_CONSENT_KEY = 'cdb_cookie_consent'; // 'accepted' | 'rejected'
+const GA4_ID          = 'G-BDRWV1DDC5';
+const GTM_ID          = 'GT-K54PF9KB';
+const ADSENSE_CLIENT  = 'ca-pub-8343951291888650';
+
+window.dataLayer = window.dataLayer || [];
+function gtag() { window.dataLayer.push(arguments); }
+window.gtag = window.gtag || gtag;
+gtag('consent', 'default', {
+  ad_storage:         'denied',
+  ad_user_data:       'denied',
+  ad_personalization: 'denied',
+  analytics_storage:  'denied',
+});
+
+function cdbLoadGA4() {
+  if (window.__cdbGA4Loaded) return;
+  window.__cdbGA4Loaded = true;
   const s = document.createElement('script');
   s.async = true;
   s.src = `https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`;
   document.head.appendChild(s);
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){ dataLayer.push(arguments); }
-  window.gtag = gtag;
   gtag('js', new Date());
-  gtag('config', GA4_ID, {
-    send_page_view: true,
-    allow_ad_personalization_signals: false,
-  });
-})();
+  gtag('config', GA4_ID, { send_page_view: true });
+}
 
-// ─── Microsoft Clarity — session replay + heatmaps (skips pages that already
-// load it, e.g. index.html, to avoid double-counting) ─────────────────────────
-(function initClarity() {
-  if (window.clarity) return; // already loaded by this page
+function cdbLoadGTM() {
+  if (window.__cdbGTMLoaded) return;
+  window.__cdbGTMLoaded = true;
+  const s = document.createElement('script');
+  s.async = true;
+  s.src = `https://www.googletagmanager.com/gtm.js?id=${GTM_ID}`;
+  document.head.appendChild(s);
+}
+
+function cdbLoadClarity() {
+  if (window.clarity) return; // already loaded
   (function(c,l,a,r,i,t,y){
     c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
     t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
     y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
   })(window, document, "clarity", "script", "xf1wpk7u1x");
-})();
+}
+
+function cdbLoadAdSense() {
+  if (window.__cdbAdSenseLoaded) return;
+  window.__cdbAdSenseLoaded = true;
+  const s = document.createElement('script');
+  s.async = true;
+  s.crossOrigin = 'anonymous';
+  s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`;
+  document.head.appendChild(s);
+}
+
+function cdbGrantConsent() {
+  gtag('consent', 'update', {
+    ad_storage:         'granted',
+    ad_user_data:       'granted',
+    ad_personalization: 'granted',
+    analytics_storage:  'granted',
+  });
+  cdbLoadGA4();
+  cdbLoadGTM();
+  cdbLoadClarity();
+  cdbLoadAdSense();
+}
+
+function cdbSetCookieConsent(choice) {
+  try { localStorage.setItem(CDB_CONSENT_KEY, choice); } catch {}
+  const banner = document.getElementById('cdb-cookie-consent');
+  if (banner) banner.style.display = 'none';
+  if (choice === 'accepted') cdbGrantConsent();
+}
+window.cdbSetCookieConsent = cdbSetCookieConsent;
+
+// Injects the consent banner for any page that doesn't already carry a
+// static copy (index.html ships its own inline banner; every other page
+// gets it from here) — avoids duplicating the same banner markup across
+// 20+ HTML files. Visually matches the homepage's static banner.
+function cdbEnsureConsentBanner() {
+  if (document.getElementById('cdb-cookie-consent')) return;
+  const div = document.createElement('div');
+  div.id = 'cdb-cookie-consent';
+  div.setAttribute('role', 'dialog');
+  div.setAttribute('aria-label', 'Cookie consent');
+  div.style.cssText = 'display:none;position:fixed;left:0;right:0;bottom:0;z-index:2147483000;background:#0f1420;border-top:1px solid rgba(0,212,255,.25);padding:16px 20px;box-shadow:0 -4px 24px rgba(0,0,0,.4);flex-wrap:wrap;align-items:center;gap:16px;justify-content:space-between';
+  div.innerHTML =
+    '<div style="flex:1;min-width:240px;font-size:13px;line-height:1.5;color:#cbd5e1">' +
+    '🍪 We use essential cookies to run this platform. With your consent, we also use analytics cookies (Google Analytics, Microsoft Clarity) and advertising cookies (Google AdSense) to understand usage. See our <a href="/privacy-policy" style="color:#00d4ff">Cookie Policy</a>.' +
+    '</div>' +
+    '<div style="display:flex;gap:10px;flex-shrink:0">' +
+    '<button onclick="cdbSetCookieConsent(\'rejected\')" style="padding:9px 16px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:transparent;color:#cbd5e1;font-size:13px;font-weight:600;cursor:pointer">Reject non-essential</button>' +
+    '<button onclick="cdbSetCookieConsent(\'accepted\')" style="padding:9px 16px;border-radius:6px;border:none;background:#00d4ff;color:#04121a;font-size:13px;font-weight:700;cursor:pointer">Accept</button>' +
+    '</div>';
+  document.body.appendChild(div);
+}
+
+function cdbInitConsentGate() {
+  let stored = null;
+  try { stored = localStorage.getItem(CDB_CONSENT_KEY); } catch {}
+  if (stored === 'accepted') {
+    cdbGrantConsent();
+  } else if (!stored) {
+    cdbEnsureConsentBanner();
+    const banner = document.getElementById('cdb-cookie-consent');
+    if (banner) banner.style.display = 'flex';
+  }
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', cdbInitConsentGate);
+} else {
+  cdbInitConsentGate();
+}
 
 // ─── IndexNow ping on page load (tells Bing/Yandex about new content) ────────
 async function pingIndexNow() {
