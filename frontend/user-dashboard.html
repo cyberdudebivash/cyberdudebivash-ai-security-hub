@@ -2870,6 +2870,15 @@
     // Init feature pages after data loaded
     initAiPage();
     syncPlanCards();
+
+    // Deep-link support: ?tab=apikeys lands directly on the API Keys page —
+    // used by api-docs.html's "Generated in dashboard" auth note and by the
+    // developer-portal quickstart, which previously had no working pointer
+    // to where a key actually gets created.
+    const deepLinkTab = new URLSearchParams(location.search).get('tab');
+    if (deepLinkTab && document.getElementById('page-' + deepLinkTab)) {
+      showPage(deepLinkTab, null);
+    }
   }
 
   // ── Plan / Stats ─────────────────────────────────────────────────────────────
