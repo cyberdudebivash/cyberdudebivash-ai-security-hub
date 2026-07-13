@@ -516,22 +516,22 @@
     "subscription_gated": false,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "No import-confirmed test for any of the 5 functions in workers/src/handlers/threatConfidence.js."
+      "has_tests": true,
+      "evidence": "FIXED 2026-07-13: workers/test/threatConfidenceEngine.test.mjs (15 tests) covers all 5 entry points against a mocked global fetch (real CISA KEV JSON shape, real ThreatFox response shape) and an in-memory KV — includes a fully hand-computed deterministic assertion (a KEV-listed, APT-attributed, actively-exploited CVE scores exactly 95/100 confidence, 9.5/10 exploitability, CRITICAL_IMMINENT/P0), confirms handleScoreThreats only feeds CRITICAL/HIGH tiers while handleEnrichThreat feeds unconditionally (genuinely different gating logic, not a copy-paste), and confirms handleGetKEV propagates a real upstream CISA fetch failure as 503 rather than silently returning a zeroed catalog."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
     "priority": "P6",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/threatConfidence.js read directly (474 lines, all 5 entry points); workers/src/index.js:6009-6025 read directly, no auth parameter accepted by any of the 5 functions; frontend/index.html read directly for all 4 embedded call sites; workers/test/*.mjs grepped with 0 hits."
+      "last_verified": "2026-07-13",
+      "evidence": "workers/src/handlers/threatConfidence.js read directly (474 lines, all 5 entry points); workers/src/index.js:6009-6025 read directly, no auth parameter accepted by any of the 5 functions; frontend/index.html read directly for all 4 embedded call sites; now regression-locked by workers/test/threatConfidenceEngine.test.mjs (15/15 passing). Full worker suite green post-fix. Method stays static (not dynamic_browser) since this pass added test coverage only — no frontend or backend code changed, and the ~22,000-line homepage embedding this widget was not independently re-driven in a browser this pass; customer_journey_complete stays false pending that specific check, which is why GA APPROVED (requires navigation.discoverable:true, not applicable to a by-design embedded widget with no dedicated nav) was not claimed either — GA APPROVED WITH DOCUMENTED LIMITATIONS is the honest ceiling here."
     },
     "contradicts_doc": [],
-    "notes": "Real, live, genuinely working capability (confirmed via 4 distinct embedded call sites in a ~22,000-line homepage file, easy to miss on a shallow grep) with zero test coverage — a concrete, low-effort-to-close test gap given the engine already works correctly in production today."
+    "notes": "Real, live, genuinely working capability (confirmed via 4 distinct embedded call sites in a ~22,000-line homepage file, easy to miss on a shallow grep). FIXED 2026-07-13: the zero-test-coverage gap flagged here is now closed — see test_coverage.evidence. No functional changes were needed or made; this was purely a test-coverage gap, exactly as flagged."
   },
   {
     "id": "CAP-TIH-012",
@@ -556,30 +556,30 @@
       "evidence": "frontend/customer-dashboard.html:431,456 (/risk), :522 (/radar), :557,585,597 (/assets), :606,630 (/profile), :640 (/report?format=html). Real, fully wired dedicated page."
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "frontend/customer-dashboard.html not confirmed linked from the primary homepage nav or sitemap in this pass (found only via direct grep for its own API calls) — a possible discoverability gap worth a follow-up check."
+      "discoverable": true,
+      "evidence": "FIXED (was already true as of 2026-07-12, registry was stale): frontend/user-dashboard.html:923 has a real primary-sidebar nav item ('🎯 My Risk Radar', title='Personalized risk radar, asset inventory, and exportable risk report') linking to frontend/customer-dashboard.html, added in PR #188 (commit ca93b77, 2026-07-12) — one day after this entry's prior last_verified date, which is why it read as unconfirmed. Also linked from frontend/marketplace-checkout.html:157 ('View My Purchases →') as a post-purchase destination. Re-confirmed 2026-07-13."
     },
     "auth_enforced": true,
     "rbac": { "enforced": true, "permissions": ["mssp", "owner", "admin"] },
     "subscription_gated": false,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "No import-confirmed test for any function in workers/src/handlers/customerIntel.js."
+      "has_tests": true,
+      "evidence": "FIXED 2026-07-13: workers/test/customerIntelTenantScope.test.mjs (9 tests, real D1 via node:sqlite) covers the security-sensitive part directly: a non-MSSP tier's ?customer_id= override is proven silently ignored on both a read path (GET /api/customer/profile returns the caller's own new/empty profile, not the targeted victim's real one) and a write path (POST /api/customer/assets writes under the caller's own owner_id, not the targeted victim's); a direct DELETE against another customer's real asset ID is proven to leave that row untouched (owner_id-scoped WHERE clause holds even when the caller knows the exact ID); this is confirmed across TEAM/FREE/ENTERPRISE tiers, not just one. Separately proves the legitimate path: MSSP/OWNER-tier callers genuinely read and write a managed customer's real data via ?customer_id=, two managed customers stay isolated from each other under the same MSSP caller, and the override is opt-in (an MSSP with no customer_id param defaults to their own scope, not some ambient elevated access). Covers handleGetProfile/handleUpdateProfile/handleGetAssets/handleRegisterAsset/handleDeleteAsset — the 5 of 8 entry points that exercise tenantScope() against simple D1 state; handleGetPersonalizedRadar/handleGetOrgRisk/handleGetReport share the identical tenantScope() call but additionally require RadarService's threat-intel snapshot to exercise, out of proportion to what's needed to prove this specific property (identical logic, factored into one shared helper)."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
     ],
-    "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "customer_journey_complete": true,
+    "operational_status": "GA APPROVED",
     "priority": "P3",
     "verification": {
-      "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/customerIntel.js read directly (712 lines, 8 entry points); every handler calls reqAuth(authCtx)->isRealUser(authCtx), 401 otherwise (line 53-56); tenantScope() MSSP/OWNER/ADMIN override confirmed (line 69-74); workers/src/index.js:6457-6505 read directly; frontend/customer-dashboard.html read directly for all call sites; workers/test/*.mjs grepped with 0 hits."
+      "method": "dynamic_browser",
+      "last_verified": "2026-07-13",
+      "evidence": "workers/src/handlers/customerIntel.js read directly (712 lines, 8 entry points); every handler calls reqAuth(authCtx)->isRealUser(authCtx), 401 otherwise (line 53-56); tenantScope() MSSP/OWNER/ADMIN override confirmed (line 69-74) and now regression-locked by workers/test/customerIntelTenantScope.test.mjs (9/9 passing); workers/src/index.js:6457-6505 read directly; frontend/user-dashboard.html:923 and frontend/marketplace-checkout.html:157 confirmed as real nav entry points. Full worker suite green post-fix. Playwright/Chromium click-through of the real frontend/customer-dashboard.html (served locally, contract-accurate mocked /api/customer/* responses shaped directly from workers/src/handlers/customerIntel.js's real handler output): the manual X-API-Key auth gate genuinely unlocks against a mocked /api/customer/risk 200, then org risk gauge, risk factors/recommendations, personalized radar (CVE id + WATCHLIST/KEV chips), assets list, and profile form all render real mocked data — 8/8 checks passing, zero console errors. Both previously-open gaps (navigation, test coverage) are now closed and the full customer journey has been driven end-to-end in a real browser — customer_journey_complete moved false -> true, operational_status moved NOT READY -> GA APPROVED."
     },
     "contradicts_doc": [],
-    "notes": "Backend, frontend, and real per-user RBAC all genuinely exist and are wired correctly (including a real MSSP-acting-for-customer override) — the concrete gaps are navigation discoverability (unconfirmed nav entry) and zero test coverage of a fairly security-sensitive tenant-scope-override mechanism, which would be worth prioritizing given it controls cross-customer data access."
+    "notes": "Backend, frontend, real per-user RBAC, navigation, and test coverage all now confirmed genuinely exist and are wired correctly, including a real, tested MSSP-acting-for-customer override. No further gaps found in this pass."
   },
   {
     "id": "CAP-TIH-013",
@@ -728,47 +728,47 @@
     "id": "CAP-TIH-016",
     "domain": "threat-hunting-intel",
     "name": "Attack Graph from Scan Results",
-    "description": "Builds a D3-ready force-directed graph from a single completed scan result (not from the threat-intel corpus) — distinct from CAP-TIH-004's threat-graph backend and from workers/src/services/graphEngine.js (CAP-TIH-002).",
+    "description": "Builds a D3-ready force-directed graph from a single completed scan result (not from the threat-intel corpus) — distinct from CAP-TIH-004's threat-graph backend and from workers/src/services/graphEngine.js (CAP-TIH-002). CONFIRMED 2026-07-13: genuinely wired end-to-end into the live post-scan UI; the prior pass's open question is resolved.",
     "backend": {
       "handlers": ["workers/src/lib/attackGraph.js"],
-      "entry_points": ["buildAttackGraph"],
+      "entry_points": ["buildAttackGraph", "simulateExploitPaths", "getThreatActorProfiles"],
       "routes_sampled": [
-        { "path": "/api/attack-graph", "method": "POST", "evidence": "workers/src/index.js:2323" }
+        { "path": "/api/attack-graph", "method": "POST", "evidence": "workers/src/index.js:2326" }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "partial",
-      "evidence": "Referenced in frontend/index.html's PROD_FEATURES doc array and frontend/enterprise-portal.html:249 lists it as a feature/endpoint, but no live fetch('/api/attack-graph'...) call was found in any frontend file in this pass — likely called from a post-scan results view, not independently confirmed as live-wired."
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/index.html"],
+      "status": "exists",
+      "evidence": "CONFIRMED 2026-07-13, traced end-to-end: frontend/index.html's window.CDB_ATTACKGRAPH IIFE (:16688-16847) POSTs the real scan_result to /api/attack-graph (:16808) and renders the returned {nodes,links} as an inline SVG force-layout (_renderSVG, :16698). Its onScanComplete(module, scanData) is called with the REAL API response from the real scan-completion handler at :9751 — an inline comment there documents this exact wiring was previously broken ('the window.showScanResult/renderScanResult hooks it used to rely on are never actually defined anywhere, so onScanComplete never fired') and fixed in the same commit as the fetch call itself (a427121, 2026-07-11) — same day as this entry's prior last_verified date, which is why the earlier grep-based pass missed it (the commit message is unrelated: 'fix(P1): homepage Sign In crowded off-screen...', bundling this fix as an uncredited secondary change). Also called from 2 more scan-completion sites (:17201, :17211). On fetch failure or missing scan_result, falls back to a labeled 'Demo — Run a domain scan to load live attack chains' graph rather than a blank/broken panel — a deliberate, honest degradation, not a bug."
     },
     "navigation": {
-      "discoverable": "unknown",
-      "evidence": "Not independently traced to a specific nav path in this pass."
+      "discoverable": true,
+      "evidence": "CONFIRMED 2026-07-13: embedded directly in the scan-results view every customer sees after running any scan (no separate nav click needed) — arguably more discoverable than a standalone nav-gated page, matching the surface_type:embedded_widget pattern used elsewhere in this registry (e.g. CAP-NOTIF-002, CAP-TIH-004)."
     },
     "auth_enforced": false,
     "rbac": { "enforced": false, "permissions": [] },
     "subscription_gated": false,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "No import-confirmed test found for workers/src/lib/attackGraph.js."
+      "has_tests": true,
+      "evidence": "FIXED 2026-07-13: workers/test/attackGraphEngine.test.mjs (11 tests) covers all 3 exports against a realistic scan_result shape matching workers/src/handlers/domain.js's buildRealResult() output exactly (top-level findings[]/risk_score, finding objects with id/title/severity/description/recommendation) — confirms real graph output shape (nodes/links/metadata/d3_config matching what POST /api/attack-graph actually returns), severity-based finding sort order, the pivot-node multi-step-chain branch (3+ findings, risk_score>=50) vs. the direct-connection branch, graceful handling of an unmeasurable scan (empty findings, null risk_score) and an unrecognized module (falls back to the domain template), locked_findings inclusion, and simulateExploitPaths()'s two branches (reconnaissance-only vs. a real chained exploit narrative referencing the actual target/finding titles)."
     },
     "docs": [
       { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
     "priority": "P6",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/lib/attackGraph.js read directly (396 lines); workers/src/index.js:2323-2338 read directly, inline comment confirms 'public by design, rate-limited instead of tier-gated so the free scan-results UI keeps working' (lines 2320-2322); also consumed by workers/src/handlers/monitoring.js; frontend/index.html and frontend/enterprise-portal.html:249 checked, no confirmed live call site found."
+      "last_verified": "2026-07-13",
+      "evidence": "workers/src/lib/attackGraph.js read directly (396 lines, all 3 exports); workers/src/index.js:2326-2341 read directly, inline comment confirms 'public by design, rate-limited instead of tier-gated so the free scan-results UI keeps working'; frontend/index.html read directly end-to-end (the fetch call :16808, the render function :16698-16767, the demo-fallback degradation :16821-16830, and all 3 onScanComplete call sites :9751,17201,17211); git blame confirmed the wiring fix landed 2026-07-11 in commit a427121; response-shape compatibility confirmed directly against workers/src/handlers/domain.js's buildRealResult(); now regression-locked by workers/test/attackGraphEngine.test.mjs (11/11 passing). Full worker suite green post-fix. Method stays static (not dynamic_browser) — this pass traced the full source-level data flow and added real unit coverage but did not drive an actual browser through a live scan-to-graph flow on the ~22,000-line homepage, so customer_journey_complete stays false and plain GA APPROVED (which requires it) was not claimed; GA APPROVED WITH DOCUMENTED LIMITATIONS is the honest ceiling."
     },
     "contradicts_doc": [],
-    "notes": "Whether this is actually wired into the live post-scan results UI was not conclusively confirmed in this pass — flagged as an open question for the next hands-on pass on this specific capability rather than asserted either way."
+    "notes": "RESOLVED 2026-07-13: the prior pass's open question ('whether this is actually wired into the live post-scan results UI') is answered — yes, genuinely, confirmed via full source trace plus new tests. No code changes were needed; this capability already worked correctly, it was simply under-verified. See verification.evidence for the full trace."
   },
   {
     "id": "CAP-TIH-017",
