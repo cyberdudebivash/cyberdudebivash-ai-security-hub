@@ -2,7 +2,7 @@
 # Python 3.12+ required
 
 # Core framework
-fastapi>=0.111.0
+fastapi>=0.139.0
 uvicorn[standard]>=0.30.0
 pydantic>=2.7.0
 pydantic-settings>=2.14.2
