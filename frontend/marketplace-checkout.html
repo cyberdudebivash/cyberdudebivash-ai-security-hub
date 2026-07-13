@@ -6,6 +6,7 @@
 <title>Marketplace Checkout — CYBERDUDEBIVASH® SENTINEL APEX</title>
 <meta name="description" content="Purchase detection packs, AI security agents, intelligence reports, compliance kits and playbooks from CYBERDUDEBIVASH® SENTINEL APEX marketplace.">
 <meta name="robots" content="noindex">
+<script type="module" src="/assets/js/seo-schema.js"></script>
 <style>
   :root {
     --bg: #060b14; --surface: #0c1422; --surface2: #111827;
@@ -371,6 +372,14 @@ async function verifyPayment(rzpResponse) {
     document.getElementById('successMsg').textContent =
       `Your ${data.product.name} is ready. Access expires ${new Date(data.access_expires_at).toLocaleDateString()}.`;
     document.getElementById('downloadBtn').href = data.download_url;
+
+    try {
+      const gcrEmail = document.getElementById('c-email')?.value.trim();
+      window.cdbGoogleCustomerReviewsOptIn && window.cdbGoogleCustomerReviewsOptIn({
+        orderId: rzpResponse.razorpay_payment_id, email: gcrEmail,
+        estimatedDeliveryDate: window.cdbEstimatedDeliveryDate(0), // instant digital delivery
+      });
+    } catch (e) {}
 
   } catch (e) {
     showToast('⚠ Verification error. Contact support@cyberdudebivash.in with order ID: ' + razorOrderId, 'yellow');
