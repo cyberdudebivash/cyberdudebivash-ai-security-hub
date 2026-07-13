@@ -141,6 +141,24 @@ async function resolveFromApiKey(request, env) {
 function withAuthAliases(ctx) {
   if (ctx && typeof ctx === 'object') {
     if (ctx.userId === undefined) ctx.userId = ctx.user_id ?? null;
+    // ── .id alias (root fix) ─────────────────────────────────────────────────
+    // authCtx.id was never populated anywhere in this auth layer — only
+    // user_id (snake_case) and the userId alias above exist — yet at least 5
+    // handler files (notificationPlatform.js, reportingEngine.js,
+    // workflowAutomation.js, globalSearch.js, productAnalytics.js) read
+    // req.user.id / authCtx.id directly with no fallback to the field that
+    // actually exists. Every real caller — anonymous IP-fallback, JWT,
+    // partner session, staff session, API key — silently computed
+    // `userId = undefined || 'unknown'`, collapsing every customer's
+    // notification preferences, saved searches, workflow definitions, and
+    // reporting-engine jobs onto one shared 'unknown' row. Same bug class
+    // and same fix shape as the .role fix below: one missing field at the
+    // source, not a per-file bug. (securityFabricHandler.js and
+    // secureDownload.js already defensively read `.userId || .id` and were
+    // unaffected; reportingEngine.js:797 already checks all three field
+    // names and was also unaffected — only sites reading .id with no
+    // fallback were silently broken.)
+    if (ctx.id === undefined) ctx.id = ctx.user_id ?? null;
     if (ctx.keyId  === undefined) ctx.keyId  = ctx.key_id  ?? null;
     if (ctx.partnerId !== undefined && ctx.partner_id === undefined) ctx.partner_id = ctx.partnerId;
     // ── Tenant isolation (root fix) ──────────────────────────────────────────

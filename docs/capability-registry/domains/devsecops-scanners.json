@@ -1,0 +1,186 @@
+[
+  {
+    "id": "CAP-DEVSECOPS-001",
+    "domain": "devsecops-scanners",
+    "name": "SAST — Static Analysis (generic entry point)",
+    "description": "Context-aware static analysis (string/comment masking, CWE/OWASP-mapped findings, confidence scoring) exposed as a standalone endpoint — the same real engine that backs the Vibe-Code Scanner, exposed generically rather than rebuilt.",
+    "backend": {
+      "handlers": ["workers/src/handlers/devsecopsScanners.js", "workers/src/handlers/vibe-code/engine.js"],
+      "entry_points": ["handleDevSecOpsSAST", "scanVibeCode"],
+      "routes_sampled": [
+        { "path": "/api/devsecops/sast", "method": "POST", "evidence": "workers/src/index.js:7923" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/devsecops.html"],
+      "status": "partial",
+      "evidence": "frontend/devsecops.html:174 documents POST /api/devsecops/sast as a live API in the capability grid, but unlike SCA and AI-BOM this page has no interactive live-demo widget calling it directly — only descriptive copy. The endpoint is exercised interactively via frontend/vibe-code-scanner.html's dedicated UI instead, which calls the same underlying scanVibeCode() engine through a different route (/api/vibe-code/scan)."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "frontend/devsecops.html linked from frontend/index.html:5734, frontend/cloud-security.html:97, frontend/security-automation.html:92,248, and frontend/sitemap.html:113; listed in frontend/sitemap-services.xml."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/devsecopsScanners.test.mjs imports handleDevSecOpsSAST directly, asserts it finds a real SQL-injection pattern and fails safely on missing/invalid input."
+    },
+    "docs": [
+      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "PILOT ONLY",
+    "priority": "P3",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-13",
+      "evidence": "workers/src/handlers/devsecopsScanners.js read directly in full (module header explicitly documents this closed a real pre-Cisco/Oracle-audit gap: frontend/devsecops.html previously advertised SAST as live with no backend). workers/src/index.js:7923-7926 read directly. workers/test/devsecopsScanners.test.mjs read directly, confirmed real assertions (not stubs)."
+    },
+    "contradicts_doc": [],
+    "notes": "This is the first capability-registry entry for this domain — SAST/SCA/SBOM/AI-BOM had zero registry coverage prior to this pass, despite all three original scanners (SAST/SCA/SBOM) being real, tested, and live since the pre-Cisco/Oracle audit. Created alongside CAP-DEVSECOPS-004 (AI-BOM) while building that new capability. No auth/RBAC — deliberate, matches this platform's convention of unauthenticated free-tool demos on frontend/devsecops.html and frontend/vibe-code-scanner.html (unlike the paywalled report-generating scan modules on the homepage)."
+  },
+  {
+    "id": "CAP-DEVSECOPS-002",
+    "domain": "devsecops-scanners",
+    "name": "SCA — Software Composition Analysis (live OSV.dev)",
+    "description": "Live dependency vulnerability lookups against OSV.dev (Google-maintained, aggregates NVD/GHSA/PyPI Advisory DB/Go vuln DB/RustSec) for a submitted package manifest — real live API calls, not a static local CVE list.",
+    "backend": {
+      "handlers": ["workers/src/handlers/devsecopsScanners.js"],
+      "entry_points": ["handleDevSecOpsSCA", "queryOsvBatch"],
+      "routes_sampled": [
+        { "path": "/api/devsecops/sca", "method": "POST", "evidence": "workers/src/index.js:7927" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/devsecops.html"],
+      "status": "exists",
+      "evidence": "frontend/devsecops.html:117-131 — a real interactive 'Try Live SCA Right Now' widget (devsecopsTrySCA(), ~line 134) posting a name/version pair directly to the live production endpoint and rendering the real response, not a mockup."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "Same as CAP-DEVSECOPS-001 — frontend/devsecops.html discoverability."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/devsecopsScanners.test.mjs — 5 tests: correctly-shaped OSV.dev batch query, invalid-ecosystem rejection, empty-manifest rejection, safe 502 (not a crash) on OSV.dev unreachability, dependency-count cap + truncation reporting."
+    },
+    "docs": [
+      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "PILOT ONLY",
+    "priority": "P6",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-13",
+      "evidence": "workers/src/handlers/devsecopsScanners.js read directly in full, including the 2026-07-13 refactor extracting queryOsvBatch() as a shared helper (used by both SCA and the new AI-BOM handler) — verified this refactor preserves handleDevSecOpsSCA's exact response shape by re-running its pre-existing test suite unchanged (all 5 SCA tests still pass). workers/src/index.js:7927-7930 read directly."
+    },
+    "contradicts_doc": [],
+    "notes": "Structurally the cleanest of the four: real live external API integration, real interactive frontend demo, real failure-mode test coverage. No auth/RBAC/paywall — a deliberate free developer tool, same as CAP-DEVSECOPS-001."
+  },
+  {
+    "id": "CAP-DEVSECOPS-003",
+    "domain": "devsecops-scanners",
+    "name": "SBOM — CycloneDX 1.5 Generation",
+    "description": "Generates a real CycloneDX 1.5 JSON Software Bill of Materials from a submitted dependency manifest — machine-readable component inventory with correct purl construction per ecosystem.",
+    "backend": {
+      "handlers": ["workers/src/handlers/devsecopsScanners.js"],
+      "entry_points": ["handleDevSecOpsSBOM"],
+      "routes_sampled": [
+        { "path": "/api/devsecops/sbom", "method": "POST", "evidence": "workers/src/index.js:7931" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/devsecops.html"],
+      "status": "partial",
+      "evidence": "frontend/devsecops.html:203-206 documents POST /api/devsecops/sbom as a live API in the capability grid; no dedicated interactive demo widget for SBOM specifically (unlike SCA and the new AI-BOM, which both got live demo widgets — SBOM output is a full JSON document rather than a single package/version yes-no result, less suited to the same compact widget pattern used for the other two)."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "Same as CAP-DEVSECOPS-001 — frontend/devsecops.html discoverability."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/devsecopsScanners.test.mjs — 2 tests: valid CycloneDX 1.5 structure with correct purl construction, empty-manifest rejection."
+    },
+    "docs": [
+      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "PILOT ONLY",
+    "priority": "P3",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-13",
+      "evidence": "workers/src/handlers/devsecopsScanners.js read directly in full, including the 2026-07-13 extraction of ECO_TO_PURL_TYPE to module scope (shared with the new AI-BOM handler) — verified this preserves handleDevSecOpsSBOM's exact purl output by re-running its pre-existing test unchanged. workers/src/index.js:7931-7934 read directly."
+    },
+    "contradicts_doc": [],
+    "notes": "Real, spec-correct CycloneDX 1.5 output (bomFormat/specVersion/serialNumber/metadata/components all present and correctly typed). Missing interactive demo widget is a real, minor gap (P3, frontend.status:'partial') — not fixed in this pass, which was scoped to building AI-BOM."
+  },
+  {
+    "id": "CAP-DEVSECOPS-004",
+    "domain": "devsecops-scanners",
+    "name": "AI-BOM — AI/ML-Aware Bill of Materials",
+    "description": "CycloneDX 1.5 BOM generation that additionally classifies known AI/ML packages (LLM provider SDKs, agent-orchestration frameworks, model runtimes) via a maintained name map, cross-references agent-orchestration-framework components against the real, D1-backed agent_threat_advisories table (CAP-TIH-006's data — the same feed backing frontend/agent-threats.html), and runs the same live OSV.dev CVE lookup as CAP-DEVSECOPS-002 across the full manifest. Explicitly manifest-based — does not claim live model weight, prompt, or deployed-inference-endpoint introspection.",
+    "backend": {
+      "handlers": ["workers/src/handlers/devsecopsScanners.js"],
+      "entry_points": ["handleDevSecOpsAIBOM"],
+      "routes_sampled": [
+        { "path": "/api/devsecops/ai-bom", "method": "POST", "evidence": "workers/src/index.js:7935" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/devsecops.html"],
+      "status": "exists",
+      "evidence": "frontend/devsecops.html — new 'Try Live AI-BOM Right Now' widget (devsecopsTryAIBOM()) accepting a comma-separated name==version manifest, posting directly to the live production endpoint, and rendering the real ai_component_count, ai_risk_level/score, any live OSV CVE findings, and any matched agent_threat_advisories rows. New capability-grid card added alongside it. Hero copy and metrics strip updated (3 → 4 live APIs) to include AI-BOM."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "Same page as CAP-DEVSECOPS-001/002/003 — frontend/devsecops.html discoverability (frontend/index.html, frontend/cloud-security.html, frontend/security-automation.html, frontend/sitemap.html, frontend/sitemap-services.xml)."
+    },
+    "auth_enforced": false,
+    "rbac": { "enforced": false, "permissions": [] },
+    "subscription_gated": false,
+    "feature_flag": { "present": false, "mechanism": "none" },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/devsecopsScanners.test.mjs — 8 new tests: correct AI/ML classification (known packages flagged with cdb:ai-ml-component/cdb:ai-category properties, ordinary packages left unflagged), real D1 agent_threat_advisories cross-reference for detected agent-orchestration frameworks, no advisory lookup attempted for AI packages with no matching framework key (e.g. anthropic — framework:null, never guessed), graceful degradation (still returns the BOM, advisory_lookup_available:false) when no D1 binding is present, graceful degradation (osv_lookup_available:false) when OSV.dev is unreachable, an explicit assertion that the response never claims live model introspection, empty-manifest and invalid-JSON rejection."
+    },
+    "docs": [
+      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "PILOT ONLY",
+    "priority": "P6",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-13",
+      "evidence": "workers/src/handlers/devsecopsScanners.js's handleDevSecOpsAIBOM read directly (written this pass, ~170 lines). AI_ML_PACKAGES map cross-checked package-by-package against real, existing PyPI/npm package names (openai, langchain + variants, pyautogen, crewai, semantic-kernel, llama-index/llama_index, @modelcontextprotocol/sdk, anthropic, cohere, mistralai, google-generativeai, transformers, torch, tensorflow, sentence-transformers, huggingface_hub, onnxruntime, vllm, ollama) — not fabricated names. ADVISORY_FRAMEWORKS cross-checked against workers/src/handlers/agentThreatAdvisories.js:14's own FRAMEWORKS constant (mcp/langchain/autogen/openai/crewai/semantic_kernel/llama_index all present there; 'custom' deliberately excluded here since it is a catch-all bucket in that table, not a real framework a package name could be confidently mapped to). workers/src/index.js:7935-7938 read directly. frontend/devsecops.html read and edited directly; its single classic <script> block re-parsed with node --check (syntax valid). Full worker suite green: 271 files / 2814 tests. Registry validator: 0 hard failures, 0 warnings, 101 capability ids across 22 domain files."
+    },
+    "contradicts_doc": [],
+    "notes": "Built per explicit owner direction (EPIS ranking exercise, 'Global Product Dominance Program' session) as a new product surface rather than a fix to an existing gap — the lowest-confidence, highest-effort item in that session's ranked backlog specifically because it required new engineering rather than closing a documented gap. Deliberately scoped to reuse, not duplicate, two engines this platform already has proven: the CycloneDX 1.5 generator (CAP-DEVSECOPS-003) and the OSV.dev SCA lookup (CAP-DEVSECOPS-002), plus the real agent_threat_advisories table (CAP-TIH-006) for AI-framework-specific advisory cross-referencing — no new external API integration, no new database table, no new paywall/monetization logic added. The AI_ML_PACKAGES classification map is maintained/curated, not exhaustive — a real package not yet in the map is simply treated as an ordinary (non-AI-flagged) component rather than causing an error; expanding coverage is a natural low-risk follow-up, not a correctness bug in what's shipped."
+  }
+]
