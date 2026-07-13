@@ -10012,6 +10012,13 @@ function renderResults(module, data) {
     html += `</div>`;
   }
 
+  // ── MYTHOS AI INTELLIGENCE BRIEF (v40 enrichment surfaced in UI) ──────────
+  // Backend already computes this on every domain/ai/redteam/identity/compliance
+  // scan (mythosEnrichmentEngine.js) — real MITRE mapping, CyberBrain risk
+  // scoring, attack-path prediction, AI executive narrative, remediation plan.
+  // Was previously discarded at render time; this makes it visible.
+  html += _buildMythosIntelligenceSection(data, module);
+
   // ── TRAINING UPSELL BLOCK (Academy Integration) ──────────────────────────
   html += _buildTrainingUpsell(module, score, level);
 
@@ -10112,6 +10119,101 @@ function renderFinding(f) {
 //  TRAINING UPSELL ENGINE — Academy Integration
 //  Injected at the bottom of every scan result panel
 // ══════════════════════════════════════════════════════════════════════════
+function _mythosEsc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function _buildMythosIntelligenceSection(data, module) {
+  const mi = data.mythos_intelligence;
+  if (!mi) return '';
+
+  const unlocked = data.is_premium_locked === false;
+  const cb        = mi.cyber_brain || {};
+  const mitre     = mi.mitre_attack || {};
+  const brief     = mi.ai_executive_brief || {};
+  const plan      = mi.autonomous_remediation_plan || [];
+  const actors    = mi.threat_actor_overlay?.actors || [];
+  const confidence = mi.mythos_confidence ?? 0;
+
+  let html = `<div style="margin-top:16px;background:linear-gradient(135deg,rgba(124,58,237,.08),rgba(124,58,237,.03));border:1px solid rgba(124,58,237,.3);border-radius:var(--radius);padding:18px 20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:800;color:var(--accent2);letter-spacing:.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px">
+        <span>🧬</span> MYTHOS AI Intelligence Brief
+      </div>
+      <div style="font-size:10.5px;color:var(--text-dim)">Confidence ${confidence}% · Powered by ${_mythosEsc(mi.engine || 'CYBERDUDEBIVASH MYTHOS AI')}</div>
+    </div>`;
+
+  if (!unlocked) {
+    html += `<div style="font-size:12.5px;color:var(--text-muted);line-height:1.6">
+      🔒 The full AI executive brief, MITRE ATT&CK mapping, attack-path prediction and autonomous remediation plan for this scan are included with your unlocked report above.
+    </div></div>`;
+    return html;
+  }
+
+  // Cyber Brain risk signals + attack paths
+  if ((cb.risk_signals || []).length || (cb.attack_paths || []).length) {
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:14px">`;
+    if ((cb.risk_signals || []).length) {
+      html += `<div><div style="font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Risk Signals</div>`;
+      cb.risk_signals.forEach(s => {
+        html += `<div style="font-size:12.5px;color:var(--text-muted);padding:3px 0">• ${_mythosEsc(typeof s === 'string' ? s : (s.signal || s.name || JSON.stringify(s)))}</div>`;
+      });
+      html += `</div>`;
+    }
+    if ((cb.attack_paths || []).length) {
+      html += `<div><div style="font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Predicted Attack Paths</div>`;
+      cb.attack_paths.forEach(p => {
+        const label = typeof p === 'string' ? p : (p.path || p.description || p.name || '');
+        html += `<div style="font-size:12.5px;color:var(--text-muted);padding:3px 0">→ ${_mythosEsc(label)}</div>`;
+      });
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+
+  // MITRE ATT&CK mapping
+  if ((mitre.mappings || []).length) {
+    html += `<div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">MITRE ATT&CK Coverage (${mitre.framework_version || 'v15'})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">`;
+    mitre.mappings.forEach(m => {
+      html += `<span style="font-size:11px;background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);border-radius:6px;padding:4px 8px;color:#c4b5fd">${_mythosEsc(m.tactic)} · ${_mythosEsc(m.name)} (${m.finding_count})</span>`;
+    });
+    html += `</div></div>`;
+  }
+
+  // AI executive narrative
+  if (brief.generated && brief.narrative) {
+    html += `<div style="margin-bottom:14px;background:rgba(0,0,0,.2);border-radius:8px;padding:14px">
+      <div style="font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">AI Executive Brief</div>
+      <div style="font-size:12.5px;color:var(--text-muted);line-height:1.7;white-space:pre-line">${_mythosEsc(brief.narrative)}</div>
+    </div>`;
+  }
+
+  // Autonomous remediation plan
+  if (plan.length) {
+    html += `<div style="margin-bottom:${actors.length ? '14px' : '0'}">
+      <div style="font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Autonomous Remediation Plan</div>`;
+    plan.forEach(p => {
+      html += `<div style="font-size:12.5px;color:var(--text-muted);padding:4px 0"><strong style="color:#c4b5fd">${_mythosEsc(p.label)} (${_mythosEsc(p.timeline)})</strong> — ${p.item_count} item${p.item_count === 1 ? '' : 's'}</div>`;
+    });
+    html += `</div>`;
+  }
+
+  // Threat actor overlay
+  if (actors.length) {
+    html += `<div><div style="font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Correlated Threat Actors</div>`;
+    actors.forEach(a => {
+      html += `<div style="font-size:12.5px;color:var(--text-muted);padding:3px 0">${_mythosEsc(a.name)}${a.origin ? ' · ' + _mythosEsc(a.origin) : ''}${a.relevance ? ' — ' + _mythosEsc(a.relevance) : ''}</div>`;
+    });
+    html += `</div>`;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
 function _buildTrainingUpsell(module, score, level) {
   // Module → training course mapping
   const MODULE_COURSES = {
