@@ -18,7 +18,7 @@ redis[hiredis]>=5.0.4
 langchain>=0.2.0
 langgraph>=1.2.9
 langchain-core>=1.4.9
-openai>=1.30.0  # Client lib (provider-agnostic, works with any OpenAI-compatible API)
+openai>=2.45.0  # Client lib (provider-agnostic, works with any OpenAI-compatible API)
 
 # Vector DB
 qdrant-client>=1.9.0
