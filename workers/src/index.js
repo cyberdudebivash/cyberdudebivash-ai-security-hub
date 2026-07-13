@@ -7932,6 +7932,10 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     const { handleDevSecOpsSBOM } = await import('./handlers/devsecopsScanners.js');
     return withSecurityHeaders(withCors(await handleDevSecOpsSBOM(request, env, authCtx), request));
   }
+  if (path === '/api/devsecops/ai-bom' && method === 'POST') {
+    const { handleDevSecOpsAIBOM } = await import('./handlers/devsecopsScanners.js');
+    return withSecurityHeaders(withCors(await handleDevSecOpsAIBOM(request, env, authCtx), request));
+  }
 
   // ── v43: AGENT THREAT ADVISORIES — live D1-backed feed for /agent-threats ──
   if (path === '/api/agent-threats/advisories' && method === 'GET') {

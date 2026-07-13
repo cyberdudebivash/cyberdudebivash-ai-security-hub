@@ -3,7 +3,7 @@
     "id": "CAP-NOTIF-001",
     "domain": "notifications",
     "name": "Multi-Channel Notification Preferences & Delivery Log",
-    "description": "Per-user notification preferences (which channels/events to receive) and a delivery history log, backing a real Slack/Teams webhook dispatcher wired to platform events like churn-risk alerts.",
+    "description": "Per-user notification preferences (which channels/events to receive) and a delivery history log, backing a real Slack/Teams webhook dispatcher wired to platform events like churn-risk alerts. FIXED 2026-07-13: real frontend UI shipped, plus 3 collateral backend defects found and fixed while wiring it (see notes).",
     "backend": {
       "handlers": ["workers/src/handlers/notificationPlatform.js"],
       "entry_points": ["handleGetPreferences", "handleUpdatePreferences", "handleNotificationLog", "handleTestNotification", "handleAdminSendNotification"],
@@ -16,32 +16,33 @@
       "status": "exists"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "missing",
-      "evidence": "Repo-wide search across frontend/*.html for 'notifications/preferences' returns zero matches — no page lets a customer view or change their notification channel preferences, even though the backend for it is real and wired to actual events (per docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:218's Domain 8 Gap Matrix row: 'real Slack/Teams webhook delivery, wired to real events (CHURN_RISK_ALERT, MSSP/developer onboarding)'). Independently re-confirmed 2026-07-08."
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/user-dashboard.html"],
+      "status": "exists",
+      "evidence": "FIXED 2026-07-13: Settings page gained a real 'Team Alert Channels (Slack / Teams / Webhook)' card (frontend/user-dashboard.html:1937-1971) with Slack/Teams/custom-webhook URL inputs, 4 event-subscription checkboxes (scan.critical/case.created/case.escalated/health.churn), Save/Test buttons, and a live delivery-log table. Backing JS (:5208-5294): loadNotifChannels()/saveNotifChannels()/testNotifChannels()/loadNotifLog(), wired into showPage('settings') so it loads automatically. Explicitly labeled to disambiguate from the pre-existing, unrelated 'Alert Notifications' card (email/Telegram CVE-risk alerts) directly above it. Before this fix: repo-wide search across frontend/*.html for 'notifications/preferences' returned zero matches."
     },
-    "navigation": { "discoverable": false, "evidence": "No nav entry links to a notification-preferences page because none exists." },
+    "navigation": { "discoverable": true, "evidence": "FIXED 2026-07-13: reachable via the existing Settings nav item (frontend/user-dashboard.html:974), which was already in the primary sidebar — no new nav entry needed since this is a Settings sub-section, not its own page." },
     "auth_enforced": true,
     "rbac": { "enforced": false, "permissions": [] },
     "subscription_gated": false,
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "No test file imports workers/src/handlers/notificationPlatform.js directly."
+      "has_tests": true,
+      "evidence": "FIXED 2026-07-13: workers/test/notificationPlatformDashboard.test.mjs (11 tests, real D1 via node:sqlite) — proves the auth gate genuinely rejects anonymous callers on all 4 endpoints (was dead code, see notes), proves real per-user isolation (two users' webhooks don't collide, DB-row-count asserted), proves the eventType='*' wildcard broadcast actually bypasses subscription filtering (was a no-op comparison, see notes), and proves 'health.churn' delivers to a default-subscribed customer while the old mismatched 'CHURN_RISK_ALERT' string would not (regression guard). Full worker suite (274 files/2853 tests) green. Additionally browser-verified live via Playwright against the real frontend/user-dashboard.html served locally with contract-accurate mocked API responses (response shapes copied directly from workers/src/handlers/threatGraph.js and workers/src/handlers/notificationPlatform.js source, not guessed): preferences load into the form, event checkboxes reflect real subscriptions, delivery log renders real rows, Send Test Notification round-trips and displays the result, zero console/JS errors. This browser pass is what caught the showPage() wiring defect documented in notes — a unit-test-only pass would have missed it."
     },
     "docs": [
       { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
     "priority": "P2",
     "verification": {
-      "method": "static",
-      "last_verified": "2026-07-08",
-      "evidence": "workers/src/handlers/notificationPlatform.js:6-9 (route doc-comment) and its 5 exports read directly; workers/src/index.js:3199-3222 route registrations confirmed; frontend/*.html searched for any caller."
+      "method": "dynamic_browser",
+      "last_verified": "2026-07-13",
+      "evidence": "workers/src/handlers/notificationPlatform.js and workers/src/auth/middleware.js read and edited directly; workers/test/notificationPlatformDashboard.test.mjs (11/11 passing) and workers/test/authAliases.test.mjs (2 new tests) read/run directly; frontend/user-dashboard.html edited directly, inline <script> re-parsed with node --check, and click-through verified via Playwright/Chromium against contract-accurate mocked responses (11/11 checks passing, zero console errors). Full worker suite: 274 files/2853 tests green. Registry validator: 0 failures/0 warnings. SEO structure lock: 31/31 pages. customer_journey_complete stays false pending a post-deploy production smoke test with a real account (not yet performed against live D1) and because rbac/subscription_gating remain intentionally unenforced (pre-existing design choice, not touched by this fix)."
     },
-    "notes": "The backend delivery mechanism (Slack/Teams webhooks firing on real events) already works and is undersold, not broken — the gap is purely that no customer can configure it, matching the mission brief's own framing exactly."
+    "contradicts_doc": [],
+    "notes": "The backend delivery mechanism (Slack/Teams webhooks firing on real events) already worked and was undersold, not broken — the original gap was purely that no customer could configure it. Wiring the frontend surfaced 3 real, previously-undiscovered defects, all fixed in the same pass: (1) authCtx.id was never populated anywhere in the auth layer (only user_id/userId existed), so every real customer's webhook config and delivery history silently collided onto a shared 'unknown' D1 row, and the '!req.user' auth gate was permanently dead code since the router always sets a truthy req.user (real principal or anonymous IP-fallback) — fixed with a `.id` alias in workers/src/auth/middleware.js's withAuthAliases() (same fix shape as that function's pre-existing `.role` fix) plus switching the gate to the real isRealUser() helper; this transparently also fixes 4 sibling handlers with the identical bug (reportingEngine.js, workflowAutomation.js, globalSearch.js, productAnalytics.js), not re-certified here since they're outside this capability. (2) deliverNotification()'s subscription check compared eventType against itself when eventType==='*', making the documented wildcard-broadcast intent (developerOnboardingHandler.js:231's explicit comment 'wildcard — ensures delivery regardless of subscription prefs for new users') a no-op — every new-user welcome email, password-recovery email, and this capability's own Test Notification button silently delivered to nobody; fixed with an `eventType !== '*'` short-circuit. (3) revenueIntelligenceHandler.js's churn-risk alert emitted eventType:'CHURN_RISK_ALERT', which never matched the canonical 'health.churn' subscription key used everywhere else (DEFAULT_PREFS, all 3 schema SQL files, this capability's own Settings checkbox, workflowAutomation.js's template) — real churn-risk alerts had silently delivered to zero customers since inception; fixed by aligning the one outlier to the established convention. Separately, a real UI-layer bug was found and fixed by actually browser-testing rather than trusting the unit tests alone: the Global Intel Graph and Intelligence Preview nav items' auto-load calls (intelGraphSummary()/intelPreviewFeatured()) lived in the nav item's onclick instead of inside showPage(), so a deep link (?tab=intel-graph) would show a permanent loading spinner — moved into showPage() itself, matching the more robust pattern this Settings card already used."
   },
   {
     "id": "CAP-NOTIF-002",

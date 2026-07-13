@@ -412,7 +412,12 @@ export async function handleChurnInterventionTrigger(req, env) {
         const delivered = await deliverNotification({
           userId: acct.user_id,
           orgId: acct.org_id,
-          eventType: 'CHURN_RISK_ALERT',
+          // Canonical event name — must match the 'health.churn' subscription
+          // key used by DEFAULT_PREFS, schema_master.sql, and the Settings UI
+          // checkbox (frontend/user-dashboard.html NOTIF_EVENT_MAP). The prior
+          // 'CHURN_RISK_ALERT' string never matched any subscriber's list, so
+          // this alert silently delivered to zero customers.
+          eventType: 'health.churn',
           subject,
           body: notifBody,
           channels: ['INAPP', 'SLACK'],
