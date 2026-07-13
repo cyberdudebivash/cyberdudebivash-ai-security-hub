@@ -13,6 +13,8 @@
  * Revenue trigger: Free = 3 findings | Paid ₹999 = Full report + remediation
  */
 
+import { validateDomain } from '../middleware/security.js';
+
 // ── MCP Security Vulnerability Catalog (OWASP LLM + MCP-specific) ─────────────
 const MCP_VULN_CATALOG = [
   {
@@ -266,6 +268,29 @@ export async function handleMCPSecurityScan(request, env, authCtx) {
   try {
     const body = await request.json().catch(() => ({}));
     const { config, server_url, server_name = 'MCP Server' } = body;
+
+    // SSRF guard: server_url is customer-controlled and, when no config is
+    // supplied, was previously fetched server-side with zero validation — a
+    // request for e.g. 169.254.169.254 (cloud metadata) or an RFC1918 address
+    // would be fetched as-is. Only runs when we're actually about to fetch
+    // (no config provided) — a caller who sends both config and a labeling
+    // server_url never triggers a real request, so isn't rejected for it.
+    // Reject outright rather than silently degrading to a defaults-only scan,
+    // so a legitimate caller with a typo gets a clear error instead of a
+    // confusing "0 vulnerabilities found" result.
+    if (!config && server_url) {
+      let parsedUrl;
+      try { parsedUrl = new URL(server_url); } catch { parsedUrl = null; }
+      const schemeOk = parsedUrl && (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:');
+      const hostCheck = parsedUrl ? validateDomain(parsedUrl.hostname) : { valid: false, reason: 'unparseable_url' };
+      if (!schemeOk || !hostCheck.valid) {
+        return Response.json({
+          error: 'Invalid or disallowed server_url',
+          reason: !parsedUrl ? 'unparseable_url' : !schemeOk ? 'scheme_must_be_http_or_https' : hostCheck.reason,
+          field: 'server_url',
+        }, { status: 400 });
+      }
+    }
 
     // If URL provided, try to fetch the MCP server manifest
     let resolvedConfig = config;
