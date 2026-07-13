@@ -47,12 +47,17 @@ function makeMemoryKV() {
 
 function fetchMock({ kevOk = true, threatfoxData = null } = {}) {
   return vi.fn(async (url) => {
-    const u = String(url);
-    if (u.includes('cisa.gov')) {
+    // Real hostname check, not a substring match — `.includes('cisa.gov')` would
+    // also match an attacker-shaped URL like https://cisa.gov.evil.example/,
+    // which CodeQL correctly flags as incomplete URL substring sanitization
+    // even in test-only stub code.
+    let host = '';
+    try { host = new URL(String(url)).hostname; } catch {}
+    if (host === 'www.cisa.gov') {
       if (!kevOk) return { ok: false, status: 500 };
       return { ok: true, json: async () => MOCK_KEV_RAW };
     }
-    if (u.includes('threatfox-api')) {
+    if (host === 'threatfox-api.abuse.ch') {
       if (!threatfoxData) return { ok: true, json: async () => ({ query_status: 'no_result' }) };
       return { ok: true, json: async () => ({ query_status: 'ok', data: threatfoxData }) };
     }
