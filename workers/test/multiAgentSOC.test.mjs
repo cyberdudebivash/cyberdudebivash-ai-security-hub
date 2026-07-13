@@ -342,6 +342,31 @@ describe('handleAgentsStatus()', () => {
     const body = await resp.json();
     expect(body.version).toBe('2.0');
   });
+
+  // Regression: ai_providers previously checked only 4 of the 6 real providers
+  // aiProviderRouter.js routes through (PROVIDER_CONFIG), silently omitting
+  // together/anthropic and hardcoding the denominator to 4 — so the
+  // "X/4 providers active" stat undercounted regardless of real configuration.
+  it('tracks all 6 real providers (groq/deepseek/together/openrouter/anthropic/cf_workers_ai), not just 4', async () => {
+    const req = new Request('https://cyberdudebivash.in/api/agents/status');
+    const env = fakeEnv({ TOGETHER_API_KEY: 'test-together-key', ANTHROPIC_API_KEY: 'test-anthropic-key' });
+    const resp = await handleAgentsStatus(req, env, fakeAuth);
+    const body = await resp.json();
+
+    expect(Object.keys(body.ai_providers).sort()).toEqual(
+      ['anthropic', 'cf_workers_ai', 'deepseek', 'groq', 'openrouter', 'together'].sort()
+    );
+    expect(body.ai_providers.together).toBe(true);
+    expect(body.ai_providers.anthropic).toBe(true);
+  });
+
+  it('provider_note denominator reflects the real total provider count, not a hardcoded 4', async () => {
+    const req = new Request('https://cyberdudebivash.in/api/agents/status');
+    // fakeEnv() default: only groq + cf_workers_ai configured = 2 of 6.
+    const resp = await handleAgentsStatus(req, fakeEnv(), fakeAuth);
+    const body = await resp.json();
+    expect(body.provider_note).toMatch(/^2\/6 providers? active/);
+  });
 });
 
 // ── handleAgentsRun ────────────────────────────────────────────────────────────

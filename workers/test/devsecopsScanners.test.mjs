@@ -9,6 +9,7 @@ import {
   handleDevSecOpsSAST,
   handleDevSecOpsSCA,
   handleDevSecOpsSBOM,
+  handleDevSecOpsAIBOM,
 } from '../src/handlers/devsecopsScanners.js';
 
 function reqWithBody(body) {
@@ -125,6 +126,122 @@ describe('DevSecOps SBOM — real CycloneDX generation', () => {
 
   it('rejects an empty dependencies array', async () => {
     const res = await handleDevSecOpsSBOM(reqWithBody({ dependencies: [] }), {}, {});
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('DevSecOps AI-BOM — AI/ML classification + real cross-references', () => {
+  beforeEach(() => { vi.stubGlobal('fetch', vi.fn()); });
+
+  function fakeDB(rows) {
+    return {
+      DB: {
+        prepare: () => ({
+          bind: () => ({ all: async () => ({ results: rows }) }),
+        }),
+      },
+    };
+  }
+
+  it('classifies known AI/ML packages and leaves ordinary packages unflagged', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ results: [{}, {}, {}] }) });
+    const res = await handleDevSecOpsAIBOM(reqWithBody({
+      project_name: 'my-agent-app',
+      ecosystem: 'PyPI',
+      dependencies: [
+        { name: 'langchain', version: '0.1.0' },
+        { name: 'openai', version: '1.30.0' },
+        { name: 'requests', version: '2.31.0' },
+      ],
+    }), fakeDB([]), {});
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.component_count).toBe(3);
+    expect(body.ai_component_count).toBe(2);
+    expect(body.ai_components.map(c => c.name).sort()).toEqual(['langchain', 'openai']);
+
+    const langchainComponent = body.sbom.components.find(c => c.name === 'langchain');
+    expect(langchainComponent.properties).toContainEqual({ name: 'cdb:ai-ml-component', value: 'true' });
+    const requestsComponent = body.sbom.components.find(c => c.name === 'requests');
+    expect(requestsComponent.properties).toBeUndefined();
+  });
+
+  it('cross-references detected frameworks against the real agent_threat_advisories table', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ results: [{}] }) });
+    const advisoryRows = [{ advisory_id: 'AGT-001', framework: 'langchain', severity: 'HIGH', cvss_score: 7.5 }];
+    const res = await handleDevSecOpsAIBOM(reqWithBody({
+      ecosystem: 'PyPI',
+      dependencies: [{ name: 'langchain', version: '0.1.0' }],
+    }), fakeDB(advisoryRows), {});
+    const body = await res.json();
+
+    expect(body.advisory_lookup_available).toBe(true);
+    expect(body.frameworks_detected).toEqual(['langchain']);
+    expect(body.agent_advisories).toEqual(advisoryRows);
+    expect(body.ai_risk_score).toBeGreaterThan(0);
+    expect(body.ai_risk_level).not.toBe('NONE');
+  });
+
+  it('does not attempt an advisory lookup for AI packages with no matching framework key', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ results: [{}] }) });
+    const res = await handleDevSecOpsAIBOM(reqWithBody({
+      ecosystem: 'PyPI',
+      dependencies: [{ name: 'anthropic', version: '0.30.0' }],
+    }), fakeDB([]), {});
+    const body = await res.json();
+
+    expect(body.ai_component_count).toBe(1);
+    expect(body.frameworks_detected).toEqual([]);
+    expect(body.agent_advisories).toEqual([]);
+  });
+
+  it('degrades gracefully (no crash) when the database binding is unavailable', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ results: [{}] }) });
+    const res = await handleDevSecOpsAIBOM(reqWithBody({
+      ecosystem: 'PyPI',
+      dependencies: [{ name: 'langchain', version: '0.1.0' }],
+    }), {}, {});
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.advisory_lookup_available).toBe(false);
+    expect(body.agent_advisories).toEqual([]);
+  });
+
+  it('degrades gracefully (still returns the BOM) when OSV.dev is unreachable', async () => {
+    global.fetch.mockRejectedValueOnce(new Error('network down'));
+    const res = await handleDevSecOpsAIBOM(reqWithBody({
+      ecosystem: 'PyPI',
+      dependencies: [{ name: 'langchain', version: '0.1.0' }],
+    }), fakeDB([]), {});
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.osv_lookup_available).toBe(false);
+    expect(body.sbom.components).toHaveLength(1);
+  });
+
+  it('does not claim live model introspection anywhere in the response', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ results: [{}] }) });
+    const res = await handleDevSecOpsAIBOM(reqWithBody({
+      ecosystem: 'PyPI',
+      dependencies: [{ name: 'langchain', version: '0.1.0' }],
+    }), fakeDB([]), {});
+    const body = await res.json();
+    expect(body.note).toMatch(/does not introspect live model weights/i);
+  });
+
+  it('rejects an empty dependencies array', async () => {
+    const res = await handleDevSecOpsAIBOM(reqWithBody({ dependencies: [] }), {}, {});
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects invalid JSON body', async () => {
+    const res = await handleDevSecOpsAIBOM({ json: async () => { throw new Error('bad json'); } }, {}, {});
     expect(res.status).toBe(400);
   });
 });
