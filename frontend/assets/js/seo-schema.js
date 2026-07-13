@@ -23,7 +23,7 @@ const SITE = {
 // ─── Core Organization schema (always injected) ────────────────────────────
 const ORGANIZATION_SCHEMA = {
   '@context':   'https://schema.org',
-  '@type':      ['Organization', 'Corporation'],
+  '@type':      ['Organization', 'Corporation', 'ProfessionalService'],
   '@id':        `${SITE.url}/#organization`,
   name:         SITE.name,
   alternateName:['CyberDudeBivash', 'CYBERDUDEBIVASH', 'CDB Security'],
@@ -398,7 +398,7 @@ const STATIC_SCHEMA_TYPES = (function collectStaticSchemaTypes() {
     try {
       const t = JSON.parse(el.textContent)['@type'];
       (Array.isArray(t) ? t : [t]).forEach(x => x && types.add(x));
-    } catch { /* not our concern here — malformed static JSON-LD is caught by seo-structure-lock.mjs */ }
+    } catch { /* malformed static JSON-LD on this page — skip it, don't block the rest */ }
   });
   return types;
 })();
@@ -563,12 +563,13 @@ function cdbLoadGA4() {
 }
 
 function cdbLoadGTM() {
+  // GT-K54PF9KB is Google's unified "Google tag" format (GT-...), not a
+  // classic container ID (GTM-...) — it's configured via the same gtag.js
+  // bootstrap as GA4 (gtag/js?id=...), not the gtm.js container loader,
+  // which expects a GTM- prefixed ID and would silently no-op on a GT- one.
   if (window.__cdbGTMLoaded) return;
   window.__cdbGTMLoaded = true;
-  const s = document.createElement('script');
-  s.async = true;
-  s.src = `https://www.googletagmanager.com/gtm.js?id=${GTM_ID}`;
-  document.head.appendChild(s);
+  gtag('config', GTM_ID);
 }
 
 function cdbLoadClarity() {
@@ -594,7 +595,9 @@ function cdbGrantConsent() {
   gtag('consent', 'update', {
     ad_storage:         'granted',
     ad_user_data:       'granted',
-    ad_personalization: 'granted',
+    // Stays denied even on accept — the Cookie Policy promises AdSense
+    // cookies are not used to profile visitors; non-personalized ads only.
+    ad_personalization: 'denied',
     analytics_storage:  'granted',
   });
   cdbLoadGA4();
@@ -610,6 +613,15 @@ function cdbSetCookieConsent(choice) {
   if (choice === 'accepted') cdbGrantConsent();
 }
 window.cdbSetCookieConsent = cdbSetCookieConsent;
+
+// Exposed so other inline scripts (e.g. index.html's trackAffiliate()) can
+// check real consent state instead of relying on `typeof gtag`, which is
+// always defined now (Consent Mode v2's default signal needs it early,
+// before any consent decision is made).
+function cdbHasConsent() {
+  try { return localStorage.getItem(CDB_CONSENT_KEY) === 'accepted'; } catch { return false; }
+}
+window.cdbHasConsent = cdbHasConsent;
 
 // Injects the consent banner for any page that doesn't already carry a
 // static copy (index.html ships its own inline banner; every other page

@@ -4126,7 +4126,7 @@ document.addEventListener('cdb:scan:complete', function(e) {
 <div>✅ Scan history stays under your account — permanently erased on account deletion (GDPR/DPDP)</div>
 <div>✅ Deterministic scan scoring — AI chat &amp; verdicts use LLM providers disclosed in our <a href="/trust-center#sub-processors" style="color:inherit;text-decoration:underline">Sub-Processor List</a></div>
 <div>✅ Cloudflare edge network — TLS in transit, encrypted at rest</div>
-<div>✅ Google Analytics 4 only (ad personalization off) — no session recording, no ad trackers</div>
+<div>✅ Google Analytics 4, Google Tag Manager, Microsoft Clarity (session replay) &amp; Google AdSense (non-personalized ads only) — none load until you accept in the cookie banner</div>
 <div>✅ Full audit log available on Enterprise plan</div>
 <div>✅ Open API — inspect every call/response</div>
 <div>✅ Vendor security questionnaire (CAIQ-lite) — <a href="https://github.com/cyberdudebivash/cyberdudebivash-ai-security-hub/blob/main/docs/SECURITY_QUESTIONNAIRE_PACK.md" target="_blank" rel="noopener" style="color:var(--accent)">pre-answered pack for procurement</a></div>
@@ -7879,8 +7879,8 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 <a class="v14-footer-link-dim" href="/privacy-policy.html">🔒 Privacy Policy</a>
 <a class="v14-footer-link-dim" href="/terms-of-service.html">📋 Terms of Service</a>
 <a class="v14-footer-link-dim" href="/refund-policy.html">💳 Refund Policy</a>
-<a class="v14-footer-link-dim" href="#" onclick="CDB_LEGAL.show('dpdp');return false">🇮🇳 DPDP Compliance</a>
-<a class="v14-footer-link-dim" href="#" onclick="CDB_LEGAL.show('cookies');return false">🍪 Cookie Policy</a>
+<a class="v14-footer-link-dim" href="#" onclick="cdbOpenLegal('dpdp');return false">🇮🇳 DPDP Compliance</a>
+<a class="v14-footer-link-dim" href="#" onclick="cdbOpenLegal('cookies');return false">🍪 Cookie Policy</a>
 </div>
 <!-- Sentinel APEX CTA -->
 <a class="tg-community-card" href="https://t.me/cyberdudebivashSentinelApex" style="margin-top:16px;display:flex;align-items:center;gap:10px;background:rgba(0,136,204,.1);border:1px solid rgba(0,136,204,.3);border-radius:10px;padding:10px 12px;text-decoration:none" target="_blank">
@@ -8355,9 +8355,13 @@ function trackAffiliate(program, linkId) {
       keepalive: true,
     }).catch(() => {});
   } catch {}
-  // Also send to GA4 if gtag is loaded
+  // Also send to GA4 if the visitor has actually consented. window.gtag is
+  // now always defined (Consent Mode v2's default signal needs it before any
+  // consent decision), so `typeof gtag` can no longer be used as a consent
+  // proxy — check real consent state instead, or a pre-consent dataLayer
+  // backlog would get flushed to GA4 the moment a visitor later accepts.
   try {
-    if (typeof gtag !== 'undefined') {
+    if (typeof window.cdbHasConsent === 'function' && window.cdbHasConsent()) {
       gtag('event', 'affiliate_click', { event_category: 'monetization', event_label: linkId, value: program });
     }
   } catch {}

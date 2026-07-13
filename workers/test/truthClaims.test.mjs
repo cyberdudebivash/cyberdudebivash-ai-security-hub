@@ -19,6 +19,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const read = (p) => readFileSync(resolve(__dirname, p), 'utf8');
 
 const INDEX   = read('../../frontend/index.html');
+const SEO_SCHEMA_JS = read('../../frontend/assets/js/seo-schema.js');
 const TRUST   = read('../../frontend/trust-center.html');
 const CONTACT = read('../../frontend/contact.html');
 const BOOKING = read('../../frontend/booking.html');
@@ -63,11 +64,19 @@ describe('index.html — Security Transparency block tells the truth', () => {
     expect(INDEX).not.toContain('All AI processing is deterministic');
   });
 
-  it('no longer claims "no third-party analytics" while loading GA4', () => {
+  it('discloses every tracker that actually loads, instead of an outdated "GA4 only" claim', () => {
     expect(INDEX).not.toContain('No third-party analytics SDKs');
-    // GA4 is genuinely loaded — the claim must acknowledge it.
-    expect(INDEX).toContain('googletagmanager.com/gtag/js');
-    expect(INDEX).toContain('Google Analytics 4 only');
+    // GA4/GTM/Clarity/AdSense now load from the shared, consent-gated
+    // seo-schema.js module (loaded by index.html) rather than inline — the
+    // claim must name all of them, not just GA4, and must not undersell it.
+    expect(INDEX).not.toContain('Google Analytics 4 only');
+    expect(INDEX).toContain('Google Tag Manager');
+    expect(INDEX).toContain('Microsoft Clarity');
+    expect(INDEX).toContain('Google AdSense');
+    // GA4 must be genuinely reachable from this page: it loads this module...
+    expect(INDEX).toMatch(/<script type="module" src="\/assets\/js\/seo-schema\.js">/);
+    // ...and the module actually contains GA4's loader, not just a claim.
+    expect(SEO_SCHEMA_JS).toContain('googletagmanager.com/gtag/js');
   });
 
   it('links the LLM disclosure to the trust-center sub-processor section', () => {
