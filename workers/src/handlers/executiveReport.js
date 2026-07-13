@@ -20,8 +20,20 @@ const KV_REPORTS_PREFIX = 'executive:report:';
 const KV_REPORTS_INDEX  = 'executive:reports_index';
 const DEFAULT_ORG       = 'default';
 
+// Two stacked fixes, same shape as CAP-MSSP-005 (workers/src/handlers/
+// msspPanel.js, workers/test/msspPanelTenantIsolation.test.mjs):
+//  1. Was authCtx?.orgId (camelCase) — never populated anywhere in the auth
+//     layer. The real field is snake_case authCtx.org_id, which
+//     withAuthAliases (workers/src/auth/middleware.js) populates for every
+//     real authenticated caller.
+//  2. resolveAuthV5's anonymous IP-fallback tier is authenticated:true but
+//     intentionally has no org_id/userId (docs/OPERATIONAL_RISK_REGISTER.md
+//     EH-02/EH-03) — every such caller previously collapsed onto the same
+//     literal 'default' bucket for executive reports/MRR config.
+//     authCtx.identity (IP-derived, always populated) now isolates them from
+//     each other too, before falling back to the shared literal.
 function getOrgId(authCtx) {
-  return authCtx?.orgId || authCtx?.userId || DEFAULT_ORG;
+  return authCtx?.userId || authCtx?.org_id || authCtx?.identity || DEFAULT_ORG;
 }
 
 // ── MRR & Revenue Calculation ─────────────────────────────────────────────────

@@ -754,11 +754,11 @@
 
     <div id="login-view">
       <div class="form-group">
-        <label class="form-label">Email address</label>
+        <label class="form-label" for="login-email">Email address</label>
         <input id="login-email" class="form-input" type="email" placeholder="you@example.com" autocomplete="email" />
       </div>
       <div class="form-group">
-        <label class="form-label">Password</label>
+        <label class="form-label" for="login-pass">Password</label>
         <input id="login-pass" class="form-input" type="password" placeholder="••••••••" autocomplete="current-password" />
       </div>
       <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()">
@@ -775,19 +775,19 @@
 
     <div id="signup-view" style="display:none">
       <div class="form-group">
-        <label class="form-label">Full name</label>
+        <label class="form-label" for="signup-name">Full name</label>
         <input id="signup-name" class="form-input" type="text" placeholder="Jane Doe" autocomplete="name" />
       </div>
       <div class="form-group">
-        <label class="form-label">Email address</label>
+        <label class="form-label" for="signup-email">Email address</label>
         <input id="signup-email" class="form-input" type="email" placeholder="you@example.com" autocomplete="email" />
       </div>
       <div class="form-group">
-        <label class="form-label">Company <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+        <label class="form-label" for="signup-company">Company <span style="color:var(--muted);font-weight:400">(optional)</span></label>
         <input id="signup-company" class="form-input" type="text" placeholder="Acme Inc." autocomplete="organization" />
       </div>
       <div class="form-group">
-        <label class="form-label">Password</label>
+        <label class="form-label" for="signup-pass">Password</label>
         <input id="signup-pass" class="form-input" type="password" placeholder="••••••••" autocomplete="new-password" />
         <div style="font-size:.72rem;color:var(--muted);margin-top:4px">At least 8 characters, with 3 of: uppercase, lowercase, digit, special character.</div>
       </div>
@@ -803,7 +803,7 @@
 
     <div id="forgot-view" style="display:none">
       <div class="form-group">
-        <label class="form-label">Email address</label>
+        <label class="form-label" for="forgot-email">Email address</label>
         <input id="forgot-email" class="form-input" type="email" placeholder="you@example.com" autocomplete="email" />
       </div>
       <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doForgotPassword()">Send reset link</button>
@@ -815,7 +815,7 @@
 
     <div id="reset-view" style="display:none">
       <div class="form-group">
-        <label class="form-label">New password</label>
+        <label class="form-label" for="reset-pass">New password</label>
         <input id="reset-pass" class="form-input" type="password" placeholder="••••••••" autocomplete="new-password" />
       </div>
       <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doResetPassword()">Set new password</button>
@@ -828,7 +828,7 @@
     <div id="mfa-view" style="display:none">
       <p style="font-size:.83rem;color:var(--muted);margin-bottom:14px">Enter the 6-digit code from your authenticator app.</p>
       <div class="form-group">
-        <label class="form-label">Authentication code</label>
+        <label class="form-label" for="mfa-code">Authentication code</label>
         <input id="mfa-code" class="form-input" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="123456" autocomplete="one-time-code" maxlength="6" />
       </div>
       <div id="mfa-err" class="alert alert-error" style="display:none"></div>
@@ -1519,7 +1519,7 @@
 
       <div class="card" style="margin-bottom:20px">
         <div class="card-body" style="padding:20px">
-          <label class="form-label">Your API key</label>
+          <label class="form-label" for="v1-api-key">Your API key</label>
           <input id="v1-api-key" class="form-input" type="password" placeholder="cdb_..." autocomplete="off" />
           <div style="font-size:.78rem;color:var(--muted);margin-top:6px">Sent directly to the API with each request below. Not stored or transmitted anywhere else by this page.</div>
         </div>
@@ -1851,11 +1851,11 @@
           <div id="settings-err" class="alert alert-error" style="display:none"></div>
           <div id="settings-ok"  class="alert alert-ok"    style="display:none"></div>
           <div class="form-group">
-            <label class="form-label">Display Name</label>
+            <label class="form-label" for="s-name">Display Name</label>
             <input id="s-name" class="form-input" placeholder="Your name" />
           </div>
           <div class="form-group">
-            <label class="form-label">Email Address</label>
+            <label class="form-label" for="s-email">Email Address</label>
             <input id="s-email" class="form-input" type="email" disabled style="opacity:.6" />
             <div class="form-hint">Email changes require support contact.</div>
           </div>
@@ -1869,15 +1869,15 @@
           <div id="pw-err" class="alert alert-error" style="display:none"></div>
           <div id="pw-ok"  class="alert alert-ok"    style="display:none"></div>
           <div class="form-group">
-            <label class="form-label">Current Password</label>
+            <label class="form-label" for="pw-current">Current Password</label>
             <input id="pw-current" class="form-input" type="password" />
           </div>
           <div class="form-group">
-            <label class="form-label">New Password</label>
+            <label class="form-label" for="pw-new">New Password</label>
             <input id="pw-new" class="form-input" type="password" />
           </div>
           <div class="form-group">
-            <label class="form-label">Confirm New Password</label>
+            <label class="form-label" for="pw-confirm">Confirm New Password</label>
             <input id="pw-confirm" class="form-input" type="password" />
           </div>
           <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
@@ -1919,7 +1919,7 @@
         <div class="card-header"><span class="card-title">Alert Notifications</span></div>
         <div class="card-body" style="padding:24px">
           <div class="form-group">
-            <label class="form-label">Email Alerts</label>
+            <label class="form-label" for="alert-email">Email Alerts</label>
             <select id="alert-email" class="form-input" style="max-width:240px">
               <option value="all">All critical CVEs</option>
               <option value="critical_only">Critical severity only</option>
@@ -1927,7 +1927,7 @@
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">Telegram Channel</label>
+            <label class="form-label" for="alert-tg">Telegram Channel</label>
             <input id="alert-tg" class="form-input" placeholder="@your_channel or chat ID" style="max-width:300px" />
           </div>
           <button class="btn btn-primary" onclick="saveAlerts()">Save Alert Preferences</button>
@@ -1941,15 +1941,15 @@
           <div id="notif-channels-err" class="alert alert-error" style="display:none"></div>
           <div id="notif-channels-ok"  class="alert alert-ok"    style="display:none"></div>
           <div class="form-group">
-            <label class="form-label">Slack Webhook URL</label>
+            <label class="form-label" for="notif-slack">Slack Webhook URL</label>
             <input id="notif-slack" class="form-input" placeholder="https://hooks.slack.com/services/…" />
           </div>
           <div class="form-group">
-            <label class="form-label">Microsoft Teams Webhook URL</label>
+            <label class="form-label" for="notif-teams">Microsoft Teams Webhook URL</label>
             <input id="notif-teams" class="form-input" placeholder="https://outlook.office.com/webhook/…" />
           </div>
           <div class="form-group">
-            <label class="form-label">Custom Webhook URL</label>
+            <label class="form-label" for="notif-custom">Custom Webhook URL</label>
             <input id="notif-custom" class="form-input" placeholder="https://your-server.com/hook" />
           </div>
           <div class="form-group">
@@ -2155,11 +2155,11 @@
         <div class="card-header"><span class="card-title">Run an Assessment</span></div>
         <div class="card-body" style="padding:20px">
           <div class="form-group">
-            <label class="form-label">Organization / Domain</label>
+            <label class="form-label" for="compliance-target">Organization / Domain</label>
             <input id="compliance-target" class="form-input" placeholder="e.g. acme.com" />
           </div>
           <div class="form-group">
-            <label class="form-label">Industry</label>
+            <label class="form-label" for="compliance-industry">Industry</label>
             <select id="compliance-industry" class="form-input">
               <option>General</option>
               <option>Technology</option>
@@ -2272,17 +2272,17 @@
           <div class="card-header"><span class="card-title">Run a DPDP Gap Assessment</span></div>
           <div class="card-body" style="padding:20px">
             <div class="form-group">
-              <label class="form-label">Organization Name</label>
+              <label class="form-label" for="dpdp-org-name">Organization Name</label>
               <input id="dpdp-org-name" class="form-input" placeholder="e.g. Acme Pvt Ltd" />
             </div>
             <div class="form-group">
-              <label class="form-label">Industry</label>
+              <label class="form-label" for="dpdp-industry">Industry</label>
               <select id="dpdp-industry" class="form-input">
                 <option>Technology</option><option>Financial Services</option><option>Healthcare</option><option>Retail</option><option>Government</option>
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Employee Count</label>
+              <label class="form-label" for="dpdp-employee-count">Employee Count</label>
               <input id="dpdp-employee-count" type="number" class="form-input" placeholder="e.g. 250" />
             </div>
             <div class="form-group">
@@ -2586,11 +2586,11 @@
   <div class="modal">
     <div class="modal-title">🔑 Create API Key</div>
     <div class="form-group">
-      <label class="form-label">Key Name</label>
+      <label class="form-label" for="new-key-name">Key Name</label>
       <input id="new-key-name" class="form-input" placeholder="e.g. Production Bot" />
     </div>
     <div class="form-group">
-      <label class="form-label">Scopes</label>
+      <label class="form-label" for="new-key-scopes">Scopes</label>
       <select id="new-key-scopes" class="form-input">
         <option value="scan:read,scan:write">Scan (read + write)</option>
         <option value="scan:read">Scan (read only)</option>
@@ -2631,15 +2631,15 @@
   <div class="modal">
     <div class="modal-title">🏢 Create Organization</div>
     <div class="form-group">
-      <label class="form-label">Organization Name</label>
+      <label class="form-label" for="new-org-name">Organization Name</label>
       <input id="new-org-name" class="form-input" placeholder="Acme Inc." />
     </div>
     <div class="form-group">
-      <label class="form-label">Industry <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+      <label class="form-label" for="new-org-industry">Industry <span style="color:var(--muted);font-weight:400">(optional)</span></label>
       <input id="new-org-industry" class="form-input" placeholder="Financial Services" />
     </div>
     <div class="form-group">
-      <label class="form-label">Domain <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+      <label class="form-label" for="new-org-domain">Domain <span style="color:var(--muted);font-weight:400">(optional)</span></label>
       <input id="new-org-domain" class="form-input" placeholder="acme.com" />
     </div>
     <div id="create-org-err" class="alert alert-error" style="display:none"></div>
@@ -2656,11 +2656,11 @@
     <div class="modal-title">✉️ Invite Member</div>
     <p style="font-size:.83rem;color:var(--muted);margin-bottom:12px">The person must already have a CYBERDUDEBIVASH account.</p>
     <div class="form-group">
-      <label class="form-label">Email address</label>
+      <label class="form-label" for="invite-email">Email address</label>
       <input id="invite-email" class="form-input" type="email" placeholder="teammate@company.com" />
     </div>
     <div class="form-group">
-      <label class="form-label">Role</label>
+      <label class="form-label" for="invite-role">Role</label>
       <select id="invite-role" class="form-input">
         <option value="ADMIN">Admin — manage members &amp; settings</option>
         <option value="ANALYST">Analyst — run scans, view &amp; edit</option>
@@ -4879,12 +4879,13 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
 
       if (d.payment_link) {
         window.location.href = d.payment_link;
-      } else if (d.order_id && window.Razorpay) {
+      } else if (d.order_id && d.key_id && window.Razorpay) {
         const options = {
           // Backend field is key_id, not razorpay_key — this was silently
           // opening Razorpay checkout with an empty key even once the path
-          // above pointed at a real endpoint.
-          key:         d.key_id || '',
+          // above pointed at a real endpoint. Now gated by the d.key_id
+          // check above instead of falling back to '' and proceeding anyway.
+          key:         d.key_id,
           order_id:    d.order_id,
           amount:      d.amount || 99900,
           currency:    'INR',
@@ -5069,7 +5070,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
       if (on) {
         body.innerHTML = '<div style="color:#94a3b8;font-size:13px;margin-bottom:16px">✅ Two-factor authentication is <b style="color:#10b981">active</b>'
           + (d.enrolled_at ? ' (since ' + mfaEsc(new Date(d.enrolled_at).toLocaleDateString()) + ')' : '') + '. Your account requires a 6-digit code at login.</div>'
-          + '<div class="form-group"><label class="form-label">Disable 2FA — enter a current 6-digit code and your password</label>'
+          + '<div class="form-group"><label class="form-label" for="mfa-dis-code">Disable 2FA — enter a current 6-digit code and your password</label>'
           + '<input id="mfa-dis-code" class="form-input" inputmode="numeric" maxlength="6" placeholder="123456" style="max-width:200px;margin-bottom:8px" />'
           + '<input id="mfa-dis-pw" class="form-input" type="password" placeholder="Account password" style="max-width:280px" /></div>'
           + '<button class="btn" style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3)" onclick="mfaDisable()">Disable 2FA</button>';
@@ -5096,7 +5097,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
         + '<div id="mfa-qr" style="width:180px;height:180px;background:#fff;border-radius:10px;padding:10px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center"></div>'
         + '<div style="text-align:center;margin-bottom:16px"><div style="font-size:11px;color:#64748b;margin-bottom:4px">Manual entry key</div>'
         + '<code id="mfa-secret" style="font-size:14px;letter-spacing:2px;color:#e2e8f0;background:#0f0f1a;border:1px solid #2d2d4e;border-radius:6px;padding:6px 12px;cursor:pointer" onclick="mfaCopySecret()" title="Click to copy">' + mfaEsc(formatSecret(d.secret)) + '</code></div>'
-        + '<div class="form-group"><label class="form-label"><b style="color:#e2e8f0">Step 2.</b> Enter the 6-digit code from your app</label>'
+        + '<div class="form-group"><label class="form-label" for="mfa-setup-code"><b style="color:#e2e8f0">Step 2.</b> Enter the 6-digit code from your app</label>'
         + '<input id="mfa-setup-code" class="form-input" inputmode="numeric" maxlength="6" placeholder="123456" style="max-width:200px;font-size:18px;letter-spacing:4px" autocomplete="one-time-code" /></div>'
         + '<button class="btn btn-primary" onclick="mfaConfirmEnable()">Verify &amp; Enable</button> '
         + '<button class="btn" style="background:transparent;border:1px solid #2d2d4e;color:#94a3b8" onclick="loadMFAStatus()">Cancel</button>';
@@ -6154,7 +6155,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
    *   risk_score: number|null,
    *   risk_level: string|null,
    *   plan: string|null,
-   *   mcp_training: array|null,   // from /mcp/decision
+   *   mcp_training: array|null,   // from /api/mcp/decision
    * }
    */
   function showAccessModal(data = {}) {
@@ -6353,7 +6354,7 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
 
   // ══════════════════════════════════════════════════════════════════════════════
   // GOD MODE v16 — PHASE 4: PERSONALIZATION ENGINE
-  // Calls /mcp/decision after login; shows banner with relevant action
+  // Calls /api/mcp/decision after login; shows banner with relevant action
   // ══════════════════════════════════════════════════════════════════════════════
 
   async function loadPersonalization() {
@@ -6364,12 +6365,12 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
     const lastScan = JSON.parse(localStorage.getItem('cdb_last_scan') || 'null');
     if (!lastScan) return;
 
-    // ── GOD MODE v16: Use /mcp/control (unified) with /mcp/decision fallback ──
+    // ── GOD MODE v16: Use /api/mcp/control (unified) with /api/mcp/decision fallback ──
     let rec = null;
 
-    // Layer 1: try /mcp/control (has user memory + ui_blocks + personalization)
+    // Layer 1: try /api/mcp/control (has user memory + ui_blocks + personalization)
     try {
-      const ctrl = await fetch('/mcp/control', {
+      const ctrl = await fetch('/api/mcp/control', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -6386,12 +6387,12 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
         const cj = await ctrl.json();
         rec = cj?.data || cj;
       }
-    } catch { /* fallback to /mcp/decision */ }
+    } catch { /* fallback to /api/mcp/decision */ }
 
-    // Layer 2: fallback to /mcp/decision (existing v15 endpoint)
+    // Layer 2: fallback to /api/mcp/decision (existing v15 endpoint)
     if (!rec) {
       try {
-        const res = await apiFetch('/mcp/decision', {
+        const res = await apiFetch('/api/mcp/decision', {
           method: 'POST',
           body: JSON.stringify({
             module:      lastScan.module || 'domain',
@@ -6517,11 +6518,11 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
         saveTokens(_token, d.refresh_token);
       }
 
-      // Get MCP training recommendation — GOD MODE v16: use /mcp/control first
+      // Get MCP training recommendation — GOD MODE v16: use /api/mcp/control first
       let mcpTraining = null;
       try {
-        // Try /mcp/control (has bundle + user memory + full context)
-        const mcpRes = await fetch('/mcp/control', {
+        // Try /api/mcp/control (has bundle + user memory + full context)
+        const mcpRes = await fetch('/api/mcp/control', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({
@@ -6540,9 +6541,9 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
           window._lastMCPDecision = mcpRec;
         }
       } catch {
-        // Fallback to /mcp/decision
+        // Fallback to /api/mcp/decision
         try {
-          const fallbackRes = await fetch('/mcp/decision', {
+          const fallbackRes = await fetch('/api/mcp/decision', {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({ module: module || 'domain', risk_score: d.risk_score || 50, tier: 'PRO' }),

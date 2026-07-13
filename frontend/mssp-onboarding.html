@@ -445,6 +445,15 @@ async function initiatePayment() {
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || 'Checkout failed');
+    // Guard against an incomplete order response reaching the Razorpay SDK —
+    // a missing key/order_id/amount silently passes as `undefined` into
+    // `new Razorpay(...)`, which degrades into broken internal asset
+    // requests (checkout-static-next.razorpay.com/build/undefined) instead
+    // of a clear error. Same class of bug fixed in assets/checkout-modal.js
+    // (2026-06-29) and marketplace-checkout.html.
+    if (!data.razorpay_key || !data.order_id || !data.amount_paise) {
+      throw new Error('Could not start checkout (incomplete order). Please try again or contact support.');
+    }
 
     const rzp = new Razorpay({
       key:         data.razorpay_key,

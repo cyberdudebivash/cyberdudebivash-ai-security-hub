@@ -24,6 +24,21 @@ export async function handleLeadCapture(request, env) {
   const utmCampaign = (body?.utm_campaign || '').trim();
   const refCode     = (body?.ref_code     || '').trim();
 
+  // Optional enrichment fields sent by lead-capture forms (services.html's
+  // enterprise form, tools.html's custom-tool request) — were accepted by
+  // this endpoint's JSON body but never read, so the caller saw a success
+  // response while the backend silently discarded everything except email.
+  const name        = (body?.name        || '').trim().slice(0, 200);
+  const company     = (body?.company     || '').trim().slice(0, 200);
+  const companySize = (body?.size        || body?.company_size || '').trim().slice(0, 50);
+  const freeText    = (body?.challenge   || body?.description  || '').trim().slice(0, 2000);
+  const toolType    = (body?.toolType    || '').trim().slice(0, 100);
+  const notesParts = [];
+  if (companySize) notesParts.push(`Company size: ${companySize}`);
+  if (toolType)    notesParts.push(`Requested tool: ${toolType}`);
+  if (freeText)     notesParts.push(freeText);
+  const notes = notesParts.join(' | ') || null;
+
   if (!email || !EMAIL_RE.test(email)) {
     return Response.json({
       error: 'Validation failed',
@@ -47,13 +62,23 @@ export async function handleLeadCapture(request, env) {
   // Persist to D1 for durable storage (KV is cache only, 90-day TTL causes data loss)
   if (env?.DB) {
     try {
+      // Upsert rather than INSERT OR IGNORE: an email already captured once
+      // (e.g. from an earlier scan) would otherwise silently no-op on a
+      // later, richer submission (enterprise form's name/company/notes),
+      // discarding exactly the data this fix exists to stop losing.
+      // COALESCE keeps existing values when this submission didn't supply one.
       await env.DB.prepare(`
-        INSERT OR IGNORE INTO leads
-          (id, email, name, domain, source, module, scan_id,
+        INSERT INTO leads
+          (id, email, name, company, notes, domain, source, module, scan_id,
            ip_country, funnel_stage, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'lead', datetime('now'), datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'lead', datetime('now'), datetime('now'))
+        ON CONFLICT(email) DO UPDATE SET
+          name       = COALESCE(excluded.name, leads.name),
+          company    = COALESCE(excluded.company, leads.company),
+          notes      = COALESCE(excluded.notes, leads.notes),
+          updated_at = datetime('now')
       `).bind(
-        leadId, email, '',
+        leadId, email, name || null, company || null, notes,
         email.includes('@') ? email.split('@')[1] : '',
         source, module, scanId || null,
         request.headers.get('CF-IPCountry') || 'unknown',

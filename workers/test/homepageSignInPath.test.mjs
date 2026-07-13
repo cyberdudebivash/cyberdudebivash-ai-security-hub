@@ -74,7 +74,10 @@ describe('Homepage Sign In path (CAP-IDN-001)', () => {
   it('the scan-error "log in" link (403 / reused-token path) no longer targets a nonexistent modal', () => {
     expect(fe).not.toContain("showModal('loginModal')");
     expect(fe).not.toContain('id="loginModal"');
-    const idx = fe.indexOf('Please <a href="/user-dashboard.html"');
+    // Internal .html-suffixed hrefs were stripped to their clean-URL form
+    // (zero Cloudflare Pages redirect hop — see frontend/_redirects) —
+    // /user-dashboard.html is now /user-dashboard.
+    const idx = fe.indexOf('Please <a href="/user-dashboard"');
     expect(idx).toBeGreaterThan(-1);
     expect(fe.slice(idx, idx + 120)).toContain('log in');
   });

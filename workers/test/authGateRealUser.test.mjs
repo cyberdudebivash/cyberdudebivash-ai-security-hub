@@ -38,7 +38,11 @@ function dbStub() {
 }
 function ctxStub() { return { waitUntil: (p) => { Promise.resolve(p).catch(() => {}); } }; }
 function env(extra = {}) {
-  return { DB: dbStub(), KV: kvStub(), SECURITY_HUB_DB: dbStub(), SECURITY_HUB_KV: kvStub(), ...extra };
+  return {
+    DB: dbStub(), KV: kvStub(), SECURITY_HUB_DB: dbStub(), SECURITY_HUB_KV: kvStub(),
+    JWT_SECRET: 'test-jwt-secret-for-auth-gate-tests',
+    ...extra,
+  };
 }
 const anon  = (path, init) => worker.fetch(new Request(`https://cyberdudebivash.in${path}`, init), env(), ctxStub());
 const admin = (path, init = {}) => worker.fetch(

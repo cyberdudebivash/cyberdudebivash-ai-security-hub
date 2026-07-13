@@ -75,7 +75,10 @@ describe('audit-log CSV export neutralizes injected fields', () => {
       },
     };
     const req = new Request('https://x/api/audit-log/export?date=2026-07-03&format=csv');
-    const res = await handleAuditExport(req, { SECURITY_HUB_KV: kv }, { authenticated: true, user_id: 'u1', tier: 'ENTERPRISE' });
+    // isAdmin: true — this test is about CSV formula-injection neutralization,
+    // not tenant scoping, so bypass the (correctly-enforced, see auditLog.js)
+    // per-tenant filter rather than constructing a matching actor/org_id.
+    const res = await handleAuditExport(req, { SECURITY_HUB_KV: kv }, { authenticated: true, user_id: 'u1', tier: 'ENTERPRISE', isAdmin: true });
     expect(res.status).toBe(200);
     const body = await res.text();
     // No data line may begin a cell with a raw formula trigger.

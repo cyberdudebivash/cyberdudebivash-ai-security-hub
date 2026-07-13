@@ -102,7 +102,7 @@ const WEBSITE_SCHEMA = {
     '@type':        'SearchAction',
     target: {
       '@type':      'EntryPoint',
-      urlTemplate:  `${SITE.url}/cve-hub?q={search_term_string}`,
+      urlTemplate:  `${SITE.url}/cve/?q={search_term_string}`,
     },
     'query-input':  'required name=search_term_string',
   },
@@ -136,34 +136,34 @@ const SOFTWARE_SCHEMA = {
   offers: [
     {
       '@type':    'Offer',
-      name:       'Free Tier',
+      name:       'Freemium',
       price:      '0',
       priceCurrency: SITE.currency,
-      description: '3 scans/day, Basic threat intel',
+      description: '5 scans/day, all 5 security modules, limited preview findings',
     },
     {
       '@type':    'Offer',
       name:       'Starter',
-      price:      '999',
+      price:      '499',
       priceCurrency: SITE.currency,
       billingIncrement: 'monthly',
-      description: '25 scans/month, AI analysis, PDF reports',
+      description: '10 scans/month, AI Threat Analysis, PDF reports, 2 API keys',
     },
     {
       '@type':    'Offer',
       name:       'Pro',
-      price:      '2999',
+      price:      '1499',
       priceCurrency: SITE.currency,
       billingIncrement: 'monthly',
-      description: 'Unlimited scans, Full AI Copilot, SIEM export, DPDP compliance',
+      description: 'Unlimited scans, Full AI Brain V2 Suite, SIEM export, API access',
     },
     {
       '@type':    'Offer',
       name:       'Enterprise',
-      price:      '25000',
+      price:      '4999',
       priceCurrency: SITE.currency,
       billingIncrement: 'monthly',
-      description: 'MSSP white-label, 4h SLA, dedicated account manager',
+      description: 'Unlimited scans, multi-user, white-label option, SLA guarantee',
     },
   ],
   provider: { '@id': `${SITE.url}/#organization` },
@@ -380,7 +380,7 @@ function buildCVESchema(cveId, description) {
       '@type':       'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home',             item: SITE.url },
-        { '@type': 'ListItem', position: 2, name: 'CVE Database',     item: `${SITE.url}/cve-hub` },
+        { '@type': 'ListItem', position: 2, name: 'CVE Database',     item: `${SITE.url}/cve/` },
         { '@type': 'ListItem', position: 3, name: cveId },
       ],
     },
@@ -473,7 +473,7 @@ function initSEOSchemas() {
     // Breadcrumb for CVE
     injectSchema(buildBreadcrumb([
       { name: 'Home', url: SITE.url },
-      { name: 'CVE Database', url: `${SITE.url}/cve-hub` },
+      { name: 'CVE Database', url: `${SITE.url}/cve/` },
       { name: cveId },
     ]));
     return;
@@ -758,19 +758,12 @@ function cdbEstimatedDeliveryDate(daysFromNow) {
 }
 window.cdbEstimatedDeliveryDate = cdbEstimatedDeliveryDate;
 
-// ─── IndexNow ping on page load (tells Bing/Yandex about new content) ────────
-async function pingIndexNow() {
-  try {
-    const key = 'cdb-indexnow-' + window.location.hostname.replace(/\./g, '-');
-    await fetch(`https://api.indexnow.org/indexnow?url=${encodeURIComponent(window.location.href)}&key=${key}`)
-      .catch(() => {});
-  } catch (_) {}
-}
-// Only ping on first visit (not every page load) to avoid spam
-if (!sessionStorage.getItem('indexed_' + window.location.pathname)) {
-  sessionStorage.setItem('indexed_' + window.location.pathname, '1');
-  // Defer to not block rendering
-  setTimeout(pingIndexNow, 5000);
-}
+// Removed: client-side IndexNow ping. It was dead code — CSP connect-src never
+// allowed api.indexnow.org (every call silently failed), and no key file was
+// ever deployed at the site root for the key this code assumed, so a real ping
+// would have been rejected by IndexNow anyway. Per-visitor pinging from the
+// browser is also the wrong shape for IndexNow (a "content changed" signal
+// meant to fire once from the publisher/CI on actual change, not once per
+// visitor per session). A real implementation belongs in the deploy pipeline.
 
 export { buildArticleSchema, buildCVESchema, buildBreadcrumb, injectSchema, SITE };

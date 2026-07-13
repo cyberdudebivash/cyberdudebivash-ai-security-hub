@@ -704,11 +704,17 @@ async function loadMsspMetrics() {
     document.getElementById('kpiWLDeploy').textContent = Number(d.wl_deployments) || 0;
     document.getElementById('kpiPartnerPipeline').textContent = fmtINR(d.pipeline_value);
   } catch(e) {
-    document.getElementById('kpiTotalPartners').textContent = '0';
-    document.getElementById('kpiActiveClients').textContent = '0';
-    document.getElementById('kpiMSSPMRR').textContent = '₹0';
-    document.getElementById('kpiWLDeploy').textContent = '0';
-    document.getElementById('kpiPartnerPipeline').textContent = '₹0';
+    // Was setting these to '0'/'₹0' on ANY fetch failure — indistinguishable
+    // from a genuine zero-partner account. A staff member reading "₹0 MRR,
+    // 0 partners" has no way to tell "the business really has none" from
+    // "the API call failed" (expired session, network blip, backend error).
+    // Show an explicit unknown/error state instead.
+    document.getElementById('kpiTotalPartners').textContent = '—';
+    document.getElementById('kpiActiveClients').textContent = '—';
+    document.getElementById('kpiMSSPMRR').textContent = '—';
+    document.getElementById('kpiWLDeploy').textContent = '—';
+    document.getElementById('kpiPartnerPipeline').textContent = '—';
+    showToast('Failed to load MSSP metrics (' + e.message + ') — not necessarily zero, retry or check session', 'error');
   }
 }
 
@@ -762,12 +768,16 @@ async function loadPartners() {
       </table>
     `;
   } catch(e) {
+    // Was showing the same "No Partners Yet" empty-state as a genuine
+    // zero-partner account on ANY fetch failure — indistinguishable from
+    // the real thing, and offering "+ Add First Partner" on top of an
+    // account that may already have partners the call just failed to load.
     wrap.innerHTML = `
       <div class="empty-state">
-        <div class="empty-state-icon">🤝</div>
-        <div class="empty-state-title">No Partners Yet</div>
-        <p class="empty-state-sub">Add your first MSSP partner to begin tracking partnerships.</p>
-        <button class="btn btn-purple btn-sm" onclick="openPartnerModal()">+ Add First Partner</button>
+        <div class="empty-state-icon">⚠️</div>
+        <div class="empty-state-title">Couldn't Load Partners</div>
+        <p class="empty-state-sub">${esc(e.message)} — this is not necessarily an empty account. Retry or check your session.</p>
+        <button class="btn btn-purple btn-sm" onclick="loadPartners()">Retry</button>
       </div>
     `;
   }

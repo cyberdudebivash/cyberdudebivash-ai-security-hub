@@ -1,5 +1,21 @@
 # CYBERDUDEBIVASH® MACOS — GitHub Actions CI/CD Pipeline
-name: CI/CD — MACOS Platform
+#
+# NOTE: this file does NOT run. GitHub Actions only discovers workflows under
+# the repo-root .github/workflows/ — it does not scan nested
+# <subdir>/.github/workflows/ directories, so this has never executed on any
+# push or PR regardless of the `on:` triggers below. Keep that in mind before
+# treating this as evidence of CI coverage for multi-agent-os.
+#
+# The `lint` job below (ruff + bandit) has been promoted to a working
+# equivalent at .github/workflows/multi-agent-os-lint.yml, which does run.
+# The `test`/`build`/`deploy-staging`/`deploy-production` jobs were left here
+# as a template, not promoted: they assume a multi-agent-os/tests/ suite, a
+# .safety-policy.yml, and a Kubernetes + ghcr.io deployment target that don't
+# exist for this project. multi-agent-os is not deployed anywhere today (the
+# real production backend is the Cloudflare Worker under workers/). Build a
+# real test suite and an actual deploy target before promoting those jobs —
+# promoting them unchanged would just produce permanently-failing CI noise.
+name: CI/CD — MACOS Platform (template — not executed, see note above)
 
 on:
   push:

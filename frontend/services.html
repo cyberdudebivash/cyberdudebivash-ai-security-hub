@@ -1518,6 +1518,17 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
         }
 
         // Enterprise form submission
+        //
+        // Was posting to /api/leads/capture — a narrower, different feature
+        // (a pre-results email gate expecting {email, scan_id, module}; see
+        // workers/src/handlers/leads.js) that read only `email`, silently
+        // discarding name/company/size/challenge. Its response shape also
+        // has no `success` field, so `if (data.success)` was always false —
+        // this form showed "Error submitting form" on every submission,
+        // succeeded or not. Routed to the purpose-built endpoint instead
+        // (matches the field names handleEnterpriseInquiry actually reads
+        // and its real {success:true,...} response shape), the same fix
+        // already applied to contact.html/booking.html's equivalent forms.
         function submitEnterpriseForm(event) {
             event.preventDefault();
 
@@ -1525,12 +1536,13 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
                 name: document.getElementById('enterprise-name').value,
                 email: document.getElementById('enterprise-email').value,
                 company: document.getElementById('enterprise-company').value,
-                size: document.getElementById('enterprise-size').value,
-                challenge: document.getElementById('enterprise-challenge').value
+                employees: document.getElementById('enterprise-size').value,
+                use_case: document.getElementById('enterprise-challenge').value,
+                message: document.getElementById('enterprise-challenge').value
             };
 
             // Send to backend
-            fetch('/api/leads/capture', {
+            fetch('/api/enterprise/inquire', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -1543,7 +1555,7 @@ footer.v14-footer-universal::before{content:\'\';position:absolute;top:-2px;left
                     alert('Thank you! We\'ll be in touch within 24 hours.');
                     document.getElementById('enterprise-form').reset();
                 } else {
-                    alert('Error submitting form. Please try again.');
+                    alert((data.error || 'Error submitting form. Please try again.'));
                 }
             })
             .catch(error => {

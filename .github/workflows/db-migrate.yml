@@ -15,6 +15,10 @@
 # The default file is schema_master.sql, which is idempotent (IF NOT EXISTS) —
 # the canonical way to converge production onto the full 200+-table schema.
 # Incremental files (workers/schema_v*.sql) can be applied the same way.
+# NOTE: schema_master.sql's own header documents a known gap (schema_v39
+# through schema_v48 not yet folded in, with the exact missing tables and
+# which of those files are safe to apply directly vs. need review) — read it
+# before assuming the default alone is a complete convergence.
 #
 # Manual-only by design: schema changes must never ride silently on a code push.
 # =============================================================================
