@@ -23,8 +23,24 @@ const MAX_EVENTS          = 500;
 const DEFAULT_ORG         = 'default';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+// Two stacked fixes, same shape as CAP-MSSP-005 (workers/src/handlers/
+// msspPanel.js, workers/test/msspPanelTenantIsolation.test.mjs):
+//  1. Was authCtx?.orgId (camelCase) — never populated anywhere in the auth
+//     layer. The real field is snake_case authCtx.org_id, which
+//     withAuthAliases (workers/src/auth/middleware.js) populates for every
+//     real authenticated caller (u:${userId} or partner:${partnerId}). The
+//     camelCase typo meant this always skipped straight past a real,
+//     already-available org_id.
+//  2. resolveAuthV5's anonymous IP-fallback tier is authenticated:true but
+//     intentionally has no org_id/userId (see docs/
+//     OPERATIONAL_RISK_REGISTER.md EH-02/EH-03 for the shape). Every such
+//     caller previously collapsed onto the single literal key
+//     'org_memory:events:default' — mixing recorded threat events/history
+//     across unrelated anonymous visitors. authCtx.identity (IP-derived,
+//     always populated) now isolates them from each other too, before
+//     falling back to the shared literal as the final resort.
 function getOrgId(authCtx) {
-  return authCtx?.orgId || authCtx?.userId || DEFAULT_ORG;
+  return authCtx?.userId || authCtx?.org_id || authCtx?.identity || DEFAULT_ORG;
 }
 
 async function loadEvents(env, orgId) {

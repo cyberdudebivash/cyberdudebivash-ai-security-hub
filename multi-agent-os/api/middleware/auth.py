@@ -8,6 +8,8 @@ from typing import Dict
 from fastapi import HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
+from config.settings import settings
+
 _bearer = HTTPBearer(auto_error=False)
 
 async def verify_token(request: Request, credentials: HTTPAuthorizationCredentials = None) -> Dict:
@@ -17,12 +19,15 @@ async def verify_token(request: Request, credentials: HTTPAuthorizationCredentia
     2. x-api-key header (direct API key)
     3. Admin key for internal tooling
     """
-    admin_key = os.environ.get("ADMIN_API_KEY", "cdb-macos-admin-2026")
+    # settings.ADMIN_API_KEY is None when ADMIN_API_KEY is unset — admin-key
+    # auth is then unreachable (submitted keys are never None), not silently
+    # granted via a known default.
+    admin_key = settings.ADMIN_API_KEY
 
     # Check x-api-key header
     api_key = request.headers.get("x-api-key") or request.headers.get("X-API-Key")
     if api_key:
-        if api_key == admin_key:
+        if admin_key and api_key == admin_key:
             return {"user_id": "admin", "tenant_id": "cdb-internal", "tier": "GLOBAL_ENTERPRISE"}
         # Validate against key store (Redis or DB)
         return await _validate_api_key(request, api_key)
@@ -31,7 +36,7 @@ async def verify_token(request: Request, credentials: HTTPAuthorizationCredentia
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
         token = auth_header[7:]
-        if token == admin_key:
+        if admin_key and token == admin_key:
             return {"user_id": "admin", "tenant_id": "cdb-internal", "tier": "GLOBAL_ENTERPRISE"}
         return await _validate_jwt(request, token)
 

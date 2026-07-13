@@ -24,7 +24,10 @@ class Settings:
     CF_API_TOKEN       = os.environ.get("CF_API_TOKEN", "")
 
     # Auth
-    ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY", "cdb-macos-admin-2026")
+    # No hardcoded default: a hardcoded admin key in an open-source repo is a
+    # published credential. None means "admin key auth disabled" (fail-closed)
+    # rather than falling back to a known value.
+    ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY") or None
     JWKS_URL      = os.environ.get("JWKS_URL", "")
 
     # CORS

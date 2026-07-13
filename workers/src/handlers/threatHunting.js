@@ -363,8 +363,16 @@ export async function handleRunHunt(request, env, authCtx) {
   let siemMessage = null;
   if (env?.SECURITY_HUB_KV) {
     try {
+      // Was authCtx?.orgId (camelCase) — never populated anywhere in the auth
+      // layer; the real field is snake_case authCtx.org_id (see
+      // workers/src/auth/middleware.js's withAuthAliases and workers/test/
+      // msspPanelTenantIsolation.test.mjs for the same class of bug in
+      // CAP-MSSP-005). authCtx?.identity (IP-derived for the anonymous
+      // fallback tier, always populated) comes before the shared 'default'
+      // literal so distinct anonymous callers don't read each other's
+      // siem_config off the same KV key.
       const siemCfg = await env.SECURITY_HUB_KV.get(
-        `siem_config:${authCtx?.orgId || authCtx?.userId || 'default'}:primary`,
+        `siem_config:${authCtx?.userId || authCtx?.org_id || authCtx?.identity || 'default'}:primary`,
         { type: 'json' }
       ).catch(() => null);
       if (siemCfg?.endpoint) {

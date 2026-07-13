@@ -44,8 +44,13 @@ async function verifySignature(payload, signature, secret) {
 
 // ─── Token Structure: <version>.<ip_hash>.<issued_at>.<nonce>.<hmac> ─────────
 
+// Fail closed: no public literal fallback. This repo is open-source, so a
+// hardcoded default secret is a known value to anyone reading the source —
+// JWT_SECRET is already a required, documented production secret (see
+// wrangler.toml / DEPLOY.md; auth/middleware.js has the same fail-closed
+// contract), so returning null here should never trigger in production.
 function getSecret(env) {
-  return env.JWT_SECRET || env.SCAN_TOKEN_SECRET || 'cdb-fallback-dev-secret-change-in-prod';
+  return env.JWT_SECRET || env.SCAN_TOKEN_SECRET || null;
 }
 
 function hashIP(ip) {
@@ -74,6 +79,14 @@ export async function issueScanToken(request, env) {
 
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
   if (request.method !== 'POST')    return new Response(null, { status: 405, headers: cors });
+
+  if (!getSecret(env)) {
+    console.error('[ScanToken] JWT_SECRET/SCAN_TOKEN_SECRET not configured — refusing to issue token');
+    return new Response(JSON.stringify({
+      error:   'scan_token_not_configured',
+      message: 'Scan token signing is not configured on this server.',
+    }), { status: 503, headers: cors });
+  }
 
   const ip = request.headers.get('CF-Connecting-IP') ||
              request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() || 'unknown';
@@ -122,6 +135,11 @@ export async function issueScanToken(request, env) {
  * @returns {Promise<{ valid: boolean, reason?: string, nonce?: string }>}
  */
 export async function verifyScanToken(request, env) {
+  if (!getSecret(env)) {
+    console.error('[ScanToken] JWT_SECRET/SCAN_TOKEN_SECRET not configured — refusing to verify token');
+    return { valid: false, reason: 'scan_token_not_configured' };
+  }
+
   const token = request.headers.get('X-Scan-Token') ||
                 new URL(request.url).searchParams.get('scan_token');
 
@@ -205,11 +223,12 @@ export function scanTokenError(reason) {
     ip_mismatch:                    'Token was issued to a different IP address.',
     token_already_used:             'This token has already been used. Each scan token is single-use.',
     token_already_used_or_expired:  'Token has already been consumed or expired.',
+    scan_token_not_configured:      'Scan token verification is not configured on this server.',
   };
   return Response.json({
     error:   'scan_token_invalid',
     reason,
     message: messages[reason] || 'Scan token validation failed.',
     hint:    'POST /api/scan/token to obtain a fresh token, then include it as: X-Scan-Token: <token>',
-  }, { status: 403 });
+  }, { status: reason === 'scan_token_not_configured' ? 503 : 403 });
 }

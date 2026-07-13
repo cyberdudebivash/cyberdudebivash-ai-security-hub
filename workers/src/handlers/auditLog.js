@@ -101,8 +101,21 @@ export async function handleGetAuditLog(request, env, authCtx) {
           // (uppercase) — never populated anywhere in the auth layer, so this
           // bypass never fired for real admins either. isAdmin is the actual
           // owner-bypass signal.
-          if (authCtx.isAdmin !== true && authCtx.tier !== 'ENTERPRISE') {
-            if (entry.actor !== authCtx.identity && entry.org_id !== authCtx.orgId) continue;
+          //
+          // P0 FIX: `|| authCtx.tier !== 'ENTERPRISE'` used to also bypass this
+          // filter for every ENTERPRISE-tier caller (not just admins) — any
+          // paying Enterprise customer could read every other tenant's audit
+          // trail (actors, resources, IPs, actions) for any date, platform-
+          // wide. org_id-matching already gives a caller their whole
+          // organization's events (not just their own), so ENTERPRISE tier
+          // needed no separate bypass — removed it entirely; isAdmin is the
+          // only legitimate cross-tenant bypass. Also fixed authCtx.orgId
+          // (camelCase, never populated by the auth layer — see
+          // workers/src/auth/middleware.js's withAuthAliases and
+          // workers/test/msspPanelTenantIsolation.test.mjs for the same class
+          // of bug/fix) to the real field, authCtx.org_id.
+          if (authCtx.isAdmin !== true) {
+            if (entry.actor !== authCtx.identity && entry.org_id !== authCtx.org_id) continue;
           }
           entries.push(entry);
         } catch {}
@@ -163,7 +176,9 @@ export async function handleWriteAuditEvent(request, env, authCtx) {
     action:     sanitizeString(action   || '', 200),
     outcome:    outcome || 'unknown',
     details:    typeof details === 'object' ? details : {},
-    org_id:     authCtx.orgId || null,
+    // authCtx.orgId (camelCase) is never populated anywhere in the auth
+    // layer — the real field is snake_case authCtx.org_id.
+    org_id:     authCtx.org_id || null,
   });
 
   return Response.json({ success: true, message: 'Audit event recorded' }, { status: 201 });
@@ -186,15 +201,25 @@ export async function handleAuditExport(request, env, authCtx) {
     return Response.json({ error: 'date must be YYYY-MM-DD format' }, { status: 400 });
   }
 
+  // P0 FIX: this export had NO tenant filtering at all — every ENTERPRISE
+  // caller (the only tier that can reach this endpoint) received every
+  // tenant's audit entries for the requested date, platform-wide. Only
+  // authCtx.isAdmin bypasses; every other caller is scoped to their own
+  // actor identity or organization, matching handleGetAuditLog's filter.
   const entries = [];
   if (env.SECURITY_HUB_KV) {
     try {
       const list = await env.SECURITY_HUB_KV.list({ prefix: `audit:${date}:` });
       for (const key of (list.keys || [])) {
         const raw = await env.SECURITY_HUB_KV.get(key.name);
-        if (raw) {
-          try { entries.push(JSON.parse(raw)); } catch {}
-        }
+        if (!raw) continue;
+        try {
+          const entry = JSON.parse(raw);
+          if (authCtx.isAdmin !== true) {
+            if (entry.actor !== authCtx.identity && entry.org_id !== authCtx.org_id) continue;
+          }
+          entries.push(entry);
+        } catch {}
       }
     } catch {}
   }

@@ -139,7 +139,11 @@ describe('correlateThretActors — no fabricated active_campaigns', () => {
 
 // ── (2) getRiskTrendPanel (via handleCEOView) ──────────────────────────────────
 describe('CEO view risk trend — honest insufficient-data instead of a fabricated curve', () => {
-  const enterpriseCtx = { tier: 'ENTERPRISE', orgId: 'org1' };
+  // org_id (snake_case) is the real field withAuthAliases populates —
+  // camelCase orgId is never set anywhere in the auth layer (see
+  // executiveReport.js's getOrgId and workers/test/
+  // msspPanelTenantIsolation.test.mjs for the same class of bug/fix).
+  const enterpriseCtx = { tier: 'ENTERPRISE', org_id: 'org1' };
 
   it('reports INSUFFICIENT_DATA (not a fake Math.sin() curve) when no real snapshots exist', async () => {
     const env = { SECURITY_HUB_KV: makeKV() };
