@@ -51,7 +51,7 @@
 <g:price>6999.00 INR</g:price>
 <g:condition>new</g:condition>
 <g:brand>CYBERDUDEBIVASH</g:brand>
-<g:identifier_exists>no</g:identifier_exists>
+<g:mpn>soc2</g:mpn>
 <g:product_type>Compliance Packs &gt; SOC 2</g:product_type>
 <g:google_product_category>Software</g:google_product_category>
 </item>
@@ -66,7 +66,7 @@
 <g:price>5999.00 INR</g:price>
 <g:condition>new</g:condition>
 <g:brand>CYBERDUDEBIVASH</g:brand>
-<g:identifier_exists>no</g:identifier_exists>
+<g:mpn>gdpr</g:mpn>
 <g:product_type>Compliance Packs &gt; GDPR</g:product_type>
 <g:google_product_category>Software</g:google_product_category>
 </item>
@@ -81,7 +81,7 @@
 <g:price>7499.00 INR</g:price>
 <g:condition>new</g:condition>
 <g:brand>CYBERDUDEBIVASH</g:brand>
-<g:identifier_exists>no</g:identifier_exists>
+<g:mpn>hipaa</g:mpn>
 <g:product_type>Compliance Packs &gt; HIPAA</g:product_type>
 <g:google_product_category>Software</g:google_product_category>
 </item>
@@ -96,7 +96,7 @@
 <g:price>5499.00 INR</g:price>
 <g:condition>new</g:condition>
 <g:brand>CYBERDUDEBIVASH</g:brand>
-<g:identifier_exists>no</g:identifier_exists>
+<g:mpn>pci_dss</g:mpn>
 <g:product_type>Compliance Packs &gt; PCI DSS</g:product_type>
 <g:google_product_category>Software</g:google_product_category>
 </item>
@@ -107,14 +107,14 @@
 <item>
 <g:id>dp-ransomware-2025</g:id>
 <title><![CDATA[Ransomware Detection Pack 2025]]></title>
-<description><![CDATA[847 Sigma detection rules covering LockBit, BlackCat, Cl0p, Akira, Play, and Medusa TTPs, mapped to MITRE ATT&CK. SIEM-ready exports for Splunk, Elastic, Chronicle, and Microsoft Sentinel. Instant delivery.]]></description>
+<description><![CDATA[847 Sigma detection rules covering LockBit, BlackCat, Cl0p, Akira, Play, and Medusa TTPs, mapped to MITRE ATT&CK. SIEM-ready exports for Splunk, Elastic, Chronicle, and Microsoft Sentinel. Delivered within 24 hours.]]></description>
 <link>https://cyberdudebivash.in/marketplace-checkout.html?product=dp-ransomware-2025</link>
 <g:image_link>https://cyberdudebivash.in/og-image-v3.png</g:image_link>
 <g:availability>in_stock</g:availability>
 <g:price>2999.00 INR</g:price>
 <g:condition>new</g:condition>
 <g:brand>CYBERDUDEBIVASH</g:brand>
-<g:identifier_exists>no</g:identifier_exists>
+<g:mpn>dp-ransomware-2025</g:mpn>
 <g:product_type>Detection Packs &gt; Ransomware</g:product_type>
 <g:google_product_category>Software</g:google_product_category>
 </item>
@@ -122,14 +122,14 @@
 <item>
 <g:id>dp-apt-north-korea</g:id>
 <title><![CDATA[APT Lazarus & North Korea Detection Pack]]></title>
-<description><![CDATA[312 detection rules for Lazarus Group, Kimsuky, and Andariel — covering cryptocurrency theft, supply-chain attacks, and espionage TTPs attributed to DPRK threat actors. CISA advisory-aligned, updated quarterly. Instant delivery.]]></description>
+<description><![CDATA[312 detection rules for Lazarus Group, Kimsuky, and Andariel — covering cryptocurrency theft, supply-chain attacks, and espionage TTPs attributed to DPRK threat actors. CISA advisory-aligned, updated quarterly. Delivered within 24 hours.]]></description>
 <link>https://cyberdudebivash.in/marketplace-checkout.html?product=dp-apt-north-korea</link>
 <g:image_link>https://cyberdudebivash.in/og-image-v3.png</g:image_link>
 <g:availability>in_stock</g:availability>
 <g:price>4999.00 INR</g:price>
 <g:condition>new</g:condition>
 <g:brand>CYBERDUDEBIVASH</g:brand>
-<g:identifier_exists>no</g:identifier_exists>
+<g:mpn>dp-apt-north-korea</g:mpn>
 <g:product_type>Detection Packs &gt; APT</g:product_type>
 <g:google_product_category>Software</g:google_product_category>
 </item>
@@ -137,14 +137,14 @@
 <item>
 <g:id>dp-ai-threats-2025</g:id>
 <title><![CDATA[AI & LLM Threat Detection Pack]]></title>
-<description><![CDATA[OWASP LLM Top 10 detection rules for prompt injection indicators, shadow AI deployment detection, and LLM data exfiltration patterns. MITRE ATLAS-mapped. Instant delivery in Sigma/JSON/YARA formats.]]></description>
+<description><![CDATA[OWASP LLM Top 10 detection rules for prompt injection indicators, shadow AI deployment detection, and LLM data exfiltration patterns. MITRE ATLAS-mapped. Delivered within 24 hours in Sigma/JSON/YARA formats.]]></description>
 <link>https://cyberdudebivash.in/marketplace-checkout.html?product=dp-ai-threats-2025</link>
 <g:image_link>https://cyberdudebivash.in/og-image-v3.png</g:image_link>
 <g:availability>in_stock</g:availability>
 <g:price>3999.00 INR</g:price>
 <g:condition>new</g:condition>
 <g:brand>CYBERDUDEBIVASH</g:brand>
-<g:identifier_exists>no</g:identifier_exists>
+<g:mpn>dp-ai-threats-2025</g:mpn>
 <g:product_type>Detection Packs &gt; AI Security</g:product_type>
 <g:google_product_category>Software</g:google_product_category>
 </item>
@@ -152,14 +152,14 @@
 <item>
 <g:id>dp-cloud-misconfig</g:id>
 <title><![CDATA[Cloud Misconfiguration Detection Pack]]></title>
-<description><![CDATA[634 rules for AWS, Azure, and GCP covering IAM privilege escalation, exposed storage, insecure serverless functions, and lateral movement via cloud services. CIS Benchmark-aligned. Instant delivery.]]></description>
+<description><![CDATA[634 rules for AWS, Azure, and GCP covering IAM privilege escalation, exposed storage, insecure serverless functions, and lateral movement via cloud services. CIS Benchmark-aligned. Delivered within 24 hours.]]></description>
 <link>https://cyberdudebivash.in/marketplace-checkout.html?product=dp-cloud-misconfig</link>
 <g:image_link>https://cyberdudebivash.in/og-image-v3.png</g:image_link>
 <g:availability>in_stock</g:availability>
 <g:price>3499.00 INR</g:price>
 <g:condition>new</g:condition>
 <g:brand>CYBERDUDEBIVASH</g:brand>
-<g:identifier_exists>no</g:identifier_exists>
+<g:mpn>dp-cloud-misconfig</g:mpn>
 <g:product_type>Detection Packs &gt; Cloud Security</g:product_type>
 <g:google_product_category>Software</g:google_product_category>
 </item>
@@ -167,14 +167,14 @@
 <item>
 <g:id>pb-ai-governance</g:id>
 <title><![CDATA[AI Governance & Risk Management Playbook]]></title>
-<description><![CDATA[Board-ready AI governance framework aligned to NIST AI RMF, EU AI Act compliance requirements, and ISO/IEC 42001 — policy templates, risk registers, and audit checklists for CISOs. Instant delivery.]]></description>
+<description><![CDATA[Board-ready AI governance framework aligned to NIST AI RMF, EU AI Act compliance requirements, and ISO/IEC 42001 — policy templates, risk registers, and audit checklists for CISOs. Delivered within 24 hours.]]></description>
 <link>https://cyberdudebivash.in/marketplace-checkout.html?product=pb-ai-governance</link>
 <g:image_link>https://cyberdudebivash.in/og-image-v3.png</g:image_link>
 <g:availability>in_stock</g:availability>
 <g:price>1499.00 INR</g:price>
 <g:condition>new</g:condition>
 <g:brand>CYBERDUDEBIVASH</g:brand>
-<g:identifier_exists>no</g:identifier_exists>
+<g:mpn>pb-ai-governance</g:mpn>
 <g:product_type>Security Playbooks &gt; AI Governance</g:product_type>
 <g:google_product_category>Software</g:google_product_category>
 </item>
@@ -189,7 +189,7 @@
 <g:price>1999.00 INR</g:price>
 <g:condition>new</g:condition>
 <g:brand>CYBERDUDEBIVASH</g:brand>
-<g:identifier_exists>no</g:identifier_exists>
+<g:mpn>ir-q2-2025-threat</g:mpn>
 <g:product_type>Intelligence Reports</g:product_type>
 <g:google_product_category>Software</g:google_product_category>
 </item>
@@ -204,7 +204,7 @@
 <g:price>999.00 INR</g:price>
 <g:condition>new</g:condition>
 <g:brand>CYBERDUDEBIVASH</g:brand>
-<g:identifier_exists>no</g:identifier_exists>
+<g:mpn>ir-owasp-llm-2025</g:mpn>
 <g:product_type>Intelligence Reports &gt; AI Security</g:product_type>
 <g:google_product_category>Software</g:google_product_category>
 </item>
@@ -219,7 +219,7 @@
 <g:price>9999.00 INR</g:price>
 <g:condition>new</g:condition>
 <g:brand>CYBERDUDEBIVASH</g:brand>
-<g:identifier_exists>no</g:identifier_exists>
+<g:mpn>aa-threat-hunter</g:mpn>
 <g:product_type>AI Security Agents</g:product_type>
 <g:google_product_category>Software</g:google_product_category>
 </item>
@@ -234,7 +234,7 @@
 <g:price>2999.00 INR</g:price>
 <g:condition>new</g:condition>
 <g:brand>CYBERDUDEBIVASH</g:brand>
-<g:identifier_exists>no</g:identifier_exists>
+<g:mpn>aa-soc-copilot-7d</g:mpn>
 <g:product_type>AI Security Agents</g:product_type>
 <g:google_product_category>Software</g:google_product_category>
 </item>
@@ -251,7 +251,7 @@
 <g:price>499.00 INR</g:price>
 <g:condition>new</g:condition>
 <g:brand>CYBERDUDEBIVASH</g:brand>
-<g:identifier_exists>no</g:identifier_exists>
+<g:mpn>ai_security_toolkit</g:mpn>
 <g:product_type>Security Toolkits &gt; AI Security</g:product_type>
 <g:google_product_category>Software</g:google_product_category>
 </item>
@@ -266,7 +266,7 @@
 <g:price>1499.00 INR</g:price>
 <g:condition>new</g:condition>
 <g:brand>CYBERDUDEBIVASH</g:brand>
-<g:identifier_exists>no</g:identifier_exists>
+<g:mpn>red_team_playbook</g:mpn>
 <g:product_type>Security Playbooks &gt; Red Team</g:product_type>
 <g:google_product_category>Software</g:google_product_category>
 </item>
@@ -281,7 +281,7 @@
 <g:price>799.00 INR</g:price>
 <g:condition>new</g:condition>
 <g:brand>CYBERDUDEBIVASH</g:brand>
-<g:identifier_exists>no</g:identifier_exists>
+<g:mpn>zero_trust_blueprint</g:mpn>
 <g:product_type>Security Toolkits &gt; Zero Trust</g:product_type>
 <g:google_product_category>Software</g:google_product_category>
 </item>
@@ -296,7 +296,7 @@
 <g:price>499.00 INR</g:price>
 <g:condition>new</g:condition>
 <g:brand>CYBERDUDEBIVASH</g:brand>
-<g:identifier_exists>no</g:identifier_exists>
+<g:mpn>domain_security_checklist</g:mpn>
 <g:product_type>Security Toolkits &gt; Domain Security</g:product_type>
 <g:google_product_category>Software</g:google_product_category>
 </item>
@@ -311,7 +311,7 @@
 <g:price>1299.00 INR</g:price>
 <g:condition>new</g:condition>
 <g:brand>CYBERDUDEBIVASH</g:brand>
-<g:identifier_exists>no</g:identifier_exists>
+<g:mpn>ai_governance_toolkit</g:mpn>
 <g:product_type>Security Toolkits &gt; AI Governance</g:product_type>
 <g:google_product_category>Software</g:google_product_category>
 </item>
@@ -326,7 +326,7 @@
 <g:price>1799.00 INR</g:price>
 <g:condition>new</g:condition>
 <g:brand>CYBERDUDEBIVASH</g:brand>
-<g:identifier_exists>no</g:identifier_exists>
+<g:mpn>soc_analyst_runbook</g:mpn>
 <g:product_type>Security Playbooks &gt; SOC Operations</g:product_type>
 <g:google_product_category>Software</g:google_product_category>
 </item>

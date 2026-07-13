@@ -87,6 +87,8 @@ jobs:
         with: { node-version: "24" }
       - name: Public-page structure lock (head/OG/JSON-LD placement)
         run: node scripts/seo-structure-lock.mjs
+      - name: Merchant Center feed price/drift lock
+        run: node scripts/merchant-feed-price-lock.mjs
       - name: CVE meta integrity (no truncated/missing/inconsistent tags)
         run: node scripts/repair-cve-meta.mjs --check
 
