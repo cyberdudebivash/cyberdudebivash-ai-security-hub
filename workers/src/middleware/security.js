@@ -208,7 +208,10 @@ export function sanitizeString(str, maxLen = 500) {
 
 // ─── Domain / Target Validation ───────────────────────────────────────────────
 const DOMAIN_RE = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$/;
-const PRIVATE_IP_RE = /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|::1|fc|fd)/i;
+// 169.254.0.0/16 and fe80::/10 are link-local — includes the cloud-provider
+// metadata endpoint (169.254.169.254) that's the single most common SSRF
+// exfiltration target, and was missing from this list entirely.
+const PRIVATE_IP_RE = /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|169\.254\.|::1|fe80|fc|fd)/i;
 
 export function validateDomain(domain) {
   if (!domain || typeof domain !== 'string') return { valid: false, reason: 'empty' };
