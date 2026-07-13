@@ -24,7 +24,7 @@ kombu==5.3.7
 
 # ── Database ─────────────────────────────────────────────────
 sqlalchemy==2.0.51
-alembic==1.13.3
+alembic==1.18.5
 
 # ── Auth / Security ───────────────────────────────────────────
 python-jose[cryptography]==3.3.0
@@ -34,7 +34,7 @@ cryptography==49.0.0
 
 # ── Validation ───────────────────────────────────────────────
 pydantic==2.9.2
-pydantic-settings==2.5.2
+pydantic-settings==2.14.2
 email-validator==2.2.0
 
 # ── Config ───────────────────────────────────────────────────

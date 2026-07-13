@@ -220,8 +220,21 @@ describe('user-dashboard.html — API Explorer tab (CAP-TIH-002)', () => {
     expect(refreshFn).toContain('data.data?.ingestion');
   });
 
-  it('the existing Threat Intel API and Intelligence Preview tabs are untouched', () => {
+  it('the existing Threat Intel API tab nav wiring is untouched', () => {
     expect(dash).toContain(`data-page="intel-api" onclick="showPage('intel-api',this);loadIntelAPIStatus()"`);
-    expect(dash).toContain(`data-page="intel-preview" onclick="showPage('intel-preview',this);intelPreviewFeatured()"`);
+  });
+
+  // CAP-NOTIF-001/CAP-TIH-004 pass (2026-07-13): intelPreviewFeatured() moved off
+  // this onclick and into showPage()'s id-dispatch block, alongside the equivalent
+  // fix for the new Global Intel Graph tab — a deep link (?tab=intel-preview) calls
+  // showPage() directly and never runs a nav item's onclick, so the auto-load has
+  // to live in showPage() to fire on every path that shows the page.
+  it('Intelligence Preview auto-loads from showPage(), not a nav-item onclick side-call', () => {
+    expect(dash).toContain(`data-page="intel-preview" onclick="showPage('intel-preview',this)"`);
+    expect(dash).not.toContain(`intel-preview',this);intelPreviewFeatured()`);
+    const showPageStart = dash.indexOf('function showPage(id, el)');
+    const showPageFn = dash.slice(showPageStart, dash.indexOf('\n  }', showPageStart) + 4);
+    expect(showPageFn).toContain(`id === 'intel-preview'`);
+    expect(showPageFn).toContain('intelPreviewFeatured()');
   });
 });

@@ -154,7 +154,19 @@ describe('CAP-TIH-014 — intelligencePreview.js backend still returns real, hon
 
 describe('user-dashboard.html — Intelligence Preview tab (CAP-TIH-014)', () => {
   it('has a real nav-item', () => {
-    expect(dash).toContain(`data-page="intel-preview" onclick="showPage('intel-preview',this);intelPreviewFeatured()"`);
+    expect(dash).toContain(`data-page="intel-preview" onclick="showPage('intel-preview',this)"`);
+  });
+
+  // 2026-07-13: intelPreviewFeatured() moved off the nav-item onclick and into
+  // showPage()'s id-dispatch block — a deep link (?tab=intel-preview) calls
+  // showPage() directly and never runs the nav item's onclick, so a browser
+  // click-through pass (done while wiring the sibling Global Intel Graph tab)
+  // caught the featured-intel card never loading on that path.
+  it('auto-loads featured intel from showPage(), not a nav-item onclick side-call', () => {
+    const showPageStart = dash.indexOf('function showPage(id, el)');
+    const showPageFn = dash.slice(showPageStart, dash.indexOf('\n  }', showPageStart) + 4);
+    expect(showPageFn).toContain(`id === 'intel-preview'`);
+    expect(showPageFn).toContain('intelPreviewFeatured()');
   });
 
   it('has a real page section with all 8 preview tools', () => {
@@ -189,5 +201,130 @@ describe('user-dashboard.html — Intelligence Preview tab (CAP-TIH-014)', () =>
   it('the Threat Intel API and DPDP tabs are untouched', () => {
     expect(dash).toContain(`data-page="intel-api" onclick="showPage('intel-api',this);loadIntelAPIStatus()"`);
     expect(dash).toContain(`data-page="dpdp" onclick="showPage('dpdp',this);loadDPDPOverview()"`);
+  });
+});
+
+// ─── CAP-TIH-014 follow-up: the data-fabrication issue deliberately deferred
+// above (owner note: "genuinely fabricates substantive content and presents
+// it as real intelligence") is now fixed. Four instances, closed here:
+//   1. handleFeaturedIntelligence's defaultFeatured fallback (fake Cisco
+//      "FIRESTARTER backdoor" headline + fabricated "surge 340%/180%" stats)
+//   2. handlePreviewCatalog's invented total_previewable (+46 padding) and
+//      hardcoded per-category counts (85/30/8/74/3)
+//   3. handleIOCSample's hardcoded "784 additional IOCs locked" message
+//   4. handleCVEPreview / handleMalwarePreview's templated placeholder IOCs
+//      and generic MZ-header YARA stub served to PREMIUM (paying) users when
+//      the real DB has no match
+function mockDbWithData(opts = {}) {
+  const { featuredRows = [], catalogRows = [], cveCount = 0, actorCount = 0, iocCount = 0 } = opts;
+  return {
+    DB: {
+      prepare(sql) {
+        const stmt = {
+          _sql: sql,
+          bind(...args) { stmt._args = args; return stmt; },
+          async first() { return null; },
+          async all() {
+            if (/severity IN \('CRITICAL','HIGH'\)/.test(sql)) return { results: featuredRows };
+            if (/FROM threat_intel_cache WHERE expires_at > datetime\('now'\) ORDER BY severity DESC/.test(sql)) return { results: catalogRows };
+            return { results: [] };
+          },
+        };
+        return stmt;
+      },
+      async batch(stmts) {
+        return stmts.map((s) => {
+          const sql = s._sql || '';
+          if (/COUNT\(\*\) AS c FROM threat_intel_cache/.test(sql)) return { results: [{ c: cveCount }] };
+          if (/COUNT\(\*\) AS c FROM cti_actors/.test(sql)) return { results: [{ c: actorCount }] };
+          if (/COUNT\(\*\) AS c FROM cti_iocs/.test(sql)) return { results: [{ c: iocCount }] };
+          return { results: [] };
+        });
+      },
+    },
+    KV: { get: async () => null, put: async () => {} },
+  };
+}
+
+describe('CAP-TIH-014 follow-up — fabricated content removed, real/honest data only', () => {
+  it('source file no longer contains any of the documented fabricated strings', () => {
+    expect(backendSrc).not.toMatch(/FIRESTARTER/);
+    expect(backendSrc).not.toMatch(/surge 340|surge 180/);
+    expect(backendSrc).not.toMatch(/784 additional/);
+    expect(backendSrc).not.toMatch(/10\.xx\.xx\.xx|c2\.\[REDACTED\]/);
+    expect(backendSrc).not.toMatch(/MZ header/);
+    expect(backendSrc).not.toMatch(/previewCards\.length \+ 46/);
+  });
+
+  it('featured intelligence: empty DB produces an honest empty state, not fake headlines', async () => {
+    const res = await handleIntelligencePreview(req('https://x/api/preview/featured'), fakeEnv(), { tier: 'PRO', userId: 'u1' });
+    const data = await res.json();
+    expect(data.items).toEqual([]);
+    expect(data.total_active_threats).toBe(0);
+    expect(data.critical_count).toBe(0);
+    expect(data.note).toMatch(/no fabricated headlines shown/i);
+  });
+
+  it('featured intelligence: real DB rows drive real counts, not hardcoded 85/40', async () => {
+    const env = mockDbWithData({
+      featuredRows: [
+        { id: 'a', title: 'CVE-2025-1111', severity: 'CRITICAL', source: 'CISA KEV', created_at: '2026-07-01' },
+        { id: 'b', title: 'Some HIGH threat', severity: 'HIGH', source: 'SENTINEL APEX', created_at: '2026-07-02' },
+      ],
+    });
+    const res = await handleIntelligencePreview(req('https://x/api/preview/featured'), env, { tier: 'PRO', userId: 'u1' });
+    const data = await res.json();
+    expect(data.items.length).toBe(2);
+    expect(data.total_active_threats).toBe(2);
+    expect(data.critical_count).toBe(1);
+    expect(data.note).toBeUndefined();
+  });
+
+  it('catalog: total_previewable matches real item count, no +46 padding', async () => {
+    const res = await handleIntelligencePreview(req('https://x/api/preview/catalog'), fakeEnv(), { tier: 'PRO', userId: 'u1' });
+    const data = await res.json();
+    expect(data.total_previewable).toBe(data.items.length);
+  });
+
+  it('catalog: category counts reflect real queries, not hardcoded 85/30/74', async () => {
+    const env = mockDbWithData({ cveCount: 12, actorCount: 19, iocCount: 203 });
+    const res = await handleIntelligencePreview(req('https://x/api/preview/catalog'), env, { tier: 'PRO', userId: 'u1' });
+    const data = await res.json();
+    expect(data.categories.cve.count).toBe(12);
+    expect(data.categories.threat_actors.count).toBe(19);
+    expect(data.categories.ioc_feeds.count).toBe(203);
+  });
+
+  it('catalog: malware_families/reports counts derive from the real static catalogs (8 and 3), never an unrelated number', async () => {
+    const res = await handleIntelligencePreview(req('https://x/api/preview/catalog'), fakeEnv(), { tier: 'PRO', userId: 'u1' });
+    const data = await res.json();
+    expect(data.categories.malware_families.count).toBe(8);
+    expect(data.categories.reports.count).toBe(3);
+  });
+
+  it('IOC sample: locked-count message matches real totalAvailable minus returned, not hardcoded 784', async () => {
+    const env = mockDbWithData();
+    env.DB.batch = async (stmts) => {
+      // handleIOCSample batches [list, count] against cti_iocs
+      return [{ results: [] }, { results: [{ c: 25 }] }];
+    };
+    const res = await handleIntelligencePreview(req('https://x/api/preview/ioc-sample'), env, { tier: 'FREE', userId: 'u1' });
+    const data = await res.json();
+    expect(data.upgrade.message).toContain('25 additional IOCs locked');
+    expect(data.upgrade.message).not.toContain('784');
+  });
+
+  it('CVE preview: PREMIUM caller gets an honest empty IOC list (not placeholder IOCs) when the DB has no match', async () => {
+    const res = await handleIntelligencePreview(req('https://x/api/preview/cve/CVE-2024-1234'), fakeEnv(), { tier: 'PRO', userId: 'u1' });
+    const data = await res.json();
+    expect(data.full_ioc_list).toEqual([]);
+    expect(data.full_ioc_list_note).toMatch(/no fabricated IOCs shown/i);
+  });
+
+  it('malware preview: PREMIUM caller gets an honest note (not a generic YARA stub) when no signatures are on file', async () => {
+    const res = await handleIntelligencePreview(req('https://x/api/preview/malware/lockbit'), fakeEnv(), { tier: 'PRO', userId: 'u1' });
+    const data = await res.json();
+    expect(data.full_yara_library.sample_rule).toBeUndefined();
+    expect(data.full_yara_library.note).toMatch(/no fabricated rule shown/i);
   });
 });

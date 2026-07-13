@@ -698,12 +698,19 @@ export async function handleAgentDispatch(request, env, authCtx, agentId) {
 
 // ─── GET /api/agents/status ───────────────────────────────────────────────────
 export async function handleAgentsStatus(request, env, authCtx) {
+  // Must track every provider aiProviderRouter.js actually routes through
+  // (workers/src/core/aiProviderRouter.js's PROVIDERS/PROVIDER_CONFIG) — this
+  // previously checked only 4 of 6, silently undercounting Together AI and
+  // Anthropic even though both are genuinely called via real HTTP requests.
   const providers = {
     groq:          !!env?.GROQ_API_KEY,
     deepseek:      !!env?.DEEPSEEK_API_KEY,
+    together:      !!env?.TOGETHER_API_KEY,
     openrouter:    !!env?.OPENROUTER_API_KEY,
+    anthropic:     !!env?.ANTHROPIC_API_KEY,
     cf_workers_ai: !!env?.AI,
   };
+  const totalCount   = Object.keys(providers).length;
   const anyProvider  = Object.values(providers).some(Boolean);
   const activeCount  = Object.values(providers).filter(Boolean).length;
 
@@ -714,7 +721,7 @@ export async function handleAgentsStatus(request, env, authCtx) {
     status:     anyProvider ? 'OPERATIONAL' : 'NO_PROVIDER_CONFIGURED',
     ai_providers: providers,
     provider_note: anyProvider
-      ? `${activeCount}/4 provider${activeCount !== 1 ? 's' : ''} active: ${Object.entries(providers).filter(([,v])=>v).map(([k])=>k).join(', ')}`
+      ? `${activeCount}/${totalCount} provider${activeCount !== 1 ? 's' : ''} active: ${Object.entries(providers).filter(([,v])=>v).map(([k])=>k).join(', ')}`
       : 'Set GROQ_API_KEY, DEEPSEEK_API_KEY, or OPENROUTER_API_KEY as Wrangler secrets. CF Workers AI is always available as fallback.',
     total_agents:  AGENT_IDS.length,
     rate_limits: {

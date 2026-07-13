@@ -92,6 +92,31 @@ export function addMonetizationFlags(result, module, authCtx = {}, scanId = '', 
   const { free, locked } = lockFindings(result.findings, cfg.free_findings);
   const payUrl = buildPaymentUrl(module, scanId, leadEmail);
 
+  // v40 MYTHOS enrichment (merged into `result` by the calling handler before
+  // addMonetizationFlags runs — see domain.js/ai.js/redteam.js/identity.js/
+  // compliance.js) carries real premium value: an AI executive narrative,
+  // attack-path prediction, MITRE mapping, and an autonomous remediation
+  // plan. Previously this spread through `...result` untouched regardless of
+  // tier, so the full block shipped in the plain JSON response to every
+  // FREE-tier and unauthenticated caller — discoverable via the network tab
+  // even though the UI only ever rendered it when unlocked. Truncated here
+  // the same way mythosRevenueEngine.js's own (separate) paywall-aware
+  // routes already lock it for their callers, independent of whether this
+  // particular scan happened to have enough findings to lock any of them.
+  let mythosPreview = result.mythos_intelligence;
+  if (mythosPreview) {
+    mythosPreview = {
+      engine:            mythosPreview.engine,
+      version:            mythosPreview.version,
+      mythos_confidence: mythosPreview.mythos_confidence,
+      cyber_brain: mythosPreview.cyber_brain
+        ? { risk_score: mythosPreview.cyber_brain.risk_score, risk_level: mythosPreview.cyber_brain.risk_level }
+        : undefined,
+      _paywall_locked: true,
+      _paywall_notice: 'Full AI executive brief, attack-path prediction, MITRE ATT&CK mapping and autonomous remediation plan unlock with the full report.',
+    };
+  }
+
   return {
     ...result,
     findings: free,
@@ -101,6 +126,7 @@ export function addMonetizationFlags(result, module, authCtx = {}, scanId = '', 
     unlock_required: locked.length > 0,
     tier: 'FREE',
     access_level: 'preview',
+    ...(mythosPreview ? { mythos_intelligence: mythosPreview } : {}),
     monetization: {
       unlock_price: cfg.price,
       unlock_price_usd: cfg.usd,
