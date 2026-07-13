@@ -652,7 +652,7 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:36px
     </div>
 
     <div class="tab-content active" id="tab-curl">
-      <div class="code-block"><span class="comment"># MCP Security Scan API — server_url or config accepted; x-api-key required for Pro+ full reports</span>
+      <div class="code-block"><span class="comment"># MCP Security Scan API — server_url or config accepted; x-api-key optional (used only for scan history)</span>
 curl -X POST https://cyberdudebivash.in/api/mcp-security/scan \
   -H <span class="string">"Content-Type: application/json"</span> \
   -H <span class="string">"x-api-key: $YOUR_API_KEY"</span> \
@@ -679,7 +679,7 @@ response = requests.post(
 )
 result = response.json()
 <span class="key">print</span>(f<span class="string">"Risk Score: {result['risk_score']}/100 ({result['risk_level']})"</span>)
-<span class="key">print</span>(f<span class="string">"Free findings: {len(result['free_findings'])}"</span>)</div>
+<span class="key">print</span>(f<span class="string">"Free findings: {len(result['findings'])}"</span>)</div>
     </div>
 
     <div class="tab-content" id="tab-js">
@@ -696,8 +696,8 @@ result = response.json()
   })
 });
 
-<span class="key">const</span> { risk_score, risk_level, free_findings } = <span class="key">await</span> scan.json();
-console.log(<span class="string">`Risk: ${risk_score}/100 (${risk_level}) · ${free_findings.length} findings`</span>);</div>
+<span class="key">const</span> { risk_score, risk_level, findings } = <span class="key">await</span> scan.json();
+console.log(<span class="string">`Risk: ${risk_score}/100 (${risk_level}) · ${findings.length} findings`</span>);</div>
     </div>
 
     <p style="font-size:12px;color:var(--text-dim);margin-top:16px">Free preview scans need no key. Full reports (all 10 vulnerability classes, remediation guidance) require <a href="/upgrade">Pro plan (₹1,499/mo)</a> or higher, or the one-time ₹999 report. <a href="/api-docs">Full API documentation →</a></p>

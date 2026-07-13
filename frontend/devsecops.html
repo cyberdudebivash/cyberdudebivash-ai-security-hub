@@ -180,7 +180,9 @@ async function devsecopsTryAIBOM() {
       <div style="margin-top:8px">AI risk level: <strong style="color:${riskColor}">${ae(data.ai_risk_level)}</strong> (score ${data.ai_risk_score}/100)</div>
       ${cveLines ? `<div style="margin-top:10px;color:#fca5a5">${cveLines}</div>` : ''}
       ${advisoryLines ? `<div style="margin-top:10px;color:#94a3b8">${advisoryLines}</div>` : ''}
-      ${!cveLines && !advisoryLines && data.ai_component_count > 0 ? '<div style="margin-top:10px;color:#86efac">✅ No known CVEs or framework advisories found for detected AI/ML components.</div>' : ''}
+      ${!cveLines && !advisoryLines && data.ai_component_count > 0 && data.osv_lookup_available && data.advisory_lookup_available ? '<div style="margin-top:10px;color:#86efac">✅ No known CVEs or framework advisories found for detected AI/ML components.</div>' : ''}
+      ${data.ai_component_count > 0 && !data.osv_lookup_available ? '<div style="margin-top:10px;color:#fdba74">⚠️ Live CVE lookup was unavailable for this scan — results may be incomplete.</div>' : ''}
+      ${data.ai_component_count > 0 && !data.advisory_lookup_available ? '<div style="margin-top:10px;color:#fdba74">⚠️ Framework advisory cross-reference was unavailable for this scan — results may be incomplete.</div>' : ''}
     </div>`;
   } catch (e) {
     result.textContent = 'Scan failed: ' + e.message;
