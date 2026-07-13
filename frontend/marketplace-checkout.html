@@ -233,7 +233,7 @@ function renderProduct() {
     <div class="product-header">
       <span class="category-tag" style="background:rgba(${hexToRgb(catColor)},0.1);color:${catColor};border-color:rgba(${hexToRgb(catColor)},0.25);">${p.category_label}</span>
       ${p.badge ? `<span style="margin-left:0.5rem;font-size:0.65rem;font-weight:700;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);">${p.badge}</span>` : ''}
-      <div class="product-name">${p.name}</div>
+      <h1 class="product-name">${p.name}</h1>
       <div class="product-tagline">${p.tagline}</div>
     </div>
     <div class="product-body">
@@ -332,6 +332,22 @@ async function initiatePayment() {
     if (!window.Razorpay) {
       showToast('❌ Payment SDK failed to load. Please refresh.', 'red');
       btn.disabled = false;
+      return;
+    }
+
+    // Guard against an incomplete order response reaching the Razorpay SDK —
+    // a missing key/order_id/amount here (e.g. a backend misconfiguration)
+    // previously passed straight through as `undefined` into `new
+    // window.Razorpay(...)`, which the SDK doesn't fail loudly on: it
+    // degrades into broken internal asset requests (seen live as a request to
+    // checkout-static-next.razorpay.com/build/undefined) instead of a clear
+    // error. Same class of bug already fixed in assets/checkout-modal.js's
+    // subscription/report flows (2026-06-29) — this page has its own
+    // standalone Razorpay call that never got the same guard.
+    if (!data.razorpay_key || !data.order_id || !data.product?.amount) {
+      btn.disabled = false;
+      btn.textContent = `Pay ₹${fmt(productData.amount)}`;
+      showToast('❌ Could not start checkout (incomplete order). Please try again or contact support.', 'red');
       return;
     }
 

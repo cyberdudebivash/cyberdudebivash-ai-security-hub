@@ -744,13 +744,30 @@ function _updatePipelineBoard() {
    Ensures all payment flows use correct config values
 ══════════════════════════════════════════════════════════════════════ */
 function _verifyPaymentConfig() {
-  // Verify the correct UPI IDs are shown in the payment modal
-  const upiIdEl = document.querySelector('#cdb-pane-upi .cdb-pay-copy-val, [id*="upi-id"]');
-  // The CDB_PAYMENT system already reads from the modal HTML which was
-  // generated with correct values from paymentConfig.js — just verify
+  // Verify the correct UPI IDs are shown in the payment modal.
+  //
+  // Was a permanent false alarm on every page load, for two compounding
+  // reasons: (1) '.cdb-pay-copy-val' doesn't exist anywhere on the page, so
+  // the selector always fell through to '[id*="upi-id"]', which — since it
+  // isn't scoped under #cdb-pane-upi — matched the unrelated #mpm-upi-ids
+  // container from a *different* payment modal, pulling in its label/button
+  // text along with its value spans; (2) CDB_PAYMENT's real UPI values
+  // (#cdb-upi1-val / #cdb-upi2-val) are only populated after its
+  // /api/payment-config fetch resolves, which is lazy (triggered when the
+  // modal is opened) — this check runs during page-load _init(), long
+  // before that ever fires, so the target text was always the static
+  // "Loading…" placeholder. Fixed to target the real value elements
+  // directly and skip validation until they've actually been populated,
+  // instead of comparing placeholder/unrelated text against a real UPI ID.
   const correctUPI = 'iambivash.bn-5@okaxis';
-  if (upiIdEl && upiIdEl.textContent && !upiIdEl.textContent.includes(correctUPI)) {
-    console.warn('[OMNIGOD] UPI ID mismatch detected — check payment modal HTML');
+  const upiValueEls = document.querySelectorAll('#cdb-upi1-val, #cdb-upi2-val');
+  for (const el of upiValueEls) {
+    const text = el.textContent;
+    if (!text || text === 'Loading…' || text === '—') continue; // not populated yet
+    if (!text.includes(correctUPI)) {
+      console.warn('[OMNIGOD] UPI ID mismatch detected — check payment modal HTML');
+      break;
+    }
   }
 
   // Patch openManualPayment to also track revenue attempts

@@ -736,38 +736,34 @@ window.cdbTriggerReportPurchase = async function(module, target) {
   "offers": [
     {
       "@type": "Offer",
-      "name": "Free Security Preview",
+      "name": "Freemium",
       "price": "0",
       "priceCurrency": "INR",
-      "description": "Free scan with limited results"
+      "description": "5 scans/day, all 5 security modules, limited preview findings"
     },
     {
       "@type": "Offer",
-      "name": "Domain Security Report",
-      "price": "199",
-      "priceCurrency": "INR",
-      "description": "Full domain vulnerability report with remediation"
-    },
-    {
-      "@type": "Offer",
-      "name": "AI Security Report",
+      "name": "Starter",
       "price": "499",
       "priceCurrency": "INR",
-      "description": "OWASP LLM Top 10 full AI security assessment"
+      "billingIncrement": "monthly",
+      "description": "10 full scans/month, AI Threat Analysis, PDF reports, 2 API keys"
     },
     {
       "@type": "Offer",
-      "name": "Red Team Report",
-      "price": "999",
+      "name": "Pro",
+      "price": "1499",
       "priceCurrency": "INR",
-      "description": "Full red team simulation + attack chain analysis"
+      "billingIncrement": "monthly",
+      "description": "Unlimited scans, full AI Brain V2 Suite, attack simulation, API access"
     },
     {
       "@type": "Offer",
-      "name": "Enterprise Plan",
-      "price": "9999",
+      "name": "Enterprise",
+      "price": "4999",
       "priceCurrency": "INR",
-      "description": "Unlimited scans, API access, priority support"
+      "billingIncrement": "monthly",
+      "description": "Unlimited scans, 20 API keys, multi-user, SLA guarantee, white-label option"
     }
   ],
   "provider": {"@id": "https://cyberdudebivash.in/#organization"}
@@ -1229,7 +1225,7 @@ a{color:var(--accent);text-decoration:none}
 <a href="https://intel.cyberdudebivash.com" rel="noopener" style="display:inline-flex;align-items:center;gap:4px" target="_blank">🛰 Threat Intel ↗</a>
 <a data-section="trust-center" href="#trust-center" onclick="cdbNavigate('trust-center');return false">Trust</a>
 <a href="/soc-agents" style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(139,92,246,.1));border:1px solid rgba(99,102,241,.35);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:800;color:#a78bfa;letter-spacing:.03em">🤖 MASOC</a>
-<a href="/god-mode.html" style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(0,212,255,.1));border:1px solid rgba(124,58,237,.35);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:800;color:#c4b5fd;letter-spacing:.03em">⚡ GOD MODE</a>
+<a href="/god-mode" style="display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(0,212,255,.1));border:1px solid rgba(124,58,237,.35);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:800;color:#c4b5fd;letter-spacing:.03em">⚡ GOD MODE</a>
 <span id="nav-plan-badge" style="display:none;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;letter-spacing:.5px"></span>
 <a class="nav-cta" data-section="enterprise" href="#enterprise" onclick="cdbNavigate('enterprise');return false" style="background:linear-gradient(135deg,#00d4ff,#6366f1)!important;color:#000!important;font-weight:800!important;box-shadow:0 0 20px rgba(0,212,255,.3)!important">⚡ Book Demo</a>
 </div>
@@ -1279,7 +1275,7 @@ a{color:var(--accent);text-decoration:none}
 <div class="nav-mob-sep"></div>
 <a data-section="compliance-global" href="#compliance-global" onclick="cdbNavigate('compliance-global');cdbCloseMobileNav();return false" tabindex="-1">🌐 Global Compliance</a>
 <a href="https://tools.cyberdudebivash.com" onclick="cdbCloseMobileNav()" rel="noopener" tabindex="-1" target="_blank">🛠 Tools Suite ↗</a>
-<a href="/god-mode.html" onclick="cdbCloseMobileNav()" tabindex="-1" style="background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(99,102,241,.1));border-color:rgba(124,58,237,.35);color:#c4b5fd;font-weight:800">⚡ GOD MODE — Autonomous Orchestrator</a>
+<a href="/god-mode" onclick="cdbCloseMobileNav()" tabindex="-1" style="background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(99,102,241,.1));border-color:rgba(124,58,237,.35);color:#c4b5fd;font-weight:800">⚡ GOD MODE — Autonomous Orchestrator</a>
 </div>
 </nav>
 <main aria-label="Main content" id="main-content">
@@ -1298,7 +1294,7 @@ a{color:var(--accent);text-decoration:none}
 </div>
 <div class="cdb-bsp-divider"></div>
 <div class="cdb-bsp-tabs" id="cdb-bsp-tabs">
-<a class="cdb-bsp-tab" href="/sentinel-apex-marketplace.html">🛰 Intel Mkt</a>
+<a class="cdb-bsp-tab" href="/sentinel-apex-marketplace">🛰 Intel Mkt</a>
 <a class="cdb-bsp-tab" href="#enterprise-sales" onclick="cdbNavigate('enterprise-sales');return false">💼 Sales</a>
 <a class="cdb-bsp-tab" data-owner-tab="1" href="#proposal-gen" onclick="cdbNavigate('proposal-gen');return false" style="display:none">📄 Proposals</a>
 <a class="cdb-bsp-tab" href="#affiliate-hub" onclick="cdbNavigate('affiliate-hub');return false">🤝 Affiliate</a>
@@ -1551,7 +1547,7 @@ a{color:var(--accent);text-decoration:none}
 </div>
 <!-- Single secondary CTA — v26: one conversion path only -->
 <div style="margin-top:16px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-<a href="/booking.html" onmouseout="this.style.borderColor='rgba(255,255,255,.1)';this.style.color='#94a3b8'" onmouseover="this.style.borderColor='rgba(0,212,255,.3)';this.style.color='#00d4ff'" style="color:#94a3b8;font-size:12px;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 14px;transition:all .2s">
+<a href="/booking" onmouseout="this.style.borderColor='rgba(255,255,255,.1)';this.style.color='#94a3b8'" onmouseover="this.style.borderColor='rgba(0,212,255,.3)';this.style.color='#00d4ff'" style="color:#94a3b8;font-size:12px;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 14px;transition:all .2s">
       📅 Book Free Security Consultation →
     </a>
 </div>
@@ -2200,7 +2196,7 @@ a{color:var(--accent);text-decoration:none}
 </div>
 </div>
 <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;min-width:160px">
-<a href="/god-mode.html" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:13px;font-weight:800;padding:10px 20px;border-radius:10px;text-decoration:none;border:none;white-space:nowrap;box-shadow:0 4px 20px rgba(124,58,237,.3)">
+<a href="/god-mode" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:13px;font-weight:800;padding:10px 20px;border-radius:10px;text-decoration:none;border:none;white-space:nowrap;box-shadow:0 4px 20px rgba(124,58,237,.3)">
 ⚡ Open God Mode Dashboard →
 </a>
 <div style="font-size:10px;color:var(--text-dim);text-align:right" id="gm-last-run">Loading status…</div>
@@ -4691,6 +4687,13 @@ document.addEventListener('cdb:scan:complete', function(e) {
 // Load funnel data from Worker
 (function loadFunnelDashboard() {
   async function load() {
+    // /api/gtm/funnel-dashboard requires admin:business:read server-side, so
+    // this always 401/403'd for anonymous visitors anyway — but it fired
+    // unconditionally on every homepage load regardless, unlike this same
+    // section's visibility (#executive-hub is data-auth-gate="true",
+    // display:none by default). Reuse the same CDB_AUTH check the section's
+    // own visibility gate uses, instead of a guaranteed-to-fail request.
+    if (!window.CDB_AUTH || !(window.CDB_AUTH.isAuthenticated || window.CDB_AUTH.isOwner)) return;
     try {
       const res = await fetch('/api/gtm/funnel-dashboard?days=30');
       if (!res.ok) return;
@@ -5441,25 +5444,25 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </div>
 <!-- Course Mini Grid -->
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-<a class="acs-course-mini" href="/academy.html" style="text-decoration:none">
+<a class="acs-course-mini" href="/academy" style="text-decoration:none">
 <div style="font-size:24px;margin-bottom:8px;filter:drop-shadow(0 0 4px rgba(0,255,136,.3))">📘</div>
 <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:4px;line-height:1.3">SOC Analyst Playbook</div>
 <div style="font-size:10px;color:rgba(255,255,255,0.72);margin-bottom:10px;line-height:1.4">SIEM · Threat Hunting · IR</div>
 <div class="acs-course-price">₹999</div>
 </a>
-<a class="acs-course-mini" href="/academy.html" style="text-decoration:none">
+<a class="acs-course-mini" href="/academy" style="text-decoration:none">
 <div style="font-size:24px;margin-bottom:8px;filter:drop-shadow(0 0 4px rgba(0,212,255,.3))">🤖</div>
 <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:4px;line-height:1.3">AI Security Bundle</div>
 <div style="font-size:10px;color:rgba(255,255,255,0.72);margin-bottom:10px;line-height:1.4">LLM · OWASP · Adversarial ML</div>
 <div class="acs-course-price">₹1,199</div>
 </a>
-<a class="acs-course-mini" href="/academy.html" style="text-decoration:none">
+<a class="acs-course-mini" href="/academy" style="text-decoration:none">
 <div style="font-size:24px;margin-bottom:8px;filter:drop-shadow(0 0 4px rgba(124,58,237,.3))">🔍</div>
 <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:4px;line-height:1.3">OSINT Starter Bundle</div>
 <div style="font-size:10px;color:rgba(255,255,255,0.72);margin-bottom:10px;line-height:1.4">Recon · Shodan · Dark Web</div>
 <div class="acs-course-price">₹499</div>
 </a>
-<a class="acs-course-mini" href="/academy.html" style="text-decoration:none">
+<a class="acs-course-mini" href="/academy" style="text-decoration:none">
 <div style="font-size:24px;margin-bottom:8px;filter:drop-shadow(0 0 4px rgba(245,158,11,.3))">🐍</div>
 <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:4px;line-height:1.3">Python Automation Pack</div>
 <div style="font-size:10px;color:rgba(255,255,255,0.72);margin-bottom:10px;line-height:1.4">CVE Scripts · Threat Intel APIs</div>
@@ -5488,8 +5491,8 @@ document.addEventListener('cdb:scan:complete', function(e) {
 </div>
 </div>
 <div style="display:flex;gap:10px;flex-wrap:wrap">
-<a href="/academy.html" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;font-size:13px;font-weight:900;padding:12px 24px;border-radius:10px;text-decoration:none;box-shadow:0 0 16px rgba(0,255,136,.3);transition:all .2s">🎓 View All Courses</a>
-<a href="/academy.html#bundle" style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.25);color:#ffd700;font-size:13px;font-weight:800;padding:12px 24px;border-radius:10px;text-decoration:none;transition:all .2s">🏆 Get Bundle ₹1,999</a>
+<a href="/academy" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;font-size:13px;font-weight:900;padding:12px 24px;border-radius:10px;text-decoration:none;box-shadow:0 0 16px rgba(0,255,136,.3);transition:all .2s">🎓 View All Courses</a>
+<a href="/academy#bundle" style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.25);color:#ffd700;font-size:13px;font-weight:800;padding:12px 24px;border-radius:10px;text-decoration:none;transition:all .2s">🏆 Get Bundle ₹1,999</a>
 </div>
 </div>
 </div>
@@ -6318,7 +6321,7 @@ curl -H "x-api-key: <span style="color:#fbbf24">$YOUR_KEY</span>" \
 <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:22px">
 <a href="/api-docs" class="btn btn-primary" style="background:linear-gradient(135deg,#0891b2,#06b6d4);color:#001;font-weight:800">📡 API Documentation</a>
 <a href="/api/v1/intel/pricing.json" target="_blank" rel="noopener" class="btn" style="background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--text)">{ } Live Pricing JSON</a>
-<a href="/sentinel-apex-marketplace.html" class="btn" style="background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--text)">🛰 Intel Marketplace</a>
+<a href="/sentinel-apex-marketplace" class="btn" style="background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--text)">🛰 Intel Marketplace</a>
 </div>
 <p style="text-align:center;font-size:12px;color:var(--text-dim);margin-top:16px">Subscribe to any paid plan → your API key inherits the tier automatically. FREE tier needs no key. GST invoice included · DPDP Act 2023 compliant.</p>
 </div>
@@ -7680,7 +7683,7 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 </div>
 <div class="v14-page-arrow">›</div>
 </a>
-<a class="v14-page-card" href="/academy.html">
+<a class="v14-page-card" href="/academy">
 <div class="v14-new-badge">🎓 NEW</div>
 <div class="v14-page-icon">📚</div>
 <div class="v14-page-info">
@@ -7689,7 +7692,7 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 </div>
 <div class="v14-page-arrow">›</div>
 </a>
-<a class="v14-page-card" href="/tools.html">
+<a class="v14-page-card" href="/tools">
 <div class="v14-new-badge">NEW</div>
 <div class="v14-page-icon">🛠</div>
 <div class="v14-page-info">
@@ -7698,7 +7701,7 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 </div>
 <div class="v14-page-arrow">›</div>
 </a>
-<a class="v14-page-card" href="/intel.html">
+<a class="v14-page-card" href="/intel">
 <div class="v14-new-badge">NEW</div>
 <div class="v14-page-icon">🛰</div>
 <div class="v14-page-info">
@@ -7707,7 +7710,7 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 </div>
 <div class="v14-page-arrow">›</div>
 </a>
-<a class="v14-page-card" href="/services.html">
+<a class="v14-page-card" href="/services">
 <div class="v14-new-badge">NEW</div>
 <div class="v14-page-icon">💼</div>
 <div class="v14-page-info">
@@ -7716,7 +7719,7 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 </div>
 <div class="v14-page-arrow">›</div>
 </a>
-<a class="v14-page-card" href="/booking.html">
+<a class="v14-page-card" href="/booking">
 <div class="v14-new-badge">NEW</div>
 <div class="v14-page-icon">📅</div>
 <div class="v14-page-info">
@@ -7725,7 +7728,7 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 </div>
 <div class="v14-page-arrow">›</div>
 </a>
-<a class="v14-page-card" href="/about.html">
+<a class="v14-page-card" href="/about">
 <div class="v14-page-icon">⚔️</div>
 <div class="v14-page-info">
 <div class="v14-page-name">About Us</div>
@@ -7733,7 +7736,7 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 </div>
 <div class="v14-page-arrow">›</div>
 </a>
-<a class="v14-page-card" href="/contact.html">
+<a class="v14-page-card" href="/contact">
 <div class="v14-page-icon">📞</div>
 <div class="v14-page-info">
 <div class="v14-page-name">Contact</div>
@@ -7757,7 +7760,7 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 </div>
 <div class="v14-page-arrow">›</div>
 </a>
-<a class="v14-page-card" href="/user-dashboard.html">
+<a class="v14-page-card" href="/user-dashboard">
 <div class="v14-page-icon">📊</div>
 <div class="v14-page-info">
 <div class="v14-page-name">Dashboard</div>
@@ -7765,7 +7768,7 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 </div>
 <div class="v14-page-arrow">›</div>
 </a>
-<a class="v14-page-card" href="/threat-intel-workbench.html" style="background:linear-gradient(135deg,rgba(0,212,255,.07),rgba(16,185,129,.04));border-color:rgba(0,212,255,.25)">
+<a class="v14-page-card" href="/threat-intel-workbench" style="background:linear-gradient(135deg,rgba(0,212,255,.07),rgba(16,185,129,.04));border-color:rgba(0,212,255,.25)">
 <div class="v14-new-badge" style="background:linear-gradient(135deg,#0891b2,#0d9488)">🛰 NEW</div>
 <div class="v14-page-icon">🧠</div>
 <div class="v14-page-info">
@@ -7774,7 +7777,7 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 </div>
 <div class="v14-page-arrow" style="color:#22d3ee">›</div>
 </a>
-<a class="v14-page-card" href="/sentinel-apex-marketplace.html">
+<a class="v14-page-card" href="/sentinel-apex-marketplace">
 <div class="v14-page-icon">🛰</div>
 <div class="v14-page-info">
 <div class="v14-page-name">Sentinel APEX Marketplace</div>
@@ -7782,7 +7785,7 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 </div>
 <div class="v14-page-arrow">›</div>
 </a>
-<a class="v14-page-card" href="/god-mode.html" style="background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(0,212,255,.06));border-color:rgba(124,58,237,.3)">
+<a class="v14-page-card" href="/god-mode" style="background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(0,212,255,.06));border-color:rgba(124,58,237,.3)">
 <div class="v14-new-badge" style="background:linear-gradient(135deg,#7c3aed,#4f46e5)">⚡ NEW</div>
 <div class="v14-page-icon">🔮</div>
 <div class="v14-page-info">
@@ -7791,7 +7794,7 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 </div>
 <div class="v14-page-arrow" style="color:#c4b5fd">›</div>
 </a>
-<a class="v14-page-card" href="/privacy-policy.html">
+<a class="v14-page-card" href="/privacy-policy">
 <div class="v14-page-icon">🔒</div>
 <div class="v14-page-info">
 <div class="v14-page-name">Privacy Policy</div>
@@ -7848,8 +7851,8 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 <a class="v14-footer-link" href="/#scanner">🎯 Red Team</a>
 <a class="v14-footer-link" href="/#scanner">🔐 Identity ZT</a>
 <a class="v14-footer-link" href="/#scanner">📋 Compliance</a>
-<a class="v14-footer-link" href="/sentinel-apex-marketplace.html">🛡 Marketplace</a>
-<a class="v14-footer-link-dim" href="/user-dashboard.html">📊 Dashboard</a>
+<a class="v14-footer-link" href="/sentinel-apex-marketplace">🛡 Marketplace</a>
+<a class="v14-footer-link-dim" href="/user-dashboard">📊 Dashboard</a>
 <a class="v14-footer-link-dim" href="/api-docs" target="_blank">📡 API Docs</a>
 <a class="v14-footer-link-dim" href="/api/status.html" target="_blank">🟢 System Status</a>
 </div>
@@ -7858,14 +7861,14 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 <div>
 <div class="v14-col-title">📄 Pages</div>
 <div style="display:flex;flex-direction:column">
-<a class="v14-footer-link" href="/academy.html">🎓 Academy</a>
-<a class="v14-footer-link" href="/tools.html">🛠 Tools</a>
+<a class="v14-footer-link" href="/academy">🎓 Academy</a>
+<a class="v14-footer-link" href="/tools">🛠 Tools</a>
 <a class="v14-footer-link" href="/cve/">🛡 CVE Database</a>
-<a class="v14-footer-link" href="/intel.html">🛰 Intel Feed</a>
-<a class="v14-footer-link" href="/services.html">💼 Services</a>
-<a class="v14-footer-link" href="/booking.html">📅 Book Demo</a>
-<a class="v14-footer-link" href="/about.html">⚔️ About Us</a>
-<a class="v14-footer-link" href="/contact.html">📞 Contact</a>
+<a class="v14-footer-link" href="/intel">🛰 Intel Feed</a>
+<a class="v14-footer-link" href="/services">💼 Services</a>
+<a class="v14-footer-link" href="/booking">📅 Book Demo</a>
+<a class="v14-footer-link" href="/about">⚔️ About Us</a>
+<a class="v14-footer-link" href="/contact">📞 Contact</a>
 <a class="v14-footer-link-dim" href="https://blog.cyberdudebivash.in/" rel="noopener noreferrer" target="_blank">📝 Blog</a>
 <a class="v14-footer-link-dim" href="https://tools.cyberdudebivash.com" target="_blank">🔧 Tools Suite ↗</a>
 </div>
@@ -7874,10 +7877,10 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 <div>
 <div class="v14-col-title">💰 Services</div>
 <div style="display:flex;flex-direction:column">
-<a class="v14-footer-link" href="/services.html">🔍 Assessment ₹9,999</a>
-<a class="v14-footer-link" href="/services.html">🧠 Intel Report ₹14,999</a>
-<a class="v14-footer-link" href="/services.html">🎯 Red Team ₹24,999</a>
-<a class="v14-footer-link" href="/services.html">🏢 Retainer ₹99,999</a>
+<a class="v14-footer-link" href="/services">🔍 Assessment ₹9,999</a>
+<a class="v14-footer-link" href="/services">🧠 Intel Report ₹14,999</a>
+<a class="v14-footer-link" href="/services">🎯 Red Team ₹24,999</a>
+<a class="v14-footer-link" href="/services">🏢 Retainer ₹99,999</a>
 <a class="v14-footer-link-dim" href="/#pricing">📦 Starter ₹499/mo</a>
 <a class="v14-footer-link-dim" href="/#pricing">🚀 Pro ₹1,499/mo</a>
 <a class="v14-footer-link-dim" href="/#pricing">🏷 Enterprise ₹4,999/mo</a>
@@ -7888,9 +7891,9 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 <div>
 <div class="v14-col-title">⚖️ Legal</div>
 <div style="display:flex;flex-direction:column">
-<a class="v14-footer-link-dim" href="/privacy-policy.html">🔒 Privacy Policy</a>
-<a class="v14-footer-link-dim" href="/terms-of-service.html">📋 Terms of Service</a>
-<a class="v14-footer-link-dim" href="/refund-policy.html">💳 Refund Policy</a>
+<a class="v14-footer-link-dim" href="/privacy-policy">🔒 Privacy Policy</a>
+<a class="v14-footer-link-dim" href="/terms-of-service">📋 Terms of Service</a>
+<a class="v14-footer-link-dim" href="/refund-policy">💳 Refund Policy</a>
 <a class="v14-footer-link-dim" href="#" onclick="cdbOpenLegal('dpdp');return false">🇮🇳 DPDP Compliance</a>
 <a class="v14-footer-link-dim" href="#" onclick="cdbOpenLegal('cookies');return false">🍪 Cookie Policy</a>
 </div>
@@ -9679,7 +9682,7 @@ async function executeScan(module, payload) {
           () => runScan(module)
         );
       } else if (resp.status === 403) {
-        showErrorState(module, `Access denied: ${msg}. Please <a href="/user-dashboard.html" style="color:var(--accent)">log in</a> to continue.`);
+        showErrorState(module, `Access denied: ${msg}. Please <a href="/user-dashboard" style="color:var(--accent)">log in</a> to continue.`);
       } else if (resp.status >= 500) {
         showErrorState(module, `Server error (${resp.status}): ${msg}. Our team has been notified.`, () => runScan(module));
       } else {
@@ -10207,8 +10210,8 @@ function _buildTrainingUpsell(module, score, level) {
           <button onclick="if(typeof CDB_PAYMENT!=='undefined')CDB_PAYMENT.open({product:'${course.id}',productLabel:'${course.label.replace(/'/g,"\\'")}',amountLabel:'₹'+${course.price},amount:'₹'+${course.price}})" style="background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;border:none;border-radius:8px;padding:10px 20px;font-size:12px;font-weight:900;cursor:pointer;transition:all .2s;white-space:nowrap">
             🔓 Start Learning — ₹${course.price}
           </button>
-          <a href="/academy.html#bundle" style="font-size:12px;color:#00ffcc;font-weight:700;text-decoration:none;white-space:nowrap">🏆 Get All Courses ₹1,999 →</a>
-          <a href="/academy.html" style="font-size:11px;color:rgba(255,255,255,.72);text-decoration:none;white-space:nowrap">View Academy →</a>
+          <a href="/academy#bundle" style="font-size:12px;color:#00ffcc;font-weight:700;text-decoration:none;white-space:nowrap">🏆 Get All Courses ₹1,999 →</a>
+          <a href="/academy" style="font-size:11px;color:rgba(255,255,255,.72);text-decoration:none;white-space:nowrap">View Academy →</a>
         </div>
       </div>
     </div>
@@ -22336,16 +22339,10 @@ window.showPaymentInstructions = function() {
 <script defer="" src="/assets/checkout-modal.js"></script>
 <script defer="" src="/assets/revenue-engine-v14.js"></script>
 <!-- GOD MODE v16: MCP Control Client — THE OPERATING SYSTEM -->
-<!-- Safe: module type with window.MCPControl global fallback -->
-<script type="module">
-  // Resilient load: a static top-level import throws an UNCAUGHT SyntaxError (→ global
-  // error banner) if the module 404s or returns HTML. Dynamic import() is catchable, so
-  // any failure degrades silently to the no-op fallback defined in the next script block.
-  import('/src/mcpControl.js')
-    .then(function(m){ window.MCPControl = m.MCPControl; })
-    .catch(function(err){ console.warn('[MCPControl] optional module unavailable:', err && err.message); });
-</script>
-<!-- Inline fallback: if module import fails (older browsers), MCPControl is a no-op -->
+<!-- No-op implementation: /src/mcpControl.js was never shipped (no such file exists in the
+     repo), so the dynamic-import-with-fallback this used to do always failed and always fell
+     back to this same no-op — a guaranteed failed request + console warning on every page
+     load for zero behavioral difference. Ships the fallback directly instead. -->
 <script>
   // Track scan context for MCP Control integration
   window._lastScanFindings  = window._lastScanFindings  || [];
@@ -22354,16 +22351,13 @@ window.showPaymentInstructions = function() {
   window._currentUserEmail  = localStorage.getItem('cdb_email') || '';
   window._lastMCPDecision   = null;
 
-  // Ensure MCPControl is available as no-op if module failed to load
-  if (typeof window.MCPControl === 'undefined') {
-    window.MCPControl = {
-      decide:               async () => ({ ui_blocks: [], source: 'noop' }),
-      renderUIBlocks:       () => {},
-      showPersonalizationBar: () => {},
-      integrate:            async () => {},
-      clearCache:           () => {},
-    };
-  }
+  window.MCPControl = {
+    decide:                 async () => ({ ui_blocks: [], source: 'noop' }),
+    renderUIBlocks:         () => {},
+    showPersonalizationBar: () => {},
+    integrate:              async () => {},
+    clearCache:             () => {},
+  };
 </script>
 <script>
 /* CYBERDUDEBIVASH GOD ENGINE v19.0 — Threat Hunting | Vuln Mgmt | Threat Map | IR | Zero-Day */
@@ -22849,6 +22843,12 @@ async function loadThreatStats() {
 
 // ── Load visitor stats into growth panel ─────────────────────────────────────
 async function loadVisitorStats() {
+  // /api/visitor/stats is admin-only server-side (see workers/src/handlers/
+  // visitorTracking.js) — this always 401/403'd for anonymous visitors, but
+  // fired unconditionally on every homepage load regardless. Skip the
+  // guaranteed-to-fail request instead of leaking the endpoint's
+  // existence/shape to every anonymous visitor's Network tab for nothing.
+  if (!window.CDB_AUTH || !(window.CDB_AUTH.isAuthenticated || window.CDB_AUTH.isOwner)) return;
   try {
     const d = await fetchWithRetry(API + '/api/visitor/stats');
     if (d.total_visitors != null) setMetric('p4-f-visitors', Number(d.total_visitors).toLocaleString());

@@ -6824,59 +6824,65 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // GOD MODE v15 — MCP SHADOW ENGINE  (/mcp/*)
+    // GOD MODE v15 — MCP SHADOW ENGINE  (/api/mcp/*)
     // ══════════════════════════════════════════════════════════════════════════
 
-    // POST /mcp/recommend — AI-powered scan recommendations (MCP → local fallback)
-    if (path === '/mcp/recommend' && method === 'POST') {
+    // POST /api/mcp/recommend — AI-powered scan recommendations (MCP → local fallback)
+    if (path === '/api/mcp/recommend' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
       return withSecurityHeaders(withCors(await handleMCPRecommend(request, env, authCtx), request));
     }
 
-    // POST /mcp/upsell — rule-based upsell evaluation
-    if (path === '/mcp/upsell' && method === 'POST') {
+    // POST /api/mcp/upsell — rule-based upsell evaluation
+    if (path === '/api/mcp/upsell' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
       return withSecurityHeaders(withCors(await handleMCPUpsell(request, env, authCtx), request));
     }
 
-    // POST /mcp/training-map — map scan findings to training courses
-    if (path === '/mcp/training-map' && method === 'POST') {
+    // POST /api/mcp/training-map — map scan findings to training courses
+    if (path === '/api/mcp/training-map' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
       return withSecurityHeaders(withCors(await handleMCPTrainingMap(request, env, authCtx), request));
     }
 
-    // GET /mcp/health — MCP server health + fallback status
-    if (path === '/mcp/health' && method === 'GET') {
+    // GET /api/mcp/health — MCP server health + fallback status
+    if (path === '/api/mcp/health' && method === 'GET') {
       return withSecurityHeaders(withCors(await handleMCPHealth(request, env), request));
     }
 
-    // POST /mcp/bundle — time-limited bundle offers with social proof + countdown
-    if (path === '/mcp/bundle' && method === 'POST') {
+    // POST /api/mcp/bundle — time-limited bundle offers with social proof + countdown
+    if (path === '/api/mcp/bundle' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
       return withSecurityHeaders(withCors(await handleMCPBundle(request, env, authCtx), request));
     }
 
-    // POST /mcp/decision — MASTER CONTROL: full AI recommendation (tools + training + upsell + enterprise)
+    // POST /api/mcp/decision — MASTER CONTROL: full AI recommendation (tools + training + upsell + enterprise)
     // Frontend calls this FIRST after every scan. Replaces all static upsell/recommendation logic.
-    if (path === '/mcp/decision' && method === 'POST') {
+    if (path === '/api/mcp/decision' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false }));
       return withSecurityHeaders(withCors(await handleMCPDecision(request, env, authCtx), request));
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // GOD MODE v16 — MCP CONTROL ENGINE  (/mcp/control)
+    // GOD MODE v16 — MCP CONTROL ENGINE  (/api/mcp/control)
     // THE OPERATING SYSTEM: merges decision + bundle + user memory + ui_blocks
     // KV cached, D1 user context, triple failsafe. Frontend MUST call this first.
+    //
+    // P0 FIX (production): this whole v15/v16 family was registered on the bare
+    // /mcp/* path instead of /api/mcp/* — the Cloudflare Route only forwards
+    // /api/* to this Worker, so every one of these silently 404/405'd at the
+    // edge (handled by Pages, never reaching this file) despite looking correct
+    // here. v17+ below already used /api/mcp/*; v15/v16 didn't match it.
     // ══════════════════════════════════════════════════════════════════════════
 
-    // POST /mcp/control — Unified MCP Control Engine v16
-    if (path === '/mcp/control' && method === 'POST') {
+    // POST /api/mcp/control — Unified MCP Control Engine v16
+    if (path === '/api/mcp/control' && method === 'POST') {
       const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, ip: request.headers.get('CF-Connecting-IP') || 'anon' }));
       return withSecurityHeaders(withCors(await handleMCPControl(request, env, authCtx), request));
     }
 
-    // GET /mcp/control/status — health + capabilities manifest
-    if (path === '/mcp/control/status' && method === 'GET') {
+    // GET /api/mcp/control/status — health + capabilities manifest
+    if (path === '/api/mcp/control/status' && method === 'GET') {
       return withSecurityHeaders(withCors(Response.json({
         success: true,
         data: {
@@ -6884,12 +6890,12 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
           status: 'operational',
           capabilities: ['decision','bundle','user_memory','ui_blocks','personalization','kv_cache','failsafe'],
           endpoints: {
-            control:   'POST /mcp/control',
-            decision:  'POST /mcp/decision',
-            bundle:    'POST /mcp/bundle',
-            recommend: 'POST /mcp/recommend',
-            upsell:    'POST /mcp/upsell',
-            health:    'GET /mcp/health',
+            control:   'POST /api/mcp/control',
+            decision:  'POST /api/mcp/decision',
+            bundle:    'POST /api/mcp/bundle',
+            recommend: 'POST /api/mcp/recommend',
+            upsell:    'POST /api/mcp/upsell',
+            health:    'GET /api/mcp/health',
           },
           cache_ttl_s: 180,
           failsafe_layers: 3,
