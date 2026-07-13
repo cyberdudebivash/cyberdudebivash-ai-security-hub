@@ -10157,7 +10157,7 @@ function _buildMythosIntelligenceSection(data, module) {
     if ((cb.risk_signals || []).length) {
       html += `<div><div style="font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Risk Signals</div>`;
       cb.risk_signals.forEach(s => {
-        html += `<div style="font-size:12.5px;color:var(--text-muted);padding:3px 0">• ${_mythosEsc(typeof s === 'string' ? s : (s.signal || s.name || JSON.stringify(s)))}</div>`;
+        html += `<div style="font-size:12.5px;color:var(--text-muted);padding:3px 0">• ${_mythosEsc(typeof s === 'string' ? s : (s.detail || s.signal || s.name || JSON.stringify(s)))}</div>`;
       });
       html += `</div>`;
     }
