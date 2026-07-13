@@ -464,134 +464,112 @@ footer{background:var(--surface);border-top:1px solid var(--border);padding:36px
   <div class="threat-cats">
     <div class="tc-card" style="--tc-color:var(--danger)">
       <span class="tc-sev fs-crit">CRITICAL</span>
-      <span class="tc-icon">☠️</span>
-      <div class="tc-name">Tool Poisoning</div>
-      <div class="tc-desc">Malicious tool descriptions injected into MCP server metadata to manipulate LLM reasoning and decision-making.</div>
+      <span class="tc-icon">🔓</span>
+      <div class="tc-name">Unrestricted Tool Permission Scope</div>
+      <div class="tc-desc">MCP server exposes tools with broad filesystem or network access without scope restriction. (MCP-001, CVSS 9.1)</div>
       <div class="tc-examples">
-        <div class="tce">Hidden instructions in tool descriptions</div>
-        <div class="tce">Fake capability advertisements</div>
-        <div class="tce">Schema-level trojan payloads</div>
+        <div class="tce">read_file / write_file / execute_command with no directory restriction</div>
+        <div class="tce">bash / shell tools with unrestricted access</div>
+        <div class="tce">Network access with no allowlist</div>
       </div>
     </div>
     <div class="tc-card" style="--tc-color:var(--danger)">
       <span class="tc-sev fs-crit">CRITICAL</span>
-      <span class="tc-icon">💉</span>
-      <div class="tc-name">Prompt Injection</div>
-      <div class="tc-desc">Tool responses contain embedded instructions that override system prompts or hijack the LLM's current task.</div>
+      <span class="tc-icon">🔒</span>
+      <div class="tc-name">Missing Authentication Enforcement</div>
+      <div class="tc-desc">MCP server accepts tool calls without verifying caller identity or session tokens. (MCP-002, CVSS 9.8)</div>
       <div class="tc-examples">
-        <div class="tce">Indirect prompt injection via file content</div>
-        <div class="tce">Database record injection attacks</div>
-        <div class="tce">API response hijacking</div>
+        <div class="tce">No OAuth 2.0 or API key required</div>
+        <div class="tce">JWT not validated on tool invocation</div>
+        <div class="tce">Any caller can invoke any tool</div>
       </div>
     </div>
     <div class="tc-card" style="--tc-color:var(--danger)">
       <span class="tc-sev fs-high">HIGH</span>
       <span class="tc-icon">📤</span>
-      <div class="tc-name">Data Exfiltration</div>
-      <div class="tc-desc">MCP tools designed to silently extract sensitive data from the context window, conversation history, or system configuration.</div>
+      <div class="tc-name">Data Exfiltration via Tool Chaining</div>
+      <div class="tc-desc">Tools can be chained to read sensitive data and transmit it to external endpoints. (MCP-003, CVSS 8.2)</div>
       <div class="tc-examples">
-        <div class="tce">Context window data theft</div>
-        <div class="tce">System prompt extraction via tool calls</div>
-        <div class="tce">Cross-session data leakage</div>
+        <div class="tce">read_file → web_search / http_request chains</div>
+        <div class="tce">send_email used as an exfiltration channel</div>
+        <div class="tce">No egress controls on tool output</div>
       </div>
     </div>
-    <div class="tc-card" style="--tc-color:#f97316)">
+    <div class="tc-card" style="--tc-color:var(--danger)">
       <span class="tc-sev fs-high">HIGH</span>
-      <span class="tc-icon">🔐</span>
-      <div class="tc-name">Permission Escalation</div>
-      <div class="tc-desc">MCP servers requesting excessive permissions beyond stated scope, enabling unauthorized access to sensitive resources.</div>
+      <span class="tc-icon">💉</span>
+      <div class="tc-name">Prompt Injection via Tool Results</div>
+      <div class="tc-desc">Tool results containing attacker-controlled content can inject malicious instructions into the LLM context. (MCP-004, CVSS 8.6)</div>
       <div class="tc-examples">
-        <div class="tce">Over-privileged file system access</div>
-        <div class="tce">Scope creep in OAuth tokens</div>
-        <div class="tce">Unnecessary network access claims</div>
+        <div class="tce">Malicious content in web_search / browse_url results</div>
+        <div class="tce">Unsanitized query_database output reaching the LLM</div>
+        <div class="tce">No content security policy on tool responses</div>
       </div>
     </div>
-    <div class="tc-card" style="--tc-color:var(--warn)">
-      <span class="tc-sev fs-med">MEDIUM</span>
-      <span class="tc-icon">🔗</span>
-      <div class="tc-name">Schema Injection</div>
-      <div class="tc-desc">Malformed or adversarial JSON schemas that cause LLM to misinterpret tool parameters, leading to unintended actions.</div>
+    <div class="tc-card" style="--tc-color:var(--danger)">
+      <span class="tc-sev fs-high">HIGH</span>
+      <span class="tc-icon">⬆️</span>
+      <div class="tc-name">Privilege Escalation via Chained Tool Calls</div>
+      <div class="tc-desc">Low-privilege tool calls can be sequenced to escalate to high-privilege operations. (MCP-005, CVSS 7.9)</div>
       <div class="tc-examples">
-        <div class="tce">Recursive schema definitions</div>
-        <div class="tce">Type confusion attacks</div>
-        <div class="tce">Parameter boundary violations</div>
+        <div class="tce">execute_command reachable via a low-privilege chain</div>
+        <div class="tce">No explicit tool dependency graph</div>
+        <div class="tce">Missing least-privilege enforcement per tool</div>
       </div>
     </div>
-    <div class="tc-card" style="--tc-color:var(--warn)">
-      <span class="tc-sev fs-med">MEDIUM</span>
-      <span class="tc-icon">🎭</span>
-      <div class="tc-name">Rug Pull Attacks</div>
-      <div class="tc-desc">MCP server initially behaves safely to gain trust, then changes behavior after a period of normal operation.</div>
-      <div class="tc-examples">
-        <div class="tce">Delayed activation of malicious behavior</div>
-        <div class="tce">Time-based attack triggers</div>
-        <div class="tce">Usage-count based activation</div>
-      </div>
-    </div>
-    <div class="tc-card" style="--tc-color:var(--mcp)">
-      <span class="tc-sev fs-med">MEDIUM</span>
-      <span class="tc-icon">🧠</span>
-      <div class="tc-name">Context Hijacking</div>
-      <div class="tc-desc">Manipulation of the LLM's context window to override user intent or inject malicious reasoning chains.</div>
-      <div class="tc-examples">
-        <div class="tce">Context window flooding</div>
-        <div class="tce">Memory poisoning via tool calls</div>
-        <div class="tce">Reasoning chain manipulation</div>
-      </div>
-    </div>
-    <div class="tc-card" style="--tc-color:var(--mcp)">
-      <span class="tc-sev fs-med">MEDIUM</span>
-      <span class="tc-icon">🔒</span>
-      <div class="tc-name">Authentication Bypass</div>
-      <div class="tc-desc">Weak or missing authentication in MCP server implementations enabling unauthorized tool execution.</div>
-      <div class="tc-examples">
-        <div class="tce">Missing API key validation</div>
-        <div class="tce">Insecure token handling</div>
-        <div class="tce">Session fixation vulnerabilities</div>
-      </div>
-    </div>
-    <div class="tc-card" style="--tc-color:var(--accent3)">
-      <span class="tc-sev fs-low">LOW</span>
-      <span class="tc-icon">📦</span>
-      <div class="tc-name">Supply Chain Abuse</div>
-      <div class="tc-desc">Malicious MCP servers distributed through official registries or package managers with hidden attack payloads.</div>
-      <div class="tc-examples">
-        <div class="tce">Typosquatting in MCP registries</div>
-        <div class="tce">Compromised legitimate MCP packages</div>
-        <div class="tce">Backdoored open-source MCP servers</div>
-      </div>
-    </div>
-    <div class="tc-card" style="--tc-color:var(--accent3)">
-      <span class="tc-sev fs-low">LOW</span>
+    <div class="tc-card" style="--tc-color:var(--danger)">
+      <span class="tc-sev fs-high">HIGH</span>
       <span class="tc-icon">📊</span>
-      <div class="tc-name">Information Disclosure</div>
-      <div class="tc-desc">MCP server responses leaking internal system information, API keys, environment variables, or configuration secrets.</div>
+      <div class="tc-name">Secrets Exposure in Tool Arguments</div>
+      <div class="tc-desc">MCP server logs or transmits full tool arguments, exposing API keys and credentials passed as parameters. (MCP-006, CVSS 7.5)</div>
       <div class="tc-examples">
-        <div class="tce">Error message information leakage</div>
-        <div class="tce">Environment variable exposure</div>
-        <div class="tce">Internal path disclosure</div>
+        <div class="tce">Credentials logged in plaintext via authenticate / api_call</div>
+        <div class="tce">No secret-redaction middleware</div>
+        <div class="tce">Arguments transmitted without sanitization</div>
       </div>
     </div>
-    <div class="tc-card" style="--tc-color:var(--text-dim)">
-      <span class="tc-sev" style="background:rgba(100,116,139,.12);color:var(--text-dim);border:1px solid rgba(100,116,139,.2)">INFO</span>
+    <div class="tc-card" style="--tc-color:var(--warn)">
+      <span class="tc-sev fs-med">MEDIUM</span>
       <span class="tc-icon">🔁</span>
-      <div class="tc-name">Rate Limit Abuse</div>
-      <div class="tc-desc">MCP tools without rate limiting enabling DoS attacks, cost amplification, or resource exhaustion through repeated AI calls.</div>
+      <div class="tc-name">Missing Rate Limiting on Tool Invocations</div>
+      <div class="tc-desc">No rate limiting on tool calls allows abuse: mass data scraping, compute exhaustion, API quota depletion. (MCP-007, CVSS 6.5)</div>
       <div class="tc-examples">
-        <div class="tce">Unbounded API call amplification</div>
-        <div class="tce">LLM cost multiplication attacks</div>
-        <div class="tce">Recursive tool call loops</div>
+        <div class="tce">Unbounded tool calls per session</div>
+        <div class="tce">No exponential backoff on repeated calls</div>
+        <div class="tce">API quota depletion from repeated invocations</div>
       </div>
     </div>
-    <div class="tc-card" style="--tc-color:var(--text-dim)">
-      <span class="tc-sev" style="background:rgba(100,116,139,.12);color:var(--text-dim);border:1px solid rgba(100,116,139,.2)">INFO</span>
-      <span class="tc-icon">📝</span>
-      <div class="tc-name">Audit Trail Gaps</div>
-      <div class="tc-desc">Missing or insufficient logging of MCP tool calls, preventing forensic investigation and compliance audit trails.</div>
+    <div class="tc-card" style="--tc-color:var(--warn)">
+      <span class="tc-sev fs-med">MEDIUM</span>
+      <span class="tc-icon">🧪</span>
+      <div class="tc-name">Insufficient Tool Result Validation</div>
+      <div class="tc-desc">Tool results are trusted and injected into prompts without schema validation, enabling response tampering. (MCP-008, CVSS 6.1)</div>
       <div class="tc-examples">
-        <div class="tce">No tool call logging</div>
-        <div class="tce">Missing user attribution</div>
-        <div class="tce">Insufficient audit retention</div>
+        <div class="tce">No JSON schema defined per tool return type</div>
+        <div class="tce">Tool results injected into the LLM unchecked</div>
+        <div class="tce">Tampered responses treated as trustworthy</div>
+      </div>
+    </div>
+    <div class="tc-card" style="--tc-color:var(--warn)">
+      <span class="tc-sev fs-med">MEDIUM</span>
+      <span class="tc-icon">🗂️</span>
+      <div class="tc-name">Cross-Session Tool State Leakage</div>
+      <div class="tc-desc">Tool state (file handles, database cursors, network connections) persists across user sessions. (MCP-009, CVSS 5.8)</div>
+      <div class="tc-examples">
+        <div class="tce">File handles surviving session termination</div>
+        <div class="tce">Database cursors shared across sessions</div>
+        <div class="tce">Network connections not torn down between users</div>
+      </div>
+    </div>
+    <div class="tc-card" style="--tc-color:var(--accent3)">
+      <span class="tc-sev fs-low">LOW</span>
+      <span class="tc-icon">📝</span>
+      <div class="tc-name">Missing Tool Invocation Audit Log</div>
+      <div class="tc-desc">Tool calls are not logged with sufficient detail for security incident investigation. (MCP-010, CVSS 4.3)</div>
+      <div class="tc-examples">
+        <div class="tce">No timestamp / session ID / tool name logging</div>
+        <div class="tce">Arguments and results not hashed for audit</div>
+        <div class="tce">Forensic investigation not possible after an incident</div>
       </div>
     </div>
   </div>
