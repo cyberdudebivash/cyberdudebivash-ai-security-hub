@@ -76,3 +76,41 @@ describe('_buildMythosIntelligenceSection — real data only, premium content ga
     expect(fn).not.toMatch(/confidence\s*=\s*\d+;/);
   });
 });
+
+// ── Behavioral regression: real computeRiskScore() signal shape ────────────
+// workers/src/services/cyberBrainEngine.js's computeRiskScore() pushes every
+// risk signal as { type, detail, weight } — never { signal } or { name }.
+// The first shipped version of this section read `s.signal || s.name`,
+// neither of which exist on the real object, so it silently fell through to
+// JSON.stringify(s) and rendered a raw JSON blob to every PRO/ENTERPRISE
+// customer's "Risk Signals" list. Caught by live-verifying the real handler
+// output post-deploy, not by the static-parse tests above (which only check
+// that escaping happens, not that the right field is being escaped).
+describe('_buildMythosIntelligenceSection — executes against the real signal shape', () => {
+  const escFn  = HTML.slice(HTML.indexOf('function _mythosEsc('), HTML.indexOf('function _buildMythosIntelligenceSection('));
+  const mainFn = extractFn('_buildMythosIntelligenceSection');
+  // eslint-disable-next-line no-new-func
+  const build = new Function(`${escFn}\n${mainFn}\nreturn _buildMythosIntelligenceSection;`)();
+
+  it('renders the real .detail text, not a raw JSON dump, for a computeRiskScore()-shaped signal', () => {
+    const data = {
+      is_premium_locked: false,
+      mythos_intelligence: {
+        engine: 'CYBERDUDEBIVASH MYTHOS AI™',
+        mythos_confidence: 80,
+        cyber_brain: {
+          // Exact shape cyberBrainEngine.js's computeRiskScore() produces.
+          risk_signals: [{ type: 'critical_finding', detail: 'TLS/SSL & HSTS Configuration', weight: 30 }],
+          attack_paths: [],
+        },
+        mitre_attack: { mappings: [] },
+        ai_executive_brief: { generated: false, narrative: null },
+        autonomous_remediation_plan: [],
+        threat_actor_overlay: { actors: [] },
+      },
+    };
+    const out = build(data, 'domain');
+    expect(out).toContain('TLS/SSL &amp; HSTS Configuration');
+    expect(out).not.toContain('"type":"critical_finding"');
+  });
+});
