@@ -153,7 +153,7 @@
     "id": "CAP-TIH-004",
     "domain": "threat-hunting-intel",
     "name": "Threat Intelligence Graph (backend) — distinct from the dashboard's client-side Threat Graph",
-    "description": "A curated static knowledge base (APT groups, malware, CVEs, ATT&CK techniques, sectors) with live D1 augmentation and CISA-KEV enrichment, plus node/path/query/summary sub-routes (BFS shortest attack path). Has zero frontend callers.",
+    "description": "A curated static knowledge base (APT groups, malware, CVEs, ATT&CK techniques, sectors) with live D1 augmentation and CISA-KEV enrichment, plus node/path/query/summary sub-routes (BFS shortest attack path). FIXED 2026-07-13: now has a real dashboard consumer.",
     "backend": {
       "handlers": ["workers/src/handlers/threatGraph.js"],
       "entry_points": ["handleGetThreatGraph", "handleGetGraphNodes", "handleGetGraphPaths", "handleGraphQuery", "handleGraphSummary"],
@@ -164,14 +164,14 @@
       "status": "exists"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "missing",
-      "evidence": "Exhaustive grep of every frontend/*.html file for the literal string /api/threat-graph returns zero matches. This backend capability has no dedicated page and is not called from any dashboard."
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/user-dashboard.html"],
+      "status": "exists",
+      "evidence": "FIXED 2026-07-13: frontend/user-dashboard.html gained a real 'Global Intel Graph' tab (id=\"page-intel-graph\") with 4 live tools, each calling a real /api/threat-graph* sub-route: Threat Landscape Summary (auto-loads on tab open), Browse Nodes (type + text search), Attack Path Finder (BFS shortest path between two node IDs), and Node Neighborhood (2-hop subgraph explorer). Page copy explicitly explains how this differs from the pre-existing client-side 'Threat Graph' tab, since the two features share only a similar name. Before this fix: exhaustive grep of frontend/*.html for '/api/threat-graph' returned zero matches."
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "No page reaches this backend at all. Note: frontend/user-dashboard.html DOES have a nav item and page called 'Threat Graph' (line 899-901, #page-threatgraph), but its initThreatGraph() (line 3802) builds nodes/edges entirely client-side from the logged-in user's own _allScans history with zero calls to any /api/threat-graph* endpoint — a completely separate feature sharing only a name (see notes)."
+      "discoverable": true,
+      "evidence": "FIXED 2026-07-13: frontend/user-dashboard.html's 'Intelligence' sidebar section (same section as Scan History/Threat Graph/Intelligence Preview) now has a real nav-item (data-page=\"intel-graph\") linking to the new tab, positioned directly after Intelligence Preview and named 'Global Intel Graph' — deliberately distinct from the pre-existing 'Threat Graph' nav-item immediately above it, per this program's established collision-avoidance convention (see CAP-TIH-016's sibling naming decision in this same file's notes)."
     },
     "auth_enforced": false,
     "rbac": { "enforced": false, "permissions": [] },
@@ -179,21 +179,21 @@
     "feature_flag": { "present": false, "mechanism": "none" },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "handleGetThreatGraph only <- workers/test/threatIntelCanonicalColumns.test.mjs (imports just this one function). handleGetGraphNodes/handleGetGraphPaths/handleGraphQuery/handleGraphSummary have no import-confirmed tests."
+      "evidence": "FIXED 2026-07-13: workers/test/threatIntelGraphDashboard.test.mjs (11 tests) — confirms all 5 backend entry points return real curated-knowledge-base data (real BFS shortest path, real subgraph neighbors, real top-APT/critical-CVE summary), including a regression lock on the response envelope shape itself: workers/src/handlers/threatGraph.js responds via workers/src/lib/response.js's ok()/fail() helpers ({success,data,error}), a different convention from /api/preview/*'s flat top-level JSON body used elsewhere on this same dashboard page — the first draft of the frontend wiring read the flat shape and every field came back undefined, caught before shipping by running these tests, not by trusting the pattern copied from the adjacent Intelligence Preview tab. Also confirms the new dashboard tab's nav-item, page section, and each tool's real endpoint call."
     },
     "docs": [
       { "path": "docs/capability-registry/PROGRAM_BOARD.md", "tag": "canonical" }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
+    "operational_status": "PILOT ONLY",
     "priority": "P2",
     "verification": {
-      "method": "static",
-      "last_verified": "2026-07-11",
-      "evidence": "workers/src/handlers/threatGraph.js read directly (450 lines, all 5 entry points); workers/src/index.js:4352-4370 read directly — only the root route resolves authCtx at all (fails open to {}), nodes/paths/query/summary take no auth parameter whatsoever; frontend/*.html grepped exhaustively for '/api/threat-graph' (0 hits)."
+      "method": "dynamic_browser",
+      "last_verified": "2026-07-13",
+      "evidence": "workers/src/handlers/threatGraph.js read directly (450 lines, all 5 entry points); workers/src/index.js:4352-4370 read directly — only the root route resolves authCtx at all (fails open to {}), nodes/paths/query/summary take no auth parameter whatsoever; frontend/*.html grepped exhaustively for '/api/threat-graph' (0 hits before this fix). frontend/user-dashboard.html edited directly to add the tab described in frontend.evidence; inline <script> block re-parsed with node --check (syntax valid). Full worker suite green: 274 files / 2853 tests. Registry validator: 0 failures, 0 warnings. UPDATED 2026-07-13: click-through verified via Playwright/Chromium against the real file, served locally with contract-accurate mocked /api/threat-graph* responses (shapes copied directly from workers/src/handlers/threatGraph.js source) — Threat Landscape Summary, Browse Nodes, Attack Path Finder, and Node Neighborhood all confirmed rendering real data, zero console/JS errors. This browser pass caught a real defect the unit tests alone missed (see notes) — method upgraded from static to dynamic_browser. operational_status moved NOT READY -> PILOT ONLY; customer_journey_complete stays false since this is content-honesty + real wiring, not a full auth/RBAC/subscription-gating re-certification (this capability remains intentionally ungated per the pre-existing auth_enforced:false/subscription_gated:false — a design choice, not a gap this fix touched), and no post-deploy production smoke test against live D1 has been performed yet."
     },
     "contradicts_doc": [],
-    "notes": "Important disambiguation for anyone working this domain: this backend capability and user-dashboard.html's client-side 'Threat Graph' feature are two entirely independent systems sharing only a name. The dashboard's client-side graph is already tracked and partially fixed this session (docs/capability-registry/domains/organizations.json-adjacent Threat Graph findings-persistence work, PR #159/160): scan_history never persisted a findings column, so every real scan produced exactly one isolated node with no relationship edges. workers/schema_migration_scan_history_findings_2026_07.sql and workers/src/lib/findingsSummary.js shipped as a safe no-op fix for that gap but the migration has not yet been applied to production (owner must run .github/workflows/db-migrate.yml with APPLY). That fix is unrelated to and does not touch this backend capability (threatGraph.js), which remains entirely unused by any frontend."
+    "notes": "Important disambiguation for anyone working this domain: this backend capability and user-dashboard.html's client-side 'Threat Graph' feature are two entirely independent systems sharing only a name. The dashboard's client-side graph is already tracked and partially fixed this session (docs/capability-registry/domains/organizations.json-adjacent Threat Graph findings-persistence work, PR #159/160): scan_history never persisted a findings column, so every real scan produced exactly one isolated node with no relationship edges. workers/schema_migration_scan_history_findings_2026_07.sql and workers/src/lib/findingsSummary.js shipped as a safe no-op fix for that gap but the migration has not yet been applied to production (owner must run .github/workflows/db-migrate.yml with APPLY — still true as of this update, unrelated to and not fixed by the work below). FIXED 2026-07-13: this backend capability (workers/src/handlers/threatGraph.js) is no longer unused — a real 'Global Intel Graph' dashboard tab now consumes all 5 real endpoints, positioned right next to the pre-existing 'Threat Graph' nav item with page copy that explicitly states the two are different features, so the disambiguation this note existed to capture is now also visible to the customer, not just to whoever reads this registry. Per this domain's standing instruction to flag rather than reconcile duplicate implementations (see CAP-TIH-014's notes for the fuller 3-pair list: workers/src/services/graphEngine.js behind /api/v1/graph, the client-side Threat Graph tab, and workers/src/lib/attackGraph.js/CAP-TIH-016 are all still separate, unreconciled 'graph' concepts) — this fix added a consumer for the one specific handler documented here; it did not touch or reconcile the other three. UPDATED 2026-07-13: actually browser-testing this tab (rather than trusting the unit tests + a syntax check alone) surfaced a real defect: intelGraphSummary() only fired from the nav item's onclick handler, not from showPage() itself, so this tab's data never loaded when reached via the dashboard's own ?tab=intel-graph deep-link mechanism (initDashboard(), used by other pages to link directly into a tab) — same latent bug already present in the pre-existing Intelligence Preview tab (CAP-TIH-014), which this pass also fixed for consistency. Both now auto-load from inside showPage(), matching the more robust pattern the Settings page's lazy-loads already used. A third, unrelated nav item (Threat Intel API, data-page=\"intel-api\") has the identical shape of latent bug and was deliberately left untouched — out of scope for this pass, flagged here for whoever next touches that capability."
   },
   {
     "id": "CAP-TIH-005",
