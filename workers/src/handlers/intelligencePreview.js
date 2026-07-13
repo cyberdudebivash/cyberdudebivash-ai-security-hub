@@ -66,6 +66,55 @@ function upgradePrompt(feature, price = '$49/month') {
   };
 }
 
+// Known APT profiles — single source of truth, also used by handlePreviewCatalog
+// to report a real (not invented) threat-actor category count.
+const KNOWN_ACTORS = {
+  'apt29': { name: 'APT29 (Cozy Bear)', nation: 'Russia', sophistication: 'NATION_STATE', active: true },
+  'apt28': { name: 'APT28 (Fancy Bear)', nation: 'Russia', sophistication: 'NATION_STATE', active: true },
+  'lazarus': { name: 'Lazarus Group', nation: 'North Korea', sophistication: 'NATION_STATE', active: true },
+  'apt41': { name: 'APT41 (Double Dragon)', nation: 'China', sophistication: 'NATION_STATE', active: true },
+  'fin7': { name: 'FIN7 (Carbanak)', nation: 'Unknown', sophistication: 'CRIMINAL_ENTERPRISE', active: true },
+  'lockbit': { name: 'LockBit 3.0', nation: 'Unknown', sophistication: 'CRIMINAL_ENTERPRISE', active: true },
+  'volt-typhoon': { name: 'Volt Typhoon', nation: 'China', sophistication: 'NATION_STATE', active: true },
+  'scattered-spider': { name: 'Scattered Spider', nation: 'Western', sophistication: 'CRIMINAL_ENTERPRISE', active: true },
+};
+
+// Malware family catalog — single source of truth, also used by handlePreviewCatalog
+// to report a real (not invented) malware-family category count.
+const MALWARE_FAMILIES = {
+  'lockbit': { name: 'LockBit 3.0', type: 'ransomware', severity: 'CRITICAL', active: true },
+  'blackcat': { name: 'BlackCat/ALPHV', type: 'ransomware', severity: 'CRITICAL', active: true },
+  'cobeacon': { name: 'Cobalt Strike Beacon', type: 'c2_framework', severity: 'HIGH', active: true },
+  'qakbot': { name: 'QakBot', type: 'banking_trojan', severity: 'HIGH', active: true },
+  'emotet': { name: 'Emotet', type: 'banking_trojan', severity: 'CRITICAL', active: true },
+  'icedid': { name: 'IcedID', type: 'banking_trojan', severity: 'HIGH', active: true },
+  'sliver': { name: 'Sliver C2', type: 'c2_framework', severity: 'HIGH', active: true },
+  'metasploit': { name: 'Meterpreter', type: 'exploitation_framework', severity: 'HIGH', active: true },
+};
+
+// Report product catalog — single source of truth, also used by handlePreviewCatalog
+// to report a real (not invented) report-type category count.
+const REPORT_TYPES = {
+  tactical_dossier: {
+    name: 'Tactical Threat Dossier',
+    sections: 20,
+    price: '$49/report',
+    description: 'Full 20-section tactical intelligence report for any active threat',
+  },
+  executive_risk: {
+    name: 'Executive Risk Intelligence Report',
+    sections: 12,
+    price: '$299/month',
+    description: 'Board-ready monthly threat intelligence for CISOs and executives',
+  },
+  weekly_brief: {
+    name: 'Weekly SOC Intelligence Brief',
+    sections: 6,
+    price: '$99/month',
+    description: 'Curated weekly threat brief for SOC teams — every Monday',
+  },
+};
+
 // ─── CVE Preview Card ────────────────────────────────────────────────────────
 async function handleCVEPreview(request, env, authCtx) {
   const url = new URL(request.url);
@@ -161,11 +210,8 @@ async function handleCVEPreview(request, env, authCtx) {
       techniques: ['T1190 Exploit Public-Facing Application', 'T1059 Command and Scripting Interpreter'],
       sub_techniques: ['T1059.001 PowerShell', 'T1059.003 Windows Command Shell'],
     },
-    full_ioc_list: iocs.length > 0 ? iocs : [
-      { type: 'ip', value: '10.xx.xx.xx', confidence: 85, tlp: 'AMBER', last_seen: new Date().toISOString() },
-      { type: 'domain', value: 'c2.[REDACTED]', confidence: 92, tlp: 'AMBER' },
-      { type: 'hash_sha256', value: 'a3f...', confidence: 78, tlp: 'GREEN' },
-    ],
+    full_ioc_list: iocs,
+    ...(iocs.length === 0 ? { full_ioc_list_note: 'No IOCs on file for this CVE yet — feed pending ingestion. No fabricated IOCs shown.' } : {}),
     detection_rules: {
       sigma: `title: ${cveId} Exploitation\nstatus: stable\ndetection:\n  selection:\n    EventID: 4688\n  condition: selection`,
       kql: `SecurityEvent | where EventID == 4688 | where CommandLine contains "${cveId.toLowerCase()}"`,
@@ -210,18 +256,6 @@ async function handleThreatActorPreview(request, env, authCtx) {
   const url = new URL(request.url);
   const actorId = url.pathname.split('/').pop();
   const premium = await isPremium(authCtx, env?.DB);
-
-  // Known APT profiles
-  const KNOWN_ACTORS = {
-    'apt29': { name: 'APT29 (Cozy Bear)', nation: 'Russia', sophistication: 'NATION_STATE', active: true },
-    'apt28': { name: 'APT28 (Fancy Bear)', nation: 'Russia', sophistication: 'NATION_STATE', active: true },
-    'lazarus': { name: 'Lazarus Group', nation: 'North Korea', sophistication: 'NATION_STATE', active: true },
-    'apt41': { name: 'APT41 (Double Dragon)', nation: 'China', sophistication: 'NATION_STATE', active: true },
-    'fin7': { name: 'FIN7 (Carbanak)', nation: 'Unknown', sophistication: 'CRIMINAL_ENTERPRISE', active: true },
-    'lockbit': { name: 'LockBit 3.0', nation: 'Unknown', sophistication: 'CRIMINAL_ENTERPRISE', active: true },
-    'volt-typhoon': { name: 'Volt Typhoon', nation: 'China', sophistication: 'NATION_STATE', active: true },
-    'scattered-spider': { name: 'Scattered Spider', nation: 'Western', sophistication: 'CRIMINAL_ENTERPRISE', active: true },
-  };
 
   // Try D1 lookup
   let actorData = null;
@@ -315,17 +349,6 @@ async function handleMalwarePreview(request, env, authCtx) {
   const familyId = url.pathname.split('/').pop();
   const premium = await isPremium(authCtx, env?.DB);
 
-  const MALWARE_FAMILIES = {
-    'lockbit': { name: 'LockBit 3.0', type: 'ransomware', severity: 'CRITICAL', active: true },
-    'blackcat': { name: 'BlackCat/ALPHV', type: 'ransomware', severity: 'CRITICAL', active: true },
-    'cobeacon': { name: 'Cobalt Strike Beacon', type: 'c2_framework', severity: 'HIGH', active: true },
-    'qakbot': { name: 'QakBot', type: 'banking_trojan', severity: 'HIGH', active: true },
-    'emotet': { name: 'Emotet', type: 'banking_trojan', severity: 'CRITICAL', active: true },
-    'icedid': { name: 'IcedID', type: 'banking_trojan', severity: 'HIGH', active: true },
-    'sliver': { name: 'Sliver C2', type: 'c2_framework', severity: 'HIGH', active: true },
-    'metasploit': { name: 'Meterpreter', type: 'exploitation_framework', severity: 'HIGH', active: true },
-  };
-
   const known = MALWARE_FAMILIES[familyId.toLowerCase()] || {
     name: familyId.toUpperCase(),
     type: 'malware',
@@ -371,22 +394,15 @@ async function handleMalwarePreview(request, env, authCtx) {
 
   return Response.json({
     ...baseCard,
+    // sentinel_yara_count is always 0 today (no dynamic YARA-signature source
+    // wired up yet) — an honest "none on file" note, not a generic MZ-header
+    // stub presented as if it were a real family-specific signature.
     full_yara_library: {
       count: baseCard.sentinel_yara_count,
       categories: ['memory_scanning', 'file_scanning', 'network_signatures', 'behavioral'],
       download_url: '/api/marketplace/download/malware-yara-pack',
       last_updated: new Date().toISOString(),
-      sample_rule: `rule ${known.name.replace(/[^a-z0-9]/gi, '_')}_Generic {
-  meta:
-    description = "Detects ${known.name} samples"
-    author = "SENTINEL APEX"
-    severity = "${known.severity}"
-  strings:
-    $s1 = { 4D 5A 90 00 } // MZ header
-    $s2 = "ransom" nocase
-  condition:
-    $s1 at 0 and $s2
-}`,
+      note: `No family-specific YARA signatures on file yet for ${known.name} — no fabricated rule shown.`,
     },
     network_iocs: {
       c2_ips: [],
@@ -459,8 +475,9 @@ async function handleIOCSample(request, env, authCtx) {
   };
 
   if (!premium) {
+    const lockedCount = Math.max(totalAvailable - iocs.length, 0);
     response.upgrade = {
-      message: '784 additional IOCs locked. Upgrade to PRO for full feed + STIX 2.1 + CSV export.',
+      message: `${lockedCount} additional IOC${lockedCount === 1 ? '' : 's'} locked. Upgrade to PRO for full feed + STIX 2.1 + CSV export.`,
       pro_price: '$49/month',
       upgrade_url: '/#pricing',
       formats_locked: ['STIX 2.1', 'CSV bulk export', 'MISP format', 'SIEM webhook push'],
@@ -475,27 +492,6 @@ async function handleReportSamplePreview(request, env, authCtx) {
   const premium = await isPremium(authCtx, env?.DB);
   const url = new URL(request.url);
   const reportType = url.searchParams.get('type') || 'tactical_dossier';
-
-  const REPORT_TYPES = {
-    tactical_dossier: {
-      name: 'Tactical Threat Dossier',
-      sections: 20,
-      price: '$49/report',
-      description: 'Full 20-section tactical intelligence report for any active threat',
-    },
-    executive_risk: {
-      name: 'Executive Risk Intelligence Report',
-      sections: 12,
-      price: '$299/month',
-      description: 'Board-ready monthly threat intelligence for CISOs and executives',
-    },
-    weekly_brief: {
-      name: 'Weekly SOC Intelligence Brief',
-      sections: 6,
-      price: '$99/month',
-      description: 'Curated weekly threat brief for SOC teams — every Monday',
-    },
-  };
 
   const reportMeta = REPORT_TYPES[reportType] || REPORT_TYPES.tactical_dossier;
 
@@ -584,16 +580,36 @@ async function handlePreviewCatalog(request, env, authCtx) {
     published: item.created_at,
   }));
 
+  // Real counts per category — no invented numbers. threat_intel*/cti_actors/cti_iocs
+  // are queried live; malware_families and reports have no DB table backing them, so
+  // their real count is the size of the actual static catalog each handler serves
+  // from (MALWARE_FAMILIES / REPORT_TYPES) rather than an unrelated made-up figure.
+  // Every count falls back to already-fetched real data (never to a fabricated
+  // number) if the live query fails.
+  let cveCount = previewCards.length;
+  let actorCount = Object.keys(KNOWN_ACTORS).length;
+  let iocCount = 0;
+  try {
+    const [cveRes, actorRes, iocRes] = await env.DB.batch([
+      env.DB.prepare(`SELECT COUNT(*) AS c FROM threat_intel_cache WHERE expires_at > datetime('now')`),
+      env.DB.prepare(`SELECT COUNT(*) AS c FROM cti_actors`),
+      env.DB.prepare(`SELECT COUNT(*) AS c FROM cti_iocs WHERE tlp != 'RED'`),
+    ]);
+    cveCount = Math.max(cveRes.results?.[0]?.c ?? 0, previewCards.length);
+    actorCount = Math.max(actorRes.results?.[0]?.c ?? 0, Object.keys(KNOWN_ACTORS).length);
+    iocCount = iocRes.results?.[0]?.c ?? 0;
+  } catch {}
+
   return Response.json({
     type: 'preview_catalog',
-    total_previewable: previewCards.length + 46,
+    total_previewable: previewCards.length,
     items: previewCards,
     categories: {
-      cve: { count: 85, description: 'Active CVE intelligence with CVSS/EPSS/KEV data' },
-      threat_actors: { count: 30, description: 'APT group profiles with TTP matrices' },
-      malware_families: { count: 8, description: 'Malware family intelligence with YARA' },
-      ioc_feeds: { count: 74, description: 'Live IOC feeds across 74 sources' },
-      reports: { count: 3, description: 'Intelligence report types' },
+      cve: { count: cveCount, description: 'Active CVE intelligence with CVSS/EPSS/KEV data' },
+      threat_actors: { count: actorCount, description: 'APT group profiles with TTP matrices' },
+      malware_families: { count: Object.keys(MALWARE_FAMILIES).length, description: 'Malware family intelligence with YARA' },
+      ioc_feeds: { count: iocCount, description: 'Live IOC records currently on file' },
+      reports: { count: Object.keys(REPORT_TYPES).length, description: 'Intelligence report types' },
     },
     last_updated: new Date().toISOString(),
   });
@@ -609,42 +625,24 @@ async function handleFeaturedIntelligence(request, env, authCtx) {
     featured = r.results || [];
   } catch {}
 
-  const defaultFeatured = [
-    { severity: 'CRITICAL', title: 'Active exploitation of MFA bypass via session token hijacking', source: 'CISA KEV', type: 'cve' },
-    { severity: 'CRITICAL', title: 'APT29 credential phishing campaign — MFA fatigue attacks surge 340%', source: 'SENTINEL APEX', type: 'threat_actor', actor: 'apt29' },
-    { severity: 'HIGH', title: 'LockBit 3.0 new variant targeting healthcare organizations', source: 'SENTINEL APEX', type: 'malware', family: 'lockbit' },
-    { severity: 'HIGH', title: 'Supply chain compromise via npm package injection', source: 'SENTINEL APEX', type: 'campaign' },
-    { severity: 'CRITICAL', title: 'Cisco FTD zero-day — FIRESTARTER backdoor active exploitation', source: 'CISA KEV', type: 'cve' },
-    { severity: 'HIGH', title: 'AI/LLM prompt injection attacks against enterprise chatbots surge 180%', source: 'SENTINEL APEX', type: 'ai_threat' },
-  ];
-
-  const items = featured.length > 0
-    ? featured.map(f => ({
-        id: f.id,
-        title: f.title,
-        severity: f.severity,
-        source: f.source,
-        published: f.created_at,
-        type: 'threat',
-        preview_url: `/api/preview/cve/${f.title?.match(/CVE-\d{4}-\d+/)?.[0] || f.id}`,
-      }))
-    : defaultFeatured.map((f, i) => ({
-        id: `FEATURED-${i + 1}`,
-        ...f,
-        published: new Date(Date.now() - 3600000 * (i + 1) * 4).toISOString(),
-        preview_url: f.type === 'cve' ? `/api/preview/cve/CVE-2025-${20000 + i}`
-          : f.type === 'threat_actor' ? `/api/preview/threat/${f.actor}`
-          : f.type === 'malware' ? `/api/preview/malware/${f.family}`
-          : `/api/preview/report-sample?type=tactical_dossier`,
-      }));
+  const items = featured.map(f => ({
+    id: f.id,
+    title: f.title,
+    severity: f.severity,
+    source: f.source,
+    published: f.created_at,
+    type: 'threat',
+    preview_url: `/api/preview/cve/${f.title?.match(/CVE-\d{4}-\d+/)?.[0] || f.id}`,
+  }));
 
   return Response.json({
     type: 'featured_intelligence',
     items,
-    total_active_threats: 85,
-    critical_count: 40,
+    total_active_threats: items.length,
+    critical_count: items.filter(f => f.severity === 'CRITICAL').length,
     last_updated: new Date().toISOString(),
     next_update: new Date(Date.now() + 14400000).toISOString(),
+    ...(items.length === 0 ? { note: 'No live featured intelligence available right now — feed pending ingestion. No fabricated headlines shown.' } : {}),
   });
 }
 

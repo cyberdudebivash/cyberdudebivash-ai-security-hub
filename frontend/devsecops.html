@@ -68,7 +68,7 @@ footer a{color:#ec4899;text-decoration:none}
   "@type": "Service",
   "name": "DevSecOps Services",
   "provider": {"@id": "https://cyberdudebivash.in/#organization"},
-  "description": "Shift-left DevSecOps services covering SAST, SCA, and SBOM generation via live self-serve APIs and an AI-generated code (vibe-code) security scanner, plus expert-delivered DAST and IaC/container scanning for CI/CD pipeline security and software supply chain protection.",
+  "description": "Shift-left DevSecOps services covering SAST, SCA, SBOM, and AI-BOM (AI/ML component bill of materials) generation via live self-serve APIs and an AI-generated code (vibe-code) security scanner, plus expert-delivered DAST and IaC/container scanning for CI/CD pipeline security and software supply chain protection.",
   "serviceType": "DevSecOps",
   "areaServed": "Worldwide",
   "url": "https://cyberdudebivash.in/devsecops"
@@ -97,7 +97,7 @@ footer a{color:#ec4899;text-decoration:none}
 <div class="hero">
   <div class="hero-badge">🔧 DevSecOps</div>
   <h1>Shift-Left Security <span>Built Into Your Pipeline</span></h1>
-  <p>Live SAST, SCA, and SBOM generation via self-serve API — plus our AI-generated code (vibe-code) scanner. DAST and IaC scanning are available today as expert-delivered engagements, with automated self-serve APIs on our roadmap.</p>
+  <p>Live SAST, SCA, SBOM, and AI-BOM generation via self-serve API — plus our AI-generated code (vibe-code) scanner. DAST and IaC scanning are available today as expert-delivered engagements, with automated self-serve APIs on our roadmap.</p>
   <div class="cta-row">
     <a href="/security-assessment" class="btn-primary">Start Free Scan</a>
     <a href="/booking" class="btn-secondary">Book DevSecOps Review →</a>
@@ -105,7 +105,7 @@ footer a{color:#ec4899;text-decoration:none}
 </div>
 
 <div class="metrics">
-  <div class="metric"><div class="metric-val">3</div><div class="metric-label">Live APIs: SAST/SCA/SBOM</div></div>
+  <div class="metric"><div class="metric-val">4</div><div class="metric-label">Live APIs: SAST/SCA/SBOM/AI-BOM</div></div>
   <div class="metric"><div class="metric-val">OSV.dev</div><div class="metric-label">Live Vulnerability Lookups</div></div>
   <div class="metric"><div class="metric-val">CycloneDX</div><div class="metric-label">Real SBOM Generation</div></div>
   <div class="metric"><div class="metric-val">1,625+</div><div class="metric-label">CVEs Mapped (Threat Intel)</div></div>
@@ -130,7 +130,67 @@ footer a{color:#ec4899;text-decoration:none}
   </div>
 </section>
 
+<section style="padding:24px 24px 0">
+  <div class="container" style="max-width:680px;margin:0 auto">
+    <div class="card" style="padding:28px 32px">
+      <h3 style="margin-bottom:6px">🧬 Try Live AI-BOM Right Now</h3>
+      <p style="color:#94a3b8;font-size:.9rem;margin-bottom:16px">Submit your AI/ML dependency manifest — get a real CycloneDX 1.5 bill of materials with AI/ML components flagged, cross-referenced against our live AI-agent-framework advisory feed. Calls the live <code>POST /api/devsecops/ai-bom</code> production endpoint.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <span style="font-size:.85rem;color:#94a3b8">PyPI packages:</span>
+        <input id="aibom-pkg-input" type="text" value="langchain==0.1.0, openai==1.30.0, requests==2.31.0"
+          style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:#fff;font-size:.9rem;flex:1;min-width:260px"/>
+        <button id="aibom-btn" class="btn-primary" style="border:none;cursor:pointer" onclick="devsecopsTryAIBOM()">Scan →</button>
+      </div>
+      <div style="font-size:.78rem;color:#64748b;margin-top:6px">Comma-separated <code>name==version</code> pairs. Try adding your own AI stack.</div>
+      <div id="aibom-result" style="margin-top:16px;font-size:.85rem;color:#94a3b8"></div>
+    </div>
+  </div>
+</section>
+
 <script>
+async function devsecopsTryAIBOM() {
+  const btn = document.getElementById('aibom-btn');
+  const result = document.getElementById('aibom-result');
+  const raw = (document.getElementById('aibom-pkg-input').value || '').trim();
+  if (!raw) return;
+  const dependencies = raw.split(',').map(s => s.trim()).filter(Boolean).map(pair => {
+    const [name, version] = pair.split('==').map(x => (x || '').trim());
+    return { name, version: version || '0.0.0' };
+  }).filter(d => d.name);
+  if (dependencies.length === 0) return;
+  const ae = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#x27;'}[c]));
+  btn.disabled = true; btn.textContent = 'Scanning…';
+  try {
+    const res = await fetch('https://cyberdudebivash.in/api/devsecops/ai-bom', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project_name: 'ai-bom-demo', ecosystem: 'PyPI', dependencies }),
+      signal: AbortSignal.timeout(15000),
+    });
+    const data = await res.json();
+    if (!data.success) { result.textContent = data.error || 'Scan failed.'; return; }
+    const aiNames = (data.ai_components || []).map(c => ae(c.name)).join(', ') || 'none detected';
+    const riskColor = data.ai_risk_level === 'HIGH' ? '#fca5a5' : data.ai_risk_level === 'MEDIUM' ? '#fdba74' : '#86efac';
+    const cveLines = (data.ai_specific_cve_findings || []).map(f =>
+      `⚠️ ${ae(f.package)}@${ae(f.version)}: ${(f.vulnerability_ids || []).map(ae).join(', ')}`).join('<br/>');
+    const advisoryLines = (data.agent_advisories || []).slice(0, 5).map(a =>
+      `🛰️ [${ae(a.severity)}] ${ae(a.title)} (${ae(a.framework)})`).join('<br/>');
+    result.innerHTML = `<div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:14px">
+      <div><strong>${data.ai_component_count}</strong> of ${data.component_count} components flagged as AI/ML: <span style="color:#f9a8d4">${aiNames}</span></div>
+      <div style="margin-top:8px">AI risk level: <strong style="color:${riskColor}">${ae(data.ai_risk_level)}</strong> (score ${data.ai_risk_score}/100)</div>
+      ${cveLines ? `<div style="margin-top:10px;color:#fca5a5">${cveLines}</div>` : ''}
+      ${advisoryLines ? `<div style="margin-top:10px;color:#94a3b8">${advisoryLines}</div>` : ''}
+      ${!cveLines && !advisoryLines && data.ai_component_count > 0 && data.osv_lookup_available && data.advisory_lookup_available ? '<div style="margin-top:10px;color:#86efac">✅ No known CVEs or framework advisories found for detected AI/ML components.</div>' : ''}
+      ${data.ai_component_count > 0 && !data.osv_lookup_available ? '<div style="margin-top:10px;color:#fdba74">⚠️ Live CVE lookup was unavailable for this scan — results may be incomplete.</div>' : ''}
+      ${data.ai_component_count > 0 && !data.advisory_lookup_available ? '<div style="margin-top:10px;color:#fdba74">⚠️ Framework advisory cross-reference was unavailable for this scan — results may be incomplete.</div>' : ''}
+    </div>`;
+  } catch (e) {
+    result.textContent = 'Scan failed: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Scan →';
+  }
+}
+
 async function devsecopsTrySCA() {
   const btn = document.getElementById('sca-btn');
   const result = document.getElementById('sca-result');
@@ -202,6 +262,12 @@ async function devsecopsTrySCA() {
         <div class="card-icon">🔗</div>
         <h3>SBOM & Supply Chain Security</h3>
         <p>Generate a real CycloneDX 1.5 Software Bill of Materials from your dependency manifest — machine-readable component inventory for rapid CVE impact assessment. Live API: <code>POST /api/devsecops/sbom</code>.</p>
+        <span class="tag">Live API</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">🧬</div>
+        <h3>AI-BOM — AI/ML Bill of Materials</h3>
+        <p>CycloneDX 1.5 BOM generation with AI/ML components (LLM provider SDKs, agent-orchestration frameworks, model runtimes) automatically flagged and cross-referenced against our live agent-threat-framework advisory feed, plus live OSV.dev CVE lookups. Manifest-based inventory — not live model introspection. Live API: <code>POST /api/devsecops/ai-bom</code>.</p>
         <span class="tag">Live API</span>
       </div>
     </div>
@@ -277,7 +343,7 @@ async function devsecopsTrySCA() {
 </div>
 
 <footer>
-  <p><strong><a href="/">CYBERDUDEBIVASH AI Security Hub™</a></strong> · DevSecOps · SAST · DAST · SCA · SBOM · Vibe-Code Scanner</p>
+  <p><strong><a href="/">CYBERDUDEBIVASH AI Security Hub™</a></strong> · DevSecOps · SAST · DAST · SCA · SBOM · AI-BOM · Vibe-Code Scanner</p>
   <p style="margin-top:8px">© 2024–2026 CYBERDUDEBIVASH Pvt Ltd · GSTIN: 21AOBPN4328N1ZK · <a href="/privacy-policy">Privacy</a> · <a href="/terms-of-service">Terms</a></p>
 </footer>
 <script src="/assets/copilot-widget.js" defer></script>

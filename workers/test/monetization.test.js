@@ -46,6 +46,83 @@ describe('addMonetizationFlags — tier gating', () => {
   });
 });
 
+// Regression — v40 MYTHOS enrichment (mythosEnrichmentEngine.js's
+// enrichAssessmentWithMYTHOS) is merged into the scan result by
+// domain.js/ai.js/redteam.js/identity.js/compliance.js BEFORE this function
+// runs. Its full premium value (AI executive narrative, attack-path
+// prediction, MITRE mapping, autonomous remediation plan) previously spread
+// through `...result` completely untouched for FREE-tier callers — the
+// findings array was truncated but mythos_intelligence was not, so the full
+// block shipped in the plain JSON response to every free/unauthenticated
+// scan. Caught during a post-deploy production audit (called
+// handleDomainScan directly against a real resolvable domain with tier:
+// undefined and confirmed the full mythos_intelligence block was present in
+// the response). Fixed to mirror how mythosRevenueEngine.js's own (separate)
+// paywall-aware routes already lock this exact field for their callers.
+describe('addMonetizationFlags — mythos_intelligence is locked for FREE, not spread through', () => {
+  const withMythos = () => ({
+    findings: [{ id: 'f1', title: 'Open port', severity: 'high', description: 'd1', is_premium: false }],
+    mythos_intelligence: {
+      engine: 'CYBERDUDEBIVASH MYTHOS AI™',
+      version: 'v4.0-SOVEREIGN',
+      mythos_confidence: 87,
+      cyber_brain: {
+        risk_score: 76, risk_level: 'HIGH',
+        risk_signals: [{ type: 'critical_finding', detail: 'Open port', weight: 30 }],
+        attack_paths: [{ id: 'x', name: 'Web Exploitation' }],
+      },
+      mitre_attack: { tactics_identified: 1, mappings: [{ tactic: 'TA0001', name: 'Initial Access' }] },
+      autonomous_remediation_plan: [{ phase: 1, label: 'IMMEDIATE', timeline: '0-7 days', item_count: 1, items: [] }],
+      ai_executive_brief: { generated: true, narrative: 'Full paid executive narrative text.' },
+      threat_actor_overlay: { active: true, actors: [{ name: 'APT99' }] },
+      authority: { platform: 'CYBERDUDEBIVASH® SENTINEL APEX' },
+    },
+  });
+
+  it('PRO/ENTERPRISE receive the complete mythos_intelligence block unmodified', () => {
+    for (const tier of ['PRO', 'ENTERPRISE']) {
+      const out = addMonetizationFlags(withMythos(), 'domain', { tier });
+      expect(out.mythos_intelligence.ai_executive_brief.narrative).toBe('Full paid executive narrative text.');
+      expect(out.mythos_intelligence.autonomous_remediation_plan).toHaveLength(1);
+      expect(out.mythos_intelligence._paywall_locked).toBeUndefined();
+    }
+  });
+
+  it('FREE never receives the AI narrative, attack paths, MITRE mapping, or remediation plan', () => {
+    const out = addMonetizationFlags(withMythos(), 'domain', { tier: 'FREE' });
+    expect(out.mythos_intelligence._paywall_locked).toBe(true);
+    expect(out.mythos_intelligence.ai_executive_brief).toBeUndefined();
+    expect(out.mythos_intelligence.autonomous_remediation_plan).toBeUndefined();
+    expect(out.mythos_intelligence.mitre_attack).toBeUndefined();
+    expect(out.mythos_intelligence.threat_actor_overlay).toBeUndefined();
+    // Only a teaser survives: engine/version/confidence and a risk-level summary.
+    expect(out.mythos_intelligence.mythos_confidence).toBe(87);
+    expect(out.mythos_intelligence.cyber_brain).toEqual({ risk_score: 76, risk_level: 'HIGH' });
+  });
+
+  it('unauthenticated callers (no authCtx.tier at all) are treated as FREE and also get the locked teaser', () => {
+    const out = addMonetizationFlags(withMythos(), 'domain', {});
+    expect(out.mythos_intelligence._paywall_locked).toBe(true);
+    expect(out.mythos_intelligence.ai_executive_brief).toBeUndefined();
+  });
+
+  it('locks mythos_intelligence even when there are zero locked findings (a clean scan)', () => {
+    // is_premium_locked is computed from findings alone and can be false on a
+    // clean/low-finding scan — mythos_intelligence must still be locked,
+    // independent of that flag, since it's independently valuable content.
+    const clean = { findings: [], mythos_intelligence: withMythos().mythos_intelligence };
+    const out = addMonetizationFlags(clean, 'domain', { tier: 'FREE' });
+    expect(out.is_premium_locked).toBe(false);
+    expect(out.mythos_intelligence._paywall_locked).toBe(true);
+    expect(out.mythos_intelligence.ai_executive_brief).toBeUndefined();
+  });
+
+  it('does not add a mythos_intelligence field where none existed', () => {
+    const out = addMonetizationFlags(sampleResult(), 'domain', { tier: 'FREE' });
+    expect(out.mythos_intelligence).toBeUndefined();
+  });
+});
+
 describe('buildPaymentUrl', () => {
   it('builds a base url without params', () => {
     expect(buildPaymentUrl('redteam')).toBe('https://rzp.io/l/cyberdudebivash-redteam');
