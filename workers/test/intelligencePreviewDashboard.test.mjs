@@ -154,7 +154,19 @@ describe('CAP-TIH-014 — intelligencePreview.js backend still returns real, hon
 
 describe('user-dashboard.html — Intelligence Preview tab (CAP-TIH-014)', () => {
   it('has a real nav-item', () => {
-    expect(dash).toContain(`data-page="intel-preview" onclick="showPage('intel-preview',this);intelPreviewFeatured()"`);
+    expect(dash).toContain(`data-page="intel-preview" onclick="showPage('intel-preview',this)"`);
+  });
+
+  // 2026-07-13: intelPreviewFeatured() moved off the nav-item onclick and into
+  // showPage()'s id-dispatch block — a deep link (?tab=intel-preview) calls
+  // showPage() directly and never runs the nav item's onclick, so a browser
+  // click-through pass (done while wiring the sibling Global Intel Graph tab)
+  // caught the featured-intel card never loading on that path.
+  it('auto-loads featured intel from showPage(), not a nav-item onclick side-call', () => {
+    const showPageStart = dash.indexOf('function showPage(id, el)');
+    const showPageFn = dash.slice(showPageStart, dash.indexOf('\n  }', showPageStart) + 4);
+    expect(showPageFn).toContain(`id === 'intel-preview'`);
+    expect(showPageFn).toContain('intelPreviewFeatured()');
   });
 
   it('has a real page section with all 8 preview tools', () => {
