@@ -20,14 +20,19 @@ import { resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 const read = (p) => readFileSync(resolve(root, p), 'utf8');
 
-// Grab the PRO block's price_inr (first numeric after `PRO: {... price_inr:`).
-function proPriceInr(src) {
-  // Tolerates `PRO: {` and `PRO: Object.freeze({`.
-  const m = src.match(/PRO:\s*(?:Object\.freeze\()?\{[^}]*?price_inr:\s*(\d+)/s);
+// Grab a named tier block's price_inr (first numeric after `TIER: {... price_inr:`).
+// Tolerates `TIER: {` and `TIER: Object.freeze({`.
+function tierPriceInr(src, tier) {
+  const m = src.match(new RegExp(`\\b${tier}:\\s*(?:Object\\.freeze\\()?\\{[^}]*?price_inr:\\s*(\\d+)`, 's'));
   return m ? Number(m[1]) : null;
 }
+const proPriceInr = (src) => tierPriceInr(src, 'PRO');
 
 const CANONICAL_PRO = 1499;
+// Only STARTER/ENTERPRISE/MSSP are covered here (not FREE, which is always 0) —
+// this is the exact gap that let TIER_LIMITS.STARTER drift to 499 while every
+// other source said 999, undetected until a dedicated audit found it.
+const CANONICAL_PRICE_INR = { STARTER: 999, ENTERPRISE: 4999, MSSP: 9999 };
 
 // Extracts a named key's numeric value from a `reports: Object.freeze({ name: N, ... })` block.
 function reportPriceRupees(src, name) {
@@ -67,6 +72,35 @@ describe('pricing lineage — one canonical PRO price across all sources', () =>
     const m = src.match(/required_tier:\s*'PRO'[^}]*?price_inr:\s*'([^']+)'/s);
     expect(m && m[1]).toBe('₹1,499/mo');
   });
+});
+
+/* FINDING (2026-07-14 commercial risk audit): this guard only ever covered PRO.
+ * TIER_LIMITS.STARTER.price_inr drifted to 499 — while razorpay.js, pricingConfig.js,
+ * subscription.js, revenueGate.js, and commercialPlatformHandler.js all agreed on
+ * 999 — and shipped undetected because nothing checked STARTER (or ENTERPRISE/MSSP)
+ * the way this file already checked PRO. A real customer upgrading Starter through
+ * the billing portal (which charges off TIER_LIMITS) was charged 499 while a
+ * customer signing up through the main pricing checkout was charged 999 for the
+ * same plan. Fixed in auth/apiKeys.js; this closes the coverage gap that let it
+ * happen. */
+describe('pricing lineage — STARTER/ENTERPRISE/MSSP prices also agree everywhere', () => {
+  for (const tier of Object.keys(CANONICAL_PRICE_INR)) {
+    const expected = CANONICAL_PRICE_INR[tier];
+
+    it(`checkout source of truth (auth/apiKeys.js TIER_LIMITS.${tier}) is ₹${expected}`, () => {
+      expect(tierPriceInr(read('src/auth/apiKeys.js'), tier)).toBe(expected);
+    });
+
+    it(`marketing checkout table (lib/razorpay.js SUBSCRIPTION_PRICES.${tier}) charges ₹${expected}`, () => {
+      const src = read('src/lib/razorpay.js');
+      const m = src.match(new RegExp(`SUBSCRIPTION_PRICES[\\s\\S]*?\\b${tier}:\\s*\\{\\s*amount:\\s*(\\d+)`));
+      expect(m && Number(m[1])).toBe(expected * 100);
+    });
+
+    it(`pricing page config (config/pricingConfig.js plans.${tier}) advertises ₹${expected}`, () => {
+      expect(tierPriceInr(read('src/config/pricingConfig.js'), tier)).toBe(expected);
+    });
+  }
 });
 
 /* FINDING (2026-07-06 revenue-mechanisms audit): frontend/assets/geo-currency-
