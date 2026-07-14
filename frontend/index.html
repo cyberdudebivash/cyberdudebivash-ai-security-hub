@@ -23812,13 +23812,22 @@ function v21TriggerUrgencyPayment(){
 <!-- Nav — Executive/SOC Operations/Sentinel APEX Intel are public and always
      shown below (jump links, not show/hide toggles). AI SecOps and MSSP
      Operations are customer/revenue sections, gated behind a real exclusive
-     tab toggle so they stay hidden until a signed-in visitor opens them. -->
-<div class="cdb-cc-nav" role="navigation" aria-label="Command center sections">
+     tab toggle so they stay hidden until a signed-in visitor opens them.
+     The 3 jump buttons and the real tablist are siblings inside a plain
+     group (a tablist may only contain tab children — mixing them directly
+     would fail aria-required-children) — .cdb-cc-tablist uses
+     display:contents so this nesting has zero visual/layout effect, all 5
+     buttons still render as one flex row. soc-case-detail.js's injected
+     "Investigation" tab targets .cdb-cc-tablist directly so it lands inside
+     the real tablist too. -->
+<div class="cdb-cc-nav" role="group" aria-label="Command center sections">
 <button class="cdb-cc-tab active" data-scrollto="cdb-panel-exec" data-cc-jump="true">Executive</button>
 <button class="cdb-cc-tab active" data-scrollto="cdb-panel-soc" data-cc-jump="true">SOC Operations</button>
 <button class="cdb-cc-tab active" data-scrollto="cdb-panel-sentinel" data-cc-jump="true">Sentinel APEX Intel</button>
+<div class="cdb-cc-tablist" role="tablist" style="display:contents">
 <button aria-selected="false" class="cdb-cc-tab" data-target="cdb-panel-ai" role="tab">AI SecOps</button>
 <button aria-selected="false" class="cdb-cc-tab" data-target="cdb-panel-mssp" role="tab">MSSP Operations</button>
+</div>
 </div>
 </div>
 <!-- ── Panels body ────────────────────────────────────────────────────── -->
@@ -23826,7 +23835,7 @@ function v21TriggerUrgencyPayment(){
 <!-- ════════════════════════════════════════════════════════════════════
          PANEL 1 — Executive Command Center
          ════════════════════════════════════════════════════════════════════ -->
-<div class="cdb-cc-panel active" id="cdb-panel-exec">
+<div class="cdb-cc-panel cdb-cc-panel-public active" id="cdb-panel-exec">
 <!-- KPI row -->
 <div class="cdb-kpi-grid">
 <div class="cdb-kpi-card accent-purple">
@@ -23905,7 +23914,7 @@ function v21TriggerUrgencyPayment(){
      the Case Management sub-section soc-investigations.js injects below
      already self-gates behind a real 401/login prompt for anonymous
      visitors, so the panel as a whole is safe to show by default. -->
-<div aria-label="SOC Operations" class="cdb-cc-panel active" id="cdb-panel-soc" role="region">
+<div aria-label="SOC Operations" class="cdb-cc-panel cdb-cc-panel-public active" id="cdb-panel-soc" role="region">
 <div class="cdb-cc-panel-divider">
 <span class="cdb-cc-panel-divider-icon">🖥</span> SOC Operations
 </div>
@@ -23933,7 +23942,7 @@ function v21TriggerUrgencyPayment(){
 </div>
 <!-- ══════════════════ PANEL 3 — Sentinel APEX Intel ══════════════════ -->
 <!-- Public section — live CVE/incident intelligence, no customer or revenue data. -->
-<div aria-label="Sentinel APEX Intel" class="cdb-cc-panel active" id="cdb-panel-sentinel" role="region">
+<div aria-label="Sentinel APEX Intel" class="cdb-cc-panel cdb-cc-panel-public active" id="cdb-panel-sentinel" role="region">
 <div class="cdb-cc-panel-divider">
 <span class="cdb-cc-panel-divider-icon">🛰</span> Sentinel APEX Intel
 </div>

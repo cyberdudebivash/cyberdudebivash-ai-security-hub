@@ -71,7 +71,7 @@
 
       <!-- Case list -->
       <div id="cdb-soc-case-list" style="display:flex;flex-direction:column;gap:6px;max-height:360px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#1e293b transparent;">
-        <div style="text-align:center;padding:30px;color:#475569;font-size:13px;">
+        <div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px;">
           Log in to view and manage SOC cases.
         </div>
       </div>
@@ -117,7 +117,7 @@
       const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
 
       if (resp.status === 401) {
-        list.innerHTML = `<div style="text-align:center;padding:24px;color:#475569;font-size:13px;">
+        list.innerHTML = `<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px;">
           🔐 Authentication required to view SOC cases.<br>
           <span style="font-size:11px;margin-top:4px;display:block;">Log in to access the full SOC platform.</span>
         </div>`;
@@ -128,7 +128,7 @@
       const cases = d.cases || [];
 
       if (!cases.length) {
-        list.innerHTML = `<div style="text-align:center;padding:24px;color:#475569;font-size:13px;">
+        list.innerHTML = `<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px;">
           No ${status ? status.toLowerCase() : ''} cases found.
           ${!status ? 'Create your first case above.' : ''}
         </div>`;
@@ -149,7 +149,7 @@
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
             <span style="font-size:10px;font-weight:600;color:${statusColors[c.status] || '#64748b'};background:${statusColors[c.status] || '#64748b'}22;padding:2px 8px;border-radius:9999px;">${c.status}</span>
-            <span style="font-size:10px;color:#475569;">${formatAge(c.created_at)}</span>
+            <span style="font-size:10px;color:#94a3b8;">${formatAge(c.created_at)}</span>
           </div>
         </div>
       `).join('');
@@ -160,7 +160,7 @@
 
     } catch (e) {
       console.info(LOG, 'Cases load failed:', e.message);
-      if (list) list.innerHTML = `<div style="text-align:center;padding:20px;color:#475569;font-size:12px;">Could not load cases</div>`;
+      if (list) list.innerHTML = `<div style="text-align:center;padding:20px;color:#94a3b8;font-size:12px;">Could not load cases</div>`;
     }
 
     loadCaseMetrics();
@@ -195,7 +195,7 @@
           <div class="cdb-section-heading">Timeline</div>
           ${timeline.map(t => `
             <div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid #1e293b;font-size:11px;">
-              <span style="color:#475569;flex-shrink:0;width:80px;">${new Date(t.ts).toLocaleTimeString()}</span>
+              <span style="color:#94a3b8;flex-shrink:0;width:80px;">${new Date(t.ts).toLocaleTimeString()}</span>
               <span style="color:${t.type === 'created' ? '#6366f1' : t.type === 'resolved' ? '#22c55e' : '#94a3b8'};">
                 ${t.author ? `<strong>${t.author}:</strong> ` : ''}${t.text}
               </span>

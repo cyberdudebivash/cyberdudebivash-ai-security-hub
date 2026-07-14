@@ -22,7 +22,10 @@
   function inject() {
     if (document.getElementById(MODULE_ID)) return;
 
-    const nav  = document.querySelector('.cdb-cc-nav');
+    // .cdb-cc-tablist (not .cdb-cc-nav) — the real role="tablist" is scoped
+    // to just the gated tabs (a tablist may only contain tab children); the
+    // outer .cdb-cc-nav also holds the 3 always-visible public jump buttons.
+    const nav  = document.querySelector('.cdb-cc-tablist');
     const body = document.querySelector('.cdb-cc-body');
     if (!nav || !body) { setTimeout(inject, 800); return; }
 
@@ -58,8 +61,13 @@
   }
 
   function activateTab() {
-    document.querySelectorAll('.cdb-cc-tab').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
-    document.querySelectorAll('.cdb-cc-panel').forEach(p => p.classList.remove('active'));
+    // Investigation is a customer/case-specific panel like AI SecOps and MSSP
+    // Operations — only ever toggle among those gated panels, never the
+    // always-visible public ones (Executive/SOC Operations/Sentinel APEX Intel).
+    document.querySelectorAll('.cdb-cc-tab[data-target]').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+    // .cdb-cc-panel-public marks the always-visible panels (Executive/SOC/
+    // Sentinel) — excluded here so this only ever toggles gated panels.
+    document.querySelectorAll('.cdb-cc-panel:not(.cdb-cc-panel-public)').forEach(p => p.classList.remove('active'));
     const tab = document.getElementById(TAB_ID);
     tab.classList.add('active');
     tab.setAttribute('aria-selected', 'true');

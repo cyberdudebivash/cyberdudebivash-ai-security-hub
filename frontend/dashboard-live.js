@@ -544,7 +544,10 @@
       tab.addEventListener('click', () => {
         const target = tab.dataset.target;
         document.querySelectorAll('.cdb-cc-tab[data-target]').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
-        document.querySelectorAll('#cdb-panel-ai, #cdb-panel-mssp').forEach(p => p.classList.remove('active'));
+        // .cdb-cc-panel-public marks the always-visible panels (Executive/SOC/
+        // Sentinel) — excluded here so this only ever toggles gated panels,
+        // including any a script like soc-case-detail.js injects later.
+        document.querySelectorAll('.cdb-cc-panel:not(.cdb-cc-panel-public)').forEach(p => p.classList.remove('active'));
         tab.classList.add('active');
         tab.setAttribute('aria-selected', 'true');
         const panel = $(target);
