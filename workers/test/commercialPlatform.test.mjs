@@ -227,6 +227,7 @@ const ADMIN_CTX      = { authenticated: true, tier: 'ADMIN',      userId: 'u_adm
 const ENTERPRISE_CTX = { authenticated: true, tier: 'ENTERPRISE', userId: 'u1',      user_id: 'u1' };
 const PRO_CTX        = { authenticated: true, tier: 'PRO',        userId: 'u1',      user_id: 'u1' };
 const FREE_CTX       = { authenticated: true, tier: 'FREE',       userId: 'u5',      user_id: 'u5' };
+const MSSP_CTX       = { authenticated: true, tier: 'MSSP',       userId: 'u6',      user_id: 'u6' };
 const UNAUTH_CTX     = { authenticated: false };
 
 // ─── Request helpers ──────────────────────────────────────────────────────────
@@ -369,6 +370,13 @@ describe('P15.2 handleCustomerLicense', () => {
     const r = await handleCustomerLicense(getReq('/api/customer/license'), makeEnv(), PRO_CTX);
     const d = await r.json();
     expect(d.license.api_keys.active).toBe(1);
+  });
+
+  it('16b. pricing_inr reflects the real MSSP price (₹9,999), not the PLAN_PRICES.MSSP=0 placeholder', async () => {
+    const r = await handleCustomerLicense(getReq('/api/customer/license'), makeEnv(), MSSP_CTX);
+    const d = await r.json();
+    expect(d.license.tier).toBe('MSSP');
+    expect(d.license.pricing_inr).toBe(9999);
   });
 
   it('16. entitlements merged with implicit features (custom_integrations added)', async () => {
