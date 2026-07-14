@@ -21,7 +21,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { aggregateAllRevenue, getRevenueSnapshot, recordRevenueEvent, getSubscriptionRevenue } from '../services/revenueEngine.js';
-import { constantTimeEqual } from '../lib/razorpay.js';
+import { constantTimeEqual, SUBSCRIPTION_PRICES } from '../lib/razorpay.js';
 import { runRevenueOptimization, getUpsellTrigger, getProductRecommendations, analyzeChurnRisk, getUserBehaviorProfile, monetizeScanResult, runBulkOptimization } from '../services/aiRevenueOptimizer.js';
 import { getProductCatalog, getProductPreview, generateDefenseProducts, DEFENSE_PRODUCTS } from '../services/defenseSolutions.js';
 
@@ -456,7 +456,6 @@ export async function handleCheckoutInitiate(request, env, authCtx) {
     const body    = await request.json().catch(() => ({}));
 
     const product  = body.product  || url.searchParams.get('product');
-    const price    = parseFloat(body.price || url.searchParams.get('price') || '0');
     const planName = body.plan     || url.searchParams.get('plan');
     const cveId    = body.cve      || url.searchParams.get('cve');
     const email    = body.email    || authCtx?.email;
@@ -464,13 +463,29 @@ export async function handleCheckoutInitiate(request, env, authCtx) {
     if (!product && !planName) {
       return err('product or plan is required', 400, 'MISSING_PRODUCT');
     }
-    if (!price || price <= 0) {
-      return err('Invalid price', 400, 'INVALID_PRICE');
+
+    // Price is always derived from the server-side catalog — body.price /
+    // ?price= was previously trusted verbatim into the Razorpay order amount,
+    // letting a caller charge themselves any amount they chose (2026-07-14
+    // commercial-integrity audit, Priority 1). Now ignored entirely.
+    let amountPaise;
+    if (planName) {
+      const plan = SUBSCRIPTION_PRICES[String(planName).toUpperCase()];
+      if (!plan) {
+        return err('Invalid plan', 400, 'INVALID_PLAN');
+      }
+      amountPaise = plan.amount;
+    } else {
+      const catalogProduct = DEFENSE_PRODUCTS[product];
+      if (!catalogProduct) {
+        return err('Invalid product', 400, 'INVALID_PRODUCT');
+      }
+      amountPaise = Math.round(catalogProduct.price_inr * 100);
     }
+    const price = amountPaise / 100; // Razorpay uses paise; kept as INR for the JSON response/DB row
 
     // Create Razorpay order via their API
     const orderId   = crypto.randomUUID().replace(/-/g, '').slice(0, 20);
-    const amountPaise = Math.round(price * 100); // Razorpay uses paise
 
     let razorpayOrder = null;
     try {
