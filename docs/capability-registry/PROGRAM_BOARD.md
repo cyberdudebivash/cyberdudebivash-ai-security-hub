@@ -262,6 +262,120 @@ already shipped under it:
 
 ## Session log (most recent first)
 
+### 2026-07-14 — Enterprise Capability Completion Program (ECCP) launched: full triage of the 25 P2 backlog
+
+- **Context.** Following the certification synthesis below, the owner
+  proposed a new program: stop auditing, start closing the parity gap —
+  systematically expose the platform's real backend-only capabilities
+  (frontend, API wiring, permissions, billing, docs) to move parity from
+  70.3% toward 100%. Before committing engineering time to building 25
+  frontends, asked the owner two scoping questions: (1) triage the 25 P2
+  labels against source first, since the P1 experience showed labels can
+  be stale, or skip straight to building; (2) for the 4 "duplicate system"
+  capabilities, retire/consolidate first or build now and reconcile later.
+  Owner chose: **triage first**, **retire/consolidate first** for
+  duplicates.
+- **Execute:** dispatched 5 parallel research agents, each independently
+  verifying a cluster of P2-labeled capabilities against current source
+  code (handlers, routes, frontend HTML/JS, nav markup, tests) rather than
+  trusting the registry label or prior session narration. Caught and
+  corrected a self-inflicted gap mid-triage: 3 of the 25 IDs
+  (`CAP-NOTIF-001`, `CAP-CRM-008`, `CAP-MKT-005`) were never assigned to
+  any agent — verified those 3 directly against their own registry
+  `verification.evidence` fields instead of skipping them.
+- **Result: 9 of 25 P2 labels were stale** (frontend already built and
+  discoverable, registry never re-labeled — the same pattern the earlier
+  P1 re-verification found): `CAP-TIH-002`, `CAP-TIH-004`, `CAP-TIH-009`,
+  `CAP-TIH-014`, `CAP-COMP-002`, `CAP-COMP-004`, `CAP-COMP-005`,
+  `CAP-ORG-001`, `CAP-NOTIF-001`. **Corrected all 9** (`priority`: P2→P6,
+  `verification.evidence` appended with today's independent
+  re-confirmation, full paths cited so the validator can check them).
+  **1 more needed a factual (not just stale-label) correction**:
+  `CAP-PORTAL-004`'s `backend.status` said "missing" but
+  `workers/src/handlers/support.js` is real and wired
+  (`workers/src/index.js:7643-7647`) — shipped 2026-07-13, one day after
+  this registry's last check on it. Corrected to "exists"; `priority`
+  stays P2 since the frontend genuinely is still missing — now an
+  accurate gap instead of a wrong one.
+- **Two standout findings surfaced by the duplicate-system investigation**
+  (facts only — no retire decision made, per the owner's instruction):
+  - `CAP-CRM-006` (Security Assessment Booking): `assessmentBooking.js` is
+    a **complete, unused, real Razorpay-integrated paid checkout system**
+    (₹9,999/₹19,999/₹49,999 tiers, full order-creation + signature
+    verification, a real status lifecycle in an `assessments` table) that
+    **nothing in the frontend calls**. The homepage's actual booking form
+    (`submitEnterpriseV10()`) instead hits `enterpriseLayer.js`'s
+    `handleBookConsultation` — a free lead-capture form with no payment
+    capability at all. This reads as a dormant revenue opportunity, not
+    architectural cruft — flagged for a product decision (wire the paid
+    flow into the live form?) rather than a simple retire call.
+  - `CAP-NOTIF-003` (Outbound Webhooks): both implementations are real and
+    live, but the frontend (`automation-dashboard.html`) is wired to
+    `enterpriseAutomation.js`'s system, which has **no SSRF guard** (unlike
+    `developerPortal.js`'s sibling, which does) and whose auto-fire
+    function (`dispatchWebhookEvent()`) is dead code — never called
+    anywhere, so it's no more automated than the manual one today. The
+    *better-tested, SSRF-guarded* implementation
+    (`developerPortalWebhookSecurity.test.mjs`) has zero frontend callers.
+    Flagged as a possible security/consolidation priority, not just
+    duplication cleanup.
+  - `CAP-CRM-004`: investigation found these are **not actually duplicates**
+    — two complete, differently-scoped systems (org-level vs. user-level
+    health scoring). Likely a registry mis-classification, not a real
+    architecture problem. Not corrected this pass (flagged for the next
+    wave — changing a `duplicate` classification is a real editorial call,
+    not a mechanical fix).
+  - `CAP-MKT-006`: the frontend build serving this capability's routes was
+    attributed to a *different* capability's registry entry
+    (`CAP-TIH-009`) in its own test file's header comment — a
+    cross-tracking/documentation-drift issue, not a live backend
+    duplication needing a retire decision. Not corrected this pass (same
+    reasoning as CAP-CRM-004).
+- **Real remaining backlog, sized** (nothing hidden, nothing padded):
+  - *Trivial* (near one-line fix): `CAP-DASH-003` — the frontend file
+    already exists (`frontend/growth-analytics.js`, calling the 3 real
+    backend routes) but no page loads it via a `<script>` tag.
+  - *Small*: `CAP-MSSP-003` (4 discrete sub-features missing: notification
+    prefs, ticket-routing rules, label CRUD, hierarchy view — all reuse
+    existing tab/modal patterns in the same file).
+  - *Medium*: `CAP-BILL-002` (coupon admin UI, backend confirmed real, zero
+    UI anywhere), `CAP-MYTHOS-003` (needs one new dashboard tab reusing an
+    established convention), `CAP-DEVPORTAL-003` (docs-only today, needs a
+    real key CRUD panel), `CAP-PORTAL-004` (support tickets, backend now
+    real, zero frontend), `CAP-ADMIN-004` (5 real admin sub-panel gaps:
+    marketplace/academy/affiliate/crm/support).
+  - *Large / new architecture*: `CAP-MSSP-004` (delegated partner-staff
+    permissions — needs new DB schema, new auth path, RBAC retrofit across
+    18 handlers), `CAP-CRM-008` (Growth & Revenue Automation Suite — 27
+    exported functions, confirmed zero frontend callers for any of them,
+    verified as far back as 2026-07-08), `CAP-NAV-001` (server-driven
+    navigation engine, genuinely nothing built), `CAP-PROD-003`
+    (distributed tracing/APM, genuinely nothing built — infra-only, not
+    customer-facing).
+  - *Needs a product/architecture decision before any build*: the 4
+    duplicate-flagged capabilities above.
+- **No product code changed this pass** — registry corrections and
+  investigation only, per the triage-first decision. Full suite
+  independently re-run after the registry edits (docs-only, expected
+  unaffected): 294 files / 3082 tests, 0 failures. Validator: 0 hard
+  failures, 0 warnings (also independently caught and required fixing 9
+  bare-filename evidence citations before it would pass — the validator's
+  existence-check is doing real work).
+- **`PRODUCTION_READINESS_REPORT.md` regenerated**: High/P2 25→16 (9
+  corrected off), Backend 90.1%→91.1% (CAP-PORTAL-004's real backend fix),
+  Backend-only features 12→13 (same reason). Parity unchanged at 70.3% —
+  expected, since the 9 corrected capabilities already had real frontends
+  counted correctly in parity; only their misleading priority *label* was
+  stale, not the underlying parity computation.
+- **Next recommended wave (owner's call):** the real, non-decision-blocked
+  backlog above, roughly in effort order — `CAP-DASH-003` (trivial) through
+  `CAP-MSSP-003` (small) are the fastest wins on the parity number; the 4
+  duplicate capabilities need the retire/build-now/defer decision the owner
+  already indicated a preference for (retire/consolidate first) applied
+  capability-by-capability; `CAP-CRM-006`'s dormant paid checkout is worth
+  a dedicated look given the revenue angle, independent of the general ECCP
+  sequencing.
+
 ### 2026-07-14 — Enterprise Production Certification Program, Phase IV: cross-reference verification pass (no new code changes)
 
 - **Context.** Owner requested "Phase IV" of the Enterprise Production

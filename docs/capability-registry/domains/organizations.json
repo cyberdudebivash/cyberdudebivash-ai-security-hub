@@ -5,92 +5,142 @@
     "name": "Organization Management",
     "description": "Create, list, view, update, and delete organizations; invite members; assign/update member roles; view org-scoped scan history and dashboard.",
     "backend": {
-      "handlers": ["workers/src/handlers/orgManagement.js"],
+      "handlers": [
+        "workers/src/handlers/orgManagement.js"
+      ],
       "entry_points": [
-        "handleCreateOrg", "handleListOrgs", "handleGetOrg", "handleOrgDashboard",
-        "handleInviteMember", "handleUpdateMemberRole", "handleRemoveMember",
-        "handleOrgScans", "handleUpdateOrg", "handleDeleteOrg"
+        "handleCreateOrg",
+        "handleListOrgs",
+        "handleGetOrg",
+        "handleOrgDashboard",
+        "handleInviteMember",
+        "handleUpdateMemberRole",
+        "handleRemoveMember",
+        "handleOrgScans",
+        "handleUpdateOrg",
+        "handleDeleteOrg"
       ],
       "routes_sampled": [
-        { "path": "/api/orgs", "method": "POST", "evidence": "workers/src/index.js:3543" }
+        {
+          "path": "/api/orgs",
+          "method": "POST",
+          "evidence": "workers/src/index.js:3543"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "dedicated_page",
-      "pages": ["frontend/user-dashboard.html"],
+      "pages": [
+        "frontend/user-dashboard.html"
+      ],
       "status": "exists",
-      "evidence": "MOSTLY FIXED 2026-07-09, completed 2026-07-11. Added a new #page-orgs (list view + detail view: dashboard stats, members table, settings, danger zone) plus 4 modals (create/invite/remove-confirm/delete-confirm) to frontend/user-dashboard.html, wired to the existing, unmodified backend. Confirmed before building that no near-miss page existed under frontend/enterprise*.html (frontend/enterprise-dashboard.html is a threat-intel feed, frontend/enterprise-portal.html is SSO/SIEM integration docs, frontend/enterprise-kpi-dashboard.html is CDB's own internal revenue analytics, frontend/enterprise-security.html is marketing copy — none call any /api/orgs route), so this was a clean build with no duplication. 2026-07-11: the deliberately-deferred 10th handler, handleOrgScans (org-wide paginated scan history across every active member), is now wired too — a new 'Scan History' card in the detail view (module filter + Prev/Next pager) calling GET /api/orgs/:id/scans, real field names (module/target_summary/risk_score/scanned_by/scanned_at). Found and fixed in the same pass: the handler's own `total` field was `results?.length` (i.e. capped at whatever `limit` was requested, never the real row count) — a pager built on it would work on page 1 and then be unable to tell 'more pages exist' from 'this is everything' the moment an org had more scans than one page; fixed with a real `COUNT(*)` over the same WHERE clause (member ids + optional module filter), zero change to the SELECT query's own shape. All 10 of 10 backend handlers now have a real UI consumer."
+      "evidence": "MOSTLY FIXED 2026-07-09, completed 2026-07-11. Added a new #page-orgs (list view + detail view: dashboard stats, members table, settings, danger zone) plus 4 modals (create/invite/remove-confirm/delete-confirm) to frontend/user-dashboard.html, wired to the existing, unmodified backend. Confirmed before building that no near-miss page existed under frontend/enterprise*.html (frontend/enterprise-dashboard.html is a threat-intel feed, frontend/enterprise-portal.html is SSO/SIEM integration docs, frontend/enterprise-kpi-dashboard.html is CDB's own internal revenue analytics, frontend/enterprise-security.html is marketing copy \u2014 none call any /api/orgs route), so this was a clean build with no duplication. 2026-07-11: the deliberately-deferred 10th handler, handleOrgScans (org-wide paginated scan history across every active member), is now wired too \u2014 a new 'Scan History' card in the detail view (module filter + Prev/Next pager) calling GET /api/orgs/:id/scans, real field names (module/target_summary/risk_score/scanned_by/scanned_at). Found and fixed in the same pass: the handler's own `total` field was `results?.length` (i.e. capped at whatever `limit` was requested, never the real row count) \u2014 a pager built on it would work on page 1 and then be unable to tell 'more pages exist' from 'this is everything' the moment an org had more scans than one page; fixed with a real `COUNT(*)` over the same WHERE clause (member ids + optional module filter), zero change to the SELECT query's own shape. All 10 of 10 backend handlers now have a real UI consumer."
     },
     "navigation": {
       "discoverable": true,
-      "evidence": "New 'Organizations' nav-item in a new 'Team' sidebar section (frontend/user-dashboard.html), visible to every signed-in customer regardless of whether they currently belong to an org — the list view's empty state offers 'Create Organization' directly, since a brand-new signup account has zero orgs and there was previously no discoverable path to create one at all."
+      "evidence": "New 'Organizations' nav-item in a new 'Team' sidebar section (frontend/user-dashboard.html), visible to every signed-in customer regardless of whether they currently belong to an org \u2014 the list view's empty state offers 'Create Organization' directly, since a brand-new signup account has zero orgs and there was previously no discoverable path to create one at all."
     },
     "auth_enforced": true,
     "rbac": {
       "enforced": true,
-      "permissions": ["OWNER:all", "ADMIN:read,write,invite,delete_content,manage_monitors", "ANALYST:read,write,create_scans", "MEMBER:read,create_scans", "VIEWER:read"]
+      "permissions": [
+        "OWNER:all",
+        "ADMIN:read,write,invite,delete_content,manage_monitors",
+        "ANALYST:read,write,create_scans",
+        "MEMBER:read,create_scans",
+        "VIEWER:read"
+      ]
     },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "workers/test/orgRbacIsolation.test.mjs and workers/test/phase9OrgDashboardSchema.test.mjs (backend, pre-existing, unchanged) plus workers/test/userDashboardOrgManagement.test.mjs (2026-07-09, 17 tests) — cross-checks the new frontend against workers/src/index.js and workers/src/handlers/orgManagement.js directly: every API call uses the real route/method/field names (including the org_id-vs-id and slug-vs-UUID gotchas the backend contract has), and the client-side RBAC surfaced in the UI (who sees Invite/Settings/Danger-Zone, who gets a role dropdown, who can remove/leave) matches the backend's actual enforcement exactly, not just visually. Independently re-verified live via a real headless-Chromium Playwright session — 27/27 checks across 3 scenarios: full OWNER lifecycle (empty state → create → detail view with live dashboard stats → invite → change a member's role → remove a member → save settings → back to list), and a dedicated MEMBER-role permission-boundary check confirming a non-owner sees zero management controls and only 'Leave' (never 'Remove') on their own row. axe-core WCAG2A/AA scan found and fixed two real new issues (a critical 'label' violation on the settings form's Name field — added proper for/id pairing rather than the weaker placeholder-as-fallback pattern used elsewhere in this file — and a critical 'select-name' violation on the dynamically-generated per-member role dropdown — added aria-label); remaining flagged violations are the same pre-existing, site-wide '--muted'/'.badge-gray'/'.btn-danger' color-contrast issue already documented as out-of-scope on CAP-IDN-002 and CAP-RBAC-002. 2026-07-11: new workers/test/orgScansPagination.test.mjs (8 tests) for the handleOrgScans wiring — backend tests seed 28 scan_history rows (more than the 20-row default page size) to make the total-count bug and its fix diverge (a 2-row fixture can't distinguish them), confirm page-2 math, module-filter narrowing, and both a non-member and a real member of a DIFFERENT org correctly 403 (no cross-org leak); frontend static tests confirm the real field names; a real headless-Chromium session against a minimal DOM harness with the real extracted loadOrgScans()/orgScansPage() functions (not a reimplementation) drove a full page1 → next → prev → module-filter → empty-state sequence — 28 rows across 2 pages, range text, and Prev/Next disabled-state all correct at every step, zero page errors."
+      "evidence": "workers/test/orgRbacIsolation.test.mjs and workers/test/phase9OrgDashboardSchema.test.mjs (backend, pre-existing, unchanged) plus workers/test/userDashboardOrgManagement.test.mjs (2026-07-09, 17 tests) \u2014 cross-checks the new frontend against workers/src/index.js and workers/src/handlers/orgManagement.js directly: every API call uses the real route/method/field names (including the org_id-vs-id and slug-vs-UUID gotchas the backend contract has), and the client-side RBAC surfaced in the UI (who sees Invite/Settings/Danger-Zone, who gets a role dropdown, who can remove/leave) matches the backend's actual enforcement exactly, not just visually. Independently re-verified live via a real headless-Chromium Playwright session \u2014 27/27 checks across 3 scenarios: full OWNER lifecycle (empty state \u2192 create \u2192 detail view with live dashboard stats \u2192 invite \u2192 change a member's role \u2192 remove a member \u2192 save settings \u2192 back to list), and a dedicated MEMBER-role permission-boundary check confirming a non-owner sees zero management controls and only 'Leave' (never 'Remove') on their own row. axe-core WCAG2A/AA scan found and fixed two real new issues (a critical 'label' violation on the settings form's Name field \u2014 added proper for/id pairing rather than the weaker placeholder-as-fallback pattern used elsewhere in this file \u2014 and a critical 'select-name' violation on the dynamically-generated per-member role dropdown \u2014 added aria-label); remaining flagged violations are the same pre-existing, site-wide '--muted'/'.badge-gray'/'.btn-danger' color-contrast issue already documented as out-of-scope on CAP-IDN-002 and CAP-RBAC-002. 2026-07-11: new workers/test/orgScansPagination.test.mjs (8 tests) for the handleOrgScans wiring \u2014 backend tests seed 28 scan_history rows (more than the 20-row default page size) to make the total-count bug and its fix diverge (a 2-row fixture can't distinguish them), confirm page-2 math, module-filter narrowing, and both a non-member and a real member of a DIFFERENT org correctly 403 (no cross-org leak); frontend static tests confirm the real field names; a real headless-Chromium session against a minimal DOM harness with the real extracted loadOrgScans()/orgScansPage() functions (not a reimplementation) drove a full page1 \u2192 next \u2192 prev \u2192 module-filter \u2192 empty-state sequence \u2014 28 rows across 2 pages, range text, and Prev/Next disabled-state all correct at every step, zero page errors."
     },
     "docs": [
-      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" },
-      { "path": "GENERAL_AVAILABILITY_REPORT.md", "tag": "canonical" }
+      {
+        "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md",
+        "tag": "canonical"
+      },
+      {
+        "path": "GENERAL_AVAILABILITY_REPORT.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "PILOT ONLY",
-    "priority": "P2",
+    "priority": "P6",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-12",
-      "evidence": "FIXED 2026-07-09 (own commit, own regression tests). workers/src/handlers/orgManagement.js re-read in full to confirm every request/response field name and RBAC rule before writing any UI code (org_id from POST /api/orgs vs id from GET /api/orgs/:id; GET /api/orgs/:id resolves slug-or-id but GET /api/orgs/:id/dashboard requires the real UUID; the documented zero-member dashboard response shape with no summary key). Dynamic: real headless-Chromium Playwright session against the changed file served locally, mocking the full backend contract per RBAC role (OWNER and MEMBER) — 27/27 checks. Full backend suite green: 183 files / 1944 tests (182/1927 baseline + 1 new file/17 tests). scripts/seo-structure-lock.mjs: all 22 pages green (unaffected). 2026-07-11: handleOrgScans wired (see frontend.evidence for the total-count bug fixed alongside it) — workers/src/index.js's route registration re-read to confirm the real path/method; a real headless-Chromium session against a minimal DOM harness with the actual extracted loadOrgScans()/orgScansPage() functions drove a full pagination sequence (28 seeded rows, page1 → next → prev → module-filter → empty-state), all correct, zero page errors. Full backend suite 211 files/2188 tests green. customer_journey_complete stays false and operational_status is PILOT ONLY (not GA) pending a real dynamic_browser verification pass against LIVE production specifically (this pass verified against a local harness/mocked backend, not the deployed site) — not because any shipped part is in doubt. FIXED 2026-07-12 (22-paid-feature program, item 7 of 22): resolved the one remaining open field, subscription_gated (previously unknown) -- read workers/src/handlers/orgManagement.js:43-87 directly: organization creation is available to every authenticated tier including FREE (ORG_PLAN_LIMITS + the maxOrgs check at line 78 -- 1 org for FREE/STARTER, 3 for PRO, unlimited for ENTERPRISE), a tier-scaled limit rather than a paid-only gate, exactly mirroring CAP-DEVPORTAL-001/002's already-established subscription_gated:false pattern. No code change needed -- corrected the record rather than inventing busywork, the same treatment as CAP-RBAC-002 (item 1)."
+      "last_verified": "2026-07-14",
+      "evidence": "FIXED 2026-07-09 (own commit, own regression tests). workers/src/handlers/orgManagement.js re-read in full to confirm every request/response field name and RBAC rule before writing any UI code (org_id from POST /api/orgs vs id from GET /api/orgs/:id; GET /api/orgs/:id resolves slug-or-id but GET /api/orgs/:id/dashboard requires the real UUID; the documented zero-member dashboard response shape with no summary key). Dynamic: real headless-Chromium Playwright session against the changed file served locally, mocking the full backend contract per RBAC role (OWNER and MEMBER) \u2014 27/27 checks. Full backend suite green: 183 files / 1944 tests (182/1927 baseline + 1 new file/17 tests). scripts/seo-structure-lock.mjs: all 22 pages green (unaffected). 2026-07-11: handleOrgScans wired (see frontend.evidence for the total-count bug fixed alongside it) \u2014 workers/src/index.js's route registration re-read to confirm the real path/method; a real headless-Chromium session against a minimal DOM harness with the actual extracted loadOrgScans()/orgScansPage() functions drove a full pagination sequence (28 seeded rows, page1 \u2192 next \u2192 prev \u2192 module-filter \u2192 empty-state), all correct, zero page errors. Full backend suite 211 files/2188 tests green. customer_journey_complete stays false and operational_status is PILOT ONLY (not GA) pending a real dynamic_browser verification pass against LIVE production specifically (this pass verified against a local harness/mocked backend, not the deployed site) \u2014 not because any shipped part is in doubt. FIXED 2026-07-12 (22-paid-feature program, item 7 of 22): resolved the one remaining open field, subscription_gated (previously unknown) -- read workers/src/handlers/orgManagement.js:43-87 directly: organization creation is available to every authenticated tier including FREE (ORG_PLAN_LIMITS + the maxOrgs check at line 78 -- 1 org for FREE/STARTER, 3 for PRO, unlimited for ENTERPRISE), a tier-scaled limit rather than a paid-only gate, exactly mirroring CAP-DEVPORTAL-001/002's already-established subscription_gated:false pattern. No code change needed -- corrected the record rather than inventing busywork, the same treatment as CAP-RBAC-002 (item 1). | Direct re-verification: real nav-item (data-page=\"orgs\") + #page-orgs confirmed in frontend/user-dashboard.html, calling confirmed-live /api/orgs routes backed by 10 handlers in workers/src/handlers/orgManagement.js. RE-VERIFIED 2026-07-14 (Enterprise Capability Completion Program triage): independently re-confirmed via source (not the registry label) that this frontend/navigation work is real, live, and reachable. Priority corrected from P2 (backend exists, frontend missing) since that is no longer true."
     },
     "contradicts_doc": [
       {
         "file": "GENERAL_AVAILABILITY_REPORT.md",
         "line": 79,
         "claim": "Organizations: create / members / RBAC / dashboard / scan history | GA APPROVED | Full admin loop live-verified this phase; RC-B1 fix verified at Phase IX gate",
-        "correction": "The original \"live-verified\" evidence behind this claim was scripts/ceap-sweep.mjs, which calls the API directly (dynamic_api) — no dynamic_browser verification existed, and no frontend page called any /api/orgs* endpoint at all, until the 2026-07-09 fix. A real UI now exists for all 10 backend handlers, including org-wide scan history as of 2026-07-11 — but no production dynamic_browser pass has been performed for any of it yet, so 'GA APPROVED... live-verified' remains inaccurate specifically on the verification-method claim, not on functional completeness."
+        "correction": "The original \"live-verified\" evidence behind this claim was scripts/ceap-sweep.mjs, which calls the API directly (dynamic_api) \u2014 no dynamic_browser verification existed, and no frontend page called any /api/orgs* endpoint at all, until the 2026-07-09 fix. A real UI now exists for all 10 backend handlers, including org-wide scan history as of 2026-07-11 \u2014 but no production dynamic_browser pass has been performed for any of it yet, so 'GA APPROVED... live-verified' remains inaccurate specifically on the verification-method claim, not on functional completeness."
       }
     ],
-    "notes": "Was the highest-value single gap identified across the whole platform: full, working, RBAC-enforced backend with a complete admin loop, and precisely zero customer-facing UI. Fixed as a minimally-disruptive, additive build: zero changes to the existing, working orgManagement.js backend; a new sidebar section and page reusing the dashboard's exact existing markup/CSS/JS conventions (form-group/modal/card/table patterns) rather than introducing a new design language. Client-side permission checks were derived directly from the backend's own enforcement code (read first, then mirrored), not guessed at, and independently regression-tested against both. 2026-07-11: the one deliberately-deferred increment — org-wide scan history (handleOrgScans) — is now also wired, closing the last of the 10 handlers. Found a genuine backend bug while wiring it (total was page-size, not a real count) and fixed it in the same pass rather than building a pager against data that would silently lie past page 1 — see frontend.evidence. Remaining gap, unchanged from before: no production dynamic_browser verification pass has been run for any part of org management yet (this and the 2026-07-09 build were both verified against local/mocked backends only) — that, not any known functional defect, is what's keeping operational_status at PILOT ONLY. 2026-07-12 (22-paid-feature program, item 7): the fifth of the 22 paid features found to already be genuinely, thoroughly complete from prior sessions' work -- no code change needed, just a stale registry field (subscription_gated) resolved by direct verification, same treatment as CAP-RBAC-002. A real live-production dynamic_browser verification pass remains the one honest gap between this and full GA -- flagged, not attempted in this pass (a materially different, riskier kind of action than local/mocked testing; would need real production credentials and careful test-data cleanup, better scoped as its own deliberate task than bundled into this backlog pass)."
+    "notes": "Was the highest-value single gap identified across the whole platform: full, working, RBAC-enforced backend with a complete admin loop, and precisely zero customer-facing UI. Fixed as a minimally-disruptive, additive build: zero changes to the existing, working orgManagement.js backend; a new sidebar section and page reusing the dashboard's exact existing markup/CSS/JS conventions (form-group/modal/card/table patterns) rather than introducing a new design language. Client-side permission checks were derived directly from the backend's own enforcement code (read first, then mirrored), not guessed at, and independently regression-tested against both. 2026-07-11: the one deliberately-deferred increment \u2014 org-wide scan history (handleOrgScans) \u2014 is now also wired, closing the last of the 10 handlers. Found a genuine backend bug while wiring it (total was page-size, not a real count) and fixed it in the same pass rather than building a pager against data that would silently lie past page 1 \u2014 see frontend.evidence. Remaining gap, unchanged from before: no production dynamic_browser verification pass has been run for any part of org management yet (this and the 2026-07-09 build were both verified against local/mocked backends only) \u2014 that, not any known functional defect, is what's keeping operational_status at PILOT ONLY. 2026-07-12 (22-paid-feature program, item 7): the fifth of the 22 paid features found to already be genuinely, thoroughly complete from prior sessions' work -- no code change needed, just a stale registry field (subscription_gated) resolved by direct verification, same treatment as CAP-RBAC-002. A real live-production dynamic_browser verification pass remains the one honest gap between this and full GA -- flagged, not attempted in this pass (a materially different, riskier kind of action than local/mocked testing; would need real production credentials and careful test-data cleanup, better scoped as its own deliberate task than bundled into this backlog pass)."
   },
   {
     "id": "CAP-ORG-002",
     "domain": "organizations",
     "name": "Organization Activity Log (Audit Trail)",
-    "description": "OWNER/ADMIN-visible audit trail of org membership and settings changes (invites, role changes, removals, org updates/deletion) — the customer-facing counterpart to the platform staff's own merged audit log (CAP-ADMIN-001).",
+    "description": "OWNER/ADMIN-visible audit trail of org membership and settings changes (invites, role changes, removals, org updates/deletion) \u2014 the customer-facing counterpart to the platform staff's own merged audit log (CAP-ADMIN-001).",
     "backend": {
-      "handlers": ["workers/src/handlers/orgManagement.js"],
-      "entry_points": ["writeOrgAuditLog", "handleGetOrgAuditLog"],
+      "handlers": [
+        "workers/src/handlers/orgManagement.js"
+      ],
+      "entry_points": [
+        "writeOrgAuditLog",
+        "handleGetOrgAuditLog"
+      ],
       "routes_sampled": [
-        { "path": "/api/orgs/:id/audit", "method": "GET", "evidence": "workers/src/index.js — registered immediately after /api/orgs/:id/scans" }
+        {
+          "path": "/api/orgs/:id/audit",
+          "method": "GET",
+          "evidence": "workers/src/index.js \u2014 registered immediately after /api/orgs/:id/scans"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "embedded_widget",
-      "pages": ["frontend/user-dashboard.html"],
+      "pages": [
+        "frontend/user-dashboard.html"
+      ],
       "status": "exists",
       "evidence": "ADDED 2026-07-11 (competitor-parity wave). New 'Activity Log' card in the existing org detail view (#org-audit-card), positioned between Settings and Danger Zone, visible only to OWNER/ADMIN (same canManage gate as #org-settings-card). loadOrgAudit() calls the new GET /api/orgs/:id/audit endpoint and renders actor name, a human-readable action label (ORG_AUDIT_LABELS), and a per-action detail string (orgAuditDetail()), all HTML-escaped via the existing orgEsc() helper."
     },
     "navigation": {
       "discoverable": true,
-      "evidence": "Embedded in the already-discoverable Organizations page (CAP-ORG-001) — no new nav entry needed, loads automatically when an OWNER/ADMIN opens their org's detail view."
+      "evidence": "Embedded in the already-discoverable Organizations page (CAP-ORG-001) \u2014 no new nav entry needed, loads automatically when an OWNER/ADMIN opens their org's detail view."
     },
     "auth_enforced": true,
-    "rbac": { "enforced": true, "permissions": ["OWNER:read_audit", "ADMIN:read_audit"] },
+    "rbac": {
+      "enforced": true,
+      "permissions": [
+        "OWNER:read_audit",
+        "ADMIN:read_audit"
+      ]
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "workers/test/orgAuditLog.test.mjs (17 tests, new): real in-memory SQLite (node:sqlite, same convention as workers/test/orgRbacIsolation.test.mjs) proving audit rows are written on invite/role-change/remove/leave/update/delete with correct actor+metadata; audit writing degrades gracefully (never blocks the underlying action) if audit_log is unavailable; the read endpoint is OWNER/ADMIN-only (plain MEMBER, a non-member outsider, and a real OWNER of a DIFFERENT org all correctly get 403 — no cross-org existence leak); route-registration contract check; frontend static-parse checks confirming the Activity Log card's visibility gate, data loading, and escaped rendering."
+      "evidence": "workers/test/orgAuditLog.test.mjs (17 tests, new): real in-memory SQLite (node:sqlite, same convention as workers/test/orgRbacIsolation.test.mjs) proving audit rows are written on invite/role-change/remove/leave/update/delete with correct actor+metadata; audit writing degrades gracefully (never blocks the underlying action) if audit_log is unavailable; the read endpoint is OWNER/ADMIN-only (plain MEMBER, a non-member outsider, and a real OWNER of a DIFFERENT org all correctly get 403 \u2014 no cross-org existence leak); route-registration contract check; frontend static-parse checks confirming the Activity Log card's visibility gate, data loading, and escaped rendering."
     },
     "docs": [],
     "customer_journey_complete": false,
@@ -99,9 +149,9 @@
     "verification": {
       "method": "dynamic_browser",
       "last_verified": "2026-07-11",
-      "evidence": "Backend: 17/17 tests passing against a real SQLite engine executing the real handler code. Frontend: real headless-Chromium Playwright session against the changed frontend/user-dashboard.html, hitting the REAL live backend for signup/org-create (routes that already exist in production) and a locally-mocked response — shaped field-for-field to match handleGetOrgAuditLog's real, tested output — for the one new route that cannot exist on production until this PR merges and deploys. Confirmed: Activity Log card visible and correctly populated for the OWNER with human-readable labels and per-action detail text, zero JS errors. customer_journey_complete stays false pending a post-merge production pass once the real endpoint is live (same discipline as every other capability in this registry — dynamic_api/dynamic_browser against a route that doesn't exist yet pre-merge is a contradiction in terms, not a shortcut taken here)."
+      "evidence": "Backend: 17/17 tests passing against a real SQLite engine executing the real handler code. Frontend: real headless-Chromium Playwright session against the changed frontend/user-dashboard.html, hitting the REAL live backend for signup/org-create (routes that already exist in production) and a locally-mocked response \u2014 shaped field-for-field to match handleGetOrgAuditLog's real, tested output \u2014 for the one new route that cannot exist on production until this PR merges and deploys. Confirmed: Activity Log card visible and correctly populated for the OWNER with human-readable labels and per-action detail text, zero JS errors. customer_journey_complete stays false pending a post-merge production pass once the real endpoint is live (same discipline as every other capability in this registry \u2014 dynamic_api/dynamic_browser against a route that doesn't exist yet pre-merge is a contradiction in terms, not a shortcut taken here)."
     },
     "contradicts_doc": [],
-    "notes": "Found via a structured competitor comparison (CrowdStrike, SentinelOne, Palo Alto Cortex, Recorded Future, Google Mandiant, ThreatConnect): 4 of 6 vendors publicly document some form of customer-admin-visible audit trail (ThreatConnect's is the most granular — actor/action/timestamp/source IP/session ID). This platform had a staff-only equivalent (CAP-ADMIN-001) but nothing an org OWNER could see for their own org. Reuses the existing, already-migrated D1 audit_log table (the same one aiSecurityCopilot.js's writeCopilotAuditLog() and the SSO handler already write to, and handleAdminAudit already merges into its staff view) — zero new schema, zero migration dependency, unlike the Threat Graph findings-persistence fix (PR #159) which needed a genuinely new column. See docs/capability-registry/PROGRAM_BOARD.md's 2026-07-11 competitor-gap-analysis session log entry for the full comparison and the larger, explicitly-scoped-out gaps (pervasive org-RBAC enforcement outside this one page, in-product support ticketing, enterprise SSO self-service configuration, API-key system consolidation)."
+    "notes": "Found via a structured competitor comparison (CrowdStrike, SentinelOne, Palo Alto Cortex, Recorded Future, Google Mandiant, ThreatConnect): 4 of 6 vendors publicly document some form of customer-admin-visible audit trail (ThreatConnect's is the most granular \u2014 actor/action/timestamp/source IP/session ID). This platform had a staff-only equivalent (CAP-ADMIN-001) but nothing an org OWNER could see for their own org. Reuses the existing, already-migrated D1 audit_log table (the same one aiSecurityCopilot.js's writeCopilotAuditLog() and the SSO handler already write to, and handleAdminAudit already merges into its staff view) \u2014 zero new schema, zero migration dependency, unlike the Threat Graph findings-persistence fix (PR #159) which needed a genuinely new column. See docs/capability-registry/PROGRAM_BOARD.md's 2026-07-11 competitor-gap-analysis session log entry for the full comparison and the larger, explicitly-scoped-out gaps (pervasive org-RBAC enforcement outside this one page, in-product support ticketing, enterprise SSO self-service configuration, API-key system consolidation)."
   }
 ]

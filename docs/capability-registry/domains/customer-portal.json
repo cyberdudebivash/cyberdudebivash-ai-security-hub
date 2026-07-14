@@ -5,32 +5,49 @@
     "name": "Profile & Security Settings",
     "description": "View/update profile, change password, and set up/manage multi-factor authentication from within the authenticated dashboard.",
     "backend": {
-      "handlers": ["workers/src/handlers/auth.js", "workers/src/handlers/mfa.js"],
-      "entry_points": ["handleUpdateProfile", "handleChangePassword"],
+      "handlers": [
+        "workers/src/handlers/auth.js",
+        "workers/src/handlers/mfa.js"
+      ],
+      "entry_points": [
+        "handleUpdateProfile",
+        "handleChangePassword"
+      ],
       "routes_sampled": [],
       "routes_fully_enumerated": false,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "dedicated_page",
-      "pages": ["frontend/user-dashboard.html"],
+      "pages": [
+        "frontend/user-dashboard.html"
+      ],
       "status": "exists",
-      "evidence": "frontend/user-dashboard.html:1595 (Update Password button), 1602-1607 (MFA status badge + setup body), 2798-2823 (changePassword(), calling POST /api/auth/change-password), 2825+ (MFA setup flow) — all read directly, verified 2026-07-08."
+      "evidence": "frontend/user-dashboard.html:1595 (Update Password button), 1602-1607 (MFA status badge + setup body), 2798-2823 (changePassword(), calling POST /api/auth/change-password), 2825+ (MFA setup flow) \u2014 all read directly, verified 2026-07-08."
     },
     "navigation": {
       "discoverable": true,
       "evidence": "frontend/user-dashboard.html:897 sidebar nav-item (data-page=\"settings\") reaches this page section."
     },
     "auth_enforced": true,
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "workers/test/phase10PasswordReset.test.mjs, workers/test/mfaEnforcementRegression.test.mjs, and workers/test/gdprAccountDeletion.test.mjs import directly from workers/src/handlers/auth.js — confirmed by import-statement grep, 2026-07-08."
+      "evidence": "workers/test/phase10PasswordReset.test.mjs, workers/test/mfaEnforcementRegression.test.mjs, and workers/test/gdprAccountDeletion.test.mjs import directly from workers/src/handlers/auth.js \u2014 confirmed by import-statement grep, 2026-07-08."
     },
     "docs": [
-      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+      {
+        "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
@@ -48,34 +65,51 @@
     "name": "Scan History & Reports",
     "description": "View past scans/purchased reports with expiry and re-download.",
     "backend": {
-      "handlers": ["workers/src/handlers/payments.js"],
+      "handlers": [
+        "workers/src/handlers/payments.js"
+      ],
       "entry_points": [],
       "routes_sampled": [
-        { "path": "/api/customer/payments", "method": "GET", "evidence": "workers/src/index.js:5500" }
+        {
+          "path": "/api/customer/payments",
+          "method": "GET",
+          "evidence": "workers/src/index.js:5500"
+        }
       ],
       "routes_fully_enumerated": false,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "dedicated_page",
-      "pages": ["frontend/user-dashboard.html"],
+      "pages": [
+        "frontend/user-dashboard.html"
+      ],
       "status": "exists",
-      "evidence": "frontend/user-dashboard.html:3700-3722 (loadUserReports()) renders the reports table with module/target/price/expiry/download columns and is wired to fire on nav to the reports page or on load if already active. As of commit 67f6b924 (PR #97 quick-win fix), this function is the sole owner of #reports-table — the previous race condition against loadPayments() (both functions writing the same DOM element, whichever resolved last silently won) was removed by scoping loadPayments() to #payment-history only. Independently re-confirmed 2026-07-08: no other function in the file references #reports-table."
+      "evidence": "frontend/user-dashboard.html:3700-3722 (loadUserReports()) renders the reports table with module/target/price/expiry/download columns and is wired to fire on nav to the reports page or on load if already active. As of commit 67f6b924 (PR #97 quick-win fix), this function is the sole owner of #reports-table \u2014 the previous race condition against loadPayments() (both functions writing the same DOM element, whichever resolved last silently won) was removed by scoping loadPayments() to #payment-history only. Independently re-confirmed 2026-07-08: no other function in the file references #reports-table."
     },
     "navigation": {
       "discoverable": true,
       "evidence": "frontend/user-dashboard.html:846 sidebar nav-item (data-page=\"reports\")."
     },
     "auth_enforced": true,
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
       "evidence": "workers/test/billingPortal.test.mjs and workers/test/commercialPlatform.test.mjs reference report_url/customer payments behavior (confirmed by grep for these terms; both test the payments/billing data shape this page consumes)."
     },
     "docs": [
-      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+      {
+        "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
@@ -85,7 +119,7 @@
       "last_verified": "2026-07-08",
       "evidence": "frontend/user-dashboard.html:3700-3722 read directly and cross-checked against the PR #97 diff (git show 67f6b924) to confirm the previously-documented race condition is actually fixed in current code, not just claimed fixed."
     },
-    "notes": "This entry supersedes docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:227's 'Exists, buggy' status — the bug it references (Quick Win #3) was fixed in commit 67f6b924, after the mission brief was written. No actionable gap found now; P7 by elimination."
+    "notes": "This entry supersedes docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:227's 'Exists, buggy' status \u2014 the bug it references (Quick Win #3) was fixed in commit 67f6b924, after the mission brief was written. No actionable gap found now; P7 by elimination."
   },
   {
     "id": "CAP-PORTAL-003",
@@ -93,35 +127,60 @@
     "name": "Session Management (Active Sessions / Per-Session Revoke)",
     "description": "Let a customer see which devices/sessions are currently signed in and revoke an individual session, rather than only being able to sign out everywhere at once.",
     "backend": {
-      "handlers": ["workers/src/handlers/auth.js"],
-      "entry_points": ["handleListSessions", "handleRevokeSession", "revokeAllUserTokens"],
+      "handlers": [
+        "workers/src/handlers/auth.js"
+      ],
+      "entry_points": [
+        "handleListSessions",
+        "handleRevokeSession",
+        "revokeAllUserTokens"
+      ],
       "routes_sampled": [
-        { "path": "/api/user/sessions", "method": "GET", "evidence": "workers/src/index.js (auth routes block, immediately after /api/auth/delete-account)" },
-        { "path": "/api/user/sessions/{id}", "method": "DELETE", "evidence": "workers/src/index.js (same block)" }
+        {
+          "path": "/api/user/sessions",
+          "method": "GET",
+          "evidence": "workers/src/index.js (auth routes block, immediately after /api/auth/delete-account)"
+        },
+        {
+          "path": "/api/user/sessions/{id}",
+          "method": "DELETE",
+          "evidence": "workers/src/index.js (same block)"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "embedded_widget",
-      "pages": ["frontend/user-dashboard.html"],
+      "pages": [
+        "frontend/user-dashboard.html"
+      ],
       "status": "exists",
-      "evidence": "FIXED 2026-07-10 (production-readiness lifecycle wave 1). New 'Active Sessions' card added to #page-settings between Change Password and 2FA, table body #sessions-list. loadSessions() (lazy-loaded the first time Settings is opened, same pattern as loadMFAStatus()) calls GET /api/user/sessions with an X-Session-Hint header carrying the browser's own already-held refresh token (sessionStorage 'cdb_refresh') purely so the backend can flag which row is 'This device' — not a new privilege, the token is already held client-side and already usable at /api/auth/refresh. renderSessions() shows a device label parsed from user_agent (sessDeviceLabel()), IP, signed-in date, and a per-row 'Sign out' button (hidden for the current session) wired via a data-session-id attribute + revokeSession(this.dataset.sessionId) — not a string-interpolated onclick, deliberately following the CAP-ADMIN-004 fix's safer pattern even though session ids are server-generated hex (no actual injection vector) rather than the older, riskier convention."
+      "evidence": "FIXED 2026-07-10 (production-readiness lifecycle wave 1). New 'Active Sessions' card added to #page-settings between Change Password and 2FA, table body #sessions-list. loadSessions() (lazy-loaded the first time Settings is opened, same pattern as loadMFAStatus()) calls GET /api/user/sessions with an X-Session-Hint header carrying the browser's own already-held refresh token (sessionStorage 'cdb_refresh') purely so the backend can flag which row is 'This device' \u2014 not a new privilege, the token is already held client-side and already usable at /api/auth/refresh. renderSessions() shows a device label parsed from user_agent (sessDeviceLabel()), IP, signed-in date, and a per-row 'Sign out' button (hidden for the current session) wired via a data-session-id attribute + revokeSession(this.dataset.sessionId) \u2014 not a string-interpolated onclick, deliberately following the CAP-ADMIN-004 fix's safer pattern even though session ids are server-generated hex (no actual injection vector) rather than the older, riskier convention."
     },
     "navigation": {
       "discoverable": true,
       "evidence": "Embedded in the existing, already-discoverable Settings page (data-page=\"settings\"), same sidebar nav-item as Change Password / 2FA."
     },
     "auth_enforced": true,
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
       "evidence": "workers/test/userSessionManagement.test.mjs (new, 2026-07-10, 13 tests, real in-memory node:sqlite matching production schema, same convention as workers/test/phase10PasswordReset.test.mjs): lists only the caller's own active non-revoked non-expired sessions, flags the current session via X-Session-Hint without leaking token_hash to the client, returns the device/IP/created_at fields the UI renders, requires authentication on both routes, revokes an owned session, 404s (not silently succeeds) on another user's session id (IDOR-safe) and on an already-revoked/nonexistent id, plus a route+frontend contract check (workers/src/index.js registers both routes wired to the real handlers; frontend/user-dashboard.html calls the real endpoints, not a placeholder; the revoke button uses a data-attribute, not a string-interpolated onclick)."
     },
     "docs": [
-      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+      {
+        "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "PILOT ONLY",
@@ -131,7 +190,7 @@
       "last_verified": "2026-07-10",
       "evidence": "FIXED 2026-07-10. workers/src/handlers/auth.js (handleListSessions/handleRevokeSession), workers/src/index.js (route registration + auditLog on revoke), frontend/user-dashboard.html (#page-settings card, loadSessions/renderSessions/revokeSession/sessDeviceLabel/sessEsc) all read directly. All 3 inline <script> blocks in frontend/user-dashboard.html syntax-checked clean (new Function(src)) before and after the change. Full backend suite green: 191 files / 2038 tests (190/2025 baseline + 1 new file/13 tests, zero regressions)."
     },
-    "notes": "customer_journey_complete stays false pending a real dynamic_browser (live production click-through) pass — this fix used static evidence + a real in-memory-SQL-backed handler test, not a headless-Chromium session, per this registry's own Production Truth Law (docs/ENGINEERING_STANDARDS.md §11). Deliberately minimal scope, matching the capability's own description exactly: list + individual revoke only. NOT built in this pass (disclosed, not silently skipped): a 'sign out all other sessions' bulk action (would need a new backend function that excludes the caller's own current token, distinct from the existing revokeAllUserTokens which revokes literally everything including the caller); a 'last used' timestamp (refresh_tokens has no such column — created_at is the closest available proxy and is what's shown); geo/location display (would require an IP-geolocation dependency, out of scope for this fix). Matches docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md Domain 1 (Identity) and Domain 9 (Customer Portal) rows, which both flagged this same gap before the fix."
+    "notes": "customer_journey_complete stays false pending a real dynamic_browser (live production click-through) pass \u2014 this fix used static evidence + a real in-memory-SQL-backed handler test, not a headless-Chromium session, per this registry's own Production Truth Law (docs/ENGINEERING_STANDARDS.md \u00a711). Deliberately minimal scope, matching the capability's own description exactly: list + individual revoke only. NOT built in this pass (disclosed, not silently skipped): a 'sign out all other sessions' bulk action (would need a new backend function that excludes the caller's own current token, distinct from the existing revokeAllUserTokens which revokes literally everything including the caller); a 'last used' timestamp (refresh_tokens has no such column \u2014 created_at is the closest available proxy and is what's shown); geo/location display (would require an IP-geolocation dependency, out of scope for this fix). Matches docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md Domain 1 (Identity) and Domain 9 (Customer Portal) rows, which both flagged this same gap before the fix."
   },
   {
     "id": "CAP-PORTAL-004",
@@ -139,42 +198,64 @@
     "name": "Support Ticket System",
     "description": "In-product support ticket submission and tracking, as opposed to routing every support request through email.",
     "backend": {
-      "handlers": [],
-      "entry_points": [],
-      "routes_sampled": [],
+      "handlers": [
+        "workers/src/handlers/support.js"
+      ],
+      "entry_points": [
+        "handlePOST /api/support/ticket (and FAQ/status/SLA endpoints)"
+      ],
+      "routes_sampled": [
+        {
+          "path": "/api/support/ticket",
+          "method": "POST",
+          "evidence": "workers/src/index.js:7643-7647"
+        }
+      ],
       "routes_fully_enumerated": false,
-      "status": "missing"
+      "status": "exists"
     },
     "frontend": {
       "surface_type": "none",
       "pages": [],
       "status": "missing",
-      "evidence": "frontend/user-dashboard.html:2720 and :4161 are the only 'support' touchpoints found, and both are static mailto: links (mailto:enterprise@cyberdudebivash.in and mailto:support@cyberdudebivash.com respectively) — no in-product ticket form, ticket list, or ticket-status API exists anywhere in the repo."
+      "evidence": "frontend/user-dashboard.html:2720 and :4161 are the only 'support' touchpoints found, and both are static mailto: links (mailto:enterprise@cyberdudebivash.in and mailto:support@cyberdudebivash.com respectively) \u2014 no in-product ticket form, ticket list, or ticket-status API exists anywhere in the repo."
     },
     "navigation": {
       "discoverable": false,
       "evidence": "No nav entry links to a support/ticketing page because none exists; the mailto: links are inline text, not nav items."
     },
     "auth_enforced": false,
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": false,
       "evidence": "No test file references a ticket/support-case handler, because none exists."
     },
     "docs": [
-      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" },
-      { "path": "SUPPORT_PLAYBOOK.md", "tag": "canonical" }
+      {
+        "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md",
+        "tag": "canonical"
+      },
+      {
+        "path": "SUPPORT_PLAYBOOK.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "NOT READY",
     "priority": "P2",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-08",
-      "evidence": "Case-insensitive search for 'support ticket' and 'mailto:' across frontend/user-dashboard.html; no handler file in workers/src/handlers/ named or grepped for ticket-related exports."
+      "last_verified": "2026-07-14",
+      "evidence": "Case-insensitive search for 'support ticket' and 'mailto:' across frontend/user-dashboard.html; no handler file in workers/src/handlers/ named or grepped for ticket-related exports. | CORRECTED 2026-07-14 (Enterprise Capability Completion Program triage): backend.status was 'missing' but workers/src/handlers/support.js is real -- wired at workers/src/index.js:7643-7647, implements POST /api/support/ticket with a genuine INSERT INTO support_tickets (table present in workers/schema_master.sql), plus FAQ/status/SLA endpoints. Added 2026-07-13 (git log), i.e. after this registry's prior 2026-07-08 verification -- the registry had not caught up. Also exercised via an AI-copilot tool (create_support_ticket, tested in workers/test/copilotSalesSupportTools.test.mjs). Frontend remains genuinely empty (confirmed zero matches for /api/support/, submitTicket, supportTicket anywhere in frontend/; only static mailto: links exist). Priority stays P2 -- now an accurate 'backend exists, frontend missing' gap, not a from-scratch build."
     },
-    "notes": "Confirms docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:229's 'Missing — only static mailto: links found' finding exactly as written; no change since that audit. SUPPORT_PLAYBOOK.md documents the operational process for handling support over email/WhatsApp, which is the current real workflow — this entry tracks the absence of in-product tooling, not an absence of any support process at all."
+    "notes": "Confirms docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:229's 'Missing \u2014 only static mailto: links found' finding exactly as written; no change since that audit. SUPPORT_PLAYBOOK.md documents the operational process for handling support over email/WhatsApp, which is the current real workflow \u2014 this entry tracks the absence of in-product tooling, not an absence of any support process at all."
   }
 ]

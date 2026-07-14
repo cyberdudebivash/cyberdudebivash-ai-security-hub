@@ -5,44 +5,78 @@
     "name": "Multi-Channel Notification Preferences & Delivery Log",
     "description": "Per-user notification preferences (which channels/events to receive) and a delivery history log, backing a real Slack/Teams webhook dispatcher wired to platform events like churn-risk alerts. FIXED 2026-07-13: real frontend UI shipped, plus 3 collateral backend defects found and fixed while wiring it (see notes).",
     "backend": {
-      "handlers": ["workers/src/handlers/notificationPlatform.js"],
-      "entry_points": ["handleGetPreferences", "handleUpdatePreferences", "handleNotificationLog", "handleTestNotification", "handleAdminSendNotification"],
+      "handlers": [
+        "workers/src/handlers/notificationPlatform.js"
+      ],
+      "entry_points": [
+        "handleGetPreferences",
+        "handleUpdatePreferences",
+        "handleNotificationLog",
+        "handleTestNotification",
+        "handleAdminSendNotification"
+      ],
       "routes_sampled": [
-        { "path": "/api/notifications/preferences", "method": "GET", "evidence": "workers/src/index.js:3199" },
-        { "path": "/api/notifications/preferences", "method": "PUT", "evidence": "workers/src/index.js:3204" },
-        { "path": "/api/notifications/log", "method": "GET", "evidence": "workers/src/index.js:3209" }
+        {
+          "path": "/api/notifications/preferences",
+          "method": "GET",
+          "evidence": "workers/src/index.js:3199"
+        },
+        {
+          "path": "/api/notifications/preferences",
+          "method": "PUT",
+          "evidence": "workers/src/index.js:3204"
+        },
+        {
+          "path": "/api/notifications/log",
+          "method": "GET",
+          "evidence": "workers/src/index.js:3209"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "embedded_widget",
-      "pages": ["frontend/user-dashboard.html"],
+      "pages": [
+        "frontend/user-dashboard.html"
+      ],
       "status": "exists",
       "evidence": "FIXED 2026-07-13: Settings page gained a real 'Team Alert Channels (Slack / Teams / Webhook)' card (frontend/user-dashboard.html:1937-1971) with Slack/Teams/custom-webhook URL inputs, 4 event-subscription checkboxes (scan.critical/case.created/case.escalated/health.churn), Save/Test buttons, and a live delivery-log table. Backing JS (:5208-5294): loadNotifChannels()/saveNotifChannels()/testNotifChannels()/loadNotifLog(), wired into showPage('settings') so it loads automatically. Explicitly labeled to disambiguate from the pre-existing, unrelated 'Alert Notifications' card (email/Telegram CVE-risk alerts) directly above it. Before this fix: repo-wide search across frontend/*.html for 'notifications/preferences' returned zero matches."
     },
-    "navigation": { "discoverable": true, "evidence": "FIXED 2026-07-13: reachable via the existing Settings nav item (frontend/user-dashboard.html:974), which was already in the primary sidebar — no new nav entry needed since this is a Settings sub-section, not its own page." },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "FIXED 2026-07-13: reachable via the existing Settings nav item (frontend/user-dashboard.html:974), which was already in the primary sidebar \u2014 no new nav entry needed since this is a Settings sub-section, not its own page."
+    },
     "auth_enforced": true,
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "FIXED 2026-07-13: workers/test/notificationPlatformDashboard.test.mjs (11 tests, real D1 via node:sqlite) — proves the auth gate genuinely rejects anonymous callers on all 4 endpoints (was dead code, see notes), proves real per-user isolation (two users' webhooks don't collide, DB-row-count asserted), proves the eventType='*' wildcard broadcast actually bypasses subscription filtering (was a no-op comparison, see notes), and proves 'health.churn' delivers to a default-subscribed customer while the old mismatched 'CHURN_RISK_ALERT' string would not (regression guard). Full worker suite (274 files/2853 tests) green. Additionally browser-verified live via Playwright against the real frontend/user-dashboard.html served locally with contract-accurate mocked API responses (response shapes copied directly from workers/src/handlers/threatGraph.js and workers/src/handlers/notificationPlatform.js source, not guessed): preferences load into the form, event checkboxes reflect real subscriptions, delivery log renders real rows, Send Test Notification round-trips and displays the result, zero console/JS errors. This browser pass is what caught the showPage() wiring defect documented in notes — a unit-test-only pass would have missed it."
+      "evidence": "FIXED 2026-07-13: workers/test/notificationPlatformDashboard.test.mjs (11 tests, real D1 via node:sqlite) \u2014 proves the auth gate genuinely rejects anonymous callers on all 4 endpoints (was dead code, see notes), proves real per-user isolation (two users' webhooks don't collide, DB-row-count asserted), proves the eventType='*' wildcard broadcast actually bypasses subscription filtering (was a no-op comparison, see notes), and proves 'health.churn' delivers to a default-subscribed customer while the old mismatched 'CHURN_RISK_ALERT' string would not (regression guard). Full worker suite (274 files/2853 tests) green. Additionally browser-verified live via Playwright against the real frontend/user-dashboard.html served locally with contract-accurate mocked API responses (response shapes copied directly from workers/src/handlers/threatGraph.js and workers/src/handlers/notificationPlatform.js source, not guessed): preferences load into the form, event checkboxes reflect real subscriptions, delivery log renders real rows, Send Test Notification round-trips and displays the result, zero console/JS errors. This browser pass is what caught the showPage() wiring defect documented in notes \u2014 a unit-test-only pass would have missed it."
     },
     "docs": [
-      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+      {
+        "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
-    "priority": "P2",
+    "priority": "P6",
     "verification": {
       "method": "dynamic_browser",
-      "last_verified": "2026-07-13",
-      "evidence": "workers/src/handlers/notificationPlatform.js and workers/src/auth/middleware.js read and edited directly; workers/test/notificationPlatformDashboard.test.mjs (11/11 passing) and workers/test/authAliases.test.mjs (2 new tests) read/run directly; frontend/user-dashboard.html edited directly, inline <script> re-parsed with node --check, and click-through verified via Playwright/Chromium against contract-accurate mocked responses (11/11 checks passing, zero console errors). Full worker suite: 274 files/2853 tests green. Registry validator: 0 failures/0 warnings. SEO structure lock: 31/31 pages. customer_journey_complete stays false pending a post-deploy production smoke test with a real account (not yet performed against live D1) and because rbac/subscription_gating remain intentionally unenforced (pre-existing design choice, not touched by this fix)."
+      "last_verified": "2026-07-14",
+      "evidence": "workers/src/handlers/notificationPlatform.js and workers/src/auth/middleware.js read and edited directly; workers/test/notificationPlatformDashboard.test.mjs (11/11 passing) and workers/test/authAliases.test.mjs (2 new tests) read/run directly; frontend/user-dashboard.html edited directly, inline <script> re-parsed with node --check, and click-through verified via Playwright/Chromium against contract-accurate mocked responses (11/11 checks passing, zero console errors). Full worker suite: 274 files/2853 tests green. Registry validator: 0 failures/0 warnings. SEO structure lock: 31/31 pages. customer_journey_complete stays false pending a post-deploy production smoke test with a real account (not yet performed against live D1) and because rbac/subscription_gating remain intentionally unenforced (pre-existing design choice, not touched by this fix). | Direct re-verification: real 'Team Alert Channels' card confirmed in frontend/user-dashboard.html Settings page, wired to loadNotifChannels()/saveNotifChannels()/testNotifChannels()/loadNotifLog(), discoverable via the existing Settings nav item. RE-VERIFIED 2026-07-14 (Enterprise Capability Completion Program triage): independently re-confirmed via source (not the registry label) that this frontend/navigation work is real, live, and reachable. Priority corrected from P2 (backend exists, frontend missing) since that is no longer true."
     },
     "contradicts_doc": [],
-    "notes": "The backend delivery mechanism (Slack/Teams webhooks firing on real events) already worked and was undersold, not broken — the original gap was purely that no customer could configure it. Wiring the frontend surfaced 3 real, previously-undiscovered defects, all fixed in the same pass: (1) authCtx.id was never populated anywhere in the auth layer (only user_id/userId existed), so every real customer's webhook config and delivery history silently collided onto a shared 'unknown' D1 row, and the '!req.user' auth gate was permanently dead code since the router always sets a truthy req.user (real principal or anonymous IP-fallback) — fixed with a `.id` alias in workers/src/auth/middleware.js's withAuthAliases() (same fix shape as that function's pre-existing `.role` fix) plus switching the gate to the real isRealUser() helper; this transparently also fixes 4 sibling handlers with the identical bug (reportingEngine.js, workflowAutomation.js, globalSearch.js, productAnalytics.js), not re-certified here since they're outside this capability. (2) deliverNotification()'s subscription check compared eventType against itself when eventType==='*', making the documented wildcard-broadcast intent (developerOnboardingHandler.js:231's explicit comment 'wildcard — ensures delivery regardless of subscription prefs for new users') a no-op — every new-user welcome email, password-recovery email, and this capability's own Test Notification button silently delivered to nobody; fixed with an `eventType !== '*'` short-circuit. (3) revenueIntelligenceHandler.js's churn-risk alert emitted eventType:'CHURN_RISK_ALERT', which never matched the canonical 'health.churn' subscription key used everywhere else (DEFAULT_PREFS, all 3 schema SQL files, this capability's own Settings checkbox, workflowAutomation.js's template) — real churn-risk alerts had silently delivered to zero customers since inception; fixed by aligning the one outlier to the established convention. Separately, a real UI-layer bug was found and fixed by actually browser-testing rather than trusting the unit tests alone: the Global Intel Graph and Intelligence Preview nav items' auto-load calls (intelGraphSummary()/intelPreviewFeatured()) lived in the nav item's onclick instead of inside showPage(), so a deep link (?tab=intel-graph) would show a permanent loading spinner — moved into showPage() itself, matching the more robust pattern this Settings card already used."
+    "notes": "The backend delivery mechanism (Slack/Teams webhooks firing on real events) already worked and was undersold, not broken \u2014 the original gap was purely that no customer could configure it. Wiring the frontend surfaced 3 real, previously-undiscovered defects, all fixed in the same pass: (1) authCtx.id was never populated anywhere in the auth layer (only user_id/userId existed), so every real customer's webhook config and delivery history silently collided onto a shared 'unknown' D1 row, and the '!req.user' auth gate was permanently dead code since the router always sets a truthy req.user (real principal or anonymous IP-fallback) \u2014 fixed with a `.id` alias in workers/src/auth/middleware.js's withAuthAliases() (same fix shape as that function's pre-existing `.role` fix) plus switching the gate to the real isRealUser() helper; this transparently also fixes 4 sibling handlers with the identical bug (reportingEngine.js, workflowAutomation.js, globalSearch.js, productAnalytics.js), not re-certified here since they're outside this capability. (2) deliverNotification()'s subscription check compared eventType against itself when eventType==='*', making the documented wildcard-broadcast intent (developerOnboardingHandler.js:231's explicit comment 'wildcard \u2014 ensures delivery regardless of subscription prefs for new users') a no-op \u2014 every new-user welcome email, password-recovery email, and this capability's own Test Notification button silently delivered to nobody; fixed with an `eventType !== '*'` short-circuit. (3) revenueIntelligenceHandler.js's churn-risk alert emitted eventType:'CHURN_RISK_ALERT', which never matched the canonical 'health.churn' subscription key used everywhere else (DEFAULT_PREFS, all 3 schema SQL files, this capability's own Settings checkbox, workflowAutomation.js's template) \u2014 real churn-risk alerts had silently delivered to zero customers since inception; fixed by aligning the one outlier to the established convention. Separately, a real UI-layer bug was found and fixed by actually browser-testing rather than trusting the unit tests alone: the Global Intel Graph and Intelligence Preview nav items' auto-load calls (intelGraphSummary()/intelPreviewFeatured()) lived in the nav item's onclick instead of inside showPage(), so a deep link (?tab=intel-graph) would show a permanent loading spinner \u2014 moved into showPage() itself, matching the more robust pattern this Settings card already used."
   },
   {
     "id": "CAP-NOTIF-002",
@@ -50,34 +84,53 @@
     "name": "In-App Notification Bell",
     "description": "A homepage bell icon showing a badge count and dropdown of recent alerts.",
     "backend": {
-      "handlers": ["workers/src/handlers/notificationPlatform.js"],
-      "entry_points": ["handleNotificationLog"],
+      "handlers": [
+        "workers/src/handlers/notificationPlatform.js"
+      ],
+      "entry_points": [
+        "handleNotificationLog"
+      ],
       "routes_sampled": [
-        { "path": "/api/notifications/log", "method": "GET", "evidence": "workers/src/index.js:3209" }
+        {
+          "path": "/api/notifications/log",
+          "method": "GET",
+          "evidence": "workers/src/index.js:3209"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "embedded_widget",
-      "pages": ["frontend/index.html"],
+      "pages": [
+        "frontend/index.html"
+      ],
       "status": "exists",
-      "evidence": "FIXED 2026-07-09. CDB_NOTIF's _fetch() (frontend/index.html, in the CDB_NOTIF IIFE) was rewired from GET /api/v1/alerts + GET /api/realtime/stats (global threat intel, plus a _synthesizeAlerts() fallback that fabricated fake 'personal' alerts from platform-wide CVE counts — both removed) to GET /api/notifications/log, the customer's own notification_log-backed history CAP-NOTIF-001's backend maintains. Maps the real response shape ({log:[{id,channel,event_type,subject,status,sent_at,created_at}],total}) to the existing render item (subject -> title, channel -> description). Gated on the same JWT presence check (_authToken(), reading the pre-existing cdb_v13_jwt key) the module already used for its Authorization header, so a signed-out visitor gets an honest '🔒 Sign in to see your notifications' empty state instead of either a crash or someone else's-looking data — matches the real backend, which requires a resolved session (workers/src/index.js:3241-3244 sets request.user via resolveAuthV5) and otherwise degrades gracefully rather than 401ing. Verified live via Playwright: signed-out state shows the sign-in message; signed-in state (mocked GET /api/notifications/log) renders the real subject line and no longer shows any global-threat-intel content."
+      "evidence": "FIXED 2026-07-09. CDB_NOTIF's _fetch() (frontend/index.html, in the CDB_NOTIF IIFE) was rewired from GET /api/v1/alerts + GET /api/realtime/stats (global threat intel, plus a _synthesizeAlerts() fallback that fabricated fake 'personal' alerts from platform-wide CVE counts \u2014 both removed) to GET /api/notifications/log, the customer's own notification_log-backed history CAP-NOTIF-001's backend maintains. Maps the real response shape ({log:[{id,channel,event_type,subject,status,sent_at,created_at}],total}) to the existing render item (subject -> title, channel -> description). Gated on the same JWT presence check (_authToken(), reading the pre-existing cdb_v13_jwt key) the module already used for its Authorization header, so a signed-out visitor gets an honest '\ud83d\udd12 Sign in to see your notifications' empty state instead of either a crash or someone else's-looking data \u2014 matches the real backend, which requires a resolved session (workers/src/index.js:3241-3244 sets request.user via resolveAuthV5) and otherwise degrades gracefully rather than 401ing. Verified live via Playwright: signed-out state shows the sign-in message; signed-in state (mocked GET /api/notifications/log) renders the real subject line and no longer shows any global-threat-intel content."
     },
     "navigation": {
       "discoverable": true,
       "evidence": "The bell icon is in frontend/index.html's primary header, always visible."
     },
     "auth_enforced": false,
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": false,
-      "evidence": "No committed automated test covers the CDB_NOTIF frontend object (inline page JS, not an importable module). Verified this pass via an ad-hoc Playwright click-through (not committed to the repo) against contract-accurate mocked responses; not a permanent regression lock — a real gap, flagged as a follow-up (e.g. a committed Playwright/browser test suite) rather than fixed in this pass."
+      "evidence": "No committed automated test covers the CDB_NOTIF frontend object (inline page JS, not an importable module). Verified this pass via an ad-hoc Playwright click-through (not committed to the repo) against contract-accurate mocked responses; not a permanent regression lock \u2014 a real gap, flagged as a follow-up (e.g. a committed Playwright/browser test suite) rather than fixed in this pass."
     },
     "docs": [
-      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+      {
+        "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
@@ -85,18 +138,21 @@
     "verification": {
       "method": "dynamic_browser",
       "last_verified": "2026-07-09",
-      "evidence": "Source fix read directly against workers/src/handlers/notificationPlatform.js:176-190's real handleNotificationLog response shape. Playwright click-through of the real frontend/index.html confirmed: (1) signed-out visitors see an honest sign-in prompt with zero network call to a protected endpoint; (2) a signed-in session (simulated JWT, mocked GET /api/notifications/log response shaped exactly like the real handler's SQL SELECT columns) renders the real subject as the item title and no longer shows the old fabricated CVE-count alerts. Full backend suite (188 files/2012 tests) green post-fix — this was a frontend-only change. NOT YET verified against the live deployed backend/D1 notification_log table — customer_journey_complete stays false pending a post-merge production smoke test with a real account that has notification_log rows."
+      "evidence": "Source fix read directly against workers/src/handlers/notificationPlatform.js:176-190's real handleNotificationLog response shape. Playwright click-through of the real frontend/index.html confirmed: (1) signed-out visitors see an honest sign-in prompt with zero network call to a protected endpoint; (2) a signed-in session (simulated JWT, mocked GET /api/notifications/log response shaped exactly like the real handler's SQL SELECT columns) renders the real subject as the item title and no longer shows the old fabricated CVE-count alerts. Full backend suite (188 files/2012 tests) green post-fix \u2014 this was a frontend-only change. NOT YET verified against the live deployed backend/D1 notification_log table \u2014 customer_journey_complete stays false pending a post-merge production smoke test with a real account that has notification_log rows."
     },
     "contradicts_doc": [],
-    "notes": "Distinct from frontend/user-dashboard.html's own separate, unrelated client-only alert array, which docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:222 also flags as disconnected from notification_log — not addressed in this pass, remains a related open item. Two adjacent accessibility defects surfaced and fixed in the same pass while touching this widget: (1) the severity-badge palette's LOW tier fell through to MEDIUM's cyan background tint while keeping distinct gray text (3.44:1 contrast, failing WCAG AA) — given its own tint plus the page's existing --text-muted color (7.08:1); (2) the shared p4Toast() helper appended plain divs with no ARIA live region, silent to screen readers — now role=\"status\" aria-live=\"polite\". Both verified via axe-core (zero WCAG2A/AA violations in the notification panel post-fix)."
+    "notes": "Distinct from frontend/user-dashboard.html's own separate, unrelated client-only alert array, which docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:222 also flags as disconnected from notification_log \u2014 not addressed in this pass, remains a related open item. Two adjacent accessibility defects surfaced and fixed in the same pass while touching this widget: (1) the severity-badge palette's LOW tier fell through to MEDIUM's cyan background tint while keeping distinct gray text (3.44:1 contrast, failing WCAG AA) \u2014 given its own tint plus the page's existing --text-muted color (7.08:1); (2) the shared p4Toast() helper appended plain divs with no ARIA live region, silent to screen readers \u2014 now role=\"status\" aria-live=\"polite\". Both verified via axe-core (zero WCAG2A/AA violations in the notification panel post-fix)."
   },
   {
     "id": "CAP-NOTIF-003",
     "domain": "notifications",
     "name": "Outbound Webhooks (Developer + Organization)",
-    "description": "Let a customer register a webhook URL to receive real-time event notifications — two separate, competing implementations exist.",
+    "description": "Let a customer register a webhook URL to receive real-time event notifications \u2014 two separate, competing implementations exist.",
     "backend": {
-      "handlers": ["workers/src/handlers/developerPortal.js", "workers/src/handlers/enterpriseAutomation.js"],
+      "handlers": [
+        "workers/src/handlers/developerPortal.js",
+        "workers/src/handlers/enterpriseAutomation.js"
+      ],
       "entry_points": [],
       "routes_sampled": [],
       "routes_fully_enumerated": false,
@@ -106,19 +162,31 @@
       "surface_type": "none",
       "pages": [],
       "status": "missing",
-      "evidence": "workers/src/handlers/developerPortal.js:856-904 implements full CRUD plus a manual test-fire against a developer_webhooks table (9-event catalog per docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:223), but that catalog is not wired to any automatic dispatcher — webhooks only ever fire when a user manually clicks test. Separately, workers/src/handlers/enterpriseAutomation.js:22-243 implements a second, independent schema (org_webhooks plus a webhook_delivery_log audit table) that DOES fire automatically on matching events (:231-243), but is a completely separate table/code path from the developer_webhooks system — a customer using one system has no visibility into or relationship with the other. No frontend page was found calling either system's CRUD endpoints in this pass. Verified 2026-07-08 by reading both files' SQL directly."
+      "evidence": "workers/src/handlers/developerPortal.js:856-904 implements full CRUD plus a manual test-fire against a developer_webhooks table (9-event catalog per docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:223), but that catalog is not wired to any automatic dispatcher \u2014 webhooks only ever fire when a user manually clicks test. Separately, workers/src/handlers/enterpriseAutomation.js:22-243 implements a second, independent schema (org_webhooks plus a webhook_delivery_log audit table) that DOES fire automatically on matching events (:231-243), but is a completely separate table/code path from the developer_webhooks system \u2014 a customer using one system has no visibility into or relationship with the other. No frontend page was found calling either system's CRUD endpoints in this pass. Verified 2026-07-08 by reading both files' SQL directly."
     },
-    "navigation": { "discoverable": false, "evidence": "No nav entry calls either webhook system's routes because no page does." },
+    "navigation": {
+      "discoverable": false,
+      "evidence": "No nav entry calls either webhook system's routes because no page does."
+    },
     "auth_enforced": "unknown",
-    "rbac": { "enforced": "unknown", "permissions": [] },
+    "rbac": {
+      "enforced": "unknown",
+      "permissions": []
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": false,
       "evidence": "No test file imports the webhook-specific functions from either workers/src/handlers/developerPortal.js or workers/src/handlers/enterpriseAutomation.js directly in a way targeting this feature specifically."
     },
     "docs": [
-      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+      {
+        "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "NOT READY",
@@ -128,7 +196,7 @@
       "last_verified": "2026-07-08",
       "evidence": "workers/src/handlers/developerPortal.js:856-904 and workers/src/handlers/enterpriseAutomation.js:22-243 read directly, confirming two distinct table schemas and confirming which one actually auto-fires on events."
     },
-    "notes": "backend.status is \"duplicate\" — this is real, unreconciled architectural duplication (not a wiring gap): two schemas, two code paths, one manual-only, one automatic-only, with no frontend for either. Reconciling into one system is a prerequisite for building any UI, not a follow-on task."
+    "notes": "backend.status is \"duplicate\" \u2014 this is real, unreconciled architectural duplication (not a wiring gap): two schemas, two code paths, one manual-only, one automatic-only, with no frontend for either. Reconciling into one system is a prerequisite for building any UI, not a follow-on task."
   },
   {
     "id": "CAP-NOTIF-004",
@@ -136,8 +204,13 @@
     "name": "Transactional & Lifecycle Email Engine",
     "description": "Branded transactional email (signup, password reset, payment confirmation/failure, coupon redemption, suspicious login) plus multi-step drip sequences, with provider fallback and a dead-letter queue for failed sends.",
     "backend": {
-      "handlers": ["workers/src/services/emailEngine.js"],
-      "entry_points": ["sendPaymentFailedEmail", "sendPurchaseConfirmation"],
+      "handlers": [
+        "workers/src/services/emailEngine.js"
+      ],
+      "entry_points": [
+        "sendPaymentFailedEmail",
+        "sendPurchaseConfirmation"
+      ],
       "routes_sampled": [],
       "routes_fully_enumerated": false,
       "status": "exists"
@@ -146,19 +219,31 @@
       "surface_type": "none",
       "pages": [],
       "status": "exists",
-      "evidence": "This capability's customer surface is the inbox, not a page — evidence is that real triggers call it from real customer actions: workers/src/handlers/payments.js:1104 calls sendPaymentFailedEmail on a failed webhook; per docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:127-134, the engine implements 9 drip sequences, 20+ branded templates, a Resend-to-MailChannels provider fallback cascade, cron-driven retry, and a dead-letter queue (email_dlq table) with bounded retry, shipped 2026-07-08."
+      "evidence": "This capability's customer surface is the inbox, not a page \u2014 evidence is that real triggers call it from real customer actions: workers/src/handlers/payments.js:1104 calls sendPaymentFailedEmail on a failed webhook; per docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:127-134, the engine implements 9 drip sequences, 20+ branded templates, a Resend-to-MailChannels provider fallback cascade, cron-driven retry, and a dead-letter queue (email_dlq table) with bounded retry, shipped 2026-07-08."
     },
-    "navigation": { "discoverable": true, "evidence": "N/A (delivered via email, not a navigable page); triggered automatically by real account/payment events." },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "N/A (delivered via email, not a navigable page); triggered automatically by real account/payment events."
+    },
     "auth_enforced": false,
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "workers/test/emailDlqAndTemplates.test.mjs and workers/test/emailWiringTask3Phase1.test.mjs import from workers/src/services/emailEngine.js — confirmed by import-statement grep, 2026-07-08."
+      "evidence": "workers/test/emailDlqAndTemplates.test.mjs and workers/test/emailWiringTask3Phase1.test.mjs import from workers/src/services/emailEngine.js \u2014 confirmed by import-statement grep, 2026-07-08."
     },
     "docs": [
-      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+      {
+        "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
@@ -168,6 +253,6 @@
       "last_verified": "2026-07-08",
       "evidence": "workers/src/handlers/payments.js:1104 read directly to confirm a real trigger exists (not just a defined-but-uncalled function, the exact class of mistake this registry exists to prevent); workers/test/emailDlqAndTemplates.test.mjs and workers/test/emailWiringTask3Phase1.test.mjs import statements confirmed."
     },
-    "notes": "No actionable gap found in this pass. Genuinely missing multi-channel expansions (SMS, real WhatsApp Business API send, push) are tracked as their own gaps in the platform's product backlog rather than as defects in this working capability — this entry covers only what emailEngine.js itself does, which it does correctly."
+    "notes": "No actionable gap found in this pass. Genuinely missing multi-channel expansions (SMS, real WhatsApp Business API send, push) are tracked as their own gaps in the platform's product backlog rather than as defects in this working capability \u2014 this entry covers only what emailEngine.js itself does, which it does correctly."
   }
 ]

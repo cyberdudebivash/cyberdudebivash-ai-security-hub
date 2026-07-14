@@ -5,22 +5,60 @@
     "name": "Threat Hunting Engine (KQL/Sigma/YARA)",
     "description": "Runs KQL/Sigma/YARA hunt queries against live D1 (threat_intel, scan_history, analytics_events), batch IOC enrichment, hunt-session history, and a static MITRE coverage summary.",
     "backend": {
-      "handlers": ["workers/src/handlers/threatHunting.js"],
-      "entry_points": ["handleRunHunt", "handleHuntTemplates", "handleIOCLookup", "handleHuntSessions", "handleMITREMatrix"],
+      "handlers": [
+        "workers/src/handlers/threatHunting.js"
+      ],
+      "entry_points": [
+        "handleRunHunt",
+        "handleHuntTemplates",
+        "handleIOCLookup",
+        "handleHuntSessions",
+        "handleMITREMatrix"
+      ],
       "routes_sampled": [
-        { "path": "/api/hunt", "method": "POST", "evidence": "workers/src/index.js:7078" },
-        { "path": "/api/hunt/run", "method": "POST", "evidence": "workers/src/index.js:7084" },
-        { "path": "/api/hunt/templates", "method": "GET", "evidence": "workers/src/index.js:7101" },
-        { "path": "/api/hunt/ioc", "method": "POST", "evidence": "workers/src/index.js:7107" },
-        { "path": "/api/hunt/sessions", "method": "GET", "evidence": "workers/src/index.js:7113" },
-        { "path": "/api/hunt/mitre", "method": "GET", "evidence": "workers/src/index.js:7119" }
+        {
+          "path": "/api/hunt",
+          "method": "POST",
+          "evidence": "workers/src/index.js:7078"
+        },
+        {
+          "path": "/api/hunt/run",
+          "method": "POST",
+          "evidence": "workers/src/index.js:7084"
+        },
+        {
+          "path": "/api/hunt/templates",
+          "method": "GET",
+          "evidence": "workers/src/index.js:7101"
+        },
+        {
+          "path": "/api/hunt/ioc",
+          "method": "POST",
+          "evidence": "workers/src/index.js:7107"
+        },
+        {
+          "path": "/api/hunt/sessions",
+          "method": "GET",
+          "evidence": "workers/src/index.js:7113"
+        },
+        {
+          "path": "/api/hunt/mitre",
+          "method": "GET",
+          "evidence": "workers/src/index.js:7119"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "dedicated_page",
-      "pages": ["frontend/threat-hunting.html", "frontend/index.html", "frontend/threat-intelligence.html", "frontend/cyber-defense.html", "frontend/attack-surface-management.html"],
+      "pages": [
+        "frontend/threat-hunting.html",
+        "frontend/index.html",
+        "frontend/threat-intelligence.html",
+        "frontend/cyber-defense.html",
+        "frontend/attack-surface-management.html"
+      ],
       "status": "exists",
       "evidence": "frontend/threat-hunting.html:130,146 (Live Threat Hunt Executor). frontend/index.html:7384-7432 embeds the full section (data-auth-gate, pro-tier per line 14143) via window.thRunHunt (22228) and window.thLookupIOC (22229). frontend/threat-intelligence.html:179 and secondary widgets in frontend/cyber-defense.html:156, frontend/attack-surface-management.html:205."
     },
@@ -29,15 +67,24 @@
       "evidence": "Dedicated SEO page listed in frontend/sitemap.html:116; same capability also embedded on the homepage behind a pro-tier gate."
     },
     "auth_enforced": false,
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
     "subscription_gated": true,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "FIXED 2026-07-12: workers/test/threatHuntingEngine.test.mjs (20 tests) imports and exercises all 5 entry points directly — handleRunHunt (input validation, malicious-payload rejection, honest no_findings with no D1 binding, real CVE findings from a real D1 threat_intel match, real MITRE-technique inference from query content, tier-gated adaptive_hunt_suggestions, real hunt-session KV persistence), handleHuntTemplates (real template counts/filters by lang and tactic, and a decoded-template content check proving the base64-at-rest AV-evasion encoding round-trips to real, correct detection logic, not garbled or still-encoded output), handleIOCLookup (batch cap at 20, honest 'clean' verdict from internal-only signals when every external source fails — not a crash, not a fabricated result — and real IOC type detection), and handleHuntSessions (401 without a real user, real KV-list-based session retrieval sorted newest-first). Replaces workers/test/handlers.unit.test.mjs's copy-pasted __sig/detectIOCType reimplementation as the coverage signal for this capability (that file is unchanged; it just no longer represents the coverage story for this handler alone)."
+      "evidence": "FIXED 2026-07-12: workers/test/threatHuntingEngine.test.mjs (20 tests) imports and exercises all 5 entry points directly \u2014 handleRunHunt (input validation, malicious-payload rejection, honest no_findings with no D1 binding, real CVE findings from a real D1 threat_intel match, real MITRE-technique inference from query content, tier-gated adaptive_hunt_suggestions, real hunt-session KV persistence), handleHuntTemplates (real template counts/filters by lang and tactic, and a decoded-template content check proving the base64-at-rest AV-evasion encoding round-trips to real, correct detection logic, not garbled or still-encoded output), handleIOCLookup (batch cap at 20, honest 'clean' verdict from internal-only signals when every external source fails \u2014 not a crash, not a fabricated result \u2014 and real IOC type detection), and handleHuntSessions (401 without a real user, real KV-list-based session retrieval sorted newest-first). Replaces workers/test/handlers.unit.test.mjs's copy-pasted __sig/detectIOCType reimplementation as the coverage signal for this capability (that file is unchanged; it just no longer represents the coverage story for this handler alone)."
     },
     "docs": [
-      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+      {
+        "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "PILOT ONLY",
@@ -45,63 +92,126 @@
     "verification": {
       "method": "static",
       "last_verified": "2026-07-12",
-      "evidence": "First audit of this domain (previously an unpopulated [] stub). workers/src/handlers/threatHunting.js read directly (574 lines, all 5 entry points with line numbers); workers/src/index.js:7078-7119 read directly for all 6 routes; frontend pages and workers/test/handlers.unit.test.mjs confirmed by direct grep+read. handleHuntSessions requires isRealUser (line 516); all other hunt endpoints fail open to an anonymous FREE tier (rate-limited instead of gated) confirmed at workers/src/index.js:7079,7085,7091,7102,7108,7120 — auth_enforced resolved from 'unknown' to false on that majority-shape basis, with the handleHuntSessions exception documented here and in notes rather than lost in a single boolean. FIXED 2026-07-12: workers/src/handlers/threatHunting.js edited directly — handleMITREMatrix's covered_techniques/coverage_pct are now computed from the real hunt_coverage object in the same response rather than a stale hardcoded pair; confirmed via grep that GET /api/hunt/mitre is not called by any frontend page today, so this was not a live customer-facing discrepancy, but was fixed at the source since an external API consumer calling the route directly would have seen mismatched numbers. Full suite green: 258 files / 2665 tests. Registry validator: 0 failures, 0 warnings."
+      "evidence": "First audit of this domain (previously an unpopulated [] stub). workers/src/handlers/threatHunting.js read directly (574 lines, all 5 entry points with line numbers); workers/src/index.js:7078-7119 read directly for all 6 routes; frontend pages and workers/test/handlers.unit.test.mjs confirmed by direct grep+read. handleHuntSessions requires isRealUser (line 516); all other hunt endpoints fail open to an anonymous FREE tier (rate-limited instead of gated) confirmed at workers/src/index.js:7079,7085,7091,7102,7108,7120 \u2014 auth_enforced resolved from 'unknown' to false on that majority-shape basis, with the handleHuntSessions exception documented here and in notes rather than lost in a single boolean. FIXED 2026-07-12: workers/src/handlers/threatHunting.js edited directly \u2014 handleMITREMatrix's covered_techniques/coverage_pct are now computed from the real hunt_coverage object in the same response rather than a stale hardcoded pair; confirmed via grep that GET /api/hunt/mitre is not called by any frontend page today, so this was not a live customer-facing discrepancy, but was fixed at the source since an external API consumer calling the route directly would have seen mismatched numbers. Full suite green: 258 files / 2665 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": "FIXED 2026-07-12: handleMITREMatrix's ATT&CK coverage numbers (previously hardcoded covered_techniques: 47, coverage_pct: 25.4 — inconsistent with the ~10 unique techniques actually listed in the same response's hunt_coverage object) are now genuinely computed from hunt_coverage; see verification.evidence for the not-currently-customer-facing confirmation. auth_enforced resolved from 'unknown' to false: 5 of 6 endpoints deliberately fail open to anonymous/FREE (rate-limited, not gated) by design; only handleHuntSessions (GET /api/hunt/sessions) requires isRealUser — a single top-level boolean can't capture that split, so it's spelled out here explicitly rather than picking a value that hides the exception. One of three parallel 'hunting' implementations in this domain (see CAP-TIH-002's huntingEngine.js and this capability's own runHunt) — not yet reconciled, tracked here rather than silently merged. 2026-07-11 (Tier-2 backlog item #4): fixed the frontend/cyber-defense.html:156 secondary-widget caller (not this handler — handleIOCLookup's own response shape was already correct). It read d.virustotal/d.abuseipdb directly off the top-level POST /api/hunt/ioc response, but the real per-IOC result is nested at d.results[0] (this endpoint supports batch lookups) with real field names raw_data.virustotal and abuse_score (plain number) — d.virustotal/d.abuseipdb never existed at any level, so the tile always showed 0/\"checked\" regardless of the real verdict."
+    "notes": "FIXED 2026-07-12: handleMITREMatrix's ATT&CK coverage numbers (previously hardcoded covered_techniques: 47, coverage_pct: 25.4 \u2014 inconsistent with the ~10 unique techniques actually listed in the same response's hunt_coverage object) are now genuinely computed from hunt_coverage; see verification.evidence for the not-currently-customer-facing confirmation. auth_enforced resolved from 'unknown' to false: 5 of 6 endpoints deliberately fail open to anonymous/FREE (rate-limited, not gated) by design; only handleHuntSessions (GET /api/hunt/sessions) requires isRealUser \u2014 a single top-level boolean can't capture that split, so it's spelled out here explicitly rather than picking a value that hides the exception. One of three parallel 'hunting' implementations in this domain (see CAP-TIH-002's huntingEngine.js and this capability's own runHunt) \u2014 not yet reconciled, tracked here rather than silently merged. 2026-07-11 (Tier-2 backlog item #4): fixed the frontend/cyber-defense.html:156 secondary-widget caller (not this handler \u2014 handleIOCLookup's own response shape was already correct). It read d.virustotal/d.abuseipdb directly off the top-level POST /api/hunt/ioc response, but the real per-IOC result is nested at d.results[0] (this endpoint supports batch lookups) with real field names raw_data.virustotal and abuse_score (plain number) \u2014 d.virustotal/d.abuseipdb never existed at any level, so the tile always showed 0/\"checked\" regardless of the real verdict."
   },
   {
     "id": "CAP-TIH-002",
     "domain": "threat-hunting-intel",
     "name": "Threat Intelligence Feed & Versioned API (Sentinel APEX v2.0)",
-    "description": "Main paginated/tiered threat-intel feed (D1 -> KV -> seed fallback), SSE stream, manual ingest, and a v1 API surface (threat-intel, IOCs, correlations, graph, hunting). The 5 previously-uncalled handlers (iocs/correlations/graph/hunting/manual-ingest) now have a real dashboard UI — an API-key-based \"API Explorer\" tab, since /api/v1/* deliberately rejects dashboard-session auth (see notes).",
+    "description": "Main paginated/tiered threat-intel feed (D1 -> KV -> seed fallback), SSE stream, manual ingest, and a v1 API surface (threat-intel, IOCs, correlations, graph, hunting). The 5 previously-uncalled handlers (iocs/correlations/graph/hunting/manual-ingest) now have a real dashboard UI \u2014 an API-key-based \"API Explorer\" tab, since /api/v1/* deliberately rejects dashboard-session auth (see notes).",
     "backend": {
-      "handlers": ["workers/src/handlers/threatIntel.js"],
-      "entry_points": ["handleGetThreatIntel", "handleThreatIntelStats", "handleGetThreatIntelEntry", "handleManualIngest", "handleV1ThreatIntel", "handleV1IOCs", "handleThreatIntelStream", "handleV1Correlations", "handleV1Graph", "handleV1Hunting"],
+      "handlers": [
+        "workers/src/handlers/threatIntel.js"
+      ],
+      "entry_points": [
+        "handleGetThreatIntel",
+        "handleThreatIntelStats",
+        "handleGetThreatIntelEntry",
+        "handleManualIngest",
+        "handleV1ThreatIntel",
+        "handleV1IOCs",
+        "handleThreatIntelStream",
+        "handleV1Correlations",
+        "handleV1Graph",
+        "handleV1Hunting"
+      ],
       "routes_sampled": [
-        { "path": "/api/threat-intel", "method": "GET", "evidence": "workers/src/index.js:2346" },
-        { "path": "/api/threat-intel/stats", "method": "GET", "evidence": "workers/src/index.js:2352" },
-        { "path": "/api/threat-intel/ingest", "method": "POST", "evidence": "workers/src/index.js:3511" },
-        { "path": "/api/v1/threat-intel", "method": "GET", "evidence": "workers/src/index.js:3859" },
-        { "path": "/api/v1/iocs", "method": "GET", "evidence": "workers/src/index.js:3864" },
-        { "path": "/api/v1/correlations", "method": "GET", "evidence": "workers/src/index.js:3971" },
-        { "path": "/api/v1/graph", "method": "GET", "evidence": "workers/src/index.js:3976" },
-        { "path": "/api/v1/hunting", "method": "GET", "evidence": "workers/src/index.js:3981" }
+        {
+          "path": "/api/threat-intel",
+          "method": "GET",
+          "evidence": "workers/src/index.js:2346"
+        },
+        {
+          "path": "/api/threat-intel/stats",
+          "method": "GET",
+          "evidence": "workers/src/index.js:2352"
+        },
+        {
+          "path": "/api/threat-intel/ingest",
+          "method": "POST",
+          "evidence": "workers/src/index.js:3511"
+        },
+        {
+          "path": "/api/v1/threat-intel",
+          "method": "GET",
+          "evidence": "workers/src/index.js:3859"
+        },
+        {
+          "path": "/api/v1/iocs",
+          "method": "GET",
+          "evidence": "workers/src/index.js:3864"
+        },
+        {
+          "path": "/api/v1/correlations",
+          "method": "GET",
+          "evidence": "workers/src/index.js:3971"
+        },
+        {
+          "path": "/api/v1/graph",
+          "method": "GET",
+          "evidence": "workers/src/index.js:3976"
+        },
+        {
+          "path": "/api/v1/hunting",
+          "method": "GET",
+          "evidence": "workers/src/index.js:3981"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "dedicated_page",
-      "pages": ["frontend/intel.html", "frontend/intel-hub.html", "frontend/index.html", "frontend/soc-dashboard.html", "frontend/user-dashboard.html"],
+      "pages": [
+        "frontend/intel.html",
+        "frontend/intel-hub.html",
+        "frontend/index.html",
+        "frontend/soc-dashboard.html",
+        "frontend/user-dashboard.html"
+      ],
       "status": "exists",
-      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html gained a real \"API Explorer\" tab (id=\"page-v1-explorer\", Developer sidebar section) with 5 live tools, one per previously-uncalled handler: IOC Registry query (ENTERPRISE), CVE Correlation lookup (PRO/ENTERPRISE), Intel Graph Neighborhood query (PRO/ENTERPRISE), Automated Hunting Alerts (PRO/ENTERPRISE), and Manual Feed Refresh (PRO/ENTERPRISE, triggers a real live re-ingestion from CISA KEV/NVD/GitHub Advisories). Unlike CAP-TIH-009/CAP-TIH-014's tabs, this one does NOT use the session-cookie apiFetch() helper — /api/v1/* rejects session auth outright (see auth_enforced/notes), so the tab collects the customer's own previously-issued API key and calls the endpoints directly with x-api-key. Named deliberately to avoid colliding with the existing \"Threat Hunting\" (CAP-TIH-001) and \"Threat Graph\" (client-side) nav-items elsewhere in this same sidebar. Before this fix: no frontend caller found anywhere for handleV1Correlations, handleV1Graph, handleV1Hunting, handleManualIngest, or handleV1IOCs. frontend/intel.html:1424,1656 and frontend/intel-hub.html:470,522 call /api/threat-intel and /stats; frontend/index.html:8890,22234 pull the CVE feed; frontend/soc-dashboard.html calls /api/v1/threat-intel (all three unchanged by this fix)."
+      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html gained a real \"API Explorer\" tab (id=\"page-v1-explorer\", Developer sidebar section) with 5 live tools, one per previously-uncalled handler: IOC Registry query (ENTERPRISE), CVE Correlation lookup (PRO/ENTERPRISE), Intel Graph Neighborhood query (PRO/ENTERPRISE), Automated Hunting Alerts (PRO/ENTERPRISE), and Manual Feed Refresh (PRO/ENTERPRISE, triggers a real live re-ingestion from CISA KEV/NVD/GitHub Advisories). Unlike CAP-TIH-009/CAP-TIH-014's tabs, this one does NOT use the session-cookie apiFetch() helper \u2014 /api/v1/* rejects session auth outright (see auth_enforced/notes), so the tab collects the customer's own previously-issued API key and calls the endpoints directly with x-api-key. Named deliberately to avoid colliding with the existing \"Threat Hunting\" (CAP-TIH-001) and \"Threat Graph\" (client-side) nav-items elsewhere in this same sidebar. Before this fix: no frontend caller found anywhere for handleV1Correlations, handleV1Graph, handleV1Hunting, handleManualIngest, or handleV1IOCs. frontend/intel.html:1424,1656 and frontend/intel-hub.html:470,522 call /api/threat-intel and /stats; frontend/index.html:8890,22234 pull the CVE feed; frontend/soc-dashboard.html calls /api/v1/threat-intel (all three unchanged by this fix)."
     },
     "navigation": {
       "discoverable": true,
       "evidence": "frontend/intel.html and frontend/intel-hub.html linked from sitemap and homepage ('Open full Intel Hub ->', frontend/index.html:1994). FIXED 2026-07-12: frontend/user-dashboard.html's Developer sidebar section now has a real nav-item (data-page=\"v1-explorer\") for the 5 handlers described in frontend.evidence; the /api/v1/* endpoints are also still documented in frontend/api-docs.html."
     },
     "auth_enforced": false,
-    "rbac": { "enforced": true, "permissions": ["tier:PRO", "tier:ENTERPRISE"] },
+    "rbac": {
+      "enforced": true,
+      "permissions": [
+        "tier:PRO",
+        "tier:ENTERPRISE"
+      ]
+    },
     "subscription_gated": true,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "handleGetThreatIntel/handleThreatIntelStats <- workers/test/phase2ContractDrift.test.mjs. handleV1ThreatIntel <- workers/test/threatIntelExportEntitlement.test.mjs and workers/test/v1ThreatIntelConsistency.test.mjs. FIXED 2026-07-12: workers/test/threatIntelV1Explorer.test.mjs (22 tests) closes the test-coverage gap for handleV1IOCs, handleV1Correlations, handleV1Graph, handleV1Hunting, and handleManualIngest — tier-gate checks for all 5, real-DB-driven (non-fabricated) response-shape checks for the 4 GET handlers, a network-stubbed run of the real ingestion pipeline for handleManualIngest, a full-router-level proof that /api/v1/* rejects a plain unauthenticated (session-shaped) request with ERR_API_KEY_REQUIRED before any tier check runs, and frontend checks for the new tab (nav-item, endpoint calls, envelope-unwrapping correctness, naming-collision avoidance). Still no import-confirmed test for handleGetThreatIntelEntry or handleThreatIntelStream (SSE) — untouched by this fix, out of its scope. workers/src/services/huntingEngine.js, workers/src/services/correlationEngine.js, workers/src/services/graphEngine.js still have zero DIRECT import-confirmed unit tests of their own (covered only indirectly via the handler tests above)."
+      "evidence": "handleGetThreatIntel/handleThreatIntelStats <- workers/test/phase2ContractDrift.test.mjs. handleV1ThreatIntel <- workers/test/threatIntelExportEntitlement.test.mjs and workers/test/v1ThreatIntelConsistency.test.mjs. FIXED 2026-07-12: workers/test/threatIntelV1Explorer.test.mjs (22 tests) closes the test-coverage gap for handleV1IOCs, handleV1Correlations, handleV1Graph, handleV1Hunting, and handleManualIngest \u2014 tier-gate checks for all 5, real-DB-driven (non-fabricated) response-shape checks for the 4 GET handlers, a network-stubbed run of the real ingestion pipeline for handleManualIngest, a full-router-level proof that /api/v1/* rejects a plain unauthenticated (session-shaped) request with ERR_API_KEY_REQUIRED before any tier check runs, and frontend checks for the new tab (nav-item, endpoint calls, envelope-unwrapping correctness, naming-collision avoidance). Still no import-confirmed test for handleGetThreatIntelEntry or handleThreatIntelStream (SSE) \u2014 untouched by this fix, out of its scope. workers/src/services/huntingEngine.js, workers/src/services/correlationEngine.js, workers/src/services/graphEngine.js still have zero DIRECT import-confirmed unit tests of their own (covered only indirectly via the handler tests above)."
     },
     "docs": [
-      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+      {
+        "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "PILOT ONLY",
-    "priority": "P2",
+    "priority": "P6",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-12",
-      "evidence": "workers/src/handlers/threatIntel.js read directly (739 lines, 10 entry points with line numbers); workers/src/index.js routes read directly (2346-3529, 3859-3981, plus 3511 for /api/threat-intel/ingest, previously uncited). Critically, workers/src/index.js:3827-3852 read directly and confirmed by a live router-level test: /api/v1/* requires authCtx.method === 'api_key' (a real x-api-key: cdb_* key), rejecting any session/Bearer-authenticated request with 401 ERR_API_KEY_REQUIRED before the PRO/ENTERPRISE tier gate even runs — this is why the new tab cannot reuse the session-cookie apiFetch() pattern used by CAP-TIH-009/CAP-TIH-014, unlike what a naive port of that pattern would assume. frontend/user-dashboard.html edited directly to add the tab described in frontend.evidence; all 3 inline <script> blocks re-parsed with node --check (syntax valid). Full suite green: 252 files / 2589 tests. Registry validator: 0 failures, 0 warnings."
+      "last_verified": "2026-07-14",
+      "evidence": "workers/src/handlers/threatIntel.js read directly (739 lines, 10 entry points with line numbers); workers/src/index.js routes read directly (2346-3529, 3859-3981, plus 3511 for /api/threat-intel/ingest, previously uncited). Critically, workers/src/index.js:3827-3852 read directly and confirmed by a live router-level test: /api/v1/* requires authCtx.method === 'api_key' (a real x-api-key: cdb_* key), rejecting any session/Bearer-authenticated request with 401 ERR_API_KEY_REQUIRED before the PRO/ENTERPRISE tier gate even runs \u2014 this is why the new tab cannot reuse the session-cookie apiFetch() pattern used by CAP-TIH-009/CAP-TIH-014, unlike what a naive port of that pattern would assume. frontend/user-dashboard.html edited directly to add the tab described in frontend.evidence; all 3 inline <script> blocks re-parsed with node --check (syntax valid). Full suite green: 252 files / 2589 tests. Registry validator: 0 failures, 0 warnings. | Direct re-verification: #page-v1-explorer + nav-item confirmed live in frontend/user-dashboard.html, calling confirmed-live /api/v1/* routes. Test file workers/test/threatIntelV1Explorer.test.mjs confirmed present. RE-VERIFIED 2026-07-14 (Enterprise Capability Completion Program triage): independently re-confirmed via source (not the registry label) that this frontend/navigation work is real, live, and reachable. Priority corrected from P2 (backend exists, frontend missing) since that is no longer true."
     },
     "contradicts_doc": [],
-    "notes": "Third and final item in the owner-directed dashboard cluster that began with CAP-TIH-009 and CAP-TIH-014 (see CAP-TIH-009's session-log entry for the cluster decision). workers/src/services/huntingEngine.js's runHunting (behind /api/v1/hunting) is a second, separate hunting implementation unrelated to CAP-TIH-001's workers/src/handlers/threatHunting.js (which already has its own full dashboard page, frontend/threat-hunting.html) — the new tab calls this one \"Automated Hunting Alerts\" specifically to avoid presenting two same-named, unrelated \"Threat Hunting\" features to the same customer. workers/src/services/graphEngine.js (behind /api/v1/graph) is a fourth separate graph implementation, distinct from threatGraph.js (CAP-TIH-004), the dashboard's own client-side \"Threat Graph\" tab (built entirely from the customer's own scan history, no backend call at all), and workers/src/lib/attackGraph.js (CAP-TIH-016) — called \"Intel Graph Neighborhood\" here for the same collision-avoidance reason. workers/src/services/correlationEngine.js (behind /api/v1/correlations) is a separate engine from workers/src/lib/threatCorrelation.js (CAP-TIH-017, explicitly commented 'legacy' in its own source). None of these three parallel-implementation pairs are reconciled by this fix — reconciling them (picking one canonical engine per concept and retiring the others) is a materially larger, separate undertaking than adding a UI consumer for an existing, unreconciled handler, and was out of scope here; recorded rather than silently merged, per this program's standing instruction to flag duplication rather than build over it. Separately, while reading workers/src/index.js's /api/v1/* tier-gate block (line 3850) for this fix, noticed its upgrade-URL field points to https://tools.cyberdudebivash.com/#pricing and flagged it here as a possible third instance of CAP-TIH-014's external-URL bug class. CORRECTED 2026-07-12 (found while investigating CAP-TIH-015): this was a false alarm. frontend/index.html's own \"CYBERDUDEBIVASH® Ecosystem\" footer (~line 23946 onward) explicitly and transparently lists intel.cyberdudebivash.com (\"Threat Intel Platform\") and tools.cyberdudebivash.com (\"Tools Store\") as real, separate, deliberately-cross-linked sibling properties owned by the same company, alongside cyberdudebivash.in (this platform, labeled \"AI Security Hub\") — not stale or mistaken references. This does not change the CAP-TIH-014 fix (redirecting THIS platform's own teaser-card upgrade URLs to its own /#pricing was explicit, deliberate owner instruction, independent of whether the linked-away domain was legitimate), but it does mean tools.cyberdudebivash.com in this file's own /api/v1/* gate is plausibly an intentional cross-sell to a real sibling storefront, not a leftover bug — no follow-up sweep needed on this specific URL. Left as-is; not fixed, and no longer flagged as suspected fabrication."
+    "notes": "Third and final item in the owner-directed dashboard cluster that began with CAP-TIH-009 and CAP-TIH-014 (see CAP-TIH-009's session-log entry for the cluster decision). workers/src/services/huntingEngine.js's runHunting (behind /api/v1/hunting) is a second, separate hunting implementation unrelated to CAP-TIH-001's workers/src/handlers/threatHunting.js (which already has its own full dashboard page, frontend/threat-hunting.html) \u2014 the new tab calls this one \"Automated Hunting Alerts\" specifically to avoid presenting two same-named, unrelated \"Threat Hunting\" features to the same customer. workers/src/services/graphEngine.js (behind /api/v1/graph) is a fourth separate graph implementation, distinct from threatGraph.js (CAP-TIH-004), the dashboard's own client-side \"Threat Graph\" tab (built entirely from the customer's own scan history, no backend call at all), and workers/src/lib/attackGraph.js (CAP-TIH-016) \u2014 called \"Intel Graph Neighborhood\" here for the same collision-avoidance reason. workers/src/services/correlationEngine.js (behind /api/v1/correlations) is a separate engine from workers/src/lib/threatCorrelation.js (CAP-TIH-017, explicitly commented 'legacy' in its own source). None of these three parallel-implementation pairs are reconciled by this fix \u2014 reconciling them (picking one canonical engine per concept and retiring the others) is a materially larger, separate undertaking than adding a UI consumer for an existing, unreconciled handler, and was out of scope here; recorded rather than silently merged, per this program's standing instruction to flag duplication rather than build over it. Separately, while reading workers/src/index.js's /api/v1/* tier-gate block (line 3850) for this fix, noticed its upgrade-URL field points to https://tools.cyberdudebivash.com/#pricing and flagged it here as a possible third instance of CAP-TIH-014's external-URL bug class. CORRECTED 2026-07-12 (found while investigating CAP-TIH-015): this was a false alarm. frontend/index.html's own \"CYBERDUDEBIVASH\u00ae Ecosystem\" footer (~line 23946 onward) explicitly and transparently lists intel.cyberdudebivash.com (\"Threat Intel Platform\") and tools.cyberdudebivash.com (\"Tools Store\") as real, separate, deliberately-cross-linked sibling properties owned by the same company, alongside cyberdudebivash.in (this platform, labeled \"AI Security Hub\") \u2014 not stale or mistaken references. This does not change the CAP-TIH-014 fix (redirecting THIS platform's own teaser-card upgrade URLs to its own /#pricing was explicit, deliberate owner instruction, independent of whether the linked-away domain was legitimate), but it does mean tools.cyberdudebivash.com in this file's own /api/v1/* gate is plausibly an intentional cross-sell to a real sibling storefront, not a leftover bug \u2014 no follow-up sweep needed on this specific URL. Left as-is; not fixed, and no longer flagged as suspected fabrication."
   },
   {
     "id": "CAP-TIH-003",
@@ -109,34 +219,56 @@
     "name": "Threat Intel Pro Workbench (MITRE ATT&CK, APT Actors, STIX/TAXII, AI Analyst)",
     "description": "The genuine classic MITRE ATT&CK Enterprise v14 catalog, APT actor profiles, composite risk/EPSS scoring, STIX 2.1/TAXII feeds, AI-generated sector/CVE briefs, and an NL threat-query AI analyst, all behind a single dispatch router.",
     "backend": {
-      "handlers": ["workers/src/handlers/threatIntelPro.js"],
-      "entry_points": ["handleThreatIntelPro"],
+      "handlers": [
+        "workers/src/handlers/threatIntelPro.js"
+      ],
+      "entry_points": [
+        "handleThreatIntelPro"
+      ],
       "routes_sampled": [
-        { "path": "/api/intel/actors", "method": "GET", "evidence": "workers/src/index.js:5251" }
+        {
+          "path": "/api/intel/actors",
+          "method": "GET",
+          "evidence": "workers/src/index.js:5251"
+        }
       ],
       "routes_fully_enumerated": false,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "dedicated_page",
-      "pages": ["frontend/threat-intel-workbench.html"],
+      "pages": [
+        "frontend/threat-intel-workbench.html"
+      ],
       "status": "exists",
       "evidence": "frontend/threat-intel-workbench.html (1792 lines) calls essentially every sub-route: risk-queue:998, risk-score/cve-brief:1072-1073, actors/actor detail:1207,1266, heatmap:1329, analyst/query:1405, sector brief:1575, stix:1617,1639, tactics/techniques:1690-1691,1745. Real, complete, dedicated frontend."
     },
     "navigation": {
       "discoverable": true,
-      "evidence": "frontend/user-dashboard.html:923 — sidebar nav item '🛰️ Threat Workbench' under 'SENTINEL APEX™', linking directly to frontend/threat-intel-workbench.html. Also linked from frontend/intel-hub.html. Not listed in frontend/sitemap.html."
+      "evidence": "frontend/user-dashboard.html:923 \u2014 sidebar nav item '\ud83d\udef0\ufe0f Threat Workbench' under 'SENTINEL APEX\u2122', linking directly to frontend/threat-intel-workbench.html. Also linked from frontend/intel-hub.html. Not listed in frontend/sitemap.html."
     },
     "auth_enforced": false,
-    "rbac": { "enforced": true, "permissions": ["tier:PRO", "tier:ENTERPRISE"] },
+    "rbac": {
+      "enforced": true,
+      "permissions": [
+        "tier:PRO",
+        "tier:ENTERPRISE"
+      ]
+    },
     "subscription_gated": true,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "workers/test/threatIntelProAiRateLimit.test.mjs (12 tests, added 2026-07-11 Tier-2 backlog item #1) covers the 3 LLM-calling sub-routes' rate-limit gating. FIXED 2026-07-12: workers/test/threatIntelProWorkbench.test.mjs (26 tests) closes the rest of the router surface — real (non-fabricated) data checks for actors/actor-detail/tactics/techniques/attack-map/heatmap(cache miss+hit)/risk-score/risk-queue/epss/attribute, honest 404s for unknown actors/CVEs/collections, STIX bundle access-never-blocked-content-varies-by-tier, real TAXII discovery/collections documents, and — the centerpiece — explicit proof of the two actual hard tier gates found while tracing rbac.enforced (ioc-feed 403 below PRO/200 at PRO, actor-feed 403 below ENTERPRISE/200 at ENTERPRISE). The 5 backing services' MITRE/actor/risk-scoring/STIX data is exercised through the router, not mocked away."
+      "evidence": "workers/test/threatIntelProAiRateLimit.test.mjs (12 tests, added 2026-07-11 Tier-2 backlog item #1) covers the 3 LLM-calling sub-routes' rate-limit gating. FIXED 2026-07-12: workers/test/threatIntelProWorkbench.test.mjs (26 tests) closes the rest of the router surface \u2014 real (non-fabricated) data checks for actors/actor-detail/tactics/techniques/attack-map/heatmap(cache miss+hit)/risk-score/risk-queue/epss/attribute, honest 404s for unknown actors/CVEs/collections, STIX bundle access-never-blocked-content-varies-by-tier, real TAXII discovery/collections documents, and \u2014 the centerpiece \u2014 explicit proof of the two actual hard tier gates found while tracing rbac.enforced (ioc-feed 403 below PRO/200 at PRO, actor-feed 403 below ENTERPRISE/200 at ENTERPRISE). The 5 backing services' MITRE/actor/risk-scoring/STIX data is exercised through the router, not mocked away."
     },
     "docs": [
-      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+      {
+        "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "PILOT ONLY",
@@ -144,94 +276,154 @@
     "verification": {
       "method": "static",
       "last_verified": "2026-07-12",
-      "evidence": "workers/src/handlers/threatIntelPro.js read directly (now 581 lines after the 2026-07-11 rate-limit fix, single router handleThreatIntelPro:72 dispatching ~15 internal sub-paths by path match); workers/src/index.js:5251-5273 read directly (single prefix dispatch block, routes_fully_enumerated correctly set false per docs/capability-registry/SCHEMA.md's own convention for this pattern); frontend/threat-intel-workbench.html read directly for all call sites; workers/test/threatIntelProAiRateLimit.test.mjs confirmed via direct run (12/12 passing). FIXED 2026-07-12: rbac.enforced resolved from 'unknown' to true via a full per-sub-route trace of the entire 581-line router (every one of the ~17 sub-paths read line by line, not sampled) — see notes for the precise 2-hard-gate / 1-soft-gate / 14-ungated breakdown. Full suite green: 259 files / 2691 tests. Registry validator: 0 failures, 0 warnings."
+      "evidence": "workers/src/handlers/threatIntelPro.js read directly (now 581 lines after the 2026-07-11 rate-limit fix, single router handleThreatIntelPro:72 dispatching ~15 internal sub-paths by path match); workers/src/index.js:5251-5273 read directly (single prefix dispatch block, routes_fully_enumerated correctly set false per docs/capability-registry/SCHEMA.md's own convention for this pattern); frontend/threat-intel-workbench.html read directly for all call sites; workers/test/threatIntelProAiRateLimit.test.mjs confirmed via direct run (12/12 passing). FIXED 2026-07-12: rbac.enforced resolved from 'unknown' to true via a full per-sub-route trace of the entire 581-line router (every one of the ~17 sub-paths read line by line, not sampled) \u2014 see notes for the precise 2-hard-gate / 1-soft-gate / 14-ungated breakdown. Full suite green: 259 files / 2691 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": "Real, complete, prominently-discoverable feature. Sub-routes are individually tier-gated inside their handlers (e.g. STIX actors at ENTERPRISE, IOCs at PRO+) rather than at the router level. FIXED 2026-07-12: rbac.enforced resolved from \"unknown\" via the full per-sub-route trace this note originally deferred. The real shape, precisely: of ~17 sub-routes, exactly 2 return a hard 403 — GET /api/taxii/collections/ioc-feed/objects (PRO+) and GET /api/taxii/collections/actor-feed/objects (ENTERPRISE+), both proven by test. GET /api/intel/stix soft-gates its response CONTENT by tier (includeActors at ENTERPRISE+, includeIOCs at PRO+) without ever blocking access to the endpoint itself — a deliberate, different pattern from a hard gate, also proven by test. The remaining ~14 sub-routes (actors, actor/:id, tactics, techniques, attack-map, heatmap, risk-score, risk-queue, epss, taxii/discovery, taxii/collections, cve-feed, kev-feed, attribute/:id) carry no tier check of any kind — intentionally public, per the same design already documented below for the 3 LLM-calling routes (rate-limited instead of gated, since they're not free-riding on paid-tier-differentiated data, just costly-to-compute or costly-to-call). 2026-07-11 (Tier-2 backlog item #1): the 3 sub-routes that make a real LLM call (analyst/query chat, AI-generated cve-brief, AI-generated sector brief) had zero authentication requirement AND zero rate limiting — any anonymous visitor could script unlimited calls, each one billed as real third-party LLM API usage; an open cost-abuse vector. Fixed by wiring the existing shared checkRateLimitCost() (workers/src/middleware/rateLimit.js — already used by threatHunting.js/vulnManagement.js/auditLog.js for their own costly operations) into all 3 routes, with 3 new ENDPOINT_COST entries (intel/analyst, intel/cve-brief, intel/sector, each cost 2). auth_enforced intentionally still false — this closes the cost-abuse gap via per-IP/per-tier quota, not a login requirement change; FREE-tier/anonymous callers get a capped daily budget (~5 calls/day at cost 2 each under TIERS.FREE's 10-unit budget) instead of unlimited access. The other ~12 sub-routes were not in scope for this fix (they don't call an LLM and were not part of the audit finding) and remain exactly as previously documented. FIXED 2026-07-12 (Tier-3 backlog item #6, last of 6, full-frontend-audit follow-up — this closes the entire 24-item backlog): the APT Actor Profiles panel's actor cards (grid + detail modal) rendered a raw keyword string ('bear', 'dragon', 'typhoon', …) crammed into a 36px icon box instead of an emoji. workers/src/services/aptActorProfiles.js's `icon` field is a semantic keyword, not a display glyph, and every one of the 15 actors in APT_ACTORS has it set — so frontend/threat-intel-workbench.html's `${a.icon || '🎭'}` fallback never actually triggered for any real actor; it always printed the literal keyword text. Frontend-only fix: added an `ACTOR_ICON_EMOJI` keyword→glyph map plus an `actorIconEmoji(a)` helper (falling back to 🎭 for any unmapped keyword, preserving the original degrade-gracefully intent), used by both the grid card and the detail modal. No backend change needed — the semantic-keyword data design is reasonable; the gap was purely the missing frontend translation step. New workers/test/threatIntelWorkbenchActorIconFix.test.mjs (5 tests): a real-data contract test importing APT_ACTORS directly and asserting every actor's real icon keyword is covered by the frontend's map (the general form of this bug — an unmapped keyword — not just the one instance), plus static-parse checks on both render sites. test_coverage.has_tests above unchanged (frontend-only static parse plus a data-shape assertion, not new coverage of handleThreatIntelPro itself). Full suite: 244 files / 2489 tests passing. FIXED 2026-07-12 (22-paid-feature program, item 21 of 22): closed this entry's last two open items together — rbac.enforced (see above) and the real test-coverage gap for ~14 previously-untested sub-routes (workers/test/threatIntelProWorkbench.test.mjs, 26 tests). Also noticed, in passing, a minor cross-reference worth recording rather than fixing: this engine's real TACTICS catalog has 14 entries (includes Reconnaissance and Resource Development), while CAP-TIH-013's enterpriseIntel.js hardcodes a separate, smaller 12-tactic MITRE table elsewhere in this codebase — one more item in this domain's already-tracked list of unreconciled parallel MITRE/ATT&CK representations (see CAP-TIH-002's notes for the fuller list); not fixed here, consistent with this program's standing instruction to flag duplication rather than merge engines outside the scope of the specific fix at hand. operational_status moves NOT READY -> PILOT ONLY — no fabrication found anywhere in this pass; the MITRE/actor/STIX data this engine serves is genuinely real."
+    "notes": "Real, complete, prominently-discoverable feature. Sub-routes are individually tier-gated inside their handlers (e.g. STIX actors at ENTERPRISE, IOCs at PRO+) rather than at the router level. FIXED 2026-07-12: rbac.enforced resolved from \"unknown\" via the full per-sub-route trace this note originally deferred. The real shape, precisely: of ~17 sub-routes, exactly 2 return a hard 403 \u2014 GET /api/taxii/collections/ioc-feed/objects (PRO+) and GET /api/taxii/collections/actor-feed/objects (ENTERPRISE+), both proven by test. GET /api/intel/stix soft-gates its response CONTENT by tier (includeActors at ENTERPRISE+, includeIOCs at PRO+) without ever blocking access to the endpoint itself \u2014 a deliberate, different pattern from a hard gate, also proven by test. The remaining ~14 sub-routes (actors, actor/:id, tactics, techniques, attack-map, heatmap, risk-score, risk-queue, epss, taxii/discovery, taxii/collections, cve-feed, kev-feed, attribute/:id) carry no tier check of any kind \u2014 intentionally public, per the same design already documented below for the 3 LLM-calling routes (rate-limited instead of gated, since they're not free-riding on paid-tier-differentiated data, just costly-to-compute or costly-to-call). 2026-07-11 (Tier-2 backlog item #1): the 3 sub-routes that make a real LLM call (analyst/query chat, AI-generated cve-brief, AI-generated sector brief) had zero authentication requirement AND zero rate limiting \u2014 any anonymous visitor could script unlimited calls, each one billed as real third-party LLM API usage; an open cost-abuse vector. Fixed by wiring the existing shared checkRateLimitCost() (workers/src/middleware/rateLimit.js \u2014 already used by threatHunting.js/vulnManagement.js/auditLog.js for their own costly operations) into all 3 routes, with 3 new ENDPOINT_COST entries (intel/analyst, intel/cve-brief, intel/sector, each cost 2). auth_enforced intentionally still false \u2014 this closes the cost-abuse gap via per-IP/per-tier quota, not a login requirement change; FREE-tier/anonymous callers get a capped daily budget (~5 calls/day at cost 2 each under TIERS.FREE's 10-unit budget) instead of unlimited access. The other ~12 sub-routes were not in scope for this fix (they don't call an LLM and were not part of the audit finding) and remain exactly as previously documented. FIXED 2026-07-12 (Tier-3 backlog item #6, last of 6, full-frontend-audit follow-up \u2014 this closes the entire 24-item backlog): the APT Actor Profiles panel's actor cards (grid + detail modal) rendered a raw keyword string ('bear', 'dragon', 'typhoon', \u2026) crammed into a 36px icon box instead of an emoji. workers/src/services/aptActorProfiles.js's `icon` field is a semantic keyword, not a display glyph, and every one of the 15 actors in APT_ACTORS has it set \u2014 so frontend/threat-intel-workbench.html's `${a.icon || '\ud83c\udfad'}` fallback never actually triggered for any real actor; it always printed the literal keyword text. Frontend-only fix: added an `ACTOR_ICON_EMOJI` keyword\u2192glyph map plus an `actorIconEmoji(a)` helper (falling back to \ud83c\udfad for any unmapped keyword, preserving the original degrade-gracefully intent), used by both the grid card and the detail modal. No backend change needed \u2014 the semantic-keyword data design is reasonable; the gap was purely the missing frontend translation step. New workers/test/threatIntelWorkbenchActorIconFix.test.mjs (5 tests): a real-data contract test importing APT_ACTORS directly and asserting every actor's real icon keyword is covered by the frontend's map (the general form of this bug \u2014 an unmapped keyword \u2014 not just the one instance), plus static-parse checks on both render sites. test_coverage.has_tests above unchanged (frontend-only static parse plus a data-shape assertion, not new coverage of handleThreatIntelPro itself). Full suite: 244 files / 2489 tests passing. FIXED 2026-07-12 (22-paid-feature program, item 21 of 22): closed this entry's last two open items together \u2014 rbac.enforced (see above) and the real test-coverage gap for ~14 previously-untested sub-routes (workers/test/threatIntelProWorkbench.test.mjs, 26 tests). Also noticed, in passing, a minor cross-reference worth recording rather than fixing: this engine's real TACTICS catalog has 14 entries (includes Reconnaissance and Resource Development), while CAP-TIH-013's enterpriseIntel.js hardcodes a separate, smaller 12-tactic MITRE table elsewhere in this codebase \u2014 one more item in this domain's already-tracked list of unreconciled parallel MITRE/ATT&CK representations (see CAP-TIH-002's notes for the fuller list); not fixed here, consistent with this program's standing instruction to flag duplication rather than merge engines outside the scope of the specific fix at hand. operational_status moves NOT READY -> PILOT ONLY \u2014 no fabrication found anywhere in this pass; the MITRE/actor/STIX data this engine serves is genuinely real."
   },
   {
     "id": "CAP-TIH-004",
     "domain": "threat-hunting-intel",
-    "name": "Threat Intelligence Graph (backend) — distinct from the dashboard's client-side Threat Graph",
+    "name": "Threat Intelligence Graph (backend) \u2014 distinct from the dashboard's client-side Threat Graph",
     "description": "A curated static knowledge base (APT groups, malware, CVEs, ATT&CK techniques, sectors) with live D1 augmentation and CISA-KEV enrichment, plus node/path/query/summary sub-routes (BFS shortest attack path). FIXED 2026-07-13: now has a real dashboard consumer.",
     "backend": {
-      "handlers": ["workers/src/handlers/threatGraph.js"],
-      "entry_points": ["handleGetThreatGraph", "handleGetGraphNodes", "handleGetGraphPaths", "handleGraphQuery", "handleGraphSummary"],
+      "handlers": [
+        "workers/src/handlers/threatGraph.js"
+      ],
+      "entry_points": [
+        "handleGetThreatGraph",
+        "handleGetGraphNodes",
+        "handleGetGraphPaths",
+        "handleGraphQuery",
+        "handleGraphSummary"
+      ],
       "routes_sampled": [
-        { "path": "/api/threat-graph", "method": "GET", "evidence": "workers/src/index.js:4352" }
+        {
+          "path": "/api/threat-graph",
+          "method": "GET",
+          "evidence": "workers/src/index.js:4352"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "embedded_widget",
-      "pages": ["frontend/user-dashboard.html"],
+      "pages": [
+        "frontend/user-dashboard.html"
+      ],
       "status": "exists",
       "evidence": "FIXED 2026-07-13: frontend/user-dashboard.html gained a real 'Global Intel Graph' tab (id=\"page-intel-graph\") with 4 live tools, each calling a real /api/threat-graph* sub-route: Threat Landscape Summary (auto-loads on tab open), Browse Nodes (type + text search), Attack Path Finder (BFS shortest path between two node IDs), and Node Neighborhood (2-hop subgraph explorer). Page copy explicitly explains how this differs from the pre-existing client-side 'Threat Graph' tab, since the two features share only a similar name. Before this fix: exhaustive grep of frontend/*.html for '/api/threat-graph' returned zero matches."
     },
     "navigation": {
       "discoverable": true,
-      "evidence": "FIXED 2026-07-13: frontend/user-dashboard.html's 'Intelligence' sidebar section (same section as Scan History/Threat Graph/Intelligence Preview) now has a real nav-item (data-page=\"intel-graph\") linking to the new tab, positioned directly after Intelligence Preview and named 'Global Intel Graph' — deliberately distinct from the pre-existing 'Threat Graph' nav-item immediately above it, per this program's established collision-avoidance convention (see CAP-TIH-016's sibling naming decision in this same file's notes)."
+      "evidence": "FIXED 2026-07-13: frontend/user-dashboard.html's 'Intelligence' sidebar section (same section as Scan History/Threat Graph/Intelligence Preview) now has a real nav-item (data-page=\"intel-graph\") linking to the new tab, positioned directly after Intelligence Preview and named 'Global Intel Graph' \u2014 deliberately distinct from the pre-existing 'Threat Graph' nav-item immediately above it, per this program's established collision-avoidance convention (see CAP-TIH-016's sibling naming decision in this same file's notes)."
     },
     "auth_enforced": false,
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "FIXED 2026-07-13: workers/test/threatIntelGraphDashboard.test.mjs (11 tests) — confirms all 5 backend entry points return real curated-knowledge-base data (real BFS shortest path, real subgraph neighbors, real top-APT/critical-CVE summary), including a regression lock on the response envelope shape itself: workers/src/handlers/threatGraph.js responds via workers/src/lib/response.js's ok()/fail() helpers ({success,data,error}), a different convention from /api/preview/*'s flat top-level JSON body used elsewhere on this same dashboard page — the first draft of the frontend wiring read the flat shape and every field came back undefined, caught before shipping by running these tests, not by trusting the pattern copied from the adjacent Intelligence Preview tab. Also confirms the new dashboard tab's nav-item, page section, and each tool's real endpoint call."
+      "evidence": "FIXED 2026-07-13: workers/test/threatIntelGraphDashboard.test.mjs (11 tests) \u2014 confirms all 5 backend entry points return real curated-knowledge-base data (real BFS shortest path, real subgraph neighbors, real top-APT/critical-CVE summary), including a regression lock on the response envelope shape itself: workers/src/handlers/threatGraph.js responds via workers/src/lib/response.js's ok()/fail() helpers ({success,data,error}), a different convention from /api/preview/*'s flat top-level JSON body used elsewhere on this same dashboard page \u2014 the first draft of the frontend wiring read the flat shape and every field came back undefined, caught before shipping by running these tests, not by trusting the pattern copied from the adjacent Intelligence Preview tab. Also confirms the new dashboard tab's nav-item, page section, and each tool's real endpoint call."
     },
     "docs": [
-      { "path": "docs/capability-registry/PROGRAM_BOARD.md", "tag": "canonical" }
+      {
+        "path": "docs/capability-registry/PROGRAM_BOARD.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "PILOT ONLY",
-    "priority": "P2",
+    "priority": "P6",
     "verification": {
       "method": "dynamic_browser",
-      "last_verified": "2026-07-13",
-      "evidence": "workers/src/handlers/threatGraph.js read directly (450 lines, all 5 entry points); workers/src/index.js:4352-4370 read directly — only the root route resolves authCtx at all (fails open to {}), nodes/paths/query/summary take no auth parameter whatsoever; frontend/*.html grepped exhaustively for '/api/threat-graph' (0 hits before this fix). frontend/user-dashboard.html edited directly to add the tab described in frontend.evidence; inline <script> block re-parsed with node --check (syntax valid). Full worker suite green: 274 files / 2853 tests. Registry validator: 0 failures, 0 warnings. UPDATED 2026-07-13: click-through verified via Playwright/Chromium against the real file, served locally with contract-accurate mocked /api/threat-graph* responses (shapes copied directly from workers/src/handlers/threatGraph.js source) — Threat Landscape Summary, Browse Nodes, Attack Path Finder, and Node Neighborhood all confirmed rendering real data, zero console/JS errors. This browser pass caught a real defect the unit tests alone missed (see notes) — method upgraded from static to dynamic_browser. operational_status moved NOT READY -> PILOT ONLY; customer_journey_complete stays false since this is content-honesty + real wiring, not a full auth/RBAC/subscription-gating re-certification (this capability remains intentionally ungated per the pre-existing auth_enforced:false/subscription_gated:false — a design choice, not a gap this fix touched), and no post-deploy production smoke test against live D1 has been performed yet."
+      "last_verified": "2026-07-14",
+      "evidence": "workers/src/handlers/threatGraph.js read directly (450 lines, all 5 entry points); workers/src/index.js:4352-4370 read directly \u2014 only the root route resolves authCtx at all (fails open to {}), nodes/paths/query/summary take no auth parameter whatsoever; frontend/*.html grepped exhaustively for '/api/threat-graph' (0 hits before this fix). frontend/user-dashboard.html edited directly to add the tab described in frontend.evidence; inline <script> block re-parsed with node --check (syntax valid). Full worker suite green: 274 files / 2853 tests. Registry validator: 0 failures, 0 warnings. UPDATED 2026-07-13: click-through verified via Playwright/Chromium against the real file, served locally with contract-accurate mocked /api/threat-graph* responses (shapes copied directly from workers/src/handlers/threatGraph.js source) \u2014 Threat Landscape Summary, Browse Nodes, Attack Path Finder, and Node Neighborhood all confirmed rendering real data, zero console/JS errors. This browser pass caught a real defect the unit tests alone missed (see notes) \u2014 method upgraded from static to dynamic_browser. operational_status moved NOT READY -> PILOT ONLY; customer_journey_complete stays false since this is content-honesty + real wiring, not a full auth/RBAC/subscription-gating re-certification (this capability remains intentionally ungated per the pre-existing auth_enforced:false/subscription_gated:false \u2014 a design choice, not a gap this fix touched), and no post-deploy production smoke test against live D1 has been performed yet. | Direct re-verification: #page-intel-graph + nav-item confirmed live, calling confirmed-live /api/threat-graph/* routes. Test file workers/test/threatIntelGraphDashboard.test.mjs confirmed present. Note: this capability's original fix has no dedicated docs/capability-registry/PROGRAM_BOARD.md session-log heading of its own (only cross-referenced inside CAP-TIH-002's entry) -- a documentation-trail gap, not a code gap. RE-VERIFIED 2026-07-14 (Enterprise Capability Completion Program triage): independently re-confirmed via source (not the registry label) that this frontend/navigation work is real, live, and reachable. Priority corrected from P2 (backend exists, frontend missing) since that is no longer true."
     },
     "contradicts_doc": [],
-    "notes": "Important disambiguation for anyone working this domain: this backend capability and user-dashboard.html's client-side 'Threat Graph' feature are two entirely independent systems sharing only a name. The dashboard's client-side graph is already tracked and partially fixed this session (docs/capability-registry/domains/organizations.json-adjacent Threat Graph findings-persistence work, PR #159/160): scan_history never persisted a findings column, so every real scan produced exactly one isolated node with no relationship edges. workers/schema_migration_scan_history_findings_2026_07.sql and workers/src/lib/findingsSummary.js shipped as a safe no-op fix for that gap but the migration has not yet been applied to production (owner must run .github/workflows/db-migrate.yml with APPLY — still true as of this update, unrelated to and not fixed by the work below). FIXED 2026-07-13: this backend capability (workers/src/handlers/threatGraph.js) is no longer unused — a real 'Global Intel Graph' dashboard tab now consumes all 5 real endpoints, positioned right next to the pre-existing 'Threat Graph' nav item with page copy that explicitly states the two are different features, so the disambiguation this note existed to capture is now also visible to the customer, not just to whoever reads this registry. Per this domain's standing instruction to flag rather than reconcile duplicate implementations (see CAP-TIH-014's notes for the fuller 3-pair list: workers/src/services/graphEngine.js behind /api/v1/graph, the client-side Threat Graph tab, and workers/src/lib/attackGraph.js/CAP-TIH-016 are all still separate, unreconciled 'graph' concepts) — this fix added a consumer for the one specific handler documented here; it did not touch or reconcile the other three. UPDATED 2026-07-13: actually browser-testing this tab (rather than trusting the unit tests + a syntax check alone) surfaced a real defect: intelGraphSummary() only fired from the nav item's onclick handler, not from showPage() itself, so this tab's data never loaded when reached via the dashboard's own ?tab=intel-graph deep-link mechanism (initDashboard(), used by other pages to link directly into a tab) — same latent bug already present in the pre-existing Intelligence Preview tab (CAP-TIH-014), which this pass also fixed for consistency. Both now auto-load from inside showPage(), matching the more robust pattern the Settings page's lazy-loads already used. A third, unrelated nav item (Threat Intel API, data-page=\"intel-api\") has the identical shape of latent bug and was deliberately left untouched — out of scope for this pass, flagged here for whoever next touches that capability."
+    "notes": "Important disambiguation for anyone working this domain: this backend capability and user-dashboard.html's client-side 'Threat Graph' feature are two entirely independent systems sharing only a name. The dashboard's client-side graph is already tracked and partially fixed this session (docs/capability-registry/domains/organizations.json-adjacent Threat Graph findings-persistence work, PR #159/160): scan_history never persisted a findings column, so every real scan produced exactly one isolated node with no relationship edges. workers/schema_migration_scan_history_findings_2026_07.sql and workers/src/lib/findingsSummary.js shipped as a safe no-op fix for that gap but the migration has not yet been applied to production (owner must run .github/workflows/db-migrate.yml with APPLY \u2014 still true as of this update, unrelated to and not fixed by the work below). FIXED 2026-07-13: this backend capability (workers/src/handlers/threatGraph.js) is no longer unused \u2014 a real 'Global Intel Graph' dashboard tab now consumes all 5 real endpoints, positioned right next to the pre-existing 'Threat Graph' nav item with page copy that explicitly states the two are different features, so the disambiguation this note existed to capture is now also visible to the customer, not just to whoever reads this registry. Per this domain's standing instruction to flag rather than reconcile duplicate implementations (see CAP-TIH-014's notes for the fuller 3-pair list: workers/src/services/graphEngine.js behind /api/v1/graph, the client-side Threat Graph tab, and workers/src/lib/attackGraph.js/CAP-TIH-016 are all still separate, unreconciled 'graph' concepts) \u2014 this fix added a consumer for the one specific handler documented here; it did not touch or reconcile the other three. UPDATED 2026-07-13: actually browser-testing this tab (rather than trusting the unit tests + a syntax check alone) surfaced a real defect: intelGraphSummary() only fired from the nav item's onclick handler, not from showPage() itself, so this tab's data never loaded when reached via the dashboard's own ?tab=intel-graph deep-link mechanism (initDashboard(), used by other pages to link directly into a tab) \u2014 same latent bug already present in the pre-existing Intelligence Preview tab (CAP-TIH-014), which this pass also fixed for consistency. Both now auto-load from inside showPage(), matching the more robust pattern the Settings page's lazy-loads already used. A third, unrelated nav item (Threat Intel API, data-page=\"intel-api\") has the identical shape of latent bug and was deliberately left untouched \u2014 out of scope for this pass, flagged here for whoever next touches that capability."
   },
   {
     "id": "CAP-TIH-005",
     "domain": "threat-hunting-intel",
     "name": "AI Attack Library (MITRE ATLAS / OWASP LLM techniques)",
-    "description": "A catalog of adversarial-ML/LLM attack techniques (prompt injection, jailbreak, agent-takeover, RAG-poisoning, data-exfil, model-abuse) mapped to MITRE ATLAS and OWASP LLM Top-10 IDs — not the classic MITRE ATT&CK Enterprise catalog (that is CAP-TIH-003's mitreAttackService.js).",
+    "description": "A catalog of adversarial-ML/LLM attack techniques (prompt injection, jailbreak, agent-takeover, RAG-poisoning, data-exfil, model-abuse) mapped to MITRE ATLAS and OWASP LLM Top-10 IDs \u2014 not the classic MITRE ATT&CK Enterprise catalog (that is CAP-TIH-003's mitreAttackService.js).",
     "backend": {
-      "handlers": ["workers/src/handlers/attackLibrary.js", "workers/src/services/attackLibraryIngestion.js"],
-      "entry_points": ["handleListAttackTechniques", "handleAttackLibraryOverview", "handleCreateAttackTechnique", "ingestAttackLibraryTechniques"],
+      "handlers": [
+        "workers/src/handlers/attackLibrary.js",
+        "workers/src/services/attackLibraryIngestion.js"
+      ],
+      "entry_points": [
+        "handleListAttackTechniques",
+        "handleAttackLibraryOverview",
+        "handleCreateAttackTechnique",
+        "ingestAttackLibraryTechniques"
+      ],
       "routes_sampled": [
-        { "path": "/api/attack-library/techniques", "method": "GET", "evidence": "workers/src/index.js:7927" },
-        { "path": "/api/attack-library/overview", "method": "GET", "evidence": "workers/src/index.js:7930" },
-        { "path": "/api/admin/attack-library/techniques", "method": "POST", "evidence": "workers/src/index.js:7933" },
-        { "path": "/api/admin/attack-library/ingest", "method": "POST", "evidence": "workers/src/index.js:7936" }
+        {
+          "path": "/api/attack-library/techniques",
+          "method": "GET",
+          "evidence": "workers/src/index.js:7927"
+        },
+        {
+          "path": "/api/attack-library/overview",
+          "method": "GET",
+          "evidence": "workers/src/index.js:7930"
+        },
+        {
+          "path": "/api/admin/attack-library/techniques",
+          "method": "POST",
+          "evidence": "workers/src/index.js:7933"
+        },
+        {
+          "path": "/api/admin/attack-library/ingest",
+          "method": "POST",
+          "evidence": "workers/src/index.js:7936"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "dedicated_page",
-      "pages": ["frontend/attack-library.html"],
+      "pages": [
+        "frontend/attack-library.html"
+      ],
       "status": "exists",
       "evidence": "frontend/attack-library.html:222 (/api/attack-library/overview), :288 (/api/attack-library/techniques?limit=200). Real, live page."
     },
     "navigation": {
       "discoverable": true,
-      "evidence": "Listed in frontend/sitemap.html:144, linked from frontend/index.html:5573 ('Attack Library ↗')."
+      "evidence": "Listed in frontend/sitemap.html:144, linked from frontend/index.html:5573 ('Attack Library \u2197')."
     },
     "auth_enforced": false,
-    "rbac": { "enforced": true, "permissions": ["admin"] },
+    "rbac": {
+      "enforced": true,
+      "permissions": [
+        "admin"
+      ]
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
       "evidence": "handleListAttackTechniques/handleAttackLibraryOverview/handleCreateAttackTechnique <- workers/test/attackLibrary.test.mjs. workers/src/services/attackLibraryIngestion.js's ingestAttackLibraryTechniques has no import-confirmed test."
     },
     "docs": [
-      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+      {
+        "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "PILOT ONLY",
@@ -242,7 +434,7 @@
       "evidence": "workers/src/handlers/attackLibrary.js read directly (195 lines); schema_v44_attack_library.sql and schema_v44b_attack_library_categories.sql read directly, confirming this catalogs MITRE ATLAS (e.g. AML.T0054) + OWASP LLM Top-10, not classic ATT&CK; workers/src/index.js:7927-7936 read directly; frontend/attack-library.html read directly; workers/test/attackLibrary.test.mjs confirmed by direct grep."
     },
     "contradicts_doc": [],
-    "notes": "GET routes fully public. Admin write/ingest routes gated by isAdminAuthorized()/constant-time ADMIN_TOKEN compare (attackLibrary.js:137-147) — staff-only by design, correctly so. Do not confuse with classic MITRE ATT&CK (CAP-TIH-003) despite the schema-version-number adjacency to unrelated v44 migrations."
+    "notes": "GET routes fully public. Admin write/ingest routes gated by isAdminAuthorized()/constant-time ADMIN_TOKEN compare (attackLibrary.js:137-147) \u2014 staff-only by design, correctly so. Do not confuse with classic MITRE ATT&CK (CAP-TIH-003) despite the schema-version-number adjacency to unrelated v44 migrations."
   },
   {
     "id": "CAP-TIH-006",
@@ -250,37 +442,75 @@
     "name": "Agent Threat Advisories (AI agent framework CVEs/advisories)",
     "description": "Curated advisories for AI-agent-framework CVEs, ingested from external sources, with a dedicated overview and detail page. The most prominently-linked threat-intel page on the platform.",
     "backend": {
-      "handlers": ["workers/src/handlers/agentThreatAdvisories.js", "workers/src/services/agentThreatIngestion.js"],
-      "entry_points": ["handleListAgentAdvisories", "handleAgentThreatOverview", "handleCreateAgentAdvisory", "ingestAgentThreatAdvisories"],
+      "handlers": [
+        "workers/src/handlers/agentThreatAdvisories.js",
+        "workers/src/services/agentThreatIngestion.js"
+      ],
+      "entry_points": [
+        "handleListAgentAdvisories",
+        "handleAgentThreatOverview",
+        "handleCreateAgentAdvisory",
+        "ingestAgentThreatAdvisories"
+      ],
       "routes_sampled": [
-        { "path": "/api/agent-threats/advisories", "method": "GET", "evidence": "workers/src/index.js:7909" },
-        { "path": "/api/agent-threats/overview", "method": "GET", "evidence": "workers/src/index.js:7912" },
-        { "path": "/api/admin/agent-threats/advisories", "method": "POST", "evidence": "workers/src/index.js:7915" },
-        { "path": "/api/admin/agent-threats/ingest", "method": "POST", "evidence": "workers/src/index.js:7918" }
+        {
+          "path": "/api/agent-threats/advisories",
+          "method": "GET",
+          "evidence": "workers/src/index.js:7909"
+        },
+        {
+          "path": "/api/agent-threats/overview",
+          "method": "GET",
+          "evidence": "workers/src/index.js:7912"
+        },
+        {
+          "path": "/api/admin/agent-threats/advisories",
+          "method": "POST",
+          "evidence": "workers/src/index.js:7915"
+        },
+        {
+          "path": "/api/admin/agent-threats/ingest",
+          "method": "POST",
+          "evidence": "workers/src/index.js:7918"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "dedicated_page",
-      "pages": ["frontend/agent-threats.html", "frontend/index.html"],
+      "pages": [
+        "frontend/agent-threats.html",
+        "frontend/index.html"
+      ],
       "status": "exists",
       "evidence": "frontend/agent-threats.html:567 (/overview), :668 (/advisories?...). Real, live, dedicated 736-line page."
     },
     "navigation": {
       "discoverable": true,
-      "evidence": "Linked from BOTH desktop and mobile primary nav on frontend/index.html, labeled '🤖 AI Threat Intel' (lines 1180, 1223), plus in-page CTAs (2022, 5595-5596, 5617, 12300) and frontend/sitemap.html:142 — the most prominently-linked page in this domain."
+      "evidence": "Linked from BOTH desktop and mobile primary nav on frontend/index.html, labeled '\ud83e\udd16 AI Threat Intel' (lines 1180, 1223), plus in-page CTAs (2022, 5595-5596, 5617, 12300) and frontend/sitemap.html:142 \u2014 the most prominently-linked page in this domain."
     },
     "auth_enforced": false,
-    "rbac": { "enforced": true, "permissions": ["admin"] },
+    "rbac": {
+      "enforced": true,
+      "permissions": [
+        "admin"
+      ]
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
       "evidence": "handleListAgentAdvisories/handleAgentThreatOverview/handleCreateAgentAdvisory <- workers/test/agentThreatAdvisories.test.mjs. workers/src/services/agentThreatIngestion.js has no import-confirmed test."
     },
     "docs": [
-      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+      {
+        "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
@@ -291,7 +521,7 @@
       "evidence": "workers/src/handlers/agentThreatAdvisories.js read directly (223 lines); workers/src/index.js:7909-7919 read directly, admin POSTs gated by isAdminAuthorized() inline check (7919); frontend/agent-threats.html and frontend/index.html nav entries read directly; workers/test/agentThreatAdvisories.test.mjs confirmed by direct grep."
     },
     "contradicts_doc": [],
-    "notes": "Structurally the cleanest capability found in this domain audit: real backend, real dedicated frontend, most-prominent navigation of any threat-intel page, real tests, correct staff-only gating on writes. Sole gap is agentThreatIngestion.js itself lacking direct test coverage. Not marked GA APPROVED outright because that operational_status value mechanically requires customer_journey_complete:true (docs/capability-registry/SCHEMA.md §5.5), which requires a dynamic_browser verification pass not yet performed for this domain."
+    "notes": "Structurally the cleanest capability found in this domain audit: real backend, real dedicated frontend, most-prominent navigation of any threat-intel page, real tests, correct staff-only gating on writes. Sole gap is agentThreatIngestion.js itself lacking direct test coverage. Not marked GA APPROVED outright because that operational_status value mechanically requires customer_journey_complete:true (docs/capability-registry/SCHEMA.md \u00a75.5), which requires a dynamic_browser verification pass not yet performed for this domain."
   },
   {
     "id": "CAP-TIH-007",
@@ -299,36 +529,73 @@
     "name": "AI Threat Intelligence Feed & Agent Security (Pillar 4/5)",
     "description": "Curated + live-ingested (NVD/CISA-KEV/OSV.dev/GitHub Advisories) AI-CVE and prompt-attack feed, a premium 12-section markdown intelligence report, threat radar status/scan-now, and an AI-agent inventory scanner.",
     "backend": {
-      "handlers": ["workers/src/handlers/aiThreatIntel.js", "workers/src/services/aiThreatIngestion.js", "workers/src/services/aiThreatRadar.js"],
-      "entry_points": ["handleAIThreatFeed", "handleAIThreatReport", "handleLatestPublishedReport", "handleAIThreatRadarStatus", "handleAIThreatRadarScanNow", "handleScanAgent", "handleRegisterAgent", "handleListAgents"],
+      "handlers": [
+        "workers/src/handlers/aiThreatIntel.js",
+        "workers/src/services/aiThreatIngestion.js",
+        "workers/src/services/aiThreatRadar.js"
+      ],
+      "entry_points": [
+        "handleAIThreatFeed",
+        "handleAIThreatReport",
+        "handleLatestPublishedReport",
+        "handleAIThreatRadarStatus",
+        "handleAIThreatRadarScanNow",
+        "handleScanAgent",
+        "handleRegisterAgent",
+        "handleListAgents"
+      ],
       "routes_sampled": [
-        { "path": "/api/ai-security/threat-feed", "method": "GET", "evidence": "workers/src/index.js:7725" },
-        { "path": "/api/ai-security/threat-feed/report", "method": "GET", "evidence": "workers/src/index.js:7712" },
-        { "path": "/api/ai-security/agents/scan", "method": "POST", "evidence": "workers/src/index.js:7700" }
+        {
+          "path": "/api/ai-security/threat-feed",
+          "method": "GET",
+          "evidence": "workers/src/index.js:7725"
+        },
+        {
+          "path": "/api/ai-security/threat-feed/report",
+          "method": "GET",
+          "evidence": "workers/src/index.js:7712"
+        },
+        {
+          "path": "/api/ai-security/agents/scan",
+          "method": "POST",
+          "evidence": "workers/src/index.js:7700"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "embedded_widget",
-      "pages": ["frontend/index.html", "frontend/agent-threats.html"],
+      "pages": [
+        "frontend/index.html",
+        "frontend/agent-threats.html"
+      ],
       "status": "exists",
-      "evidence": "frontend/index.html embeds an 'AI Threat Intel' panel (renderAIThreatIntelFlagship, auto-refresh every 90s matching the handler's own autoRefreshSec:90 contract). frontend/agent-threats.html has a dedicated 'Scan My Agent' modal (runAgentScan(), 2026-07-11) that POSTs to /api/ai-security/agents/scan — the handleScanAgent entry point specifically."
+      "evidence": "frontend/index.html embeds an 'AI Threat Intel' panel (renderAIThreatIntelFlagship, auto-refresh every 90s matching the handler's own autoRefreshSec:90 contract). frontend/agent-threats.html has a dedicated 'Scan My Agent' modal (runAgentScan(), 2026-07-11) that POSTs to /api/ai-security/agents/scan \u2014 the handleScanAgent entry point specifically."
     },
     "navigation": {
       "discoverable": true,
-      "evidence": "RESOLVED 2026-07-12 (was 'unknown'): frontend/agent-threats.html (the dedicated page hosting the 'Scan My Agent' modal) is in frontend/index.html's top-level desktop nav (line 1228, \"AI Threat Intel\"), its mobile nav (line 1271), frontend/sitemap.html (line 142, \"Agent Threats\"), and linked again from 5 separate in-page CTAs on frontend/index.html plus frontend/intel-hub.html, frontend/ai-security-assessment.html, and frontend/vibe-code-scanner.html. One of the more thoroughly-linked pages checked in this program — not a real gap, just never independently confirmed."
+      "evidence": "RESOLVED 2026-07-12 (was 'unknown'): frontend/agent-threats.html (the dedicated page hosting the 'Scan My Agent' modal) is in frontend/index.html's top-level desktop nav (line 1228, \"AI Threat Intel\"), its mobile nav (line 1271), frontend/sitemap.html (line 142, \"Agent Threats\"), and linked again from 5 separate in-page CTAs on frontend/index.html plus frontend/intel-hub.html, frontend/ai-security-assessment.html, and frontend/vibe-code-scanner.html. One of the more thoroughly-linked pages checked in this program \u2014 not a real gap, just never independently confirmed."
     },
     "auth_enforced": false,
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
     "subscription_gated": true,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
       "evidence": "handleAIThreatFeed/handleAIThreatRadarScanNow <- workers/test/aiThreatIntel.test.mjs. workers/src/services/aiThreatIngestion.js <- workers/test/aiThreatIngestion.test.mjs. workers/src/services/aiThreatRadar.js <- workers/test/aiThreatRadar.test.mjs and workers/test/aiThreatIntel.test.mjs. Good coverage relative to the rest of this domain."
     },
     "docs": [
-      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+      {
+        "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "PILOT ONLY",
@@ -336,10 +603,10 @@
     "verification": {
       "method": "static",
       "last_verified": "2026-07-12",
-      "evidence": "workers/src/handlers/aiThreatIntel.js read (1011 lines, read to line 825; core exports confirmed via import statements). workers/src/index.js routes 7700-7725 read directly. Freemium gating confirmed: FREE_LIVE_PREVIEW=3 live entries plus full curated library for anonymous callers, no isRealUser hard gate. workers/test/*.mjs matches confirmed by direct grep. 2026-07-12: navigation.discoverable resolved by direct grep of every frontend/*.html for 'agent-threats' (6 files reference it; desktop nav, mobile nav, and sitemap links read directly at their cited line numbers) — zero code change needed."
+      "evidence": "workers/src/handlers/aiThreatIntel.js read (1011 lines, read to line 825; core exports confirmed via import statements). workers/src/index.js routes 7700-7725 read directly. Freemium gating confirmed: FREE_LIVE_PREVIEW=3 live entries plus full curated library for anonymous callers, no isRealUser hard gate. workers/test/*.mjs matches confirmed by direct grep. 2026-07-12: navigation.discoverable resolved by direct grep of every frontend/*.html for 'agent-threats' (6 files reference it; desktop nav, mobile nav, and sitemap links read directly at their cited line numbers) \u2014 zero code change needed."
     },
     "contradicts_doc": [],
-    "notes": "Priority P3 (navigation partly unconfirmed) rather than lower, since this is otherwise one of the better-built and better-tested capabilities in the domain — the gap is specifically not having verified where/how a customer discovers it beyond the homepage embed. auth_enforced:false describes the feed/report/radar entry points only (confirmed genuinely public, no isRealUser gate) — it does NOT apply to handleScanAgent/handleRegisterAgent/handleListAgents, all 3 of which DO hard-require a real authenticated user (`if (!authCtx?.userId) return err('Auth required', 401)`), a nuance this single top-level field can't capture for a capability bundling entry points with different auth requirements. 2026-07-11 (Tier-2 backlog item #7): found and fixed the real consequence of that nuance — frontend/agent-threats.html's runAgentScan() sent zero auth header of any kind, so handleScanAgent always 401'd for every visitor including logged-in customers. The bug was invisible in the UI because the page has a fully-functional client-side fallback (an identical OWASP LLM Top 10 rule engine) that always produced a complete-looking report — but the real, D1-persisted assessment (real agent_id, actually retrievable via handleListAgents, actually eligible for 'Register & Save Report' / advisory alerts / rescans) never fired for anyone. Fixed by adding a getAuthToken() helper (sessionStorage['cdb_access'] first, matching the convention already established elsewhere this session) and attaching it as a Bearer Authorization header. 2026-07-12 (22-paid-feature program, item 12 of 22): the one remaining open field, navigation.discoverable, is resolved above — zero code change needed, this capability's discoverability was simply never independently checked. No further open gaps on this entry."
+    "notes": "Priority P3 (navigation partly unconfirmed) rather than lower, since this is otherwise one of the better-built and better-tested capabilities in the domain \u2014 the gap is specifically not having verified where/how a customer discovers it beyond the homepage embed. auth_enforced:false describes the feed/report/radar entry points only (confirmed genuinely public, no isRealUser gate) \u2014 it does NOT apply to handleScanAgent/handleRegisterAgent/handleListAgents, all 3 of which DO hard-require a real authenticated user (`if (!authCtx?.userId) return err('Auth required', 401)`), a nuance this single top-level field can't capture for a capability bundling entry points with different auth requirements. 2026-07-11 (Tier-2 backlog item #7): found and fixed the real consequence of that nuance \u2014 frontend/agent-threats.html's runAgentScan() sent zero auth header of any kind, so handleScanAgent always 401'd for every visitor including logged-in customers. The bug was invisible in the UI because the page has a fully-functional client-side fallback (an identical OWASP LLM Top 10 rule engine) that always produced a complete-looking report \u2014 but the real, D1-persisted assessment (real agent_id, actually retrievable via handleListAgents, actually eligible for 'Register & Save Report' / advisory alerts / rescans) never fired for anyone. Fixed by adding a getAuthToken() helper (sessionStorage['cdb_access'] first, matching the convention already established elsewhere this session) and attaching it as a Bearer Authorization header. 2026-07-12 (22-paid-feature program, item 12 of 22): the one remaining open field, navigation.discoverable, is resolved above \u2014 zero code change needed, this capability's discoverability was simply never independently checked. No further open gaps on this entry."
   },
   {
     "id": "CAP-TIH-008",
@@ -347,36 +614,71 @@
     "name": "Global Threat Intel Firehose (worldwide OSINT)",
     "description": "Aggregates ~30 global OSINT sources into a tiered feed, briefing, and source list; a manual refresh trigger is owner/admin-gated to prevent anonymous triggering of the expensive pipeline.",
     "backend": {
-      "handlers": ["workers/src/handlers/globalIntel.js", "workers/src/services/globalIntelFirehose.js"],
-      "entry_points": ["handleGlobalIntelFeed", "handleGlobalIntelBriefing", "handleGlobalIntelSources", "handleGlobalIntelRefresh", "runGlobalIntelFirehose"],
+      "handlers": [
+        "workers/src/handlers/globalIntel.js",
+        "workers/src/services/globalIntelFirehose.js"
+      ],
+      "entry_points": [
+        "handleGlobalIntelFeed",
+        "handleGlobalIntelBriefing",
+        "handleGlobalIntelSources",
+        "handleGlobalIntelRefresh",
+        "runGlobalIntelFirehose"
+      ],
       "routes_sampled": [
-        { "path": "/api/global-intel", "method": "GET", "evidence": "workers/src/index.js:7945" },
-        { "path": "/api/global-intel/briefing", "method": "GET", "evidence": "workers/src/index.js:7950" },
-        { "path": "/api/global-intel/refresh", "method": "POST", "evidence": "workers/src/index.js:7955" }
+        {
+          "path": "/api/global-intel",
+          "method": "GET",
+          "evidence": "workers/src/index.js:7945"
+        },
+        {
+          "path": "/api/global-intel/briefing",
+          "method": "GET",
+          "evidence": "workers/src/index.js:7950"
+        },
+        {
+          "path": "/api/global-intel/refresh",
+          "method": "POST",
+          "evidence": "workers/src/index.js:7955"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "embedded_widget",
-      "pages": ["frontend/intel-hub.html"],
+      "pages": [
+        "frontend/intel-hub.html"
+      ],
       "status": "exists",
       "evidence": "frontend/intel-hub.html:604 (/api/global-intel/briefing), :611 (/api/global-intel?limit=15&sort=breaking). Real, live."
     },
     "navigation": {
       "discoverable": true,
-      "evidence": "CORRECTED 2026-07-12 (was false — inconsistent with the sibling capability on this exact page, see below): frontend/intel-hub.html is linked from frontend/sitemap.html:94 ('Intel Hub') and frontend/index.html:2042 ('Open full Intel Hub →') — the same two links CAP-TIH-002's entry already credits as making that page discoverable. On the page itself, this capability is not a buried afterthought: frontend/intel-hub.html:258-265 gives it its own prominent, live-updating section headed 'Global Threat Intel Firehose' with an animated 'live' indicator dot, auto-refreshing every 5 minutes (frontend/intel-hub.html:634). The prior 'false' was technically narrow (no *dedicated* top-level nav entry distinct from frontend/intel-hub.html) but inconsistent with how the identically-situated CAP-TIH-002 is graded — corrected to match."
+      "evidence": "CORRECTED 2026-07-12 (was false \u2014 inconsistent with the sibling capability on this exact page, see below): frontend/intel-hub.html is linked from frontend/sitemap.html:94 ('Intel Hub') and frontend/index.html:2042 ('Open full Intel Hub \u2192') \u2014 the same two links CAP-TIH-002's entry already credits as making that page discoverable. On the page itself, this capability is not a buried afterthought: frontend/intel-hub.html:258-265 gives it its own prominent, live-updating section headed 'Global Threat Intel Firehose' with an animated 'live' indicator dot, auto-refreshing every 5 minutes (frontend/intel-hub.html:634). The prior 'false' was technically narrow (no *dedicated* top-level nav entry distinct from frontend/intel-hub.html) but inconsistent with how the identically-situated CAP-TIH-002 is graded \u2014 corrected to match."
     },
     "auth_enforced": false,
-    "rbac": { "enforced": true, "permissions": ["owner", "admin"] },
+    "rbac": {
+      "enforced": true,
+      "permissions": [
+        "owner",
+        "admin"
+      ]
+    },
     "subscription_gated": true,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "handleGlobalIntelFeed/handleGlobalIntelRefresh <- workers/test/globalIntelMonetization.test.mjs. FIXED 2026-07-12: handleGlobalIntelBriefing/handleGlobalIntelSources <- new workers/test/globalIntelBriefingSources.test.mjs (4 tests) — confirms the honest 'warming_up' fallback (no fabricated briefing when no snapshot/D1 data exists), the D1-derivation path, and that the source registry response reflects the real INTEL_SOURCES catalog (not a hardcoded count). workers/src/services/globalIntelFirehose.js <- workers/test/globalIntelFirehose.test.mjs."
+      "evidence": "handleGlobalIntelFeed/handleGlobalIntelRefresh <- workers/test/globalIntelMonetization.test.mjs. FIXED 2026-07-12: handleGlobalIntelBriefing/handleGlobalIntelSources <- new workers/test/globalIntelBriefingSources.test.mjs (4 tests) \u2014 confirms the honest 'warming_up' fallback (no fabricated briefing when no snapshot/D1 data exists), the D1-derivation path, and that the source registry response reflects the real INTEL_SOURCES catalog (not a hardcoded count). workers/src/services/globalIntelFirehose.js <- workers/test/globalIntelFirehose.test.mjs."
     },
     "docs": [
-      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+      {
+        "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "PILOT ONLY",
@@ -384,58 +686,92 @@
     "verification": {
       "method": "static",
       "last_verified": "2026-07-12",
-      "evidence": "workers/src/handlers/globalIntel.js read directly (279 lines); workers/src/index.js:7945-7955 read directly; handleGlobalIntelRefresh's isOwner(authCtx) OR ADMIN_TOKEN gate confirmed at workers/src/handlers/globalIntel.js:259-274 (timing-safe token comparison); GI_PLANS per-tier item caps (FREE 6/no IOCs up to MSSP 200) confirmed; workers/test/*.mjs matches confirmed by direct grep. 2026-07-12: navigation.discoverable corrected by direct grep of frontend/sitemap.html and frontend/index.html for 'intel-hub', and of the intel hub page (frontend/intel-hub.html) for the firehose section's actual placement/prominence — zero frontend code change needed. Also added workers/test/globalIntelBriefingSources.test.mjs closing the test_coverage gap. Full suite green: 254 files / 2607 tests. Registry validator: 0 failures, 0 warnings."
+      "evidence": "workers/src/handlers/globalIntel.js read directly (279 lines); workers/src/index.js:7945-7955 read directly; handleGlobalIntelRefresh's isOwner(authCtx) OR ADMIN_TOKEN gate confirmed at workers/src/handlers/globalIntel.js:259-274 (timing-safe token comparison); GI_PLANS per-tier item caps (FREE 6/no IOCs up to MSSP 200) confirmed; workers/test/*.mjs matches confirmed by direct grep. 2026-07-12: navigation.discoverable corrected by direct grep of frontend/sitemap.html and frontend/index.html for 'intel-hub', and of the intel hub page (frontend/intel-hub.html) for the firehose section's actual placement/prominence \u2014 zero frontend code change needed. Also added workers/test/globalIntelBriefingSources.test.mjs closing the test_coverage gap. Full suite green: 254 files / 2607 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": "Real, deliberate protection against an anonymous caller triggering an expensive 30-source pipeline. 2026-07-12: the discoverability concern this note used to flag is resolved — see navigation.evidence above. The page hosting this capability (frontend/intel-hub.html) is itself linked from the sitemap and homepage, and this capability gets its own prominent, live-updating section on that page, not a buried one; graded inconsistently against its sibling CAP-TIH-002 on the same page, now corrected to match. No remaining open field on this entry."
+    "notes": "Real, deliberate protection against an anonymous caller triggering an expensive 30-source pipeline. 2026-07-12: the discoverability concern this note used to flag is resolved \u2014 see navigation.evidence above. The page hosting this capability (frontend/intel-hub.html) is itself linked from the sitemap and homepage, and this capability gets its own prominent, live-updating section on that page, not a buried one; graded inconsistently against its sibling CAP-TIH-002 on the same page, now corrected to match. No remaining open field on this entry."
   },
   {
     "id": "CAP-TIH-009",
     "domain": "threat-hunting-intel",
     "name": "Threat Intelligence API Economy (monetized IOC/CVE/Actor/TTP/Risk)",
-    "description": "A pure API-economy product for external integrators — IOC, CVE, actor, TTP, and risk lookups with per-endpoint tier gating, D1 entitlement checks, and dual daily+per-minute rate limiting. Documented in API docs only; no dashboard UI.",
+    "description": "A pure API-economy product for external integrators \u2014 IOC, CVE, actor, TTP, and risk lookups with per-endpoint tier gating, D1 entitlement checks, and dual daily+per-minute rate limiting. Documented in API docs only; no dashboard UI.",
     "backend": {
-      "handlers": ["workers/src/handlers/intelAPIHandlers.js"],
-      "entry_points": ["handleIntelIOC", "handleIntelCVE", "handleIntelActor", "handleIntelTTP", "handleIntelRisk"],
+      "handlers": [
+        "workers/src/handlers/intelAPIHandlers.js"
+      ],
+      "entry_points": [
+        "handleIntelIOC",
+        "handleIntelCVE",
+        "handleIntelActor",
+        "handleIntelTTP",
+        "handleIntelRisk"
+      ],
       "routes_sampled": [
-        { "path": "/api/intel/ioc", "method": "GET", "evidence": "workers/src/index.js:5229" },
-        { "path": "/api/intel/cve", "method": "GET", "evidence": "workers/src/index.js:5233" },
-        { "path": "/api/intel/ttp", "method": "GET", "evidence": "workers/src/index.js:5241" }
+        {
+          "path": "/api/intel/ioc",
+          "method": "GET",
+          "evidence": "workers/src/index.js:5229"
+        },
+        {
+          "path": "/api/intel/cve",
+          "method": "GET",
+          "evidence": "workers/src/index.js:5233"
+        },
+        {
+          "path": "/api/intel/ttp",
+          "method": "GET",
+          "evidence": "workers/src/index.js:5241"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "embedded_widget",
-      "pages": ["frontend/user-dashboard.html"],
+      "pages": [
+        "frontend/user-dashboard.html"
+      ],
       "status": "exists",
-      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html gained a real \"Threat Intel API\" tab (id=\"page-intel-api\") with 5 live lookup tools, one per real endpoint (IOC check, CVE lookup, threat actor search, MITRE ATT&CK TTP lookup, composite risk score) — each calls the real GET /api/intel/* route and renders the real response (verdict/risk_score for IOC, CVSS/KEV/severity for CVE, actor profile or list, technique+mitigations for TTP, composite score+level+narrative for risk). A tier/quota status line at the top shows the customer's plan and today's usage. Because access is tiered per-endpoint (FREE/STARTER: ioc+cve only; PRO/ENTERPRISE: all 5) rather than an all-or-nothing gate, a 429 from any individual tool renders an inline upgrade notice for that tool specifically rather than blocking the whole page. Before this fix: no frontend/*.html page called any /api/intel/{ioc,cve,actor,ttp,risk} route — documented in frontend/api-docs.html text only, no interactive UI."
+      "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html gained a real \"Threat Intel API\" tab (id=\"page-intel-api\") with 5 live lookup tools, one per real endpoint (IOC check, CVE lookup, threat actor search, MITRE ATT&CK TTP lookup, composite risk score) \u2014 each calls the real GET /api/intel/* route and renders the real response (verdict/risk_score for IOC, CVSS/KEV/severity for CVE, actor profile or list, technique+mitigations for TTP, composite score+level+narrative for risk). A tier/quota status line at the top shows the customer's plan and today's usage. Because access is tiered per-endpoint (FREE/STARTER: ioc+cve only; PRO/ENTERPRISE: all 5) rather than an all-or-nothing gate, a 429 from any individual tool renders an inline upgrade notice for that tool specifically rather than blocking the whole page. Before this fix: no frontend/*.html page called any /api/intel/{ioc,cve,actor,ttp,risk} route \u2014 documented in frontend/api-docs.html text only, no interactive UI."
     },
     "navigation": {
       "discoverable": true,
       "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html's sidebar (same section as DPDP/Compliance/CISO Metrics) now has a real nav-item (data-page=\"intel-api\") linking to the new tab."
     },
     "auth_enforced": true,
-    "rbac": { "enforced": true, "permissions": ["tier:PRO", "tier:ENTERPRISE"] },
+    "rbac": {
+      "enforced": true,
+      "permissions": [
+        "tier:PRO",
+        "tier:ENTERPRISE"
+      ]
+    },
     "subscription_gated": true,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "workers/test/intelApiDashboard.test.mjs (2026-07-12, 11 tests) — closes the test-coverage gap for all 4 previously-unconfirmed handlers: handleIntelCVE (honest found_in_db:false for an unknown CVE, no hallucination), handleIntelActor (honest empty result set, not fabricated), handleIntelTTP (real embedded MITRE catalog lookup), handleIntelRisk (real composite score from real component weights), plus handleIntelIOC and a 429/upgrade-url check for a FREE-tier caller. Frontend tests confirm the new tab's nav-item, 5 tool inputs, real endpoint calls per tool, and inline (not page-blocking) 429 handling."
+      "evidence": "workers/test/intelApiDashboard.test.mjs (2026-07-12, 11 tests) \u2014 closes the test-coverage gap for all 4 previously-unconfirmed handlers: handleIntelCVE (honest found_in_db:false for an unknown CVE, no hallucination), handleIntelActor (honest empty result set, not fabricated), handleIntelTTP (real embedded MITRE catalog lookup), handleIntelRisk (real composite score from real component weights), plus handleIntelIOC and a 429/upgrade-url check for a FREE-tier caller. Frontend tests confirm the new tab's nav-item, 5 tool inputs, real endpoint calls per tool, and inline (not page-blocking) 429 handling."
     },
     "docs": [
-      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+      {
+        "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "PILOT ONLY",
-    "priority": "P2",
+    "priority": "P6",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-12",
-      "evidence": "workers/src/handlers/intelAPIHandlers.js read directly (661 lines, 5 entry points with line numbers, handleIntelTTP's own embedded 30-technique MITRE catalog noted as a third parallel ATT&CK representation); workers/src/index.js:5229-5245 read directly; tierLimits()/checkEntitlement()/dual rate-limiting confirmed. FIXED 2026-07-12 (22-paid-feature program, item 8 of 22, owner-directed build): frontend/user-dashboard.html read and edited directly to add the real Threat Intel API tab described in frontend.evidence above. All 3 inline <script> blocks re-parsed with node --check (syntax valid). No backend change. Full suite green: 250 files / 2549 tests. Registry validator: 0 failures, 0 warnings."
+      "last_verified": "2026-07-14",
+      "evidence": "workers/src/handlers/intelAPIHandlers.js read directly (661 lines, 5 entry points with line numbers, handleIntelTTP's own embedded 30-technique MITRE catalog noted as a third parallel ATT&CK representation); workers/src/index.js:5229-5245 read directly; tierLimits()/checkEntitlement()/dual rate-limiting confirmed. FIXED 2026-07-12 (22-paid-feature program, item 8 of 22, owner-directed build): frontend/user-dashboard.html read and edited directly to add the real Threat Intel API tab described in frontend.evidence above. All 3 inline <script> blocks re-parsed with node --check (syntax valid). No backend change. Full suite green: 250 files / 2549 tests. Registry validator: 0 failures, 0 warnings. | Direct re-verification: #page-intel-api + nav-item confirmed live, calling confirmed-live /api/intel/* routes. Test file workers/test/intelApiDashboard.test.mjs confirmed present. Minor non-blocking nuance: showPage() does not auto-fire loadIntelAPIStatus() on a raw deep link (only via the nav item's own onclick) -- normal sidebar navigation is unaffected. RE-VERIFIED 2026-07-14 (Enterprise Capability Completion Program triage): independently re-confirmed via source (not the registry label) that this frontend/navigation work is real, live, and reachable. Priority corrected from P2 (backend exists, frontend missing) since that is no longer true."
     },
     "contradicts_doc": [],
-    "notes": "The prior wave's open question — 'worth a decision on whether [no dashboard] is acceptable for an API-only SKU or a real gap' — is now resolved by explicit owner direction: build a real customer-facing dashboard. Done; see frontend.evidence. handleIntelTTP's embedded 30-technique MITRE catalog remains a noted third parallel ATT&CK representation on this platform (alongside at least two others catalogued elsewhere in this domain) — not reconciled by this fix, which only added a UI consumer for the existing handler, per this wave's standing discipline to flag duplication rather than silently merge engines outside the scope of the specific fix at hand."
+    "notes": "The prior wave's open question \u2014 'worth a decision on whether [no dashboard] is acceptable for an API-only SKU or a real gap' \u2014 is now resolved by explicit owner direction: build a real customer-facing dashboard. Done; see frontend.evidence. handleIntelTTP's embedded 30-technique MITRE catalog remains a noted third parallel ATT&CK representation on this platform (alongside at least two others catalogued elsewhere in this domain) \u2014 not reconciled by this fix, which only added a UI consumer for the existing handler, per this wave's standing discipline to flag duplication rather than silently merge engines outside the scope of the specific fix at hand."
   },
   {
     "id": "CAP-TIH-010",
@@ -443,19 +779,40 @@
     "name": "Production IOC Enrichment",
     "description": "Real multi-source IOC enrichment: CVE via D1 threat_intel, IP via AbuseIPDB v2, Domain via VirusTotal v3, Hash via MalwareBazaar, URL via VirusTotal v3, Email via domain-part VT lookup.",
     "backend": {
-      "handlers": ["workers/src/handlers/iocEnrichment.js", "workers/src/handlers/revenueFeatures.js"],
-      "entry_points": ["handleThreatIOC", "handleIOCEnrich", "handleIOCEnrichBatch"],
+      "handlers": [
+        "workers/src/handlers/iocEnrichment.js",
+        "workers/src/handlers/revenueFeatures.js"
+      ],
+      "entry_points": [
+        "handleThreatIOC",
+        "handleIOCEnrich",
+        "handleIOCEnrichBatch"
+      ],
       "routes_sampled": [
-        { "path": "/api/threat/ioc", "method": "GET", "evidence": "workers/src/index.js:7090" },
-        { "path": "/api/ioc/enrich", "method": "GET", "evidence": "workers/src/index.js:5219" },
-        { "path": "/api/ioc/enrich/batch", "method": "POST", "evidence": "workers/src/index.js:5223" }
+        {
+          "path": "/api/threat/ioc",
+          "method": "GET",
+          "evidence": "workers/src/index.js:7090"
+        },
+        {
+          "path": "/api/ioc/enrich",
+          "method": "GET",
+          "evidence": "workers/src/index.js:5219"
+        },
+        {
+          "path": "/api/ioc/enrich/batch",
+          "method": "POST",
+          "evidence": "workers/src/index.js:5223"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "embedded_widget",
-      "pages": ["frontend/index.html"],
+      "pages": [
+        "frontend/index.html"
+      ],
       "status": "exists",
       "evidence": "frontend/index.html:22229 (window.thLookupIOC -> /api/threat/ioc?ioc=..., embedded homepage panel, same widget as CAP-TIH-001). No frontend caller confirmed for the separate /api/ioc/enrich or /api/ioc/enrich/batch routes in workers/src/handlers/revenueFeatures.js."
     },
@@ -464,15 +821,24 @@
       "evidence": "Embedded in the homepage's Proactive Threat Hunting section, same navigation path as CAP-TIH-001."
     },
     "auth_enforced": false,
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
       "evidence": "handleThreatIOC <- workers/test/iocEnrichmentTimeout.test.mjs. handleIOCEnrich/handleIOCEnrichBatch (workers/src/handlers/revenueFeatures.js) not import-confirmed."
     },
     "docs": [
-      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+      {
+        "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "PILOT ONLY",
@@ -489,21 +855,43 @@
     "id": "CAP-TIH-011",
     "domain": "threat-hunting-intel",
     "name": "Threat Confidence & Exploitability Engine",
-    "description": "CISA KEV catalog lookup, ThreatFox + APT attribution + CVSS composite scoring enrichment, and a scored feed/stats pair — embedded deep in the homepage as an 'AI Verdict' panel replacing a prior fake severity template.",
+    "description": "CISA KEV catalog lookup, ThreatFox + APT attribution + CVSS composite scoring enrichment, and a scored feed/stats pair \u2014 embedded deep in the homepage as an 'AI Verdict' panel replacing a prior fake severity template.",
     "backend": {
-      "handlers": ["workers/src/handlers/threatConfidence.js"],
-      "entry_points": ["handleScoreThreats", "handleGetKEV", "handleEnrichThreat", "handleGetFeed", "handleGetStats"],
+      "handlers": [
+        "workers/src/handlers/threatConfidence.js"
+      ],
+      "entry_points": [
+        "handleScoreThreats",
+        "handleGetKEV",
+        "handleEnrichThreat",
+        "handleGetFeed",
+        "handleGetStats"
+      ],
       "routes_sampled": [
-        { "path": "/api/threat-confidence/enrich", "method": "POST", "evidence": "workers/src/index.js:6009" },
-        { "path": "/api/threat-confidence/kev", "method": "GET", "evidence": "workers/src/index.js:6009" },
-        { "path": "/api/threat-confidence/stats", "method": "GET", "evidence": "workers/src/index.js:6025" }
+        {
+          "path": "/api/threat-confidence/enrich",
+          "method": "POST",
+          "evidence": "workers/src/index.js:6009"
+        },
+        {
+          "path": "/api/threat-confidence/kev",
+          "method": "GET",
+          "evidence": "workers/src/index.js:6009"
+        },
+        {
+          "path": "/api/threat-confidence/stats",
+          "method": "GET",
+          "evidence": "workers/src/index.js:6025"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "embedded_widget",
-      "pages": ["frontend/index.html"],
+      "pages": [
+        "frontend/index.html"
+      ],
       "status": "exists",
       "evidence": "frontend/index.html:15192 (/api/threat-confidence/enrich, 'AI Verdict' panel on live-feed CVE clicks, inline comment documents this replaced a prior fake severity template), :20051 (/stats), :20062 (/feed?limit=10), :20094 (second /enrich POST panel)."
     },
@@ -512,15 +900,24 @@
       "evidence": "Reachable only as embedded homepage widgets; no standalone page or nav link."
     },
     "auth_enforced": false,
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "FIXED 2026-07-13: workers/test/threatConfidenceEngine.test.mjs (15 tests) covers all 5 entry points against a mocked global fetch (real CISA KEV JSON shape, real ThreatFox response shape) and an in-memory KV — includes a fully hand-computed deterministic assertion (a KEV-listed, APT-attributed, actively-exploited CVE scores exactly 95/100 confidence, 9.5/10 exploitability, CRITICAL_IMMINENT/P0), confirms handleScoreThreats only feeds CRITICAL/HIGH tiers while handleEnrichThreat feeds unconditionally (genuinely different gating logic, not a copy-paste), and confirms handleGetKEV propagates a real upstream CISA fetch failure as 503 rather than silently returning a zeroed catalog."
+      "evidence": "FIXED 2026-07-13: workers/test/threatConfidenceEngine.test.mjs (15 tests) covers all 5 entry points against a mocked global fetch (real CISA KEV JSON shape, real ThreatFox response shape) and an in-memory KV \u2014 includes a fully hand-computed deterministic assertion (a KEV-listed, APT-attributed, actively-exploited CVE scores exactly 95/100 confidence, 9.5/10 exploitability, CRITICAL_IMMINENT/P0), confirms handleScoreThreats only feeds CRITICAL/HIGH tiers while handleEnrichThreat feeds unconditionally (genuinely different gating logic, not a copy-paste), and confirms handleGetKEV propagates a real upstream CISA fetch failure as 503 rather than silently returning a zeroed catalog."
     },
     "docs": [
-      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+      {
+        "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
@@ -528,10 +925,10 @@
     "verification": {
       "method": "static",
       "last_verified": "2026-07-13",
-      "evidence": "workers/src/handlers/threatConfidence.js read directly (474 lines, all 5 entry points); workers/src/index.js:6009-6025 read directly, no auth parameter accepted by any of the 5 functions; frontend/index.html read directly for all 4 embedded call sites; now regression-locked by workers/test/threatConfidenceEngine.test.mjs (15/15 passing). Full worker suite green post-fix. Method stays static (not dynamic_browser) since this pass added test coverage only — no frontend or backend code changed, and the ~22,000-line homepage embedding this widget was not independently re-driven in a browser this pass; customer_journey_complete stays false pending that specific check, which is why GA APPROVED (requires navigation.discoverable:true, not applicable to a by-design embedded widget with no dedicated nav) was not claimed either — GA APPROVED WITH DOCUMENTED LIMITATIONS is the honest ceiling here."
+      "evidence": "workers/src/handlers/threatConfidence.js read directly (474 lines, all 5 entry points); workers/src/index.js:6009-6025 read directly, no auth parameter accepted by any of the 5 functions; frontend/index.html read directly for all 4 embedded call sites; now regression-locked by workers/test/threatConfidenceEngine.test.mjs (15/15 passing). Full worker suite green post-fix. Method stays static (not dynamic_browser) since this pass added test coverage only \u2014 no frontend or backend code changed, and the ~22,000-line homepage embedding this widget was not independently re-driven in a browser this pass; customer_journey_complete stays false pending that specific check, which is why GA APPROVED (requires navigation.discoverable:true, not applicable to a by-design embedded widget with no dedicated nav) was not claimed either \u2014 GA APPROVED WITH DOCUMENTED LIMITATIONS is the honest ceiling here."
     },
     "contradicts_doc": [],
-    "notes": "Real, live, genuinely working capability (confirmed via 4 distinct embedded call sites in a ~22,000-line homepage file, easy to miss on a shallow grep). FIXED 2026-07-13: the zero-test-coverage gap flagged here is now closed — see test_coverage.evidence. No functional changes were needed or made; this was purely a test-coverage gap, exactly as flagged."
+    "notes": "Real, live, genuinely working capability (confirmed via 4 distinct embedded call sites in a ~22,000-line homepage file, easy to miss on a shallow grep). FIXED 2026-07-13: the zero-test-coverage gap flagged here is now closed \u2014 see test_coverage.evidence. No functional changes were needed or made; this was purely a test-coverage gap, exactly as flagged."
   },
   {
     "id": "CAP-TIH-012",
@@ -539,36 +936,75 @@
     "name": "Customer/MSSP Personalized Intelligence",
     "description": "Per-customer threat profile, personalized radar, org risk, monitored-asset inventory, and an executive JSON/HTML report; MSSP/OWNER/ADMIN can act on behalf of a managed customer via a tenant-scope override.",
     "backend": {
-      "handlers": ["workers/src/handlers/customerIntel.js", "workers/src/services/radarService.js"],
-      "entry_points": ["handleGetProfile", "handleUpdateProfile", "handleGetPersonalizedRadar", "handleGetOrgRisk", "handleGetAssets", "handleRegisterAsset", "handleDeleteAsset", "handleGetReport"],
+      "handlers": [
+        "workers/src/handlers/customerIntel.js",
+        "workers/src/services/radarService.js"
+      ],
+      "entry_points": [
+        "handleGetProfile",
+        "handleUpdateProfile",
+        "handleGetPersonalizedRadar",
+        "handleGetOrgRisk",
+        "handleGetAssets",
+        "handleRegisterAsset",
+        "handleDeleteAsset",
+        "handleGetReport"
+      ],
       "routes_sampled": [
-        { "path": "/api/customer/profile", "method": "GET", "evidence": "workers/src/index.js:6457" },
-        { "path": "/api/customer/radar", "method": "GET", "evidence": "workers/src/index.js:6470" },
-        { "path": "/api/customer/report", "method": "GET", "evidence": "workers/src/index.js:6502" }
+        {
+          "path": "/api/customer/profile",
+          "method": "GET",
+          "evidence": "workers/src/index.js:6457"
+        },
+        {
+          "path": "/api/customer/radar",
+          "method": "GET",
+          "evidence": "workers/src/index.js:6470"
+        },
+        {
+          "path": "/api/customer/report",
+          "method": "GET",
+          "evidence": "workers/src/index.js:6502"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "dedicated_page",
-      "pages": ["frontend/customer-dashboard.html"],
+      "pages": [
+        "frontend/customer-dashboard.html"
+      ],
       "status": "exists",
       "evidence": "frontend/customer-dashboard.html:431,456 (/risk), :522 (/radar), :557,585,597 (/assets), :606,630 (/profile), :640 (/report?format=html). Real, fully wired dedicated page."
     },
     "navigation": {
       "discoverable": true,
-      "evidence": "FIXED (was already true as of 2026-07-12, registry was stale): frontend/user-dashboard.html:923 has a real primary-sidebar nav item ('🎯 My Risk Radar', title='Personalized risk radar, asset inventory, and exportable risk report') linking to frontend/customer-dashboard.html, added in PR #188 (commit ca93b77, 2026-07-12) — one day after this entry's prior last_verified date, which is why it read as unconfirmed. Also linked from frontend/marketplace-checkout.html:157 ('View My Purchases →') as a post-purchase destination. Re-confirmed 2026-07-13."
+      "evidence": "FIXED (was already true as of 2026-07-12, registry was stale): frontend/user-dashboard.html:923 has a real primary-sidebar nav item ('\ud83c\udfaf My Risk Radar', title='Personalized risk radar, asset inventory, and exportable risk report') linking to frontend/customer-dashboard.html, added in PR #188 (commit ca93b77, 2026-07-12) \u2014 one day after this entry's prior last_verified date, which is why it read as unconfirmed. Also linked from frontend/marketplace-checkout.html:157 ('View My Purchases \u2192') as a post-purchase destination. Re-confirmed 2026-07-13."
     },
     "auth_enforced": true,
-    "rbac": { "enforced": true, "permissions": ["mssp", "owner", "admin"] },
+    "rbac": {
+      "enforced": true,
+      "permissions": [
+        "mssp",
+        "owner",
+        "admin"
+      ]
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "FIXED 2026-07-13: workers/test/customerIntelTenantScope.test.mjs (9 tests, real D1 via node:sqlite) covers the security-sensitive part directly: a non-MSSP tier's ?customer_id= override is proven silently ignored on both a read path (GET /api/customer/profile returns the caller's own new/empty profile, not the targeted victim's real one) and a write path (POST /api/customer/assets writes under the caller's own owner_id, not the targeted victim's); a direct DELETE against another customer's real asset ID is proven to leave that row untouched (owner_id-scoped WHERE clause holds even when the caller knows the exact ID); this is confirmed across TEAM/FREE/ENTERPRISE tiers, not just one. Separately proves the legitimate path: MSSP/OWNER-tier callers genuinely read and write a managed customer's real data via ?customer_id=, two managed customers stay isolated from each other under the same MSSP caller, and the override is opt-in (an MSSP with no customer_id param defaults to their own scope, not some ambient elevated access). Covers handleGetProfile/handleUpdateProfile/handleGetAssets/handleRegisterAsset/handleDeleteAsset — the 5 of 8 entry points that exercise tenantScope() against simple D1 state; handleGetPersonalizedRadar/handleGetOrgRisk/handleGetReport share the identical tenantScope() call but additionally require RadarService's threat-intel snapshot to exercise, out of proportion to what's needed to prove this specific property (identical logic, factored into one shared helper)."
+      "evidence": "FIXED 2026-07-13: workers/test/customerIntelTenantScope.test.mjs (9 tests, real D1 via node:sqlite) covers the security-sensitive part directly: a non-MSSP tier's ?customer_id= override is proven silently ignored on both a read path (GET /api/customer/profile returns the caller's own new/empty profile, not the targeted victim's real one) and a write path (POST /api/customer/assets writes under the caller's own owner_id, not the targeted victim's); a direct DELETE against another customer's real asset ID is proven to leave that row untouched (owner_id-scoped WHERE clause holds even when the caller knows the exact ID); this is confirmed across TEAM/FREE/ENTERPRISE tiers, not just one. Separately proves the legitimate path: MSSP/OWNER-tier callers genuinely read and write a managed customer's real data via ?customer_id=, two managed customers stay isolated from each other under the same MSSP caller, and the override is opt-in (an MSSP with no customer_id param defaults to their own scope, not some ambient elevated access). Covers handleGetProfile/handleUpdateProfile/handleGetAssets/handleRegisterAsset/handleDeleteAsset \u2014 the 5 of 8 entry points that exercise tenantScope() against simple D1 state; handleGetPersonalizedRadar/handleGetOrgRisk/handleGetReport share the identical tenantScope() call but additionally require RadarService's threat-intel snapshot to exercise, out of proportion to what's needed to prove this specific property (identical logic, factored into one shared helper)."
     },
     "docs": [
-      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+      {
+        "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": true,
     "operational_status": "GA APPROVED",
@@ -576,7 +1012,7 @@
     "verification": {
       "method": "dynamic_browser",
       "last_verified": "2026-07-13",
-      "evidence": "workers/src/handlers/customerIntel.js read directly (712 lines, 8 entry points); every handler calls reqAuth(authCtx)->isRealUser(authCtx), 401 otherwise (line 53-56); tenantScope() MSSP/OWNER/ADMIN override confirmed (line 69-74) and now regression-locked by workers/test/customerIntelTenantScope.test.mjs (9/9 passing); workers/src/index.js:6457-6505 read directly; frontend/user-dashboard.html:923 and frontend/marketplace-checkout.html:157 confirmed as real nav entry points. Full worker suite green post-fix. Playwright/Chromium click-through of the real frontend/customer-dashboard.html (served locally, contract-accurate mocked /api/customer/* responses shaped directly from workers/src/handlers/customerIntel.js's real handler output): the manual X-API-Key auth gate genuinely unlocks against a mocked /api/customer/risk 200, then org risk gauge, risk factors/recommendations, personalized radar (CVE id + WATCHLIST/KEV chips), assets list, and profile form all render real mocked data — 8/8 checks passing, zero console errors. Both previously-open gaps (navigation, test coverage) are now closed and the full customer journey has been driven end-to-end in a real browser — customer_journey_complete moved false -> true, operational_status moved NOT READY -> GA APPROVED."
+      "evidence": "workers/src/handlers/customerIntel.js read directly (712 lines, 8 entry points); every handler calls reqAuth(authCtx)->isRealUser(authCtx), 401 otherwise (line 53-56); tenantScope() MSSP/OWNER/ADMIN override confirmed (line 69-74) and now regression-locked by workers/test/customerIntelTenantScope.test.mjs (9/9 passing); workers/src/index.js:6457-6505 read directly; frontend/user-dashboard.html:923 and frontend/marketplace-checkout.html:157 confirmed as real nav entry points. Full worker suite green post-fix. Playwright/Chromium click-through of the real frontend/customer-dashboard.html (served locally, contract-accurate mocked /api/customer/* responses shaped directly from workers/src/handlers/customerIntel.js's real handler output): the manual X-API-Key auth gate genuinely unlocks against a mocked /api/customer/risk 200, then org risk gauge, risk factors/recommendations, personalized radar (CVE id + WATCHLIST/KEV chips), assets list, and profile form all render real mocked data \u2014 8/8 checks passing, zero console errors. Both previously-open gaps (navigation, test coverage) are now closed and the full customer journey has been driven end-to-end in a real browser \u2014 customer_journey_complete moved false -> true, operational_status moved NOT READY -> GA APPROVED."
     },
     "contradicts_doc": [],
     "notes": "Backend, frontend, real per-user RBAC, navigation, and test coverage all now confirmed genuinely exist and are wired correctly, including a real, tested MSSP-acting-for-customer override. No further gaps found in this pass."
@@ -587,37 +1023,77 @@
     "name": "Enterprise Premium Intelligence API",
     "description": "Enterprise-tier intelligence, risk, campaign, and actor endpoints built on the same radarService.js as CAP-TIH-012, gated to PRO/ENTERPRISE/MSSP/OWNER/ADMIN. All 4 endpoints now have a real frontend caller and real tests; the page itself is now discoverable from the main customer dashboard.",
     "backend": {
-      "handlers": ["workers/src/handlers/enterpriseIntel.js"],
-      "entry_points": ["handleEnterpriseIntelligence", "handleEnterpriseRisk", "handleEnterpriseCampaigns", "handleEnterpriseActors"],
+      "handlers": [
+        "workers/src/handlers/enterpriseIntel.js"
+      ],
+      "entry_points": [
+        "handleEnterpriseIntelligence",
+        "handleEnterpriseRisk",
+        "handleEnterpriseCampaigns",
+        "handleEnterpriseActors"
+      ],
       "routes_sampled": [
-        { "path": "/api/enterprise/intelligence", "method": "GET", "evidence": "workers/src/index.js:6428" },
-        { "path": "/api/enterprise/risk", "method": "GET", "evidence": "workers/src/index.js:6435" },
-        { "path": "/api/enterprise/campaigns", "method": "GET", "evidence": "workers/src/index.js:6442" },
-        { "path": "/api/enterprise/actors", "method": "GET", "evidence": "workers/src/index.js:6449" }
+        {
+          "path": "/api/enterprise/intelligence",
+          "method": "GET",
+          "evidence": "workers/src/index.js:6428"
+        },
+        {
+          "path": "/api/enterprise/risk",
+          "method": "GET",
+          "evidence": "workers/src/index.js:6435"
+        },
+        {
+          "path": "/api/enterprise/campaigns",
+          "method": "GET",
+          "evidence": "workers/src/index.js:6442"
+        },
+        {
+          "path": "/api/enterprise/actors",
+          "method": "GET",
+          "evidence": "workers/src/index.js:6449"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "dedicated_page",
-      "pages": ["frontend/enterprise-dashboard.html"],
+      "pages": [
+        "frontend/enterprise-dashboard.html"
+      ],
       "status": "exists",
-      "evidence": "FIXED 2026-07-12: frontend/enterprise-dashboard.html gained a real \"Full Signal Intelligence Feed\" section with industry/severity/min-risk filter controls, calling the previously-orphaned GET /api/enterprise/intelligence and rendering real enriched signals (risk_score, targeted_sectors). Wired into the page's existing refreshAll()/apiFetch() pattern so it loads automatically alongside the other 3 sections, not only on manual filter. Pre-existing: /api/enterprise/risk (319,343), /api/enterprise/actors (397), /api/enterprise/campaigns (426) — unchanged."
+      "evidence": "FIXED 2026-07-12: frontend/enterprise-dashboard.html gained a real \"Full Signal Intelligence Feed\" section with industry/severity/min-risk filter controls, calling the previously-orphaned GET /api/enterprise/intelligence and rendering real enriched signals (risk_score, targeted_sectors). Wired into the page's existing refreshAll()/apiFetch() pattern so it loads automatically alongside the other 3 sections, not only on manual filter. Pre-existing: /api/enterprise/risk (319,343), /api/enterprise/actors (397), /api/enterprise/campaigns (426) \u2014 unchanged."
     },
     "navigation": {
       "discoverable": true,
-      "evidence": "FIXED 2026-07-12: resolved from 'unknown' to a verified 'false', then fixed. Grepped frontend/sitemap.html, frontend/index.html, and every other frontend/*.html for 'enterprise-dashboard' — zero real links (only two coincidental CSS-comment mentions in frontend/decision-dashboard.html and frontend/soc-command-dashboard.html, not navigation). Added a real nav-item in frontend/user-dashboard.html's Developer sidebar section (same treatment CAP-DEVPORTAL-002 gave frontend/automation-dashboard.html)."
+      "evidence": "FIXED 2026-07-12: resolved from 'unknown' to a verified 'false', then fixed. Grepped frontend/sitemap.html, frontend/index.html, and every other frontend/*.html for 'enterprise-dashboard' \u2014 zero real links (only two coincidental CSS-comment mentions in frontend/decision-dashboard.html and frontend/soc-command-dashboard.html, not navigation). Added a real nav-item in frontend/user-dashboard.html's Developer sidebar section (same treatment CAP-DEVPORTAL-002 gave frontend/automation-dashboard.html)."
     },
     "auth_enforced": true,
-    "rbac": { "enforced": true, "permissions": ["tier:PRO", "tier:ENTERPRISE", "tier:MSSP", "owner", "admin"] },
+    "rbac": {
+      "enforced": true,
+      "permissions": [
+        "tier:PRO",
+        "tier:ENTERPRISE",
+        "tier:MSSP",
+        "owner",
+        "admin"
+      ]
+    },
     "subscription_gated": true,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "FIXED 2026-07-12: workers/test/enterpriseIntelligenceDashboard.test.mjs (14 tests) — auth-gate checks (401 unauthenticated, 403 insufficient tier) for all 4 handlers; real-D1-driven checks for handleEnterpriseIntelligence (computed risk_score/targeted_sectors, industry/severity/min_risk filters against real fixtures) and handleEnterpriseRisk (real risk distribution); a real MITRE ATT&CK correlation check for handleEnterpriseActors; an honest-empty-list check for handleEnterpriseCampaigns (see notes — not a test gap, a real upstream data gap); plus frontend checks for the new section and the new nav-item's placement."
+      "evidence": "FIXED 2026-07-12: workers/test/enterpriseIntelligenceDashboard.test.mjs (14 tests) \u2014 auth-gate checks (401 unauthenticated, 403 insufficient tier) for all 4 handlers; real-D1-driven checks for handleEnterpriseIntelligence (computed risk_score/targeted_sectors, industry/severity/min_risk filters against real fixtures) and handleEnterpriseRisk (real risk distribution); a real MITRE ATT&CK correlation check for handleEnterpriseActors; an honest-empty-list check for handleEnterpriseCampaigns (see notes \u2014 not a test gap, a real upstream data gap); plus frontend checks for the new section and the new nav-item's placement."
     },
     "docs": [
-      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+      {
+        "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "PILOT ONLY",
@@ -628,25 +1104,35 @@
       "evidence": "workers/src/handlers/enterpriseIntel.js read directly (371 lines, 4 entry points); checkAuth() real tier+isRealUser gate confirmed (lines 75-83); workers/src/index.js:6428-6451 read directly; frontend/enterprise-dashboard.html read and edited directly (new section + JS, node --check clean); frontend/user-dashboard.html read and edited directly for the new nav-item. Full suite green: 253 files / 2603 tests. Registry validator: 0 failures, 0 warnings."
     },
     "contradicts_doc": [],
-    "notes": "Real, enforced RBAC (isRealUser AND tier whitelist) — one of the stronger auth stories in this domain. While building real D1 fixtures for the new tests, confirmed a genuine upstream finding in the shared workers/src/services/radarService.js (not modified here, out of scope for this capability's own fix): collectFromD1()'s two SQL queries (threat_intel, ai_threat_feed) never select a campaign_name or ransomware_group column at all — only ai_threat_feed selects threat_actor. This means handleEnterpriseCampaigns can never return a real campaign today regardless of live data (verified: it honestly returns an empty list rather than fabricating one), and handleEnterpriseActors can only ever surface actors sourced from ai_threat_feed rows, never from the much larger threat_intel table. Not fixed here since radarService.js is shared infrastructure behind other capabilities too and reconciling its column selection is a materially larger change than this capability's own frontend/test gap; flagged for a dedicated follow-up rather than silently worked around."
+    "notes": "Real, enforced RBAC (isRealUser AND tier whitelist) \u2014 one of the stronger auth stories in this domain. While building real D1 fixtures for the new tests, confirmed a genuine upstream finding in the shared workers/src/services/radarService.js (not modified here, out of scope for this capability's own fix): collectFromD1()'s two SQL queries (threat_intel, ai_threat_feed) never select a campaign_name or ransomware_group column at all \u2014 only ai_threat_feed selects threat_actor. This means handleEnterpriseCampaigns can never return a real campaign today regardless of live data (verified: it honestly returns an empty list rather than fabricating one), and handleEnterpriseActors can only ever surface actors sourced from ai_threat_feed rows, never from the much larger threat_intel table. Not fixed here since radarService.js is shared infrastructure behind other capabilities too and reconciling its column selection is a materially larger change than this capability's own frontend/test gap; flagged for a dedicated follow-up rather than silently worked around."
   },
   {
     "id": "CAP-TIH-014",
     "domain": "threat-hunting-intel",
     "name": "Intelligence Preview (freemium teaser cards)",
-    "description": "A tier-gated conversion-funnel feature (CVE/threat-actor/malware-family preview cards, IOC sample, report sample, catalog, featured, unlock) with a real dashboard tab, honest upgrade routing to this platform's own /pricing, and (as of 2026-07-13) no fabricated content in any fallback path — see notes for the closed finding.",
+    "description": "A tier-gated conversion-funnel feature (CVE/threat-actor/malware-family preview cards, IOC sample, report sample, catalog, featured, unlock) with a real dashboard tab, honest upgrade routing to this platform's own /pricing, and (as of 2026-07-13) no fabricated content in any fallback path \u2014 see notes for the closed finding.",
     "backend": {
-      "handlers": ["workers/src/handlers/intelligencePreview.js"],
-      "entry_points": ["handleIntelligencePreview"],
+      "handlers": [
+        "workers/src/handlers/intelligencePreview.js"
+      ],
+      "entry_points": [
+        "handleIntelligencePreview"
+      ],
       "routes_sampled": [
-        { "path": "/api/preview/*", "method": "GET", "evidence": "workers/src/index.js:7585" }
+        {
+          "path": "/api/preview/*",
+          "method": "GET",
+          "evidence": "workers/src/index.js:7585"
+        }
       ],
       "routes_fully_enumerated": false,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "embedded_widget",
-      "pages": ["frontend/user-dashboard.html"],
+      "pages": [
+        "frontend/user-dashboard.html"
+      ],
       "status": "exists",
       "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html gained a real \"Intelligence Preview\" tab (id=\"page-intel-preview\") with 8 live tools, one per real /api/preview/* sub-action: Featured Intelligence (auto-loads on tab open), CVE Preview, Threat Actor Preview, Malware Family Preview, IOC Feed Sample, Report Sample (3 report types), Previewable Catalog, and Unlock Status. Each calls the real endpoint and renders the real response, including an inline locked-field summary (intelPreviewLockedList()) for FREE-tier teaser responses. Before this fix: exhaustive grep of frontend/*.html for '/api/preview/' returned zero matches."
     },
@@ -655,26 +1141,35 @@
       "evidence": "FIXED 2026-07-12: frontend/user-dashboard.html's sidebar (same section as Threat Intel API/DPDP/Compliance/CISO Metrics) now has a real nav-item (data-page=\"intel-preview\") linking to the new tab."
     },
     "auth_enforced": false,
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
     "subscription_gated": true,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "workers/test/intelligencePreviewDashboard.test.mjs (2026-07-13, 27 tests, up from 18) — original 18 confirm all 14 former external-URL references (intel.cyberdudebivash.com, cyberdudebivash.gumroad.com) are gone and every conversion/upgrade/purchase/unlock URL resolves to '/#pricing'. 9 new tests (2026-07-13) close the previously-deferred fabrication finding: source file no longer contains any of the 6 documented fabricated strings (FIRESTARTER, surge 340/180%, 784 additional, placeholder IOC values, MZ header stub, +46 padding); featured intelligence returns an honest empty state with a 'no fabricated headlines shown' note when the DB has nothing, and real item-derived counts when it does; catalog total_previewable matches real item count; catalog category counts are asserted against a mocked DB to prove they're computed, not hardcoded; malware_families/reports counts are asserted to equal the real static catalog sizes; IOC sample locked-count message is asserted to match real totalAvailable arithmetic; CVE/malware premium fallbacks are asserted to return honest empty/note states, never placeholder data."
+      "evidence": "workers/test/intelligencePreviewDashboard.test.mjs (2026-07-13, 27 tests, up from 18) \u2014 original 18 confirm all 14 former external-URL references (intel.cyberdudebivash.com, cyberdudebivash.gumroad.com) are gone and every conversion/upgrade/purchase/unlock URL resolves to '/#pricing'. 9 new tests (2026-07-13) close the previously-deferred fabrication finding: source file no longer contains any of the 6 documented fabricated strings (FIRESTARTER, surge 340/180%, 784 additional, placeholder IOC values, MZ header stub, +46 padding); featured intelligence returns an honest empty state with a 'no fabricated headlines shown' note when the DB has nothing, and real item-derived counts when it does; catalog total_previewable matches real item count; catalog category counts are asserted against a mocked DB to prove they're computed, not hardcoded; malware_families/reports counts are asserted to equal the real static catalog sizes; IOC sample locked-count message is asserted to match real totalAvailable arithmetic; CVE/malware premium fallbacks are asserted to return honest empty/note states, never placeholder data."
     },
     "docs": [
-      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+      {
+        "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "PILOT ONLY",
-    "priority": "P2",
+    "priority": "P6",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-13",
-      "evidence": "workers/src/handlers/intelligencePreview.js read directly in full (post-fix), re-grepped for every one of the 6 documented fabricated strings (0 hits, confirmed FIXED — see notes). node --check on the file (syntax valid). MALWARE_FAMILIES/KNOWN_ACTORS/REPORT_TYPES hoisted to module scope as a single source of truth (previously duplicated inline per-handler) so handlePreviewCatalog's category counts derive from the same real catalogs the CVE/actor/malware handlers actually serve from, instead of independent invented numbers. Full worker suite green: 270 files / 2793+9 tests. Registry validator: 0 failures, 0 warnings. This verification covers content honesty only — full purchase-to-fulfillment customer journey was not (re-)tested in this pass, hence customer_journey_complete stays false and operational_status moves to PILOT ONLY (CAP-TIH-009's precedent) rather than a GA claim."
+      "last_verified": "2026-07-14",
+      "evidence": "workers/src/handlers/intelligencePreview.js read directly in full (post-fix), re-grepped for every one of the 6 documented fabricated strings (0 hits, confirmed FIXED \u2014 see notes). node --check on the file (syntax valid). MALWARE_FAMILIES/KNOWN_ACTORS/REPORT_TYPES hoisted to module scope as a single source of truth (previously duplicated inline per-handler) so handlePreviewCatalog's category counts derive from the same real catalogs the CVE/actor/malware handlers actually serve from, instead of independent invented numbers. Full worker suite green: 270 files / 2793+9 tests. Registry validator: 0 failures, 0 warnings. This verification covers content honesty only \u2014 full purchase-to-fulfillment customer journey was not (re-)tested in this pass, hence customer_journey_complete stays false and operational_status moves to PILOT ONLY (CAP-TIH-009's precedent) rather than a GA claim. | Direct re-verification: #page-intel-preview + nav-item confirmed live, calling confirmed-live /api/preview/* routes. Independently re-confirmed the prior fabrication fix too: grepped the live handler for the 4 previously-documented fake strings (FIRESTARTER, surge 340, surge 180, 784 additional) -- zero matches. RE-VERIFIED 2026-07-14 (Enterprise Capability Completion Program triage): independently re-confirmed via source (not the registry label) that this frontend/navigation work is real, live, and reachable. Priority corrected from P2 (backend exists, frontend missing) since that is no longer true."
     },
     "contradicts_doc": [],
-    "notes": "22-paid-feature program, owner-directed cluster (see CAP-TIH-009's session-log entry for the 3-item cluster decision): owner chose 'build dashboards for all three' over this program's recommendation to leave TIH-002/009 API-only and hold TIH-014 pending confirmation given its external-storefront red flag. When investigation then found the deeper issue was not just a wrong URL but genuine fabricated content, owner again explicitly chose 'build the dashboard anyway, fix fabrication separately' over the recommendation to redirect to real data with honest empty states first. This entry reflects that direction precisely. FIXED: all 14 hardcoded external-storefront references (upgrade_url / purchase.url / conversion.products[].url pointing at intel.cyberdudebivash.com and cyberdudebivash.gumroad.com) now point to this platform's own /#pricing, and fake one-time-product price labels tied to those links ('$249 one-time' YARA signatures, '$499 IR Kit') were removed so free-tier teaser copy is internally consistent with the real PRO/ENTERPRISE subscription tiers actually sold here. NOT FIXED — deliberately deferred per explicit owner instruction, and the reason operational_status stays NOT READY rather than following CAP-TIH-009's PILOT ONLY precedent: this handler still fabricates substantive content and presents it as real intelligence. Concretely: (1) handleFeaturedIntelligence's defaultFeatured array includes an invented headline naming a real vendor with a fake named vulnerability ('Cisco FTD zero-day — FIRESTARTER backdoor active exploitation') that does not correspond to any real disclosed CVE, plus fabricated statistics ('surge 340%', 'surge 180%') on other entries — shown to every visitor as if it were live threat intelligence; (2) handlePreviewCatalog invents its total and per-category counts outright (previewCards.length + 46, plus hardcoded category counts of 85/30/8/74/3) with no backing query; (3) handleIOCSample's free-tier upgrade message hardcodes '784 additional IOCs locked', unrelated to the real totalAvailable computed two lines above it from the actual DB; (4) both handleCVEPreview and handleMalwarePreview fall back to templated placeholder IOCs/YARA rules (10.xx.xx.xx, c2.[REDACTED], a generic MZ-header YARA stub) for PREMIUM (paying) users when the real DB has no match for their query, presenting filler as if it were the paid product — arguably worse than the free-tier version of the same pattern since it reaches customers who already upgraded. None of this was touched in this pass, strictly per explicit owner instruction to scope this fix to the URL/routing issue only. This remains a genuine, high-priority, unresolved gap that should block calling this specific feature customer-ready or worth its price — flagged unambiguously so the URL fix cannot be mistaken for full remediation. FIXED 2026-07-13, owner explicitly authorized ('fix it now, same rigor as PR #214') after this finding was surfaced during a full-session production audit: (1) handleFeaturedIntelligence's defaultFeatured fake-headline fallback (Cisco FIRESTARTER, surge 340%/180%) removed entirely — empty DB now returns an honest empty items array with a 'no fabricated headlines shown' note, and total_active_threats/critical_count are computed from the real items, not hardcoded 85/40; (2) handlePreviewCatalog's total_previewable is now the real item count (no +46), and its category counts are computed live (cve/threat_actors/ioc_feeds via real D1 COUNT queries with a same-or-better real-data floor if the query fails, malware_families/reports via the actual size of the MALWARE_FAMILIES/REPORT_TYPES catalogs each respective handler really serves from — those two constants plus KNOWN_ACTORS were hoisted to module scope as a single source of truth to make this possible without duplicating magic numbers); (3) handleIOCSample's locked-count message now reads real totalAvailable-minus-returned instead of the hardcoded '784'; (4) handleCVEPreview's premium full_ioc_list and handleMalwarePreview's premium full_yara_library.sample_rule now return an honest empty/note state instead of placeholder IOCs (10.xx.xx.xx, c2.[REDACTED]) or a generic MZ-header YARA stub when the real DB/catalog has no match. Verified: full re-read of the changed handler, node --check, 9 new regression tests (workers/test/intelligencePreviewDashboard.test.mjs) asserting both the absence of every documented fabricated string and the presence of correct real-data-driven behavior, full suite green. operational_status moved NOT READY -> PILOT ONLY (customer_journey_complete remains false — this fix closes the content-honesty gap only, not a full purchase-flow re-certification)."
+    "notes": "22-paid-feature program, owner-directed cluster (see CAP-TIH-009's session-log entry for the 3-item cluster decision): owner chose 'build dashboards for all three' over this program's recommendation to leave TIH-002/009 API-only and hold TIH-014 pending confirmation given its external-storefront red flag. When investigation then found the deeper issue was not just a wrong URL but genuine fabricated content, owner again explicitly chose 'build the dashboard anyway, fix fabrication separately' over the recommendation to redirect to real data with honest empty states first. This entry reflects that direction precisely. FIXED: all 14 hardcoded external-storefront references (upgrade_url / purchase.url / conversion.products[].url pointing at intel.cyberdudebivash.com and cyberdudebivash.gumroad.com) now point to this platform's own /#pricing, and fake one-time-product price labels tied to those links ('$249 one-time' YARA signatures, '$499 IR Kit') were removed so free-tier teaser copy is internally consistent with the real PRO/ENTERPRISE subscription tiers actually sold here. NOT FIXED \u2014 deliberately deferred per explicit owner instruction, and the reason operational_status stays NOT READY rather than following CAP-TIH-009's PILOT ONLY precedent: this handler still fabricates substantive content and presents it as real intelligence. Concretely: (1) handleFeaturedIntelligence's defaultFeatured array includes an invented headline naming a real vendor with a fake named vulnerability ('Cisco FTD zero-day \u2014 FIRESTARTER backdoor active exploitation') that does not correspond to any real disclosed CVE, plus fabricated statistics ('surge 340%', 'surge 180%') on other entries \u2014 shown to every visitor as if it were live threat intelligence; (2) handlePreviewCatalog invents its total and per-category counts outright (previewCards.length + 46, plus hardcoded category counts of 85/30/8/74/3) with no backing query; (3) handleIOCSample's free-tier upgrade message hardcodes '784 additional IOCs locked', unrelated to the real totalAvailable computed two lines above it from the actual DB; (4) both handleCVEPreview and handleMalwarePreview fall back to templated placeholder IOCs/YARA rules (10.xx.xx.xx, c2.[REDACTED], a generic MZ-header YARA stub) for PREMIUM (paying) users when the real DB has no match for their query, presenting filler as if it were the paid product \u2014 arguably worse than the free-tier version of the same pattern since it reaches customers who already upgraded. None of this was touched in this pass, strictly per explicit owner instruction to scope this fix to the URL/routing issue only. This remains a genuine, high-priority, unresolved gap that should block calling this specific feature customer-ready or worth its price \u2014 flagged unambiguously so the URL fix cannot be mistaken for full remediation. FIXED 2026-07-13, owner explicitly authorized ('fix it now, same rigor as PR #214') after this finding was surfaced during a full-session production audit: (1) handleFeaturedIntelligence's defaultFeatured fake-headline fallback (Cisco FIRESTARTER, surge 340%/180%) removed entirely \u2014 empty DB now returns an honest empty items array with a 'no fabricated headlines shown' note, and total_active_threats/critical_count are computed from the real items, not hardcoded 85/40; (2) handlePreviewCatalog's total_previewable is now the real item count (no +46), and its category counts are computed live (cve/threat_actors/ioc_feeds via real D1 COUNT queries with a same-or-better real-data floor if the query fails, malware_families/reports via the actual size of the MALWARE_FAMILIES/REPORT_TYPES catalogs each respective handler really serves from \u2014 those two constants plus KNOWN_ACTORS were hoisted to module scope as a single source of truth to make this possible without duplicating magic numbers); (3) handleIOCSample's locked-count message now reads real totalAvailable-minus-returned instead of the hardcoded '784'; (4) handleCVEPreview's premium full_ioc_list and handleMalwarePreview's premium full_yara_library.sample_rule now return an honest empty/note state instead of placeholder IOCs (10.xx.xx.xx, c2.[REDACTED]) or a generic MZ-header YARA stub when the real DB/catalog has no match. Verified: full re-read of the changed handler, node --check, 9 new regression tests (workers/test/intelligencePreviewDashboard.test.mjs) asserting both the absence of every documented fabricated string and the presence of correct real-data-driven behavior, full suite green. operational_status moved NOT READY -> PILOT ONLY (customer_journey_complete remains false \u2014 this fix closes the content-honesty gap only, not a full purchase-flow re-certification)."
   },
   {
     "id": "CAP-TIH-015",
@@ -682,36 +1177,75 @@
     "name": "Public Threat-Intel Feeds & Monetization Tier Matrix",
     "description": "A family of public, versioned JSON feeds (feed.json, v1/intel/latest, apex, ai_summary, kev, stix, pricing, reports/latest) driven by a shared tier/pricing/gating engine. The best-tested capability in this domain.",
     "backend": {
-      "handlers": ["workers/src/handlers/publicFeeds.js", "workers/src/handlers/intelMonetization.js"],
-      "entry_points": ["handlePublicFeeds", "resolveFeedTier", "enforceDailyLimit", "gateItems", "upgradeMeta", "pricingMatrix", "toStixBundle"],
+      "handlers": [
+        "workers/src/handlers/publicFeeds.js",
+        "workers/src/handlers/intelMonetization.js"
+      ],
+      "entry_points": [
+        "handlePublicFeeds",
+        "resolveFeedTier",
+        "enforceDailyLimit",
+        "gateItems",
+        "upgradeMeta",
+        "pricingMatrix",
+        "toStixBundle"
+      ],
       "routes_sampled": [
-        { "path": "/api/feed.json", "method": "GET", "evidence": "workers/src/index.js:1472" },
-        { "path": "/api/v1/intel/kev.json", "method": "GET", "evidence": "workers/src/index.js:1472" },
-        { "path": "/api/v1/intel/pricing.json", "method": "GET", "evidence": "workers/src/index.js:1484" }
+        {
+          "path": "/api/feed.json",
+          "method": "GET",
+          "evidence": "workers/src/index.js:1472"
+        },
+        {
+          "path": "/api/v1/intel/kev.json",
+          "method": "GET",
+          "evidence": "workers/src/index.js:1472"
+        },
+        {
+          "path": "/api/v1/intel/pricing.json",
+          "method": "GET",
+          "evidence": "workers/src/index.js:1484"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "embedded_widget",
-      "pages": ["frontend/ciso-hub.html", "frontend/mssp.html", "frontend/index.html", "frontend/sentinel-apex-marketplace.html", "frontend/security-assessment.html", "frontend/threat-intelligence.html"],
+      "pages": [
+        "frontend/ciso-hub.html",
+        "frontend/mssp.html",
+        "frontend/index.html",
+        "frontend/sentinel-apex-marketplace.html",
+        "frontend/security-assessment.html",
+        "frontend/threat-intelligence.html"
+      ],
       "status": "exists",
-      "evidence": "CORRECTED 2026-07-12 (was 'partial' — stale, checked only one page and wrongly generalized to the whole capability): grepped every frontend/*.html for the 8 real feed filenames directly. Real, live fetch() calls found on at least 4 separate pages: frontend/ciso-hub.html:989 (calls the v1 intel 'latest' feed with limit=6, powers the CISO Hub's live CVE/KEV stat counters), frontend/mssp.html:341 (calls the v1 intel pricing feed, powers the MSSP partner pricing/margin calculator), frontend/index.html:6399 (same pricing feed, renders the homepage's own live tier cards via renderTiers()), and frontend/sentinel-apex-marketplace.html:755,1006 (calls the v1 intel latest + pricing feeds, explicitly commented 'Real, same-origin FREE-tier feed... not the fabricated fallback below'). One page (the original citation) remains prose-only, but is not the whole picture."
+      "evidence": "CORRECTED 2026-07-12 (was 'partial' \u2014 stale, checked only one page and wrongly generalized to the whole capability): grepped every frontend/*.html for the 8 real feed filenames directly. Real, live fetch() calls found on at least 4 separate pages: frontend/ciso-hub.html:989 (calls the v1 intel 'latest' feed with limit=6, powers the CISO Hub's live CVE/KEV stat counters), frontend/mssp.html:341 (calls the v1 intel pricing feed, powers the MSSP partner pricing/margin calculator), frontend/index.html:6399 (same pricing feed, renders the homepage's own live tier cards via renderTiers()), and frontend/sentinel-apex-marketplace.html:755,1006 (calls the v1 intel latest + pricing feeds, explicitly commented 'Real, same-origin FREE-tier feed... not the fabricated fallback below'). One page (the original citation) remains prose-only, but is not the whole picture."
     },
     "navigation": {
       "discoverable": true,
-      "evidence": "CORRECTED 2026-07-12 (was false, same stale-check root cause as frontend.evidence above): every page found actually consuming these feeds is itself well-linked — frontend/sitemap.html:96,99,109 (APEX Marketplace, CISO Hub, MSSP Platform) and frontend/index.html has a top-level nav tab straight to the marketplace (line 1301, class=\"cdb-bsp-tab\") plus direct CTAs to MSSP (line 5725) and the marketplace (lines 6320, 7764). frontend/index.html is, by definition, the most discoverable page on the whole site and itself live-renders the pricing feed."
+      "evidence": "CORRECTED 2026-07-12 (was false, same stale-check root cause as frontend.evidence above): every page found actually consuming these feeds is itself well-linked \u2014 frontend/sitemap.html:96,99,109 (APEX Marketplace, CISO Hub, MSSP Platform) and frontend/index.html has a top-level nav tab straight to the marketplace (line 1301, class=\"cdb-bsp-tab\") plus direct CTAs to MSSP (line 5725) and the marketplace (lines 6320, 7764). frontend/index.html is, by definition, the most discoverable page on the whole site and itself live-renders the pricing feed."
     },
     "auth_enforced": false,
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
     "subscription_gated": true,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
       "evidence": "handlePublicFeeds <- workers/test/publicFeeds.test.mjs, workers/test/feedLimitsReportExpiry.test.mjs. workers/src/handlers/intelMonetization.js's exports <- workers/test/intelMonetization.test.mjs, workers/test/intelRateLimitEnforcement.test.mjs, workers/test/phase2ContractDrift.test.mjs (pricingMatrix)."
     },
     "docs": [
-      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+      {
+        "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "PILOT ONLY",
@@ -719,45 +1253,66 @@
     "verification": {
       "method": "static",
       "last_verified": "2026-07-12",
-      "evidence": "workers/src/handlers/publicFeeds.js and workers/src/handlers/intelMonetization.js read directly; workers/src/index.js:1470-1483 read directly and confirmed these 8 exact-path routes are matched (and returned) BEFORE the file's later generic /api/v1/* API-key gate (~line 3833) is ever reached — genuinely public, no key required, consistent with the capability's own name. 2026-07-12: frontend/*.html grepped for all 8 feed filenames directly (not just the one page previously checked) surfacing 4 more real live-consumer pages; each cited page/line read directly to confirm a genuine fetch(), not a prose mention. All 5 workers/test/*.mjs matches confirmed by direct grep+read."
+      "evidence": "workers/src/handlers/publicFeeds.js and workers/src/handlers/intelMonetization.js read directly; workers/src/index.js:1470-1483 read directly and confirmed these 8 exact-path routes are matched (and returned) BEFORE the file's later generic /api/v1/* API-key gate (~line 3833) is ever reached \u2014 genuinely public, no key required, consistent with the capability's own name. 2026-07-12: frontend/*.html grepped for all 8 feed filenames directly (not just the one page previously checked) surfacing 4 more real live-consumer pages; each cited page/line read directly to confirm a genuine fetch(), not a prose mention. All 5 workers/test/*.mjs matches confirmed by direct grep+read."
     },
     "contradicts_doc": [],
-    "notes": "This is an API-economy product by design (external integrators pull these JSON feeds directly) AND genuinely public (no auth/API key at all — confirmed these 8 paths are matched before the file's API-key gate, unlike CAP-TIH-002's /api/v1/* family). The prior note framed the open question as 'whether customers can find and use their API key against these feeds from within the dashboard' — that framing was itself slightly wrong (there is no key to use against a no-auth feed) and, more importantly, the underlying 'no live in-app UI call' premise was stale: real, live consumption already exists on frontend/ciso-hub.html, frontend/mssp.html, frontend/index.html itself, and frontend/sentinel-apex-marketplace.html, all of them well-linked pages. No code change needed; corrected the record. No further open gap on this entry."
+    "notes": "This is an API-economy product by design (external integrators pull these JSON feeds directly) AND genuinely public (no auth/API key at all \u2014 confirmed these 8 paths are matched before the file's API-key gate, unlike CAP-TIH-002's /api/v1/* family). The prior note framed the open question as 'whether customers can find and use their API key against these feeds from within the dashboard' \u2014 that framing was itself slightly wrong (there is no key to use against a no-auth feed) and, more importantly, the underlying 'no live in-app UI call' premise was stale: real, live consumption already exists on frontend/ciso-hub.html, frontend/mssp.html, frontend/index.html itself, and frontend/sentinel-apex-marketplace.html, all of them well-linked pages. No code change needed; corrected the record. No further open gap on this entry."
   },
   {
     "id": "CAP-TIH-016",
     "domain": "threat-hunting-intel",
     "name": "Attack Graph from Scan Results",
-    "description": "Builds a D3-ready force-directed graph from a single completed scan result (not from the threat-intel corpus) — distinct from CAP-TIH-004's threat-graph backend and from workers/src/services/graphEngine.js (CAP-TIH-002). CONFIRMED 2026-07-13: genuinely wired end-to-end into the live post-scan UI; the prior pass's open question is resolved.",
+    "description": "Builds a D3-ready force-directed graph from a single completed scan result (not from the threat-intel corpus) \u2014 distinct from CAP-TIH-004's threat-graph backend and from workers/src/services/graphEngine.js (CAP-TIH-002). CONFIRMED 2026-07-13: genuinely wired end-to-end into the live post-scan UI; the prior pass's open question is resolved.",
     "backend": {
-      "handlers": ["workers/src/lib/attackGraph.js"],
-      "entry_points": ["buildAttackGraph", "simulateExploitPaths", "getThreatActorProfiles"],
+      "handlers": [
+        "workers/src/lib/attackGraph.js"
+      ],
+      "entry_points": [
+        "buildAttackGraph",
+        "simulateExploitPaths",
+        "getThreatActorProfiles"
+      ],
       "routes_sampled": [
-        { "path": "/api/attack-graph", "method": "POST", "evidence": "workers/src/index.js:2326" }
+        {
+          "path": "/api/attack-graph",
+          "method": "POST",
+          "evidence": "workers/src/index.js:2326"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "embedded_widget",
-      "pages": ["frontend/index.html"],
+      "pages": [
+        "frontend/index.html"
+      ],
       "status": "exists",
-      "evidence": "CONFIRMED 2026-07-13, traced end-to-end: frontend/index.html's window.CDB_ATTACKGRAPH IIFE (:16688-16847) POSTs the real scan_result to /api/attack-graph (:16808) and renders the returned {nodes,links} as an inline SVG force-layout (_renderSVG, :16698). Its onScanComplete(module, scanData) is called with the REAL API response from the real scan-completion handler at :9751 — an inline comment there documents this exact wiring was previously broken ('the window.showScanResult/renderScanResult hooks it used to rely on are never actually defined anywhere, so onScanComplete never fired') and fixed in the same commit as the fetch call itself (a427121, 2026-07-11) — same day as this entry's prior last_verified date, which is why the earlier grep-based pass missed it (the commit message is unrelated: 'fix(P1): homepage Sign In crowded off-screen...', bundling this fix as an uncredited secondary change). Also called from 2 more scan-completion sites (:17201, :17211). On fetch failure or missing scan_result, falls back to a labeled 'Demo — Run a domain scan to load live attack chains' graph rather than a blank/broken panel — a deliberate, honest degradation, not a bug."
+      "evidence": "CONFIRMED 2026-07-13, traced end-to-end: frontend/index.html's window.CDB_ATTACKGRAPH IIFE (:16688-16847) POSTs the real scan_result to /api/attack-graph (:16808) and renders the returned {nodes,links} as an inline SVG force-layout (_renderSVG, :16698). Its onScanComplete(module, scanData) is called with the REAL API response from the real scan-completion handler at :9751 \u2014 an inline comment there documents this exact wiring was previously broken ('the window.showScanResult/renderScanResult hooks it used to rely on are never actually defined anywhere, so onScanComplete never fired') and fixed in the same commit as the fetch call itself (a427121, 2026-07-11) \u2014 same day as this entry's prior last_verified date, which is why the earlier grep-based pass missed it (the commit message is unrelated: 'fix(P1): homepage Sign In crowded off-screen...', bundling this fix as an uncredited secondary change). Also called from 2 more scan-completion sites (:17201, :17211). On fetch failure or missing scan_result, falls back to a labeled 'Demo \u2014 Run a domain scan to load live attack chains' graph rather than a blank/broken panel \u2014 a deliberate, honest degradation, not a bug."
     },
     "navigation": {
       "discoverable": true,
-      "evidence": "CONFIRMED 2026-07-13: embedded directly in the scan-results view every customer sees after running any scan (no separate nav click needed) — arguably more discoverable than a standalone nav-gated page, matching the surface_type:embedded_widget pattern used elsewhere in this registry (e.g. CAP-NOTIF-002, CAP-TIH-004)."
+      "evidence": "CONFIRMED 2026-07-13: embedded directly in the scan-results view every customer sees after running any scan (no separate nav click needed) \u2014 arguably more discoverable than a standalone nav-gated page, matching the surface_type:embedded_widget pattern used elsewhere in this registry (e.g. CAP-NOTIF-002, CAP-TIH-004)."
     },
     "auth_enforced": false,
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "FIXED 2026-07-13: workers/test/attackGraphEngine.test.mjs (11 tests) covers all 3 exports against a realistic scan_result shape matching workers/src/handlers/domain.js's buildRealResult() output exactly (top-level findings[]/risk_score, finding objects with id/title/severity/description/recommendation) — confirms real graph output shape (nodes/links/metadata/d3_config matching what POST /api/attack-graph actually returns), severity-based finding sort order, the pivot-node multi-step-chain branch (3+ findings, risk_score>=50) vs. the direct-connection branch, graceful handling of an unmeasurable scan (empty findings, null risk_score) and an unrecognized module (falls back to the domain template), locked_findings inclusion, and simulateExploitPaths()'s two branches (reconnaissance-only vs. a real chained exploit narrative referencing the actual target/finding titles)."
+      "evidence": "FIXED 2026-07-13: workers/test/attackGraphEngine.test.mjs (11 tests) covers all 3 exports against a realistic scan_result shape matching workers/src/handlers/domain.js's buildRealResult() output exactly (top-level findings[]/risk_score, finding objects with id/title/severity/description/recommendation) \u2014 confirms real graph output shape (nodes/links/metadata/d3_config matching what POST /api/attack-graph actually returns), severity-based finding sort order, the pivot-node multi-step-chain branch (3+ findings, risk_score>=50) vs. the direct-connection branch, graceful handling of an unmeasurable scan (empty findings, null risk_score) and an unrecognized module (falls back to the domain template), locked_findings inclusion, and simulateExploitPaths()'s two branches (reconnaissance-only vs. a real chained exploit narrative referencing the actual target/finding titles)."
     },
     "docs": [
-      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+      {
+        "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
@@ -765,10 +1320,10 @@
     "verification": {
       "method": "static",
       "last_verified": "2026-07-13",
-      "evidence": "workers/src/lib/attackGraph.js read directly (396 lines, all 3 exports); workers/src/index.js:2326-2341 read directly, inline comment confirms 'public by design, rate-limited instead of tier-gated so the free scan-results UI keeps working'; frontend/index.html read directly end-to-end (the fetch call :16808, the render function :16698-16767, the demo-fallback degradation :16821-16830, and all 3 onScanComplete call sites :9751,17201,17211); git blame confirmed the wiring fix landed 2026-07-11 in commit a427121; response-shape compatibility confirmed directly against workers/src/handlers/domain.js's buildRealResult(); now regression-locked by workers/test/attackGraphEngine.test.mjs (11/11 passing). Full worker suite green post-fix. Method stays static (not dynamic_browser) — this pass traced the full source-level data flow and added real unit coverage but did not drive an actual browser through a live scan-to-graph flow on the ~22,000-line homepage, so customer_journey_complete stays false and plain GA APPROVED (which requires it) was not claimed; GA APPROVED WITH DOCUMENTED LIMITATIONS is the honest ceiling."
+      "evidence": "workers/src/lib/attackGraph.js read directly (396 lines, all 3 exports); workers/src/index.js:2326-2341 read directly, inline comment confirms 'public by design, rate-limited instead of tier-gated so the free scan-results UI keeps working'; frontend/index.html read directly end-to-end (the fetch call :16808, the render function :16698-16767, the demo-fallback degradation :16821-16830, and all 3 onScanComplete call sites :9751,17201,17211); git blame confirmed the wiring fix landed 2026-07-11 in commit a427121; response-shape compatibility confirmed directly against workers/src/handlers/domain.js's buildRealResult(); now regression-locked by workers/test/attackGraphEngine.test.mjs (11/11 passing). Full worker suite green post-fix. Method stays static (not dynamic_browser) \u2014 this pass traced the full source-level data flow and added real unit coverage but did not drive an actual browser through a live scan-to-graph flow on the ~22,000-line homepage, so customer_journey_complete stays false and plain GA APPROVED (which requires it) was not claimed; GA APPROVED WITH DOCUMENTED LIMITATIONS is the honest ceiling."
     },
     "contradicts_doc": [],
-    "notes": "RESOLVED 2026-07-13: the prior pass's open question ('whether this is actually wired into the live post-scan results UI') is answered — yes, genuinely, confirmed via full source trace plus new tests. No code changes were needed; this capability already worked correctly, it was simply under-verified. See verification.evidence for the full trace."
+    "notes": "RESOLVED 2026-07-13: the prior pass's open question ('whether this is actually wired into the live post-scan results UI') is answered \u2014 yes, genuinely, confirmed via full source trace plus new tests. No code changes were needed; this capability already worked correctly, it was simply under-verified. See verification.evidence for the full trace."
   },
   {
     "id": "CAP-TIH-017",
@@ -776,10 +1331,22 @@
     "name": "Scan-Finding to CVE Correlation (legacy)",
     "description": "Explicitly-commented legacy endpoint correlating scan findings to CVE threat intel, cached in D1 with expiry. A third, separate correlation engine distinct from workers/src/services/correlationEngine.js (CAP-TIH-002).",
     "backend": {
-      "handlers": ["workers/src/lib/threatCorrelation.js"],
-      "entry_points": ["correlateThreatIntel", "cacheThreatIntel", "getCachedCVE", "purgeExpiredThreatIntel", "getThreatIntelStats"],
+      "handlers": [
+        "workers/src/lib/threatCorrelation.js"
+      ],
+      "entry_points": [
+        "correlateThreatIntel",
+        "cacheThreatIntel",
+        "getCachedCVE",
+        "purgeExpiredThreatIntel",
+        "getThreatIntelStats"
+      ],
       "routes_sampled": [
-        { "path": "/api/threat-intel/correlate", "method": "POST", "evidence": "workers/src/index.js:3529" }
+        {
+          "path": "/api/threat-intel/correlate",
+          "method": "POST",
+          "evidence": "workers/src/index.js:3529"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
@@ -795,15 +1362,24 @@
       "evidence": "No page reaches this route."
     },
     "auth_enforced": "unknown",
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": false,
       "evidence": "No import-confirmed test found for workers/src/lib/threatCorrelation.js."
     },
     "docs": [
-      { "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md", "tag": "canonical" }
+      {
+        "path": "docs/PRODUCTION_GAP_CLOSURE_MASTER_PROMPT.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "NOT READY",
@@ -814,6 +1390,6 @@
       "evidence": "workers/src/lib/threatCorrelation.js read directly (404 lines, 5 entry points); workers/src/index.js:3529-3537 read directly, own inline comment confirms 'legacy' status; frontend/*.html not found calling this route; workers/test/*.mjs grepped with 0 hits."
     },
     "contradicts_doc": [],
-    "notes": "Self-declared legacy by the codebase's own comment — before investing in tests or a frontend for this, confirm with the business owner whether it should be deprecated/removed in favor of workers/src/services/correlationEngine.js (CAP-TIH-002's /api/v1/correlations) rather than maintained as a third parallel implementation. Priority set to P7 (documentation: the deprecation decision itself isn't recorded anywhere) rather than a build-oriented priority, since building on top of declared-legacy code without that decision first would be wasted effort."
+    "notes": "Self-declared legacy by the codebase's own comment \u2014 before investing in tests or a frontend for this, confirm with the business owner whether it should be deprecated/removed in favor of workers/src/services/correlationEngine.js (CAP-TIH-002's /api/v1/correlations) rather than maintained as a third parallel implementation. Priority set to P7 (documentation: the deprecation decision itself isn't recorded anywhere) rather than a build-oriented priority, since building on top of declared-legacy code without that decision first would be wasted effort."
   }
 ]
