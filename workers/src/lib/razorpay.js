@@ -156,7 +156,7 @@ function hexFromBuf(buf) {
     .map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function constantTimeEqual(a, b) {
+export function constantTimeEqual(a, b) {
   if (a.length !== b.length) return false;
   let diff = 0;
   for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);

@@ -7,6 +7,7 @@
 import { generateAndStoreAll, fetchLiveIntel, generateDefenseTool, calculatePrice } from '../services/sentinelDefenseEngine.js';
 import { sendPurchaseConfirmation } from '../services/emailEngine.js';
 import { createInvoice } from '../services/v24/billingEngine.js';
+import { constantTimeEqual } from '../lib/razorpay.js';
 
 const CATEGORY_META = {
   firewall_script:    { label: 'Firewall Script',       icon: '🔥', badge: 'INSTANT DEPLOY',  difficulty: 'BEGINNER'     },
@@ -258,7 +259,7 @@ export async function handleVerifyPurchase(request, env, authCtx, solutionId) {
     const sigBuffer = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
     const expected  = Array.from(new Uint8Array(sigBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 
-    if (!secret || expected !== razorpay_signature) {
+    if (!secret || !constantTimeEqual(expected, razorpay_signature)) {
       return json({ success: false, error: 'Payment verification failed — signature mismatch' }, 400);
     }
 

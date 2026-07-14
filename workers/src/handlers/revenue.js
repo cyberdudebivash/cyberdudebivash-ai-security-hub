@@ -21,6 +21,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { aggregateAllRevenue, getRevenueSnapshot, recordRevenueEvent, getSubscriptionRevenue } from '../services/revenueEngine.js';
+import { constantTimeEqual } from '../lib/razorpay.js';
 import { runRevenueOptimization, getUpsellTrigger, getProductRecommendations, analyzeChurnRisk, getUserBehaviorProfile, monetizeScanResult, runBulkOptimization } from '../services/aiRevenueOptimizer.js';
 import { getProductCatalog, getProductPreview, generateDefenseProducts, DEFENSE_PRODUCTS } from '../services/defenseSolutions.js';
 
@@ -554,19 +555,23 @@ export async function handleCheckoutVerify(request, env, authCtx) {
     const body = await request.json().catch(() => ({}));
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, product, plan, amount, email } = body;
 
-    if (!razorpay_payment_id) {
-      return err('razorpay_payment_id required', 400, 'MISSING_PAYMENT_ID');
+    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+      return err('razorpay_payment_id, razorpay_order_id, and razorpay_signature are required', 400, 'MISSING_PAYMENT_ID');
+    }
+    if (!env.RAZORPAY_KEY_SECRET) {
+      return err('Payment verification unavailable', 503, 'VERIFICATION_UNAVAILABLE');
     }
 
-    // HMAC-SHA256 signature verification
-    if (razorpay_order_id && razorpay_signature && env.RAZORPAY_KEY_SECRET) {
-      const expectedSig = await hmacSHA256(
-        `${razorpay_order_id}|${razorpay_payment_id}`,
-        env.RAZORPAY_KEY_SECRET
-      );
-      if (expectedSig !== razorpay_signature) {
-        return err('Payment signature verification failed', 400, 'INVALID_SIGNATURE');
-      }
+    // HMAC-SHA256 signature verification — previously skippable by simply
+    // omitting razorpay_order_id/razorpay_signature, which let a caller grant
+    // themselves a plan/product with an arbitrary payment_id and no real
+    // charge (2026-07-14 commercial-integrity audit). Now unconditional.
+    const expectedSig = await hmacSHA256(
+      `${razorpay_order_id}|${razorpay_payment_id}`,
+      env.RAZORPAY_KEY_SECRET
+    );
+    if (!constantTimeEqual(expectedSig, razorpay_signature)) {
+      return err('Payment signature verification failed', 400, 'INVALID_SIGNATURE');
     }
 
     const source = plan ? 'subscription' :

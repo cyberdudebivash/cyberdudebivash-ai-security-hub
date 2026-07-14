@@ -4,6 +4,7 @@
  * POST /api/tools/purchase        — create Razorpay order
  * POST /api/tools/verify          — verify payment + grant access + notify founder
  */
+import { constantTimeEqual } from '../lib/razorpay.js';
 
 const FOUNDER_EMAIL = 'bivash@cyberdudebivash.com';
 
@@ -109,7 +110,7 @@ export async function handleVerifyTool(request, env) {
     const key     = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
     const sigBuf  = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
     const expected = Array.from(new Uint8Array(sigBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
-    if (!secret || expected !== razorpay_signature) {
+    if (!secret || !constantTimeEqual(expected, razorpay_signature)) {
       return json({ success: false, error: 'Payment signature verification failed' }, 400);
     }
 

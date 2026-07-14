@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { ok, fail, withErrorBoundary }       from '../lib/response.js';
+import { constantTimeEqual }                 from '../lib/razorpay.js';
 
 import {
   detectRegion, buildRegionContext, getLocalizedPricing,
@@ -346,31 +347,44 @@ export const handleGetApiUsage = withErrorBoundary(async (request, env) => {
 // PAYMENT CALLBACK — POST /api/billing/callback
 // ─────────────────────────────────────────────────────────────────────────────
 export const handleBillingCallback = withErrorBoundary(async (request, env) => {
-  const body = await request.json().catch(() => ({}));
+  // Read the raw body once and parse JSON from that same text — the previous
+  // version called request.json() first and then request.clone().text()
+  // afterward, but a request's body can't be cloned once already read
+  // ("unusable" TypeError), so the signature-verifying branch below threw on
+  // every real call whenever RAZORPAY_WEBHOOK_SECRET WAS configured; only the
+  // insecure fail-open branch ever actually completed (2026-07-14
+  // commercial-integrity audit).
+  const rawBody = await request.text().catch(() => '');
+  const body = (() => { try { return JSON.parse(rawBody); } catch { return {}; } })();
   const { email, plan, razorpay_payment_id, razorpay_order_id,
           razorpay_signature, event } = body;
 
   // Verify Razorpay webhook signature before acting on any payment event.
   // Without this, any caller could POST a fake payment.captured and unlock plans for free.
+  // Previously: a missing RAZORPAY_WEBHOOK_SECRET logged a warning and continued
+  // anyway, so an unconfigured environment accepted any unsigned callback — now
+  // fails closed, matching lib/razorpay.js's verifyWebhookSignature(), which
+  // already rejects when the secret is unset rather than skipping the check.
   const webhookSecret = env?.RAZORPAY_WEBHOOK_SECRET;
-  if (webhookSecret) {
-    const rawBody = await request.clone().text().catch(() => '');
-    const expectedSig = await (async () => {
-      try {
-        const enc    = new TextEncoder();
-        const key    = await crypto.subtle.importKey('raw', enc.encode(webhookSecret),
-          { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-        const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(rawBody));
-        return Array.from(new Uint8Array(sigBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
-      } catch { return null; }
-    })();
-    if (!expectedSig || razorpay_signature !== expectedSig) {
-      console.warn('[billing] Razorpay signature mismatch — rejecting callback');
-      return Response.json({ error: 'invalid_signature' }, { status: 401 });
-    }
-  } else {
-    // No webhook secret configured — log and continue (set RAZORPAY_WEBHOOK_SECRET in Wrangler secrets)
-    console.warn('[billing] RAZORPAY_WEBHOOK_SECRET not set — signature verification skipped');
+  if (!webhookSecret) {
+    console.error('[billing] RAZORPAY_WEBHOOK_SECRET not set — rejecting callback');
+    return Response.json({ error: 'webhook_not_configured' }, { status: 401 });
+  }
+  if (!razorpay_signature) {
+    return Response.json({ error: 'invalid_signature' }, { status: 401 });
+  }
+  const expectedSig = await (async () => {
+    try {
+      const enc    = new TextEncoder();
+      const key    = await crypto.subtle.importKey('raw', enc.encode(webhookSecret),
+        { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(rawBody));
+      return Array.from(new Uint8Array(sigBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch { return null; }
+  })();
+  if (!expectedSig || !constantTimeEqual(razorpay_signature, expectedSig)) {
+    console.warn('[billing] Razorpay signature mismatch — rejecting callback');
+    return Response.json({ error: 'invalid_signature' }, { status: 401 });
   }
 
   if (event !== 'payment.captured') {
