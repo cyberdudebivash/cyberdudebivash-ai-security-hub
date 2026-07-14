@@ -63,7 +63,6 @@ export const SUBSCRIPTION_PRICES = {
   MSSP:          { amount: 999900,   label: '₹9,999',   period: 'monthly', name: 'MSSP Plan'             },
   // P2-2: New enterprise tier per customer escalation audit
   ENTERPRISE_SOC: { amount: 4119900,  label: '₹41,199',  period: 'monthly', name: 'Autonomic Threat Intel API' },
-  MSSP_PARTNER:   { amount: 199900,   label: '₹1,999',   period: 'monthly', name: 'Multi-Tenant MSSP Workspace'  },
 };
 
 // ─── Create Razorpay Order ────────────────────────────────────────────────────
