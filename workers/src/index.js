@@ -232,6 +232,7 @@ import {
   handleV1Correlations, handleV1Graph, handleV1Hunting,
 } from './handlers/threatIntel.js';
 import { runIngestion, runBulkBackfill, enrichUnscoredEPSS }  from './services/threatIngestion.js';
+import { withRetry } from './lib/resilience.js';
 
 // ─── Sentinel APEX v3 — SOC Automation + Autonomous Defense ──────────────────
 import {
@@ -1598,11 +1599,19 @@ export async function routeRequest(request, env, ctx, requestId) {
       checks.api = true;
       details.api = { ok: true, note: 'worker_executing' };
 
-      // 2. DB probe — real SELECT 1 query (not just binding check)
+      // 2. DB probe — real SELECT 1 query (not just binding check).
+      // Retries once (150ms backoff) on a transient D1 "requests queued for
+      // too long" overload before declaring the platform degraded — a single
+      // momentary D1 queueing blip (observed live: self-resolves within ~90s
+      // with zero intervention) should not paint "Database degraded" across
+      // the live site for every visitor when the database is not actually down.
       if (env.DB) {
         try {
           const t0 = Date.now();
-          const probe = await env.DB.prepare('SELECT 1 AS alive').first();
+          const probe = await withRetry(
+            () => env.DB.prepare('SELECT 1 AS alive').first(),
+            2, 150, 'health:db'
+          );
           const latency = Date.now() - t0;
           checks.db = probe?.alive === 1;
           details.db = { ok: checks.db, latency_ms: latency };
@@ -1620,9 +1629,12 @@ export async function routeRequest(request, env, ctx, requestId) {
         try {
           // threat_intel.created_at is an unpopulated legacy column (every row is NULL);
           // ingestion actually stamps ingested_at — query that instead (H-5 fix).
-          const row = await env.DB.prepare(
-            "SELECT COUNT(*) as c FROM threat_intel WHERE ingested_at > datetime('now','-7 days')"
-          ).first().catch(() => null);
+          const row = await withRetry(
+            () => env.DB.prepare(
+              "SELECT COUNT(*) as c FROM threat_intel WHERE ingested_at > datetime('now','-7 days')"
+            ).first(),
+            2, 150, 'health:intel'
+          ).catch(() => null);
           checks.intel = (row?.c ?? 0) >= 0; // table exists = intel engine ok
           details.intel = { ok: checks.intel, recent_entries: row?.c ?? 0 };
         } catch {
@@ -1637,9 +1649,12 @@ export async function routeRequest(request, env, ctx, requestId) {
       // 4. Revenue probe — check payments table for system readiness
       if (env.DB && checks.db) {
         try {
-          const row = await env.DB.prepare(
-            "SELECT COUNT(*) as c FROM payments WHERE status='completed' LIMIT 1"
-          ).first().catch(() => null);
+          const row = await withRetry(
+            () => env.DB.prepare(
+              "SELECT COUNT(*) as c FROM payments WHERE status='completed' LIMIT 1"
+            ).first(),
+            2, 150, 'health:revenue'
+          ).catch(() => null);
           // Revenue engine is OK if the table exists and razorpay key is set
           checks.revenue = row !== null && !!(env.RAZORPAY_KEY_ID);
           details.revenue = {
