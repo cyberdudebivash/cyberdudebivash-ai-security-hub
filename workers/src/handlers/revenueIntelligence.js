@@ -120,7 +120,12 @@ export async function handleCreateSnapshot(request, env) {
 // Time-series MRR data for trend charts
 export async function handleRevenueHistory(request, env) {
   const authCtx = request.user || {};
+  // Admin-only, matching handleCreateSnapshot's own gate below — this
+  // returns the platform's real aggregate MRR/ARR/forecast/cohort/tier-mix
+  // data, previously reachable by any authenticated real user (any paid
+  // tier), not just staff (2026-07-14 Production Release Gate Phase II).
   if (!requireAuth(authCtx)) return Response.json({ error: 'Authentication required' }, { status: 401 });
+  if (!requireAdmin(authCtx)) return Response.json({ error: 'Admin access required' }, { status: 403 });
 
   const url   = new URL(request.url);
   const days  = Math.min(parseInt(url.searchParams.get('days') || '30'), 365);
@@ -147,7 +152,12 @@ export async function handleRevenueHistory(request, env) {
 // 3-model MRR forecast: linear, conservative (0.7x), optimistic (1.3x)
 export async function handleRevenueForecast(request, env) {
   const authCtx = request.user || {};
+  // Admin-only, matching handleCreateSnapshot's own gate below — this
+  // returns the platform's real aggregate MRR/ARR/forecast/cohort/tier-mix
+  // data, previously reachable by any authenticated real user (any paid
+  // tier), not just staff (2026-07-14 Production Release Gate Phase II).
   if (!requireAuth(authCtx)) return Response.json({ error: 'Authentication required' }, { status: 401 });
+  if (!requireAdmin(authCtx)) return Response.json({ error: 'Admin access required' }, { status: 403 });
 
   const orgId = authCtx.org_id || 'default';
   const kvKey = `revenue:forecast:${orgId}`;
@@ -228,7 +238,12 @@ export async function handleRevenueForecast(request, env) {
 // Monthly MRR waterfall: new / expansion / contraction / churn / net_new
 export async function handleRevenueWaterfall(request, env) {
   const authCtx = request.user || {};
+  // Admin-only, matching handleCreateSnapshot's own gate below — this
+  // returns the platform's real aggregate MRR/ARR/forecast/cohort/tier-mix
+  // data, previously reachable by any authenticated real user (any paid
+  // tier), not just staff (2026-07-14 Production Release Gate Phase II).
   if (!requireAuth(authCtx)) return Response.json({ error: 'Authentication required' }, { status: 401 });
+  if (!requireAdmin(authCtx)) return Response.json({ error: 'Admin access required' }, { status: 403 });
 
   const orgId = authCtx.org_id || 'default';
 
@@ -258,7 +273,12 @@ export async function handleRevenueWaterfall(request, env) {
 // Cohort analysis by plan_type — average MRR per cohort
 export async function handleCohortAnalysis(request, env) {
   const authCtx = request.user || {};
+  // Admin-only, matching handleCreateSnapshot's own gate below — this
+  // returns the platform's real aggregate MRR/ARR/forecast/cohort/tier-mix
+  // data, previously reachable by any authenticated real user (any paid
+  // tier), not just staff (2026-07-14 Production Release Gate Phase II).
   if (!requireAuth(authCtx)) return Response.json({ error: 'Authentication required' }, { status: 401 });
+  if (!requireAdmin(authCtx)) return Response.json({ error: 'Admin access required' }, { status: 403 });
 
   const orgId = authCtx.org_id || 'default';
 
@@ -297,7 +317,12 @@ export async function handleCohortAnalysis(request, env) {
 // Current tier distribution and MRR contribution
 export async function handleTierMix(request, env) {
   const authCtx = request.user || {};
+  // Admin-only, matching handleCreateSnapshot's own gate below — this
+  // returns the platform's real aggregate MRR/ARR/forecast/cohort/tier-mix
+  // data, previously reachable by any authenticated real user (any paid
+  // tier), not just staff (2026-07-14 Production Release Gate Phase II).
   if (!requireAuth(authCtx)) return Response.json({ error: 'Authentication required' }, { status: 401 });
+  if (!requireAdmin(authCtx)) return Response.json({ error: 'Admin access required' }, { status: 403 });
 
   try {
     // Get latest snapshot tier counts
