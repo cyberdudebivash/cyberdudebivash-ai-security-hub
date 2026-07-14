@@ -5038,16 +5038,24 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
         const kvTodayCount  = parseInt(kvCounts[0] || '0', 10);
         const kvTotalScans  = kvCounts.reduce((s, v) => s + parseInt(v || '0', 10), 0);
 
-        // Also check D1 scan_history for users with accounts
-        const [row, threatRow] = await Promise.all([
+        // Also check D1 scan_history for users with accounts, plus scan_jobs — the
+        // fullest lifetime ledger (same table /api/health and /api/platform/metrics
+        // read). Folding it into the max() below keeps this endpoint in agreement
+        // with those two instead of silently under-reporting: this endpoint was
+        // verified live showing total_scans=72/today=3 while /api/health and
+        // /api/platform/metrics showed 219/5 for the exact same platform — the same
+        // class of cross-endpoint contradiction metricsHydration.js already fixed
+        // for /api/platform/metrics, just never applied here too.
+        const [row, threatRow, jobsRow] = await Promise.all([
           env.DB?.prepare(`SELECT COUNT(*) as total_scans, SUM(CASE WHEN scanned_at > datetime('now','-1 day') THEN 1 ELSE 0 END) as today, SUM(CASE WHEN risk_score >= 80 THEN 1 ELSE 0 END) as critical, SUM(CASE WHEN risk_score >= 50 AND risk_score < 80 THEN 1 ELSE 0 END) as high, AVG(risk_score) as avg_risk FROM scan_history`).first().catch(() => null),
           env.DB?.prepare(`SELECT COUNT(*) as cve_count, SUM(CASE WHEN severity='CRITICAL' THEN 1 ELSE 0 END) as critical_cves FROM threat_intel`).first().catch(() => null),
+          env.DB?.prepare(`SELECT COUNT(*) as total_scans, SUM(CASE WHEN created_at > datetime('now','-1 day') THEN 1 ELSE 0 END) as today FROM scan_jobs`).first().catch(() => null),
         ]);
 
         // Use KV counts as canonical (covers all API-key and anonymous scans)
         // Fall back to D1 for authenticated users if KV is empty
-        const totalScans  = Math.max(kvTotalScans, row?.total_scans || 0);
-        const todayScans  = Math.max(kvTodayCount,  row?.today       || 0);
+        const totalScans  = Math.max(kvTotalScans, row?.total_scans || 0, jobsRow?.total_scans || 0);
+        const todayScans  = Math.max(kvTodayCount,  row?.today       || 0, jobsRow?.today       || 0);
 
         return withSecurityHeaders(withCors(Response.json({
           success:       true,
@@ -5060,6 +5068,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
           critical_cves: threatRow?.critical_cves || 0,
           kv_scans_7d:   kvTotalScans,
           d1_scans:      row?.total_scans || 0,
+          scan_jobs:     jobsRow?.total_scans || 0,
           timestamp:     new Date().toISOString(),
         }), request));
       } catch(e) {

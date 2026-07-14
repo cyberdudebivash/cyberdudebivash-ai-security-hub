@@ -22817,8 +22817,13 @@ async function loadPlatformStats() {
   try {
     const d = await fetchWithRetry(API + '/api/scan/stats');
     clearLoading(ids);
-    if (d.total_scans != null) {
-      setMetric('rb-scans-today', Number(_applyFloor(d.total_scans||0,_SCAN_BASELINE)).toLocaleString());
+    // FIX: this fed total_scans (the lifetime total) into the "Scans today" tile —
+    // racing CDB_ATTENTION_INDEX above, which correctly uses /api/health's
+    // scans_today. Whichever fetch resolved last won the DOM, so the tile
+    // intermittently showed the lifetime total mislabeled as "today". Use the
+    // endpoint's own `today` field so both hydrators agree.
+    if (d.today != null) {
+      setMetric('rb-scans-today', Number(_applyFloor(d.today||0,_SCAN_BASELINE)).toLocaleString());
     }
     if (d.cve_count != null) setMetric('rb-cve-active', Number(d.cve_count).toLocaleString());
     if (d.threats_24h != null) setMetric('rb-threats-hour', d.threats_24h);
