@@ -15,6 +15,7 @@
  */
 
 import { createInvoice, issueLicense, verifyLicense, createPayPalOrder, capturePayPalOrder, runPaymentRecovery, buildRenewalQueue } from '../services/v24/billingEngine.js';
+import { normalizeTier, getTierDef } from './subscriptionPaywallEngine.js';
 import { scoreEnterpriseOpportunity, generateProposal } from '../services/v24/salesOS.js';
 import { SCAN_TIERS, createScanOrder, fulfillScanOrder, getScanOrderByToken, getScannerRevenue, getTrustCenterData, logUptimeCheck, seedReleaseNotes, getCEODashboard } from '../services/v24/platformEngine.js';
 import { createRazorpayRefund, verifyPaymentSignature } from '../lib/razorpay.js';
@@ -142,12 +143,21 @@ export async function handleV24(request, env, authCtx, path, method) {
   }
 
   // POST /api/v24/billing/paypal/create
+  // SECURITY: amountUSD is derived from the server-side SUBSCRIPTION_TIERS
+  // catalog by plan_id only — body.amount_usd was previously trusted
+  // verbatim into a real PayPal order (2026-07-14 commercial-integrity
+  // audit, Priority 4). Never accept a client-supplied amount here.
   if (path === '/api/v24/billing/paypal/create' && method === 'POST') {
     const body = await parseBody(request);
-    if (!body.amount_usd || !body.plan_id) return err('amount_usd and plan_id required');
+    if (!body.plan_id) return err('plan_id required');
+    const tierKey = normalizeTier(body.plan_id);
+    const tierDef = getTierDef(tierKey);
+    if (!tierDef || !(tierDef.price_usd > 0)) {
+      return err('Invalid or free plan_id — PayPal checkout requires a paid plan', 400, 'INVALID_PLAN');
+    }
     const result = await createPayPalOrder(env, {
-      amountUSD:   body.amount_usd,
-      planId:      body.plan_id,
+      amountUSD:   tierDef.price_usd,
+      planId:      tierKey,
       description: body.description,
       userId:      authCtx?.userId,
       email:       body.email || authCtx?.email,
