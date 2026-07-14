@@ -15,6 +15,7 @@
 // =============================================================================
 
 import { isRealUser } from '../auth/middleware.js';
+import { featureGate, FEATURES } from '../middleware/entitlementCheck.js';
 
 const PDF_TOKEN_TTL      = 86400 * 7;   // 7-day download window
 const PDF_KV_PREFIX      = 'agpdf:';
@@ -39,6 +40,12 @@ export async function handlePdfGenerate(request, env, authCtx) {
   if (!isRealUser(authCtx)) {
     return jsonResponse({ error: 'Authentication required' }, 401);
   }
+  // Marketed as a CISO-grade, board-ready deliverable (PRO+ per the pricing
+  // page), but this only ever checked login, not plan — any FREE signup could
+  // generate it. Same PDF_REPORTS gate already used correctly elsewhere
+  // (STIX/SIEM exports).
+  const gate = await featureGate(env.DB, authCtx, FEATURES.PDF_REPORTS);
+  if (gate) return gate;
   try {
     const body = await request.json();
     // org_id is always the caller's own tenant (authCtx.org_id, uniquely
@@ -116,7 +123,17 @@ export async function handlePdfGenerate(request, env, authCtx) {
 // GET /api/ai-governance/pdf/:token
 // Returns print-ready HTML. ?preview=1 adds screen styling; otherwise print-optimised.
 // ─────────────────────────────────────────────────────────────────────────────
-export async function handlePdfDownload(request, env, token) {
+export async function handlePdfDownload(request, env, token, authCtx) {
+  // Previously took no authCtx at all — access was a bare possession-of-token
+  // check (a crypto.randomUUID() in the URL). This report can contain a real
+  // org's AI model inventory, risk scores, and compliance gaps, so a leaked
+  // link (forwarded, logged, in a referrer header) let anyone pull it with no
+  // login. Requires a real, logged-in caller — not scoped to the exact
+  // generating user, since a "share this with the board" link pattern is a
+  // plausible legitimate use this doesn't need to break.
+  if (!isRealUser(authCtx)) {
+    return new Response('Authentication required.', { status: 401, headers: { 'Content-Type': 'text/plain' } });
+  }
   try {
     const payload = await env.KV.get(`${PDF_KV_PREFIX}${token}`, 'json');
     if (!payload) {
@@ -525,6 +542,13 @@ ${preview ? `<script>
 function buildFrameworkSection(fwId, meta, models, assessment, govScore) {
   const statusColor = govScore >= 80 ? '#2E7D32' : govScore >= 60 ? '#E65100' : '#B71C1C';
   const statusLabel = govScore >= 80 ? 'COMPLIANT' : govScore >= 60 ? 'PARTIAL' : 'NON-COMPLIANT';
+  // Referenced by the NIST_CSF branch below. All six branches are template
+  // literals inside one object literal, so every one of them is evaluated on
+  // every call regardless of which fwId was actually requested — this was
+  // never in scope here (only buildReportHtml had a same-named local),
+  // throwing ReferenceError: totalModels is not defined on every single call,
+  // for every framework, unconditionally (not just when NIST_CSF is picked).
+  const totalModels = models.length;
 
   const frameworkContent = {
     EU_AI_ACT: `
