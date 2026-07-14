@@ -1,20 +1,32 @@
 /**
  * CYBERDUDEBIVASH AI Security Hub — API Key Auth Middleware
- * Tier system: FREE (5 req/day) | PRO (500/day) | ENTERPRISE (unlimited)
+ * Tier system: FREE | STARTER | PRO | ENTERPRISE | MSSP
  * Keys resolved from TWO stores (additive, KV-first):
  *   1. Cloudflare KV  apikey:{key} → JSON config (subscription/Stripe-provisioned)
  *   2. D1 api_keys (SHA-256 hashed) → self-serve keys generated via POST /api/keys
  * IP fallback for keyless FREE tier access
  */
 
-import { resolveApiKeyFromDB } from '../auth/apiKeys.js';
+import { resolveApiKeyFromDB, TIER_LIMITS } from '../auth/apiKeys.js';
 import { resolveApiKey as resolveGrowthApiKey } from '../services/apiRevenueEngine.js';
 
 // ─── Tier Definitions ────────────────────────────────────────────────────────
+// Derived from TIER_LIMITS (auth/apiKeys.js) — the platform's one
+// authoritative entitlement table — instead of a second, independently
+// maintained copy. This object previously hardcoded its own FREE/PRO/
+// ENTERPRISE numbers and never gained STARTER/MSSP entries when those tiers
+// were added to TIER_LIMITS, so middleware/rateLimit.js's `TIERS[tier] ||
+// TIERS.FREE` lookup silently rate-limited STARTER/MSSP customers (JWT/IP
+// auth path — API-key callers go through enforceQuota -> TIER_LIMITS instead
+// and were unaffected) to FREE's 5/day, 2/min burst across the core scan
+// pipeline (index.js runSyncPipeline) and 5 intel handler files. Deriving
+// from TIER_LIMITS fixes every call site with no changes needed elsewhere.
 export const TIERS = {
-  FREE:       { daily_limit: 5,    burst_per_min: 2,  priority: 0, label: 'Free'       },
-  PRO:        { daily_limit: 500,  burst_per_min: 20, priority: 1, label: 'Pro'        },
-  ENTERPRISE: { daily_limit: -1,   burst_per_min: 60, priority: 2, label: 'Enterprise' },
+  FREE:       { daily_limit: TIER_LIMITS.FREE.daily_limit,       burst_per_min: TIER_LIMITS.FREE.burst_per_min,       priority: 0, label: 'Free'       },
+  STARTER:    { daily_limit: TIER_LIMITS.STARTER.daily_limit,    burst_per_min: TIER_LIMITS.STARTER.burst_per_min,    priority: 1, label: 'Starter'    },
+  PRO:        { daily_limit: TIER_LIMITS.PRO.daily_limit,        burst_per_min: TIER_LIMITS.PRO.burst_per_min,        priority: 2, label: 'Pro'        },
+  ENTERPRISE: { daily_limit: TIER_LIMITS.ENTERPRISE.daily_limit, burst_per_min: TIER_LIMITS.ENTERPRISE.burst_per_min, priority: 3, label: 'Enterprise' },
+  MSSP:       { daily_limit: TIER_LIMITS.MSSP.daily_limit,       burst_per_min: TIER_LIMITS.MSSP.burst_per_min,       priority: 4, label: 'MSSP'       },
 };
 
 export const UPGRADE_URL   = 'https://cyberdudebivash.in/#pricing';
