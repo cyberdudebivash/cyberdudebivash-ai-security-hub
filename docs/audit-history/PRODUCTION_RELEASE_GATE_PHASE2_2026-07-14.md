@@ -1,8 +1,8 @@
 # Production Release Gate — Phase II: Subscription Integrity & Revenue Protection
 
-**Date:** 2026-07-14
+**Date:** 2026-07-14 (post-merge verification addendum appended same day)
 **Scope:** Full repository validation of the subscription entitlement lifecycle (H5) and subscription plan validation (H8), following Phase I's release-gate validation of PRs #240–#244 (server-side pricing, marketplace GST invoicing, proposal authorization, PayPal validation, uptime logging).
-**Status:** H5 and H8 fixes implemented, tested, and opened as PRs #245 and #246 (a third, unrelated authorization finding surfaced during this trace). Not yet merged as of this report.
+**Status:** PR #245 (H5+H8) and PR #246 (Revenue Intelligence admin gate) are both **merged to `main`** (`d4db0eee`, `04c6dd1d`) and **deployed** (Cloudflare Deploy workflow run `29364632745` succeeded against `04c6dd1d`). Independently re-verified post-merge — see "Post-Merge Verification" addendum at the end of this document.
 
 ---
 
@@ -10,7 +10,7 @@
 
 **RELEASE GATE: PASS WITH MINOR RISKS.**
 
-Both flagged risks — H5 (subscription tier integrity) and H8 (subscription plan validation) — were **Verified** as real, live defects through full repository trace, not assumed from prior documentation. Both are now fixed, tested (293 files / 3054 tests passing), and awaiting merge in PR #245. A third, unrelated but severe finding (an unauthenticated internal revenue dashboard) was discovered during the same trace and fixed separately in PR #246.
+Both flagged risks — H5 (subscription tier integrity) and H8 (subscription plan validation) — were **Verified** as real, live defects through full repository trace, not assumed from prior documentation. Both are now fixed, tested, **merged, and deployed to production** (PR #245: 293 files / 3054 tests passing at merge time). A third, unrelated but severe finding (an unauthenticated internal revenue dashboard) was discovered during the same trace and fixed separately in PR #246 — also merged and deployed (293 files / 3063 tests at merge time). Combined on `main` post-merge: 294 files / 3075 tests, independently re-run and confirmed 0 failures.
 
 No scenario was found where a customer using the **live, shipped checkout flow** can pay and fail to receive their purchased subscription tier. The one confirmed "charged, zero entitlement" defect (H5's System B checkout) was on an endpoint confirmed unreachable from any shipped frontend page — real but contained. H8's defect (System A, the live checkout) was reachable by direct API call, even though no legitimate frontend traffic ever triggered it. Both are now closed.
 
@@ -216,8 +216,30 @@ Per explicit instruction, these are kept separate from engineering work. Both ar
 - One additional live, severe finding (exposed revenue dashboard) was found and fixed during the same trace, in its own PR, per governance policy.
 - The "minor risks" preventing a clean PASS are: (a) a documented, contained (zero current traffic) pricing inconsistency in the tier system this pass just partially fixed, requiring a product decision rather than a code fix; (b) confirmed, pre-existing structural gaps in renewal/cancellation automation that are explicitly out of scope for a "no new feature work" pass and were never claimed to be fixed here; (c) a handful of Medium/Low severity drift and dead-code findings, each independently small, documented, and queued for their own future PRs per "one production problem per PR."
 
-**Recommended next engineering milestone:** land PR #245 and PR #246, then take up — in order of the register above — the fourth rate-limit table reconciliation (High #2) and the proposal-pricing-attribution bug (Medium #5), each as its own single-root-cause PR. The renewal-automation and cancellation-enforcement gaps (High #3, #4) warrant a scoped feature proposal to the platform owner rather than an engineering-initiated PR, given their size and the explicit "no new feature work" boundary of this pass.
+**Recommended next engineering milestone:** PR #245 and PR #246 are merged and deployed. Take up — in order of the register above — the fourth rate-limit table reconciliation (High #2) and the proposal-pricing-attribution bug (Medium #5), each as its own single-root-cause PR. The renewal-automation and cancellation-enforcement gaps (High #3, #4) warrant a scoped feature proposal to the platform owner rather than an engineering-initiated PR, given their size and the explicit "no new feature work" boundary of this pass.
 
 ---
 
-*Cross-references: `COMMERCIAL_RISK_AUDIT_2026-07-14.md`, `ENTERPRISE_COMMERCIAL_PRODUCT_REGISTRY_2026-07-14.md`, `SUBSCRIPTION_REGISTRY_2026-07-14.md` (companion document, full per-tier table), PR #240–#244 (Phase I), PR #245 (H5/H8), PR #246 (Revenue Intelligence admin gate).*
+## Post-Merge Verification (2026-07-14, same-day follow-up session)
+
+Performed after a usage-limit interruption of the session that opened PR #245/#246. Per governance policy, verified against the repository and GitHub API directly rather than trusting this document's own prior self-report.
+
+| Check | Result |
+|---|---|
+| PR #245 state | ✅ `merged: true`, merged 2026-07-14T20:03:44Z, commit `d4db0eee`. Zero unresolved review threads (the one CodeQL comment — incomplete URL substring check in a test's mock fetch — is `is_resolved: true`, `is_outdated: true`). |
+| PR #246 state | ✅ `merged: true`, merged 2026-07-14T20:07:35Z, commit `04c6dd1d`. Zero review threads. |
+| CI on both PRs | ✅ All check runs `completed`/`success`, including `CI Gate (All Required Jobs)` and `CodeQL`, on both PRs. |
+| Open PRs remaining | ✅ Zero — `list_pull_requests(state=open)` returns an empty list. |
+| `main` synchronization | ✅ Local checkout, `origin/main`, and this session's working branch all resolve to the identical commit `04c6dd1d`. No divergence, no stale unmerged commits. |
+| Deployment | ✅ `Deploy to Cloudflare` workflow run `29364632745` for head commit `04c6dd1d` — `completed`/`success`. |
+| Fix presence in code (direct grep, not PR-description trust) | ✅ `GRANTABLE_SUBSCRIPTION_PLANS` gate present and enforced at all 3 call sites in `workers/src/handlers/payments.js` (order creation, verify-payment defense-in-depth, webhook fallback grant). ✅ `TIER_LIMITS[tierKey]` guard present in `handleSubscriptionCheckout` (`subscriptionPaywallEngine.js`). ✅ `requireAdmin()` gate present on all 5 previously-open routes in `revenueIntelligence.js`. |
+| Regression suite (independent re-run) | ✅ Clean `npm ci` + `npx vitest run` on current `main`: **294 files / 3075 tests, 0 failed, 0 skipped.** Reconciles exactly with the two PRs' independently-reported deltas (292 baseline + 2 new test files + 33 new tests = 294/3075). |
+| Documentation | ✅ This document and `SUBSCRIPTION_REGISTRY_2026-07-14.md` updated/confirmed current; no new document created (living-document convention). |
+
+**Observation (not a production defect, no action taken):** the repository carries roughly 90 other `claude/*` branches from prior sessions' work, most already reflected in `main` via merged history and some possibly abandoned exploration. Branch deletion is a destructive, hard-to-reverse operation outside this session's scope (subscription integrity / H5-H8) and was not performed; flagged for the repository owner's discretion, not queued as an engineering task.
+
+**Conclusion: no change to the release gate decision.** PASS WITH MINOR RISKS is reconfirmed with fresh, independent evidence rather than carried forward on trust.
+
+---
+
+*Cross-references: `COMMERCIAL_RISK_AUDIT_2026-07-14.md`, `ENTERPRISE_COMMERCIAL_PRODUCT_REGISTRY_2026-07-14.md`, `SUBSCRIPTION_REGISTRY_2026-07-14.md` (companion document, full per-tier table), PR #240–#244 (Phase I), PR #245 (H5/H8, merged `d4db0eee`), PR #246 (Revenue Intelligence admin gate, merged `04c6dd1d`).*
