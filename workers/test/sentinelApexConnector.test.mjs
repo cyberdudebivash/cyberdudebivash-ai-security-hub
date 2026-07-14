@@ -94,9 +94,10 @@ const SENTINEL_APEX_JSON = {
 
 function stubFetch() {
   return vi.fn(async (url) => {
-    const u = String(url);
     const json = (o) => ({ ok: true, headers: { get: () => 'application/json' }, json: async () => o, text: async () => JSON.stringify(o) });
-    if (u.includes('intel.cyberdudebivash.com')) return json(SENTINEL_APEX_JSON);
+    let host = '';
+    try { host = new URL(String(url)).hostname; } catch {}
+    if (host === 'intel.cyberdudebivash.com') return json(SENTINEL_APEX_JSON);
     return { ok: false, headers: { get: () => '' }, json: async () => ({}), text: async () => '' };
   });
 }
