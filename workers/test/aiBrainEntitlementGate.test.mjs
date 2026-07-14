@@ -72,6 +72,46 @@ describe('/api/ai/forecast — subscription gate (was: open bypass)', () => {
   });
 });
 
+describe('/api/ai-security/redteam/* — subscription gate (was: zero enforcement)', () => {
+  // handlers/aiRedTeam.js's four routes checked only `authCtx?.userId` — any
+  // FREE signup got unlimited access to a capability priced/marketed as
+  // premium (prompt-injection, jailbreak, agent-takeover engagements, MITRE
+  // ATLAS campaigns). Gated the same way /api/ai/simulate already was.
+  const engageBody = JSON.stringify({ target_model: 'gpt-4o' });
+  function postRT(path, body) {
+    return new Request(`https://cyberdudebivash.in${path}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body,
+    });
+  }
+
+  it('anonymous FREE caller is blocked from starting an engagement (402 ERR_PLAN_REQUIRED)', async () => {
+    const res = await worker.fetch(postRT('/api/ai-security/redteam/engage', engageBody), baseEnv(), ctxStub());
+    expect(res.status).toBe(402);
+    const body = await res.json();
+    expect(body.code).toBe('ERR_PLAN_REQUIRED');
+    expect(body.required_plan).toBe('PRO');
+    expect(body.engagement_id).toBeUndefined();
+  });
+
+  it('anonymous FREE caller is blocked from submitting an attack transcript', async () => {
+    const res = await worker.fetch(postRT('/api/ai-security/redteam/rt_test/attack', JSON.stringify({ attack_type: 'jailbreak', test_id: 'JB-001', target_response: 'x' })), baseEnv(), ctxStub());
+    expect(res.status).toBe(402);
+    expect((await res.json()).code).toBe('ERR_PLAN_REQUIRED');
+  });
+
+  it('anonymous FREE caller is blocked from reading a report', async () => {
+    const res = await worker.fetch(new Request('https://cyberdudebivash.in/api/ai-security/redteam/rt_test/report'), baseEnv(), ctxStub());
+    expect(res.status).toBe(402);
+    expect((await res.json()).code).toBe('ERR_PLAN_REQUIRED');
+  });
+
+  it('anonymous FREE caller is blocked from reading engagement status', async () => {
+    const res = await worker.fetch(new Request('https://cyberdudebivash.in/api/ai-security/redteam/rt_test'), baseEnv(), ctxStub());
+    expect(res.status).toBe(402);
+    expect((await res.json()).code).toBe('ERR_PLAN_REQUIRED');
+  });
+});
+
 describe('/api/ai/analyze — intentionally NOT PRO-gated', () => {
   it('is not blocked by the PRO gate (analyze is STARTER-tier; must not 402 on plan)', async () => {
     const res = await worker.fetch(post('/api/ai/analyze'), baseEnv(), ctxStub());

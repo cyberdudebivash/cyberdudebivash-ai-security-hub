@@ -7749,16 +7749,28 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   }
 
   // ── v28: AI RED TEAM PLATFORM (PILLAR 3) ──────────────────────────────────
+  // Was gated on login only — any FREE signup got unlimited access to a
+  // capability priced/marketed as premium (prompt-injection, jailbreak,
+  // agent-takeover engagements, MITRE ATLAS campaigns). Gated the same way
+  // /api/ai/simulate already correctly is.
   if (path === '/api/ai-security/redteam/engage' && method === 'POST') {
+    const gate = await gateAIBrainFeature(request, env, 'ai_simulate');
+    if (gate) return gate;
     return handleRedTeamEngage(request, env, authCtx);
   }
   if (path.startsWith('/api/ai-security/redteam/') && path.endsWith('/attack') && method === 'POST') {
+    const gate = await gateAIBrainFeature(request, env, 'ai_simulate');
+    if (gate) return gate;
     return handleRedTeamAttack(request, env, authCtx);
   }
   if (path.startsWith('/api/ai-security/redteam/') && path.endsWith('/report')) {
+    const gate = await gateAIBrainFeature(request, env, 'ai_simulate');
+    if (gate) return gate;
     return handleRedTeamReport(request, env, authCtx);
   }
   if (path.startsWith('/api/ai-security/redteam/') && method === 'GET') {
+    const gate = await gateAIBrainFeature(request, env, 'ai_simulate');
+    if (gate) return gate;
     return handleGetRedTeamEngagement(request, env, authCtx);
   }
 
