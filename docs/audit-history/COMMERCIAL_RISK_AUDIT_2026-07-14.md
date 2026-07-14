@@ -46,7 +46,14 @@ sales-assisted White-Label package, and an owner-only enterprise-deal SKU). The 
 false claim) — the actual gap is that the same ledger is structurally incapable of ever honoring the lower
 30%/40% tiered margins its own self-serve onboarding flow separately promises Reseller/Silver partners; see
 updated H1/H2 for the full trace. Enterprise prospects are sold SSO/SAML that doesn't exist (SAML was never
-built).
+built). **Both `mssp.html`'s stale cards and a dead, latently-broken pricing SKU (`MSSP_PARTNER`) are now
+fixed (PR #236).** This pass also surfaced two new findings: H7, a fourth MSSP partner-program description
+(per-sale commission, usage-metered billing, an OEM tier) living in an internal-only partner dashboard that
+matches no backend code anywhere — real intent Not Verified; and H8, the general validation gap
+`MSSP_PARTNER` was one instance of — `handleCreateOrder`'s subscription module has no allow-list on the
+client-supplied plan, unlike its sibling `package` module, which already validates correctly — currently
+also affecting one other unsold product (`ENTERPRISE_SOC`). Neither H7 nor H8 is implemented; both need a
+decision before any further code or content changes.
 
 **Revenue impact:** At minimum, an under-charging bug on Starter (finding C4) and a fully unenforced
 premium AI Red Team product (C3) are leaving money on the table right now. The parallel, much-higher-priced
@@ -308,6 +315,39 @@ policy decision (which number the business actually wants to honor), not the imp
 Low for either direction; flagged for approval rather than implemented here since it changes what real
 partners are actually paid.
 
+**Commercial gap analysis — every location a partner/referral commission percentage is defined or used**
+(requested explicitly before any implementation; no code changed by this inventory):
+
+| # | Program | Where defined | Percentage(s) | Actually paid? |
+|---|---|---|---|---|
+| 1 | MSSP self-serve onboarding tiers (Reseller/Silver/Gold) | `services/globalScale.js` `MSSP_TIERS`, consumed by `handlers/msspOnboardingHandler.js` | 30% / 40% / 50% | **No** — persisted to `mssp_partners.margin_pct` / `mssp_onboarding_partners.margin_pct`, a column `recordRevenueShare()` never reads |
+| 2 | MSSP revenue-share ledger (the actual payout) | `handlers/msspRevenue.js` `recordRevenueShare()`, `mssp_partners.partner_share_pct` | 60% (schema default, never overridden) | **Yes** — this is the code that actually runs on the Razorpay webhook path |
+| 3 | MSSP marketing copy | `frontend/mssp.html` (6 mentions of "60/40") | 60% | Matches #2, not #1 |
+| 4 | MSSP on-page revenue calculator | `frontend/mssp.html` `msspCalc()` | 35% / 40% / 45% (tier names: starter/professional/enterprise — match none of the above) | No backend connection at all — pure client-side decoration |
+| 5 | **Affiliate/referral program (a distinct, genuinely separate product from MSSP)** | `handlers/affiliateSystem.js` `TIERS` | AFFILIATE 10% (first-year only) / PARTNER 15% recurring / **RESELLER 20% recurring** / STRATEGIC 25% recurring + MDF | **Yes** — `calculateCommission()` runs inline inside `recordReferralConversion()` (real conversion-tracking), with its own ledger fields (`total_commission_earned_inr`, `pending_payout_inr`) and its own payout-request route (`POST /api/affiliate/payout/request` → `handleRequestPayout()`) |
+| 6 | Internal-only "MSSP Pricing Reference" (partner ops dashboard) | `frontend/mssp-command-center.html` (`data-auth-gate`d, marked "Do not share externally") | Reseller: "30% margin on all sales" (commission-per-sale model) · White Label: ₹9,999/mo + ₹0.50/API-call over 10k · OEM: custom, ₹1,00,000/yr minimum | Not verified — no backend implements per-sale commission tracking for a generic "Reseller" role, usage-metered billing at ₹0.50/call, or an OEM product anywhere found in this repo |
+
+**New observation from this inventory:** row 5 (`affiliateSystem.js`) is a real, independently-implemented,
+independently-paid commission program — referring *any* customer to *any* plan earns 10–25% depending on
+the referring party's own tier (AFFILIATE/PARTNER/RESELLER/STRATEGIC). This is not a duplicate of MSSP's
+revenue share (row 1/2) — it rewards bringing in new customers generally, not managing white-labeled MSSP
+clients specifically — but it reuses the tier name **"RESELLER" for a 20% recurring referral commission**,
+while MSSP's onboarding flow uses the same word "Reseller" for a **30% white-label-reselling margin** that's
+actually a different program with a different mechanic entirely. Two real, live, independently-paying
+commission engines share a tier name and disagree on what it pays. Whether this naming collision has ever
+confused a real partner is Not Verified (would need a live-environment check of support tickets/partner
+communications); the code-level fact of the collision is Verified.
+
+Row 6 is flagged as its own new finding — see **H7** below — rather than folded into this table's "which
+number is real" question, because unlike rows 1–4 (all real numbers for the same MSSP program), row 6
+describes payment *mechanics* (per-sale commission, usage-metered billing, OEM minimums) that don't exist
+in any backend code found, so it isn't clear it's describing the same commercial arrangement at all.
+
+**Per explicit instruction, no revenue-share or commission code, ledger, or onboarding copy was changed as
+part of this gap analysis.** This stops here pending an explicit, single-source-of-truth policy decision
+covering both the MSSP margin-vs-ledger mismatch above and the "Reseller" naming collision with the
+affiliate program.
+
 ### H3 — Enterprise tier advertises "SSO/SAML"; SAML does not exist
 **Confidence:** Verified (both the live claim and the implementation gap)
 
@@ -391,6 +431,73 @@ figure is sourced from this platform's own recent internal audits, not independe
   files; flagging for prioritization, not auto-implementing.
 - **Complexity:** High if consolidating; low if simply correcting documentation to describe what's
   actually true today.
+
+### H7 — A fourth, internal-only MSSP partner-program description matches no code anywhere (new, 2026-07-14 H1/H2 validation pass)
+**Confidence:** Verified (the content exists, is gated, and matches no backend implementation) ·
+Not Verified (whether it reflects a real informal/manual arrangement or is simply stale)
+
+- **Evidence:** `frontend/mssp-command-center.html` — the MSSP partner-ops dashboard, confirmed
+  session-gated per finding D12 — has a section explicitly titled "MSSP Pricing Reference," tagged
+  "INTERNAL PRICING," subtitled "Internal-only reference. Do not share externally without authorization."
+  It describes three partner types with mechanics found nowhere else in this repo: **Reseller** — "30%
+  margin on all sales... 30% commission on every sale" (a per-sale commission model, not the ₹14,999/mo
+  flat-fee Reseller tier `msspOnboardingHandler.js` actually sells); **White Label** — ₹9,999/mo base +
+  ₹0.50/API-call usage billing over 10,000/mo (no code anywhere implements per-call overage billing for
+  MSSP, and ₹9,999 is the *base account tier's* price, not White-Label's actual ₹49,999/mo elsewhere);
+  **OEM/Embedded** — "Custom pricing... minimum ₹1,00,000/year contract" (no OEM product, route, or price
+  table entry exists anywhere in `workers/`). The same numbers repeat in this page's status ticker.
+- **Why this isn't folded into H1/H2's "which number is real" tables:** H1/H2 involve multiple pages
+  quoting different numbers *for the same real, code-backed product*. This section describes payment
+  *mechanics* — per-sale commission tracking, usage-metered overage billing, a minimum-contract OEM
+  product — that don't exist in any handler, schema, or route this audit found. It cannot be assumed to be
+  "the same MSSP program, described with stale numbers" the way H1's `mssp.html` cards could be — it may
+  describe a genuinely different, informally-run (e.g., phone/email-negotiated, manually invoiced) side
+  arrangement the owner uses that was never meant to be code-backed, or it may be aspirational content
+  drafted before the real Reseller/Silver/Gold system was built and never reconciled. Repository evidence
+  cannot distinguish these.
+- **Business impact:** Low immediate risk — this is gated to logged-in partners/the owner, not public
+  marketing. But if a partner-facing account manager uses this "internal reference" while actually
+  negotiating with a partner, they would quote commission/billing mechanics the platform cannot currently
+  execute (no per-call billing meter, no per-sale commission ledger for a "Reseller" role, no OEM checkout).
+- **Recommended action:** Per this repo's governance policy, documenting the ambiguity rather than
+  guessing — confirm whether this internal reference describes (a) a real, informally-run program that
+  should be built into the platform, (b) stale content describing an abandoned earlier design that should
+  be replaced with the real Reseller/Silver/Gold + revenue-share ledger facts, or (c) something else. No
+  content changed in this pass.
+- **Complexity:** Unknown until (a)/(b)/(c) above is resolved — could range from a content-only fix to a
+  new billing feature (usage-metered overage) if the internal reference is meant to become real.
+
+### H8 — `handleCreateOrder`'s subscription module accepts any plan string with no allow-list, unlike its sibling `package` module (new, 2026-07-14 H1/H2 validation pass)
+**Confidence:** Verified
+
+- **Evidence:** `handlers/payments.js` `handleCreateOrder()` — for `module === 'package'`, an unrecognized
+  `product_id` is rejected outright: `if (!PACKAGE_PRICES[packageId]) return Response.json({ error:
+  'Invalid product_id', valid: Object.keys(PACKAGE_PRICES) }, { status: 400 })`. For `module ===
+  'subscription'`, the sibling branch has no equivalent check: `const planKey = (body.plan || target ||
+  'STARTER').toUpperCase(); price = SUBSCRIPTION_PRICES[planKey] || SUBSCRIPTION_PRICES['STARTER'];` — any
+  string silently prices as STARTER (₹999) instead of erroring, and a real Razorpay order is created and
+  payable for it.
+- **Then, on verify:** `handleVerifyPayment()`'s tier-grant step only activates a user/subscription record
+  when `['STARTER', 'PRO', 'ENTERPRISE', 'MSSP'].includes(plan)`. A payment made with any other `plan`
+  string completes (Razorpay captures the money, a `sub_session` KV entry is written, the customer likely
+  sees a "payment confirmed" response) but **no tier is ever granted** — the same payment-succeeds/
+  entitlement-fails pattern as finding C5, via a different code path.
+- **Concretely affects today:** `SUBSCRIPTION_PRICES.ENTERPRISE_SOC` (₹41,199/mo, "Autonomic Threat Intel
+  API") is priced in this same table but has **no frontend button anywhere** (`frontend/*.html` — zero
+  matches) — so, like the now-removed `MSSP_PARTNER`, it is only reachable via a direct API call, not
+  through any current customer flow. Not currently customer-facing, but structurally identical to the bug
+  this same pass found (and fixed) for `MSSP_PARTNER`.
+- **Business impact:** Low today (no discoverable UI path triggers it), but it's a live gap in a real
+  payment-verification endpoint, not a hypothetical — anyone who calls `/api/payments/create-order`
+  directly with an unrecognized or not-yet-wired `plan` value gets a real charge and no product.
+- **Recommended action:** Add the same allow-list validation the `package` branch already has —
+  reject unrecognized `plan` values at create-order time with a 400 and a `valid` list, matching the
+  existing, already-correct pattern one branch over — rather than silently defaulting to STARTER pricing
+  and later silently skipping the grant. This touches a live payment-verification code path, so it's
+  flagged for approval rather than implemented in this pass, per this repo's governance policy on
+  production-safety-sensitive changes.
+- **Complexity:** Low — the fix pattern already exists one branch away in the same function; the risk is
+  entirely in testing it doesn't regress real STARTER/PRO/ENTERPRISE/MSSP purchases, not in writing it.
 
 ---
 
@@ -478,7 +585,16 @@ policy, not bundled together:
 1. ~~C4 — `apiKeys.js` Starter price 499→999~~ — **Fixed, PR #232 (merged).**
 2. ~~M6 — `commercialPlatformHandler.js` `PLAN_PRICES.MSSP` 0→9999~~ — **Fixed, PR #236** (surfaced during
    this pass's H1/H2 validation; see updated H1 above). Full suite 283/283 files, 2963/2963 tests.
-3. M7 — `cyberBrain.js` upsell copy prices corrected to match `TIER_LIMITS`. Still open — out of scope for
+3. ~~H1 (partial) — `mssp.html`'s orphaned pricing cards (₹75,000/₹25,000) rewritten to match the real
+   Enterprise (₹4,999) and Gold (₹49,999) prices their own buttons charge~~ — **Fixed, PR #236.** New test:
+   `msspLandingPricingConsistency.test.mjs`, 6/6 pass.
+4. ~~H1 (partial) — dead `MSSP_PARTNER` (₹1,999) SKU removed from `lib/razorpay.js`
+   `SUBSCRIPTION_PRICES`~~ — **Fixed, PR #236**, after confirming (per explicit request) it was reachable
+   via direct API call but produced a no-op entitlement grant — see new finding H8, which the same
+   evidence surfaced and remains open (a different, currently-unsold product, `ENTERPRISE_SOC`, has the
+   identical latent gap). New test: `mssPartnerSkuRemoved.test.mjs`, 3/3 pass. Full suite after all four
+   fixes above: 285/285 files, 2972/2972 tests.
+5. M7 — `cyberBrain.js` upsell copy prices corrected to match `TIER_LIMITS`. Still open — out of scope for
    this pass (unrelated file/feature; recorded per scope-discipline policy rather than bundled in).
 
 **Needs a decision before implementation** (architectural, or the "right" answer depends on business
@@ -486,18 +602,30 @@ intent this audit can't infer):
 - H5 — what to do with the parallel `subscriptionPaywallEngine.js` system (delete / disable / reconcile).
 - H6 — whether to retire or actually wire up `PLAN_FEATURES`/`hasAccess()`.
 - C1 — what Enterprise's revenue-visibility perk was actually supposed to be, if anything.
-- H1/H2 — **narrowed by this pass's full backend/reachability trace** (see updated sections above). No
-  longer "which of 6 numbers is real" — four are real, distinct, already-consistent products. What's left
-  to decide: (a) how to rewrite `mssp.html`'s two orphaned pricing cards (₹75,000/₹25,000, content-only,
-  low complexity), (b) whether to remove the dead `MSSP_PARTNER` ₹1,999 razorpay.js entry, (c) whether the
-  real revenue-share ledger should start honoring the 30/40/50% tiered onboarding margins instead of its
-  current flat 60%-for-everyone default, or whether 60% flat is the intended policy and the tiered-margin
-  fields/calculator should be removed instead.
+- H1 — **the two orphaned-content items are now fixed (see above).** What's left: nothing further
+  identified this pass — the remaining four MSSP prices are distinct, real, already-consistent products.
+- H2 — **narrowed by this pass's full ledger trace and expanded gap analysis** (see updated section
+  above). Not "which of 5 numbers is real" — the 60% ledger default is confirmed real and live. What's
+  left to decide: (a) whether the ledger should start honoring the 30/40/50% tiered onboarding margins
+  instead of paying everyone a flat 60%, or whether 60% flat is intended policy and the tiered-margin
+  fields/calculator should be removed instead; (b) whether the affiliate program's "RESELLER" (20%
+  recurring referral commission) and MSSP's "Reseller" (30% white-label margin) naming collision needs
+  disambiguating; (c) whether `mssp-command-center.html`'s internal-only "MSSP Pricing Reference" (H7,
+  new) reflects a real program to build or stale content to replace.
+- H7 (new) — whether the internal MSSP Pricing Reference (per-sale commission, usage-metered billing, OEM
+  minimum) describes a real informal arrangement or stale/aspirational content never reconciled with the
+  real self-serve tiers.
+- H8 (new) — whether to add allow-list validation to `handleCreateOrder`'s subscription module (matching
+  the pattern its sibling `package` module already uses), closing the same payment-succeeds/entitlement-
+  fails gap for `ENTERPRISE_SOC` that was just fixed for `MSSP_PARTNER`. Low complexity, but touches a live
+  payment-verification path — flagged for approval rather than auto-implemented.
 - H3/H4 — whether to fix the SSO/SAML and uptime copy, or invest in making the claims true.
 
 **Needs a live-environment check before scoping further:**
 - C5 — confirm whether `provisioningEngine.js`'s broken insert is on the actual current checkout path.
 - H5 — confirm no non-frontend integration calls `/api/subscription/checkout`.
+- H7 — confirm with the platform owner whether the internal MSSP Pricing Reference reflects a real,
+  currently-honored partner arrangement.
 - D5/D15 — whether a real subscription renewal or live IdP round-trip has ever actually occurred.
 
 **Recommended immediate fixes for C2, C3, M4, M5, M12** — each self-contained and low-risk once
