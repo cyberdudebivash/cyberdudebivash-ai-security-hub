@@ -17,6 +17,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { handlePublicFeeds } from '../src/handlers/publicFeeds.js';
 import { handleReportDownload } from '../src/handlers/report.js';
+import { TIERS } from '../src/middleware/auth.js';
 
 function memKV() {
   const store = new Map();
@@ -95,10 +96,16 @@ describe('report links honor their promised expiry', () => {
 
 describe('published scan burst rates equal the enforced constants', () => {
   it('pricing cards state exactly what the middleware enforces', () => {
+    // Checks TIERS' actual runtime values rather than grepping middleware/auth.js's
+    // source text for a hardcoded literal — the prior source-regex approach could
+    // never have caught STARTER drifting (it was missing from TIERS entirely,
+    // silently falling back to FREE's rate; see CAP-PROD-002 rate-limit authority
+    // consolidation) since there was no literal "STARTER: {...burst_per_min: 5}"
+    // text to match in the first place. Testing the real value catches that class
+    // of gap instead of only confirming a number appears somewhere in the file.
     const html = readFileSync(new URL('../../frontend/index.html', import.meta.url), 'utf8');
-    const mw   = readFileSync(new URL('../src/middleware/auth.js',  import.meta.url), 'utf8');
-    for (const [tier, rate] of [['FREE', 2], ['PRO', 20], ['ENTERPRISE', 60]]) {
-      expect(mw).toMatch(new RegExp(`${tier}:\\s*\\{[^}]*burst_per_min:\\s*${rate}\\b`));
+    for (const [tier, rate] of [['FREE', 2], ['STARTER', 5], ['PRO', 20], ['ENTERPRISE', 60]]) {
+      expect(TIERS[tier].burst_per_min, `${tier}.burst_per_min`).toBe(rate);
     }
     expect(html).toContain('2 scans/min burst');
     expect(html).toContain('5 scans/min burst');
