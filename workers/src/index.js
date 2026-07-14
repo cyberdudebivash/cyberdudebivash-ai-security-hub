@@ -4597,16 +4597,17 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return withSecurityHeaders(withCors(new Response(null, { status: 204 }), request));
     }
 
-    // GET /api/revenue/dashboard — revenue analytics (ENTERPRISE only)
+    // GET /api/revenue/dashboard — platform-wide revenue analytics (owner/staff only)
+    //
+    // Was gated on "is the caller's own tier ENTERPRISE" — but the data
+    // returned (revenue_by_source/affiliate_performance/gumroad_licenses) is
+    // aggregated across every customer with zero scoping to the caller, so
+    // any customer who self-serve-purchased Enterprise (₹4,999/mo) could read
+    // the vendor's own confidential business metrics. Restricted to the same
+    // owner-only check used for every other internal dashboard in this file.
     if (path === '/api/revenue/dashboard' && method === 'GET') {
-      const authCtx = await resolveAuthV5(request, env);
-      if (!isRealUser(authCtx)) return withSecurityHeaders(withCors(unauthorized(), request));
-      if (authCtx.tier !== 'ENTERPRISE') {
-        return withSecurityHeaders(withCors(Response.json({
-          success: false, error: 'Revenue dashboard requires ENTERPRISE plan.',
-          code: 'ERR_ENTERPRISE_REQUIRED',
-        }, { status: 403 }), request));
-      }
+      const authCtx = await resolveAuthV5(request, env).catch(() => ({ tier: 'FREE' }));
+      if (!isOwner(authCtx, env)) return withSecurityHeaders(withCors(forbidden(), request));
       try {
         const days = parseInt(new URL(request.url).searchParams.get('days') || '30', 10);
         const cutoff = new Date(Date.now() - days * 86400000).toISOString();
