@@ -17,7 +17,7 @@
 import { createInvoice, issueLicense, verifyLicense, createPayPalOrder, capturePayPalOrder, runPaymentRecovery, buildRenewalQueue } from '../services/v24/billingEngine.js';
 import { scoreEnterpriseOpportunity, generateProposal } from '../services/v24/salesOS.js';
 import { SCAN_TIERS, createScanOrder, fulfillScanOrder, getScanOrderByToken, getScannerRevenue, getTrustCenterData, logUptimeCheck, seedReleaseNotes, getCEODashboard } from '../services/v24/platformEngine.js';
-import { createRazorpayRefund } from '../lib/razorpay.js';
+import { createRazorpayRefund, verifyPaymentSignature } from '../lib/razorpay.js';
 import { isOwner } from '../auth/middleware.js';
 import { logSystemError } from '../lib/errorLog.js';
 
@@ -60,9 +60,18 @@ export async function handleV24(request, env, authCtx, path, method) {
   // PHASE 1 — BILLING ENGINE
   // ══════════════════════════════════════════════════════════════════════
 
-  // POST /api/v24/billing/invoice/create
+  // POST /api/v24/billing/invoice/create — manual/back-office invoice issuance
+  // (e.g. for a payment received by bank transfer). Previously gated only to
+  // "any logged-in user," with payment_id optional and never verified —
+  // any authenticated customer, any tier, could self-mint a real,
+  // sequentially-numbered "paid" GST invoice for an arbitrary amount with no
+  // payment at all, and it fed the fabricated amount into revenue_streams
+  // (2026-07-14 commercial-integrity audit). No confirmed caller anywhere
+  // used self-service invoice creation via this route; every real payment
+  // flow in this codebase creates invoices from its OWN verify handler after
+  // its OWN payment verification, not through this generic HTTP route.
   if (path === '/api/v24/billing/invoice/create' && method === 'POST') {
-    if (!authCtx?.userId) return err('Authentication required', 401);
+    if (!isAdmin(authCtx)) return err('Admin required', 403);
     const body = await parseBody(request);
     if (!body.line_items?.length) return err('line_items required');
     const result = await createInvoice(db, {
@@ -91,11 +100,19 @@ export async function handleV24(request, env, authCtx, path, method) {
     return json({ success: true, invoices: rows.results || [] });
   }
 
-  // GET /api/v24/billing/invoice/:id
+  // GET /api/v24/billing/invoice/:id — previously had no ownership check at
+  // all (any authenticated, or even unauthenticated, caller who knew/guessed
+  // an invoice id could fetch it, including GSTIN/billing address/line
+  // items). Flagged as a known follow-up in PR #230's own notes and never
+  // fixed until now (2026-07-14 commercial-integrity audit). Scoped the same
+  // way GET /api/v24/billing/invoices (list) already correctly scopes: the
+  // owning customer, or staff.
   if (path.startsWith('/api/v24/billing/invoice/') && !path.includes('create') && method === 'GET') {
+    if (!authCtx?.userId) return err('Authentication required', 401);
     const invId = path.replace('/api/v24/billing/invoice/', '').split('/')[0];
     const inv = db ? await db.prepare(`SELECT * FROM invoices WHERE id=?`).bind(invId).first().catch(() => null) : null;
     if (!inv) return err('Invoice not found', 404);
+    if (inv.user_id !== authCtx.userId && !isAdmin(authCtx)) return err('Forbidden', 403);
     return json({ success: true, invoice: inv });
   }
 
@@ -237,13 +254,18 @@ export async function handleV24(request, env, authCtx, path, method) {
   // PHASE 2 — ENTERPRISE SALES OS
   // ══════════════════════════════════════════════════════════════════════
 
-  // POST /api/v24/sales/score
+  // POST /api/v24/sales/score — the scoring computation itself has no side
+  // effects and stays open, but the deal_id branch below writes to a real
+  // internal deal_pipeline record and previously had no auth check at all
+  // (2026-07-14 commercial-integrity audit) — any caller who knew/guessed a
+  // deal_id could overwrite its budget/compliance/risk fields.
   if (path === '/api/v24/sales/score' && method === 'POST') {
     const body = await parseBody(request);
     const score = scoreEnterpriseOpportunity(body);
 
     // Update deal if deal_id provided
     if (body.deal_id && db) {
+      if (!isAdmin(authCtx)) return err('Admin required', 403);
       await db.prepare(`
         UPDATE deal_pipeline SET
           opportunity_score    = ?,
@@ -268,9 +290,13 @@ export async function handleV24(request, env, authCtx, path, method) {
     return json({ success: true, scoring: score });
   }
 
-  // GET /api/v24/sales/pipeline
+  // GET /api/v24/sales/pipeline — internal deal data across every prospect,
+  // not scoped to the caller; previously any logged-in customer (any tier)
+  // could see the whole company's enterprise sales pipeline, budgets, and
+  // risk data (2026-07-14 commercial-integrity audit — same class as the
+  // already-fixed C1 finding for /api/revenue/dashboard).
   if (path === '/api/v24/sales/pipeline' && method === 'GET') {
-    if (!authCtx?.userId) return err('Authentication required', 401);
+    if (!isAdmin(authCtx)) return err('Admin required', 403);
     const rows = db ? await db.prepare(
       `SELECT *, opportunity_score, security_budget_inr, ai_adoption_level
        FROM deal_pipeline ORDER BY opportunity_score DESC, updated_at DESC LIMIT 100`
@@ -344,9 +370,11 @@ export async function handleV24(request, env, authCtx, path, method) {
     return new Response(prop.html_content, { headers: { 'Content-Type': 'text/html; charset=utf-8', ...CORS } });
   }
 
-  // GET /api/v24/proposals
+  // GET /api/v24/proposals — lists every enterprise proposal across every
+  // prospect company; previously any logged-in customer could see this
+  // (2026-07-14 commercial-integrity audit).
   if (path === '/api/v24/proposals' && method === 'GET') {
-    if (!authCtx?.userId) return err('Authentication required', 401);
+    if (!isAdmin(authCtx)) return err('Admin required', 403);
     const rows = db ? await db.prepare(
       `SELECT id, proposal_id, type, company, contact_email, value_inr, status, created_at, valid_until
        FROM proposals ORDER BY created_at DESC LIMIT 50`
@@ -354,8 +382,11 @@ export async function handleV24(request, env, authCtx, path, method) {
     return json({ success: true, proposals: rows.results || [] });
   }
 
-  // POST /api/v24/proposals/:id/send
+  // POST /api/v24/proposals/:id/send — previously had no auth check at all;
+  // any caller could flip any proposal's status by guessing/knowing its id
+  // (2026-07-14 commercial-integrity audit).
   if (path.match(/^\/api\/v24\/proposals\/[^/]+\/send$/) && method === 'POST') {
+    if (!isAdmin(authCtx)) return err('Admin required', 403);
     const propId = path.split('/')[4];
     if (db) {
       await db.prepare(`UPDATE proposals SET status='sent', sent_at=datetime('now'), updated_at=datetime('now') WHERE id=?`)
@@ -387,10 +418,21 @@ export async function handleV24(request, env, authCtx, path, method) {
     return json(result);
   }
 
-  // POST /api/v24/scanner/fulfill
+  // POST /api/v24/scanner/fulfill — previously had NO payment verification of
+  // any kind: it marked any caller-supplied order_id "paid" with an
+  // arbitrary payment_id string, no signature check at all (2026-07-14
+  // commercial-integrity audit) — a direct caller could self-issue an order
+  // via /scanner/order, mark it paid here, and pull the report for free via
+  // /scanner/report. Now requires and verifies a real Razorpay signature,
+  // matching the canonical pattern every other checkout handler in this
+  // codebase uses.
   if (path === '/api/v24/scanner/fulfill' && method === 'POST') {
     const body = await parseBody(request);
-    if (!body.order_id || !body.payment_id) return err('order_id and payment_id required');
+    if (!body.order_id || !body.payment_id || !body.razorpay_order_id || !body.razorpay_signature) {
+      return err('order_id, payment_id, razorpay_order_id, and razorpay_signature are required');
+    }
+    const sigValid = await verifyPaymentSignature(env, body.razorpay_order_id, body.payment_id, body.razorpay_signature);
+    if (!sigValid) return err('Payment signature verification failed', 400, 'INVALID_SIGNATURE');
     const result = await fulfillScanOrder(db, body.order_id, body.payment_id);
     return json(result);
   }
@@ -456,16 +498,20 @@ export async function handleV24(request, env, authCtx, path, method) {
   // PHASE 10 — CEO REVENUE COMMAND CENTER
   // ══════════════════════════════════════════════════════════════════════
 
-  // GET /api/v24/ceo/dashboard
+  // GET /api/v24/ceo/dashboard — real platform-wide MRR/ARR/revenue data;
+  // previously any logged-in customer (any tier) could read this. Same
+  // vulnerability class as the already-fixed C1 finding
+  // (GET /api/revenue/dashboard, PR #233) — that fix's exact gate is reused
+  // here (2026-07-14 commercial-integrity audit).
   if (path === '/api/v24/ceo/dashboard' && method === 'GET') {
-    if (!authCtx?.userId) return err('Authentication required', 401);
+    if (!isOwner(authCtx, env)) return err('Owner authorization required', 403);
     const data = await getCEODashboard(db, kv);
     return json(data);
   }
 
-  // GET /api/v24/ceo/revenue-streams
+  // GET /api/v24/ceo/revenue-streams — same issue as /ceo/dashboard above.
   if (path === '/api/v24/ceo/revenue-streams' && method === 'GET') {
-    if (!authCtx?.userId) return err('Authentication required', 401);
+    if (!isOwner(authCtx, env)) return err('Owner authorization required', 403);
     const period = new URL(request.url).searchParams.get('period') || new Date().toISOString().slice(0, 7);
     const rows = db ? await db.prepare(
       `SELECT * FROM revenue_streams WHERE period=? ORDER BY revenue_inr DESC`
