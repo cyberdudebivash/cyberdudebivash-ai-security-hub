@@ -41,6 +41,10 @@ describe('verify handler gates entitlement behind a valid signature', () => {
     expect(firstTierUpdate).toBeGreaterThan(rejectIdx); // tier upgrade happens only afterwards
   });
   it('only upgrades to a whitelisted tier (no arbitrary tier injection)', () => {
-    expect(src).toMatch(/\['STARTER',\s*'PRO',\s*'ENTERPRISE',\s*'MSSP'\]\.includes\(plan\)/);
+    // Consolidated into a shared GRANTABLE_SUBSCRIPTION_PLANS constant
+    // (2026-07-14 commercial-integrity audit, H8/H5) — same four literal
+    // values, now reused by handleCreateOrder's up-front plan validation too.
+    expect(src).toMatch(/const GRANTABLE_SUBSCRIPTION_PLANS\s*=\s*\['STARTER',\s*'PRO',\s*'ENTERPRISE',\s*'MSSP'\]/);
+    expect(src).toMatch(/GRANTABLE_SUBSCRIPTION_PLANS\.includes\(plan\)/);
   });
 });
