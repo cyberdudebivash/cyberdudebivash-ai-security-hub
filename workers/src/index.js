@@ -8836,9 +8836,13 @@ export default {
     // ── EVERY CRON FIRING: EOP 9-component health probe → seeds operational_history ──
     // This is the data source for /api/status, /api/uptime, and the ops dashboard.
     // Without this, operational_history is empty and the status page shows "unknown".
+    // The success case used to log a fixed, content-free "seeded" string on
+    // every one of the 5 cron schedules (~34 times/day) — pure noise next to
+    // the [CRON] Trigger: line already marking that this tick ran; the actual
+    // observability is the operational_history rows themselves, unaffected by
+    // removing this log line. Failures still log (2026-07-14 audit, Priority 5).
     ctx.waitUntil(
       handleHealthV2(new Request('https://internal/api/platform/health/v2', { method: 'GET' }), env)
-        .then(() => console.log('[CRON] EOP health probes: operational_history seeded'))
         .catch(e => console.error('[CRON] EOP health probe error:', e?.message))
     );
 
