@@ -374,7 +374,7 @@ export async function captureRevenueSnapshot(env) {
     const [mrr, todayRev, totalRev, subs] = await Promise.all([
       env.DB.prepare(`
         SELECT COALESCE(SUM(CASE plan
-          WHEN 'starter' THEN 499 WHEN 'pro' THEN 1499 WHEN 'enterprise' THEN 4999
+          WHEN 'starter' THEN 999 WHEN 'pro' THEN 1499 WHEN 'enterprise' THEN 4999
           ELSE 0 END), 0) as mrr
         FROM leads WHERE plan != 'free' AND status = 'active'
       `).first(),
@@ -442,7 +442,7 @@ export async function injectUpsell(env, responsePayload, authCtx) {
   if (['pro', 'enterprise'].includes(plan)) return responsePayload;
 
   const upgrades = {
-    free:    { to: 'starter', price: 499, discount: 299, msg: '🔒 Unlock full features — ₹499/mo', url: '/upgrade?plan=starter' },
+    free:    { to: 'starter', price: 999, discount: 299, msg: '🔒 Unlock full features — ₹999/mo', url: '/upgrade?plan=starter' },
     starter: { to: 'pro',     price: 1499,discount: 1199, msg: '⚡ Upgrade to PRO for SIEM export + API access', url: '/upgrade?plan=pro' },
   };
 

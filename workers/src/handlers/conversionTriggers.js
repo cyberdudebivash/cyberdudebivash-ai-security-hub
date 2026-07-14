@@ -212,9 +212,9 @@ function recommendUpgrade(currentPlan, behaviorMetrics) {
   const topTrigger = firedTriggers[0] || null;
 
   // ROI messaging for current user
-  const planPrices = { STARTER: 499, PRO: 1499, ENTERPRISE: 4999 };
+  const planPrices = { STARTER: 999, PRO: 1499, ENTERPRISE: 4999 };
   const nextPlan   = planOrder[currentIdx + 1];
-  const nextPrice  = planPrices[nextPlan] || 499;
+  const nextPrice  = planPrices[nextPlan] || 999;
   const breachRisk = 1000000; // conservative ₹10L breach exposure
   const roi        = Math.round(breachRisk / (nextPrice * 12));
 
@@ -537,7 +537,7 @@ export async function handleGetUrgency(request, env, authCtx = {}) {
   }
 
   // ── Recommended upgrade + pricing ─────────────────────────────────────────
-  const PLAN_NEXT = { FREE: { plan: 'STARTER', price_inr: 499, usd: 7 }, STARTER: { plan: 'PRO', price_inr: 1499, usd: 19 }, PRO: { plan: 'ENTERPRISE', price_inr: 4999, usd: 65 }, ENTERPRISE: null };
+  const PLAN_NEXT = { FREE: { plan: 'STARTER', price_inr: 999, usd: 14 }, STARTER: { plan: 'PRO', price_inr: 1499, usd: 19 }, PRO: { plan: 'ENTERPRISE', price_inr: 4999, usd: 65 }, ENTERPRISE: null };
   const next = PLAN_NEXT[tier] || null;
 
   return ok(request, {

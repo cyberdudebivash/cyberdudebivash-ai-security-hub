@@ -19,7 +19,7 @@ export const REGION_CONFIG = {
 
 // ── Pricing by region (INR base × region multiplier) ─────────────────────────
 const PRICING_TIERS = {
-  starter:    { INR: 499,   USD: 9,    GBP: 7,   EUR: 8,   SGD: 12,  AUD: 14,  CAD: 12,  AED: 33,  JPY: 1300 },
+  starter:    { INR: 999,   USD: 18,   GBP: 14,  EUR: 16,  SGD: 24,  AUD: 28,  CAD: 24,  AED: 66,  JPY: 2600 },
   pro:        { INR: 1499,  USD: 25,   GBP: 19,  EUR: 23,  SGD: 34,  AUD: 38,  CAD: 34,  AED: 92,  JPY: 3800 },
   enterprise: { INR: 4999,  USD: 79,   GBP: 62,  EUR: 72,  SGD: 108, AUD: 122, CAD: 108, AED: 290, JPY: 11800 },
 };

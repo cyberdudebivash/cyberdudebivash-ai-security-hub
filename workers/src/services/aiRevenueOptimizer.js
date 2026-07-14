@@ -15,7 +15,7 @@ const UPGRADE_PATHS = {
     price:      499,
     discount_offer: 299,   // ₹299 for first month
     headline:   'Unlock Full Threat Intelligence',
-    cta:        'Upgrade to STARTER — ₹499/mo',
+    cta:        'Upgrade to STARTER — ₹999/mo',
     triggers:   ['scan_limit_hit', 'feature_blocked', 'third_visit'],
   },
   starter: {

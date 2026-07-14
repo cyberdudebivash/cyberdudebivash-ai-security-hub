@@ -104,7 +104,7 @@ npx wrangler deploy
 | **CISO Hub V3** | Real D1 metrics, IBM Security ROI, live ROI card in Executive Dashboard |
 | **Scan Engine** | Enterprise intelligence wired into domain scan, EPSS scoring |
 | **Revenue Engine** | `SECURITY_HUB_KV` binding fix (was `CDB_KV` — all manual payments were broken) |
-| **Pricing** | Backend aligned to frontend: STARTER ₹499 · PRO ₹1,499 · ENTERPRISE ₹4,999 |
+| **Pricing** | Backend aligned to frontend: STARTER ₹999 · PRO ₹1,499 · ENTERPRISE ₹4,999 |
 | **API consistency** | `handleGetPlansV20` + `handleSubscribeV20` wrapped in `ok()` envelope |
 
 ---

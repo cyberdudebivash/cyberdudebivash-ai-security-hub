@@ -11,14 +11,14 @@ const UPGRADE_PATH = {
 };
 
 // ── Revenue per upgrade ──────────────────────────────────────────────────────
-const PLAN_MRR = { free: 0, starter: 499, pro: 1499, enterprise: 4999 };
+const PLAN_MRR = { free: 0, starter: 999, pro: 1499, enterprise: 4999 };
 
 // ── A/B pricing variants ─────────────────────────────────────────────────────
 export const PRICING_VARIANTS = {
   A: {
     id:   'A',
     name: 'Standard',
-    starter:    { monthly: 499,  annual: 4990  },
+    starter:    { monthly: 999,  annual: 4990  },  // NOTE: annual left as pre-repricing value — needs business review (2026-07-14 Starter repricing)
     pro:        { monthly: 1499, annual: 14990 },
     enterprise: { monthly: 4999, annual: 47990 },
     cta_color:  '#2563eb',
@@ -27,7 +27,7 @@ export const PRICING_VARIANTS = {
   B: {
     id:   'B',
     name: 'Value-Anchored',
-    starter:    { monthly: 599,  annual: 4990  },  // Higher monthly, same annual = nudge to annual
+    starter:    { monthly: 999,  annual: 4990  },  // Higher monthly, same annual = nudge to annual — NOTE: annual left as pre-repricing value, needs business review
     pro:        { monthly: 1799, annual: 14990 },
     enterprise: { monthly: 5999, annual: 47990 },
     cta_color:  '#7c3aed',
@@ -37,7 +37,7 @@ export const PRICING_VARIANTS = {
   C: {
     id:   'C',
     name: 'Urgency',
-    starter:    { monthly: 499,  annual: 3990  },  // Aggressive annual discount
+    starter:    { monthly: 999,  annual: 3990  },  // Aggressive annual discount — NOTE: annual left as pre-repricing value, needs business review
     pro:        { monthly: 1499, annual: 11990 },
     enterprise: { monthly: 4999, annual: 39990 },
     cta_color:  '#dc2626',

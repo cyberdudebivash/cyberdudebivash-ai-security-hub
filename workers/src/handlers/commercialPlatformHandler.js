@@ -78,7 +78,7 @@ const PLAN_NAMES = {
   ENTERPRISE: 'Enterprise', MSSP: 'MSSP Partner',
   OWNER: 'Platform Owner', ADMIN: 'Administrator',
 };
-const PLAN_PRICES = { FREE: 0, STARTER: 499, PRO: 1499, ENTERPRISE: 4999, MSSP: 0 };
+const PLAN_PRICES = { FREE: 0, STARTER: 999, PRO: 1499, ENTERPRISE: 4999, MSSP: 0 };
 
 const TIER_QUOTAS = {
   FREE:       { scans: 50,  api_keys: 2,  seats: 1,  api_calls_day: 5,   storage_gb: 0.1 },
@@ -657,7 +657,7 @@ export async function handleCommercialObservability(request, env, authCtx) {
   usersByTier.forEach(r => { tierMap[r.tier || 'FREE'] = r.cnt; });
   const totalUsers     = Object.values(tierMap).reduce((s, v) => s + v, 0);
   const paidUsers      = (tierMap['STARTER'] || 0) + (tierMap['PRO'] || 0) + (tierMap['ENTERPRISE'] || 0) + (tierMap['MSSP'] || 0);
-  const mrrEstimateINR = (tierMap['STARTER'] || 0) * 499 + (tierMap['PRO'] || 0) * 1499 + (tierMap['ENTERPRISE'] || 0) * 4999;
+  const mrrEstimateINR = (tierMap['STARTER'] || 0) * 999 + (tierMap['PRO'] || 0) * 1499 + (tierMap['ENTERPRISE'] || 0) * 4999;
 
   return Response.json({
     success:   true,

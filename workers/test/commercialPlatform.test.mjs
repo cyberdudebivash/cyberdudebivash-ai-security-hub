@@ -774,10 +774,10 @@ describe('P15.9 handleCommercialObservability', () => {
     expect(d).toHaveProperty('commercial_observability');
   });
 
-  it('72. MRR correctly computed: 20*499 + 10*1499 + 3*4999 = 39967', async () => {
+  it('72. MRR correctly computed: 20*999 + 10*1499 + 3*4999 = 49967', async () => {
     const r = await handleCommercialObservability(getReq('/api/commercial/observability'), makeEnv(), OWNER_CTX);
     const d = await r.json();
-    const expected = 20 * 499 + 10 * 1499 + 3 * 4999;
+    const expected = 20 * 999 + 10 * 1499 + 3 * 4999;
     expect(d.commercial_observability.revenue.mrr_estimate_inr).toBe(expected);
   });
 

@@ -92,8 +92,8 @@ async function buildRevenueMetrics(db) {
   } catch (_) {}
 
   // ── MRR calculation — canonical INR pricing (from subscriptionPaywallEngine.js SSOT)
-  // STARTER: ₹499  PRO: ₹1,499  ENTERPRISE: ₹4,999  MSSP: ₹9,999
-  const STARTER_PRICE_INR    = 499;
+  // STARTER: ₹999  PRO: ₹1,499  ENTERPRISE: ₹4,999  MSSP: ₹9,999
+  const STARTER_PRICE_INR    = 999;
   const PRO_PRICE_INR        = 1499;
   const ENTERPRISE_PRICE_INR = 4999;
   const MSSP_PRICE_INR       = 9999;

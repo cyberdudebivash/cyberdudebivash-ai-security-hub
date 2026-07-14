@@ -50,8 +50,8 @@ describe('computeMRR — reads users.tier (real column), not leads.plan (never w
       ]),
     };
     const result = await computeMRR(env);
-    // 1*499 + 2*1499 + 1*4999 + 1*9999 = 17995
-    expect(result.mrr).toBe(499 + 2 * 1499 + 4999 + 9999);
+    // 1*999 + 2*1499 + 1*4999 + 1*9999 = 18995
+    expect(result.mrr).toBe(999 + 2 * 1499 + 4999 + 9999);
     expect(result.arr).toBe(result.mrr * 12);
     expect(result.by_plan.pro.customers).toBe(2);
     expect(result.by_plan.mssp.customers).toBe(1);

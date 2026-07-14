@@ -168,7 +168,7 @@ export async function verifyJwt(
 
 // ── Tier pricing map (paise) ──────────────────────────────────
 export const TIER_PRICE_PAISE: Record<string, number> = {
-  starter:    49900,    // ₹499/mo
+  starter:    99900,    // ₹999/mo
   pro:       149900,    // ₹1499/mo
   enterprise: 499900,   // ₹4999/mo
   mssp:       999900,   // ₹9999/mo

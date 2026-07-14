@@ -19,7 +19,7 @@ let b = await r.json();
 ok(r.status===200, 'anonymous scan returns 200');
 ok(b.tier==='free' && b.gated===true, 'anonymous => free + gated');
 ok(b.findings.length===3, 'free reveals exactly 3 findings');
-ok(b.locked_count>=1 && b.upgrade.unlock_price.includes('499'), 'free locks rest behind ₹499');
+ok(b.locked_count>=1 && b.upgrade.unlock_price.includes('999'), 'free locks rest behind ₹999');
 ok(b.grade && b.severity_counts, 'free still shows grade + severity counts');
 
 // 2. authCtx FREE (uppercase, as resolveAuthV5 emits) => gated
@@ -27,7 +27,7 @@ r = await handleVibeCodeScan(mkReq({code:VULN}), {}, {authenticated:false, tier:
 b = await r.json();
 ok(b.gated===true, 'authCtx tier=FREE => gated');
 
-// 3. authCtx STARTER (₹499 plan) => full report
+// 3. authCtx STARTER (₹999 plan) => full report
 r = await handleVibeCodeScan(mkReq({code:VULN}), {}, {authenticated:true, tier:'STARTER'});
 b = await r.json();
 ok(b.gated===false && b.tier==='starter', 'STARTER => full report, not gated');

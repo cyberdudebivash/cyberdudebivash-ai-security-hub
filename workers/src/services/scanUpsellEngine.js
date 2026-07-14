@@ -95,7 +95,7 @@ const PLAN_MESSAGING = {
     price: '₹499/mo',
     headline: 'Unlock Full Report + AI Analysis',
     features: ['Full findings (all CVEs)', 'AI Threat Analysis', 'PDF Report', '10 scans/month', '2 API Keys'],
-    cta: 'Get Starter — ₹499/mo',
+    cta: 'Get Starter — ₹999/mo',
     color: '#00d4ff',
   },
   PRO: {

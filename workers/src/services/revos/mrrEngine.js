@@ -8,7 +8,7 @@
  *   - Cron: 0 23 * * * (nightly snapshot)
  */
 
-const PLAN_MRR = { FREE: 0, STARTER: 499, PRO: 1499, ENTERPRISE: 4999, MSSP: 9999 };
+const PLAN_MRR = { FREE: 0, STARTER: 999, PRO: 1499, ENTERPRISE: 4999, MSSP: 9999 };
 
 // ─── Core MRR calculation from live subscriptions ────────────────────────────
 export async function computeLiveMRR(db) {

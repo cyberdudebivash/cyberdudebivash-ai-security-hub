@@ -79,7 +79,7 @@ function getManualPaymentConfig(env) {
 // ── Product catalog ──────────────────────────────────────────────────────────
 export const PRODUCT_CATALOG = {
   FREE:                 { name: 'Free Plan',              price_inr: 0,        plan_key: 'FREE' },
-  STARTER:              { name: 'Starter Plan',           price_inr: 499,      plan_key: 'STARTER' },
+  STARTER:              { name: 'Starter Plan',           price_inr: 999,      plan_key: 'STARTER' },
   PRO:                  { name: 'Pro Plan',               price_inr: 1499,     plan_key: 'PRO' },
   ENTERPRISE:           { name: 'Enterprise Plan',        price_inr: 4999,     plan_key: 'ENTERPRISE' },
   MSSP:                 { name: 'MSSP Command',           price_inr: 9999,     plan_key: 'MSSP' },

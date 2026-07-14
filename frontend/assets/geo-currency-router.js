@@ -20,7 +20,7 @@
       locale:         'en-IN',
       plans: Object.freeze({
         FREE:       Object.freeze({ monthly: 0,    annual: 0,      label: 'Free Forever' }),
-        STARTER:    Object.freeze({ monthly: 499,  annual: 4990,   label: 'Starter' }),
+        STARTER:    Object.freeze({ monthly: 999,  annual: 9990,   label: 'Starter' }),
         PRO:        Object.freeze({ monthly: 1499, annual: 14990,  label: 'Pro' }),
         ENTERPRISE: Object.freeze({ monthly: 4999, annual: 49990,  label: 'Enterprise' }),
         MSSP:       Object.freeze({ monthly: 9999, annual: 99990,  label: 'MSSP Command' }),
@@ -41,7 +41,7 @@
         appsec:     999,
         full:       1999,
       }),
-      upgradeCTA: 'Upgrade to STARTER — ₹499/mo',
+      upgradeCTA: 'Upgrade to STARTER — ₹999/mo',
     }),
     USD: Object.freeze({
       currency:       'USD',
@@ -49,13 +49,13 @@
       locale:         'en-US',
       plans: Object.freeze({
         FREE:       Object.freeze({ monthly: 0,   annual: 0,    label: 'Free Forever' }),
-        STARTER:    Object.freeze({ monthly: 6,   annual: 60,   label: 'Starter' }),
+        STARTER:    Object.freeze({ monthly: 12,  annual: 120,  label: 'Starter' }),
         PRO:        Object.freeze({ monthly: 19,  annual: 190,  label: 'Pro' }),
         ENTERPRISE: Object.freeze({ monthly: 59,  annual: 590,  label: 'Enterprise' }),
         MSSP:       Object.freeze({ monthly: 119, annual: 1190, label: 'MSSP Command' }),
       }),
       // Converted at the same ~83:1 INR:USD ratio already used by the plan
-      // prices above (e.g. STARTER ₹499/$6, PRO ₹1499/$19) — see the INR
+      // prices above (e.g. STARTER ₹999/$12, PRO ₹1499/$19) — see the INR
       // matrix's `reports` comment for why these must track MODULE_PRICES.
       reports: Object.freeze({
         domain:     12,

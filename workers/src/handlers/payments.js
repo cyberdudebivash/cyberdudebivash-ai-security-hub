@@ -316,7 +316,7 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
   // that order was actually created (and priced) for. Every branch below used
   // to trust the client's own module/target/plan/product_id fields resent to
   // THIS endpoint, so a customer could create+pay for the cheapest product
-  // (e.g. a genuinely-signed ₹499 STARTER subscription order, or a ₹499
+  // (e.g. a genuinely-signed ₹999 STARTER subscription order, or a ₹499
   // compliance report) and then call verify a second time with a different,
   // more expensive module/plan/product_id (e.g. MSSP ₹9,999/mo, or a ₹4,999
   // redteam report) while reusing that same order — the signature check alone
@@ -450,8 +450,8 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
   // ─── Subscription: activate plan, write subscriptions row, return session token ─
   if (module === 'subscription') {
     const plan         = (body.plan || target || 'STARTER').toUpperCase();
-    const subPlan      = SUBSCRIPTION_PRICES?.[plan] || { amount: 49900, name: `${plan} Plan`, price_inr: 499 };
-    const priceInr     = Math.round((subPlan.amount || 49900) / 100);
+    const subPlan      = SUBSCRIPTION_PRICES?.[plan] || { amount: 99900, name: `${plan} Plan`, price_inr: 999 };
+    const priceInr     = Math.round((subPlan.amount || 99900) / 100);
     const sessionToken = generateAccessToken();
     const expiresAt    = Date.now() + 90 * 24 * 60 * 60 * 1000;
     const confirmedEmail = email || authCtx.email || null;

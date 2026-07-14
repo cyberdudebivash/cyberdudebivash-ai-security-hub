@@ -23,12 +23,12 @@ const PRICING_CONFIG = Object.freeze({
     STARTER: Object.freeze({
       id:           'STARTER',
       name:         'Starter',
-      price_inr:    499,
-      price_paise:  49900,
+      price_inr:    999,
+      price_paise:  99900,
       billing:      'monthly',
       daily_scans:  50,
       api_keys:     2,
-      label:        'Starter — ₹499/month',
+      label:        'Starter — ₹999/month',
       cta:          '⚡ Get Starter',
     }),
     PRO: Object.freeze({

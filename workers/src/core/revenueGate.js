@@ -4,7 +4,7 @@
  * Subscription Plans, Feature Gating, Usage-Based Billing, Upsell Engine.
  *
  * Plans (v32 pricing — source of truth):
- *   STARTER    ₹499/month   — basic scans, 100 API calls/day, email support
+ *   STARTER    ₹999/month   — basic scans, 100 API calls/day, email support
  *   PRO        ₹1,499/month — AI brain, dark web, MITRE heatmap, 500 API calls/day
  *   ENTERPRISE ₹4,999/month — unlimited, custom SLA, white-label, dedicated support
  *
@@ -54,8 +54,8 @@ export const SUBSCRIPTION_PLANS = {
   STARTER: {
     id:          'STARTER',
     name:        'Starter',
-    price_inr:   499,
-    price_usd:   5.99,
+    price_inr:   999,
+    price_usd:   11.99,
     billing:     'monthly',
     description: 'For individuals and small teams',
     limits: {
@@ -78,7 +78,7 @@ export const SUBSCRIPTION_PLANS = {
       per_scan:     2,     // ₹2 per scan over limit
       per_api_call: 0.10,  // ₹0.10 per API call over limit
     },
-    cta:      'Start for ₹499/mo',
+    cta:      'Start for ₹999/mo',
     route:    '/checkout?plan=starter',
     popular:  false,
     badge:    null,

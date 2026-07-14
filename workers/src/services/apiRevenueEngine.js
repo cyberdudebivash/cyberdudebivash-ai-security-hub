@@ -239,7 +239,7 @@ export function calculateOverage(plan, totalCalls) {
  */
 export function buildRazorpayPayload(email, plan, billingCycle = 'monthly') {
   const PLAN_PRICES = {
-    starter:    { monthly: 49900,  annual: 479900  },  // paise
+    starter:    { monthly: 99900,  annual: 479900  },  // paise
     pro:        { monthly: 149900, annual: 1439900 },
     enterprise: { monthly: 499900, annual: 4799900 },
   };

@@ -8053,7 +8053,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
       return new Response(JSON.stringify({
         country, currency, symbol,
         plans: currency === 'INR'
-          ? { STARTER: 499, PRO: 1499, ENTERPRISE: 4999, MSSP: 9999 }
+          ? { STARTER: 999, PRO: 1499, ENTERPRISE: 4999, MSSP: 9999 }
           : { STARTER: 6,   PRO: 19,   ENTERPRISE: 59,   MSSP: 119  },
         report_price: currency === 'INR' ? 999 : 12,
         ts: Date.now(),
