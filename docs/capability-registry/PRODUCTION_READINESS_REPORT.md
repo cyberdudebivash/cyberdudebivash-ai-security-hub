@@ -10,38 +10,38 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-12T16:19:29.852Z
-Capabilities catalogued: 97
+Generated: 2026-07-14T22:16:09.168Z
+Capabilities catalogued: 101
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 89.7% |
-| Frontend | 72.2% |
-| Parity (backend **and** frontend both exist) | 68% |
-| Customer Journeys complete (dynamic_browser-verified) | 3.1% |
+| Backend | 91.1% |
+| Frontend | 74.8% |
+| Parity (backend **and** frontend both exist) | 70.3% |
+| Customer Journeys complete (dynamic_browser-verified) | 4% |
 
 ## Gaps by Priority
 
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
 | Critical | P1 | 3 | Broken customer journey |
-| High | P2 | 25 | Backend exists, frontend missing |
-| Medium | P3 | 7 | Backend+frontend exist, navigation missing |
+| High | P2 | 16 | Backend exists, frontend missing |
+| Medium | P3 | 9 | Backend+frontend exist, navigation missing |
 | Medium | P4 | 6 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
-| Low | P6 | 42 | No test coverage |
+| Low | P6 | 53 | No test coverage |
 | Low | P7 | 14 | Documentation missing |
 
-**Rollup:** Critical 3 · High 25 · Medium 13 · Low 56
+**Rollup:** Critical 3 · High 16 · Medium 15 · Low 67
 
 ## Structural Findings
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 19 | Backend exists, but not discoverable via navigation |
-| Backend-only features | 14 | Backend exists, zero frontend surface |
+| Hidden features | 17 | Backend exists, but not discoverable via navigation |
+| Backend-only features | 13 | Backend exists, zero frontend surface |
 | Duplicate systems | 4 | Backend marked `duplicate` (two implementations of one capability) |
 | Broken journeys | 3 | Priority P1 |
 
@@ -91,10 +91,10 @@ complete", "bug free", or "guaranteed".
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
 | CAP-COMP-001 | Global Compliance Packs Store | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P1 |
-| CAP-COMP-002 | Compliance Assessment / Readiness Engine (CDB-COMP-001) | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
+| CAP-COMP-002 | Compliance Assessment / Readiness Engine (CDB-COMP-001) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-COMP-003 | Tools Marketplace Compliance Toolkits | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
-| CAP-COMP-004 | DPDP Act 2023 Compliance Management Engine | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
-| CAP-COMP-005 | Trust Center Compliance Framework Alignment | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
+| CAP-COMP-004 | DPDP Act 2023 Compliance Management Engine | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
+| CAP-COMP-005 | Trust Center Compliance Framework Alignment | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 
 ### customer-portal (4 capabilities)
 
@@ -103,7 +103,7 @@ complete", "bug free", or "guaranteed".
 | CAP-PORTAL-001 | Profile & Security Settings | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 | CAP-PORTAL-002 | Scan History & Reports | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 | CAP-PORTAL-003 | Session Management (Active Sessions / Per-Session Revoke) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
-| CAP-PORTAL-004 | Support Ticket System | ✗ | ✗ | ✗ | NOT READY | P2 |
+| CAP-PORTAL-004 | Support Ticket System | ✓ | ✗ | ✗ | NOT READY | P2 |
 
 ### dashboard-personalization (3 capabilities)
 
@@ -121,6 +121,15 @@ complete", "bug free", or "guaranteed".
 | CAP-DEVPORTAL-002 | Self-Service Automation API Keys | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 | CAP-DEVPORTAL-003 | Developer Portal — API Explorer, SDK Generation, OpenAPI/Postman Docs, and Key Self-Serve | ✓ | ◐ | ✗ | PILOT ONLY | P2 |
 | CAP-DEVPORTAL-004 | Growth/Plan API Key Provisioning | ✓ | ✗ | ✗ | PILOT ONLY | P1 |
+
+### devsecops-scanners (4 capabilities)
+
+| ID | Capability | Backend | Frontend | Nav | Status | Priority |
+|---|---|---|---|---|---|---|
+| CAP-DEVSECOPS-001 | SAST — Static Analysis (generic entry point) | ✓ | ◐ | ✓ | PILOT ONLY | P3 |
+| CAP-DEVSECOPS-002 | SCA — Software Composition Analysis (live OSV.dev) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
+| CAP-DEVSECOPS-003 | SBOM — CycloneDX 1.5 Generation | ✓ | ◐ | ✓ | PILOT ONLY | P3 |
+| CAP-DEVSECOPS-004 | AI-BOM — AI/ML-Aware Bill of Materials | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 
 ### identity (3 capabilities)
 
@@ -168,7 +177,7 @@ complete", "bug free", or "guaranteed".
 
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
-| CAP-NOTIF-001 | Multi-Channel Notification Preferences & Delivery Log | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-NOTIF-001 | Multi-Channel Notification Preferences & Delivery Log | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 | CAP-NOTIF-002 | In-App Notification Bell | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 | CAP-NOTIF-003 | Outbound Webhooks (Developer + Organization) | ✗ | ✗ | ✗ | NOT READY | P2 |
 | CAP-NOTIF-004 | Transactional & Lifecycle Email Engine | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
@@ -177,7 +186,7 @@ complete", "bug free", or "guaranteed".
 
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
-| CAP-ORG-001 | Organization Management | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
+| CAP-ORG-001 | Organization Management | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-ORG-002 | Organization Activity Log (Audit Trail) | ✓ | ✓ | ✓ | PILOT ONLY | P4 |
 
 ### production-readiness (4 capabilities)
@@ -240,21 +249,21 @@ complete", "bug free", or "guaranteed".
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
 | CAP-TIH-001 | Threat Hunting Engine (KQL/Sigma/YARA) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
-| CAP-TIH-002 | Threat Intelligence Feed & Versioned API (Sentinel APEX v2.0) | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
+| CAP-TIH-002 | Threat Intelligence Feed & Versioned API (Sentinel APEX v2.0) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-TIH-003 | Threat Intel Pro Workbench (MITRE ATT&CK, APT Actors, STIX/TAXII, AI Analyst) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
-| CAP-TIH-004 | Threat Intelligence Graph (backend) — distinct from the dashboard's client-side Threat Graph | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-TIH-004 | Threat Intelligence Graph (backend) — distinct from the dashboard's client-side Threat Graph | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-TIH-005 | AI Attack Library (MITRE ATLAS / OWASP LLM techniques) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-TIH-006 | Agent Threat Advisories (AI agent framework CVEs/advisories) | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 | CAP-TIH-007 | AI Threat Intelligence Feed & Agent Security (Pillar 4/5) | ✓ | ✓ | ✓ | PILOT ONLY | P3 |
 | CAP-TIH-008 | Global Threat Intel Firehose (worldwide OSINT) | ✓ | ✓ | ✓ | PILOT ONLY | P3 |
-| CAP-TIH-009 | Threat Intelligence API Economy (monetized IOC/CVE/Actor/TTP/Risk) | ✓ | ✓ | ✓ | PILOT ONLY | P2 |
+| CAP-TIH-009 | Threat Intelligence API Economy (monetized IOC/CVE/Actor/TTP/Risk) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-TIH-010 | Production IOC Enrichment | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
-| CAP-TIH-011 | Threat Confidence & Exploitability Engine | ✓ | ✓ | ✗ | NOT READY | P6 |
-| CAP-TIH-012 | Customer/MSSP Personalized Intelligence | ✓ | ✓ | ✗ | NOT READY | P3 |
+| CAP-TIH-011 | Threat Confidence & Exploitability Engine | ✓ | ✓ | ✗ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
+| CAP-TIH-012 | Customer/MSSP Personalized Intelligence | ✓ | ✓ | ✓ | GA APPROVED | P3 |
 | CAP-TIH-013 | Enterprise Premium Intelligence API | ✓ | ✓ | ✓ | PILOT ONLY | P3 |
-| CAP-TIH-014 | Intelligence Preview (freemium teaser cards) | ✓ | ✓ | ✓ | NOT READY | P2 |
+| CAP-TIH-014 | Intelligence Preview (freemium teaser cards) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-TIH-015 | Public Threat-Intel Feeds & Monetization Tier Matrix | ✓ | ✓ | ✓ | PILOT ONLY | P3 |
-| CAP-TIH-016 | Attack Graph from Scan Results | ✓ | ◐ | ✓ | NOT READY | P6 |
+| CAP-TIH-016 | Attack Graph from Scan Results | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 | CAP-TIH-017 | Scan-Finding to CVE Correlation (legacy) | ✓ | ✗ | ✗ | NOT READY | P7 |
 
 ---
