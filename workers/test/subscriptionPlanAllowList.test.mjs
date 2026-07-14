@@ -126,7 +126,7 @@ let lastRazorpayBody = null;
 beforeEach(() => {
   lastRazorpayBody = null;
   globalThis.fetch = async (url, opts) => {
-    if (String(url).includes('api.razorpay.com')) {
+    if (new URL(String(url)).hostname === 'api.razorpay.com') {
       lastRazorpayBody = JSON.parse(opts.body);
       return new Response(JSON.stringify({ id: 'order_stub_123', amount: lastRazorpayBody.amount, currency: 'INR', status: 'created' }), { status: 200 });
     }
