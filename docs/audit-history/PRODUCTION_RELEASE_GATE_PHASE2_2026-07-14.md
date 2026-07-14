@@ -164,7 +164,7 @@ Explicitly not covered by new tests this pass (documented as technical debt, §b
 
 ### High
 1. **System B's ENTERPRISE tier charges 10× the platform's real ENTERPRISE price** (₹49,999 vs ₹4,999) through a still-reachable-by-direct-API endpoint. *Repository evidence*: Subscription Registry §5. *Customer impact*: none today (zero frontend callers), but a live overcharge risk for any future integration. *Revenue impact*: could cut either way (overcharge risk vs. an intentionally higher-tier product never priced correctly). *Recommended next action*: product decision — retire System B or reprice/relaunch it; block the ENTERPRISE checkout path in the interim.
-2. **A fourth, disconnected rate-limit table** (`middleware/auth.js TIERS`, FREE/PRO/ENTERPRISE only) silently throttles JWT-authenticated STARTER/MSSP/TEAM/BUSINESS customers to FREE-tier limits on several real endpoints (`globalIntel.js`, `auditLog.js`, `threatHunting.js`, `threatIntelPro.js`, `vulnManagement.js`). *Customer impact*: paying customers under-served on these specific endpoints. *Recommended next action*: reconcile this table with `TIER_LIMITS`, own PR.
+2. ~~**A fourth, disconnected rate-limit table**~~ — **RESOLVED, PR #248 (Production Engineering Phase III, merged `75baefff`).** `middleware/auth.js`'s `TIERS` (previously FREE/PRO/ENTERPRISE only) silently throttled JWT/IP-authenticated STARTER/MSSP customers to FREE-tier limits — confirmed live on `index.js`'s core scan pipeline (`/api/scan/domain|ai|redteam|identity`, `/api/generate/compliance`) in addition to the 5 handler files originally named here (the deeper trace found the real blast radius was larger than this entry originally scoped, and that all 6 dependents go through `middleware/rateLimit.js`, not `middleware/auth.js` directly). `TIERS` now derives its values from `TIER_LIMITS` instead of an independently-maintained copy, closing the drift permanently. 7 new regression tests added; full suite 294 files/3082 tests passing. See Phase III addendum below.
 3. **No automated subscription renewal exists.** *Revenue impact*: potential involuntary churn at the end of every billing period since nothing re-charges the customer; "monthly" is currently a one-time-charge label. *Recommended next action*: scope a Razorpay recurring-subscription integration as a dedicated feature project — explicitly out of scope for a "no new feature work" pass.
 4. **Cancellation doesn't enforce downgrade at period end** (both the DB-based and KV-based mechanisms). *Revenue impact*: cancelled customers may retain full paid entitlements indefinitely at zero cost. *Recommended next action*: a scheduled cron job to sweep expired `cancel_at_period_end` rows — own PR.
 
@@ -242,4 +242,23 @@ Performed after a usage-limit interruption of the session that opened PR #245/#2
 
 ---
 
-*Cross-references: `COMMERCIAL_RISK_AUDIT_2026-07-14.md`, `ENTERPRISE_COMMERCIAL_PRODUCT_REGISTRY_2026-07-14.md`, `SUBSCRIPTION_REGISTRY_2026-07-14.md` (companion document, full per-tier table), PR #240–#244 (Phase I), PR #245 (H5/H8, merged `d4db0eee`), PR #246 (Revenue Intelligence admin gate, merged `04c6dd1d`).*
+## Phase III — Entitlement & Rate-Limit Authority Consolidation (2026-07-14, follow-on session)
+
+Closes Technical Debt register item **High #2** above. Full findings, root cause, and evidence are in PR #248's description; summarized here for the living-document record.
+
+| Check | Result |
+|---|---|
+| Scope | `middleware/auth.js`'s `TIERS` (FREE/PRO/ENTERPRISE only) vs. the authoritative `TIER_LIMITS` (`auth/apiKeys.js`, all 5 real tiers). |
+| Root cause | `TIERS` was a hardcoded snapshot of `TIER_LIMITS`'s FREE/PRO/ENTERPRISE values from before STARTER/MSSP were added there. `middleware/rateLimit.js`'s `checkRateLimitV2`/`checkRateLimitCost` do `TIERS[tier] \|\| TIERS.FREE`, so STARTER/MSSP silently fell back to FREE's 5/day, 2/min burst. |
+| Precision correction vs. the original High #2 entry | The dependency is transitive (all 6 consumers go through `middleware/rateLimit.js`, not `middleware/auth.js` directly), and the blast radius is larger than originally scoped: it also gated `index.js`'s core scan pipeline (`/api/scan/domain\|ai\|redteam\|identity`, `/api/generate/compliance`, `/api/leads/capture`, `/api/contact/enterprise`, `/api/report/generate`) for every JWT/browser-session caller — not just the 5 intel-handler files originally named. API-key callers were unaffected (routed through `enforceQuota`→`TIER_LIMITS` correctly). |
+| Fix | `TIERS` now derives `daily_limit`/`burst_per_min` from `TIER_LIMITS` instead of independent literals — one file changed (`middleware/auth.js`), zero changes needed in any consumer. FREE/PRO/ENTERPRISE values numerically unchanged (regression-tested); STARTER/MSSP corrected. |
+| Tests added | 7 (STARTER burst/daily/cost-weighted, MSSP unlimited x2, `TIERS` completeness, `TIERS`-vs-`TIER_LIMITS` anti-drift guard) + 1 existing test corrected (a source-text-regex check that had the same blind spot as the bug itself, in `feedLimitsReportExpiry.test.mjs`). |
+| Regression suite | 294 files / 3082 tests passing (3075 baseline + 7 new), 0 failed. |
+| PR #248 | Merged `75baefff`, 2026-07-14T20:57:31Z. CI: all 33 check runs `completed`/`success` including CodeQL and both Analyze (python/javascript-typescript) jobs. Zero review comments. |
+| Other tables examined, confirmed out of scope | `config/pricingConfig.js`'s advertised-vs-enforced STARTER `daily_scans` drift (already Medium #6 above, unrelated root cause) and `services/revos/apiEconomyEngine.js`'s dead `daily_limit`/`monthly_limit` sub-fields (a distinct, self-contained per-call billing product) — neither touched. |
+
+**Conclusion: no change to the release gate decision.** PASS WITH MINOR RISKS stands; one High-severity item is now resolved and closed out of the open register.
+
+---
+
+*Cross-references: `COMMERCIAL_RISK_AUDIT_2026-07-14.md`, `ENTERPRISE_COMMERCIAL_PRODUCT_REGISTRY_2026-07-14.md`, `SUBSCRIPTION_REGISTRY_2026-07-14.md` (companion document, full per-tier table), PR #240–#244 (Phase I), PR #245 (H5/H8, merged `d4db0eee`), PR #246 (Revenue Intelligence admin gate, merged `04c6dd1d`), PR #247 (Phase II doc addendum, merged `eecc077e`), PR #248 (Phase III rate-limit authority consolidation, merged `75baefff`).*
