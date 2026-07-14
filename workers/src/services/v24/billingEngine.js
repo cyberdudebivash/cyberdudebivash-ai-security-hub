@@ -20,12 +20,49 @@ import { getPaymentConfig } from '../../config/paymentConfig.js';
 
 const GST_RATE = 0.18; // 18% GST
 const INVOICE_PREFIX = 'CBD';
+const MAX_INVOICE_NUMBER_ATTEMPTS = 10;
 
 // ─── Invoice number generator ─────────────────────────────────────────────────
 function generateInvoiceNumber(seq) {
   const y = new Date().getFullYear();
   const m = String(new Date().getMonth() + 1).padStart(2, '0');
   return `${INVOICE_PREFIX}-${y}${m}-${String(seq).padStart(4, '0')}`;
+}
+
+function invoiceRowToResult(inv, env) {
+  const lineItems = JSON.parse(inv.line_items || '[]');
+  return {
+    ok: true,
+    invoice_id:     inv.id,
+    invoice_number: inv.invoice_number,
+    total_inr:      inv.total_inr,
+    gst_amount_inr: inv.gst_amount_inr,
+    subtotal_inr:   inv.subtotal_inr,
+    html:           generateInvoiceHTML({
+      invId: inv.id, invoiceNumber: inv.invoice_number,
+      email: inv.email, company: inv.company, gstin: inv.gstin, lineItems,
+      subtotal: inv.subtotal_inr, gstAmount: inv.gst_amount_inr, total: inv.total_inr,
+      periodStart: inv.period_start, periodEnd: inv.period_end,
+    }, env),
+    already_existed: true,
+  };
+}
+
+// Next sequence number, derived from the highest existing numeric suffix
+// rather than "whichever row created_at sorts last" — created_at has
+// 1-second resolution, so same-second inserts can otherwise tie and hand
+// back a stale/duplicate seq.
+async function nextInvoiceSeq(db) {
+  const recent = await db.prepare(
+    `SELECT invoice_number FROM invoices ORDER BY created_at DESC LIMIT 50`
+  ).all().catch(() => ({ results: [] }));
+  let maxSeq = 0;
+  for (const row of (recent.results || [])) {
+    const parts = (row.invoice_number || '').split('-');
+    const n = parseInt(parts[parts.length - 1], 10);
+    if (Number.isFinite(n) && n > maxSeq) maxSeq = n;
+  }
+  return maxSeq + 1;
 }
 
 // ─── Generate GST invoice ─────────────────────────────────────────────────────
@@ -37,64 +74,101 @@ export async function createInvoice(db, params, env = {}) {
   } = params;
 
   try {
-    // Get next invoice sequence
-    const lastInv = await db.prepare(
-      `SELECT invoice_number FROM invoices ORDER BY created_at DESC LIMIT 1`
-    ).first().catch(() => null);
-
-    let seq = 1;
-    if (lastInv?.invoice_number) {
-      const parts = lastInv.invoice_number.split('-');
-      seq = (parseInt(parts[parts.length - 1]) || 0) + 1;
+    // Idempotent by payment: a retried webhook or double-submitted client
+    // confirmation must never mint a second invoice for the same payment.
+    if (paymentId) {
+      const existing = await db.prepare(
+        `SELECT * FROM invoices WHERE payment_id = ? LIMIT 1`
+      ).bind(paymentId).first().catch(() => null);
+      if (existing) return invoiceRowToResult(existing, env);
     }
 
-    const invoiceNumber = generateInvoiceNumber(seq);
     const subtotal = lineItems.reduce((s, i) => s + (i.amount_inr || 0), 0);
     const gstAmount = Math.round(subtotal * GST_RATE);
     const total = subtotal + gstAmount;
     const dueDate = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-    const invId = `inv-${Date.now().toString(36)}`;
 
-    await db.prepare(`
-      INSERT INTO invoices
-        (id, invoice_number, customer_id, user_id, email, company, gstin,
-         billing_address, line_items, subtotal_inr, gst_rate, gst_amount_inr,
-         total_inr, status, payment_id, payment_method, due_date,
-         subscription_id, period_start, period_end)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid', ?, ?, ?, ?, ?, ?)
-    `).bind(
-      invId, invoiceNumber,
-      userId || email, userId, email,
-      company || '', gstin || '',
-      JSON.stringify(billingAddress || {}),
-      JSON.stringify(lineItems),
-      subtotal, GST_RATE * 100, gstAmount, total,
-      paymentId || '', paymentMethod || 'razorpay',
-      dueDate, subscriptionId || '',
-      periodStart || new Date().toISOString().slice(0, 7) + '-01',
-      periodEnd || new Date().toISOString().slice(0, 10),
-    ).run();
+    let lastError;
+    for (let attempt = 0; attempt < MAX_INVOICE_NUMBER_ATTEMPTS; attempt++) {
+      const seq = await nextInvoiceSeq(db);
+      const invoiceNumber = generateInvoiceNumber(seq);
+      const invId = `inv-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
-    // Store in revenue_streams
-    const period = new Date().toISOString().slice(0, 7);
-    await db.prepare(`
-      INSERT INTO revenue_streams (period, stream, revenue_inr, transaction_count, customer_count)
-      VALUES (?, 'subscriptions', ?, 1, 1)
-      ON CONFLICT(period, stream) DO UPDATE SET
-        revenue_inr       = revenue_inr + ?,
-        transaction_count = transaction_count + 1,
-        updated_at        = datetime('now')
-    `).bind(period, total, total).run().catch(() => {});
+      try {
+        await db.prepare(`
+          INSERT INTO invoices
+            (id, invoice_number, customer_id, user_id, email, company, gstin,
+             billing_address, line_items, subtotal_inr, gst_rate, gst_amount_inr,
+             total_inr, status, payment_id, payment_method, due_date,
+             subscription_id, period_start, period_end)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid', ?, ?, ?, ?, ?, ?)
+        `).bind(
+          invId, invoiceNumber,
+          userId || email, userId, email,
+          company || '', gstin || '',
+          JSON.stringify(billingAddress || {}),
+          JSON.stringify(lineItems),
+          subtotal, GST_RATE * 100, gstAmount, total,
+          paymentId || '', paymentMethod || 'razorpay',
+          dueDate, subscriptionId || '',
+          periodStart || new Date().toISOString().slice(0, 7) + '-01',
+          periodEnd || new Date().toISOString().slice(0, 10),
+        ).run();
+      } catch (e) {
+        if (!/unique/i.test(e?.message || '')) throw e;
+        lastError = e;
 
-    return {
-      ok: true,
-      invoice_id:     invId,
-      invoice_number: invoiceNumber,
-      total_inr:      total,
-      gst_amount_inr: gstAmount,
-      subtotal_inr:   subtotal,
-      html:           generateInvoiceHTML({ invId, invoiceNumber, email, company, gstin, lineItems, subtotal, gstAmount, total, periodStart, periodEnd }, env),
-    };
+        // Two different-payment inserts can each read a distinct, individually
+        // valid seq (no invoice_number collision) yet still race on the
+        // partial UNIQUE index over payment_id — the DB rejects whichever
+        // insert lost, regardless of which constraint fired. Check for a
+        // winner under our own payment_id before assuming this was just an
+        // invoice_number collision to retry past.
+        if (paymentId) {
+          const winner = await db.prepare(
+            `SELECT * FROM invoices WHERE payment_id = ? LIMIT 1`
+          ).bind(paymentId).first().catch(() => null);
+          if (winner) return invoiceRowToResult(winner, env);
+        }
+
+        // Otherwise this was an invoice_number/id collision unrelated to our
+        // payment — recompute a fresh seq and retry, with jitter so
+        // contending callers don't stay locked in step with each other.
+        await new Promise((resolve) => setTimeout(resolve, Math.random() * 25));
+        continue;
+      }
+
+      // Store in revenue_streams
+      const period = new Date().toISOString().slice(0, 7);
+      await db.prepare(`
+        INSERT INTO revenue_streams (period, stream, revenue_inr, transaction_count, customer_count)
+        VALUES (?, 'subscriptions', ?, 1, 1)
+        ON CONFLICT(period, stream) DO UPDATE SET
+          revenue_inr       = revenue_inr + ?,
+          transaction_count = transaction_count + 1,
+          updated_at        = datetime('now')
+      `).bind(period, total, total).run().catch(() => {});
+
+      return {
+        ok: true,
+        invoice_id:     invId,
+        invoice_number: invoiceNumber,
+        total_inr:      total,
+        gst_amount_inr: gstAmount,
+        subtotal_inr:   subtotal,
+        html:           generateInvoiceHTML({ invId, invoiceNumber, email, company, gstin, lineItems, subtotal, gstAmount, total, periodStart, periodEnd }, env),
+      };
+    }
+
+    // Every attempt lost the race. If a concurrent request won under the
+    // same payment_id, hand back its invoice instead of failing outright.
+    if (paymentId) {
+      const existing = await db.prepare(
+        `SELECT * FROM invoices WHERE payment_id = ? LIMIT 1`
+      ).bind(paymentId).first().catch(() => null);
+      if (existing) return invoiceRowToResult(existing, env);
+    }
+    return { ok: false, error: `Could not allocate a unique invoice number after ${MAX_INVOICE_NUMBER_ATTEMPTS} attempts: ${lastError?.message}` };
   } catch (e) { return { ok: false, error: e.message }; }
 }
 

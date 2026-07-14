@@ -4947,3 +4947,7 @@ CREATE TABLE IF NOT EXISTS webhook_delivery_log (
   error_msg TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
+
+-- From: schema_v49_invoice_payment_id_unique.sql
+CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_payment_id_unique
+  ON invoices(payment_id) WHERE payment_id IS NOT NULL AND payment_id != '';
