@@ -36,9 +36,17 @@ consciously accepted — before treating current commercial claims as reliable.
    column that no longer exists in the schema.
 
 **Customer impact:** Starter-tier customers are being charged an inconsistent price depending on which
-button they click. MSSP prospects are shown between ₹9,999 and ₹75,000/month for "the same" plan
-depending which page they land on, and a revenue-share pitch of "60%" that the site's own calculator
-contradicts with 35–45%. Enterprise prospects are sold SSO/SAML that doesn't exist (SAML was never built).
+button they click. **Update, 2026-07-14 same-day H1/H2 validation pass:** a full backend trace found MSSP
+pricing is mostly *not* the "6 numbers, 1 plan" problem it first appeared to be — four of those numbers are
+distinct, already-consistent, real products (base tier ₹9,999, self-serve Reseller/Silver/Gold tiers, a
+sales-assisted White-Label package, and an owner-only enterprise-deal SKU). The one real bug is narrower:
+`mssp.html` quotes ₹75,000 and ₹25,000 for plans whose own buttons on that same page actually charge
+₹49,999-or-less and ₹4,999 respectively — stale copy, not a live pricing policy conflict. Similarly, the
+"60%" revenue-share pitch is confirmed to be exactly what the real payout ledger computes today (not a
+false claim) — the actual gap is that the same ledger is structurally incapable of ever honoring the lower
+30%/40% tiered margins its own self-serve onboarding flow separately promises Reseller/Silver partners; see
+updated H1/H2 for the full trace. Enterprise prospects are sold SSO/SAML that doesn't exist (SAML was never
+built).
 
 **Revenue impact:** At minimum, an under-charging bug on Starter (finding C4) and a fully unenforced
 premium AI Red Team product (C3) are leaving money on the table right now. The parallel, much-higher-priced
@@ -210,6 +218,43 @@ same pricing section as the ₹75,000 figure) · ₹14,999 (`index.html:6663`, `
 tier; audit every page listed above against it. **Complexity:** Medium — this is a content/consistency
 pass across ~8 files, not a logic change, but needs a decision on which figure is authoritative first.
 
+**2026-07-14 follow-up — full trace to backend/reachability (this validation pass, same day):** the 6
+numbers are not one plan priced 6 inconsistent ways. They resolve to **four genuinely distinct, each
+internally-consistent, independently-backed products**, plus two pieces of dead/orphaned content:
+
+| Number(s) | What it actually is | Backend source(s) | Reachable, real charge path? |
+|---|---|---|---|
+| **₹9,999/mo** | The MSSP *account tier* (alongside Free/Starter/Pro/Enterprise) | `config/pricingConfig.js` (`plans.MSSP`), `lib/razorpay.js` (`MSSP` entry), `auth/apiKeys.js` (`TIER_LIMITS.MSSP`) — three independent sources agree | **Yes.** `ciso-hub.html`'s `openPayment('MSSP_PLAN', 9999, ...)`; consistent across index.html, services.html, upgrade.html, sentinel-apex-marketplace.html, and 6 footer links |
+| **₹14,999 / ₹29,999 / ₹49,999/mo** (Reseller/Silver/Gold) | Self-serve MSSP partner tiers | `services/globalScale.js` (`MSSP_TIERS`, canonical) → `handlers/msspOnboardingHandler.js` (`/api/mssp/onboarding/*`) | **Yes — confirmed live.** `mssp-onboarding.html` calls `${API}/tiers`, `/checkout`, `/verify`, `/trial` against this exact handler; a real Razorpay order is created server-side. Echoed correctly in index.html's "Apply as MSSP Partner" modal. |
+| **₹49,999/mo** | MSSP White-Label *package* — sales-assisted, not self-serve | `config/pricingConfig.js` (`packages.MSSP_WHITE_LABEL`) | Consistent across index.html's White-Label card, services.html's White Label Platform card, and contact.html's FAQ. All route to a lead form (`openMSSPApplication()` → `POST /api/global/mssp/apply`) or `/booking.html`, not a direct charge. Numerically matches the self-serve Gold tier — plausibly the same real offering, described for a sales-assisted vs. self-serve audience. |
+| **₹14,99,900/yr** | MSSP Command Suite — negotiated enterprise deal | `config/pricingConfig.js` (`packages.MSSP_COMMAND`), `handlers/manualPayments.js`, `handlers/proposalGenerator.js` (`nda_required: true`) | Used only inside index.html's `data-auth-gate="owner"` internal Proposal Generator/ROI Calculator — the platform owner's own quoting tool for custom deals, never shown to a customer. **Confirmed Working As Intended** — not an inconsistency, excluded from the numbers below. |
+| **₹75,000/mo** ("MSSP PARTNER") and **₹25,000/mo** ("ENTERPRISE") | Neither — orphaned copy | `frontend/mssp.html`'s own pricing section, nowhere else | **Dead/stale content — the one real bug in this set.** Both of this page's own buttons route past these numbers to the real prices: "Get Enterprise" → `/upgrade` (real price ₹4,999, i.e. this page quotes 5x too high for the identical plan its own link sells) and "Become MSSP Partner" → `/mssp-onboarding` (real "unlimited clients" tier is Gold at ₹49,999, not ₹75,000). A prospect reading this specific page is quoted a number nothing in the platform will actually charge them. |
+| **₹1,999/mo** ("Multi-Tenant MSSP Workspace") | Dead code | `lib/razorpay.js` (`MSSP_PARTNER` entry) | No frontend caller found anywhere (checked every `openPayment`/checkout invocation site). Same class of issue as H5, far smaller blast radius — a priced-but-never-wired SKU. |
+
+Also found in the same pass: `frontend/mssp-command-center.html` (the partner-facing ops dashboard, gated
+per D12) labels its own status ticker "White Label: ₹9,999/mo" — that's the base MSSP tier's price, not the
+White-Label package's ₹49,999. Lower priority (shown only to already-logged-in partners, not prospects),
+but still a mislabel worth fixing alongside the rest.
+
+**Revised business impact:** the original "pick one number" framing overstated the fix's scope — three of
+the four real products were already internally consistent everywhere they're quoted. The concrete, provable
+problem is narrower and entirely contained to one page (`mssp.html`) plus one dead pricing entry plus one
+mislabeled ticker.
+**Revised recommended action (supersedes the original "pick one number" framing above — this is now a
+content-alignment fix, not a pricing-policy decision):**
+1. Rewrite `mssp.html`'s two pricing cards to match what their own buttons actually lead to — Enterprise
+   ₹4,999 (or drop the duplicate Enterprise card entirely and link out, since Enterprise is already sold on
+   `/upgrade`), and replace the single "MSSP PARTNER ₹75,000" card with the real Reseller/Silver/Gold tiers
+   (or, minimally, point at Gold's real ₹49,999 if a single card is preferred).
+2. Remove or wire up the dead `MSSP_PARTNER` (₹1,999) entry in `lib/razorpay.js`.
+3. Fix the `mssp-command-center.html` ticker label from "White Label" to the base MSSP tier, or to the
+   correct ₹49,999 if "White Label" is what's meant.
+
+All three are customer/partner-facing copy changes rather than logic bugs, so per this repo's governance
+policy (no auto-implementing customer-facing commercial changes) they're documented here for approval
+rather than implemented in this pass. **Complexity:** Low for all three — no logic changes, just content
+corrections once approved.
+
 ### H2 — MSSP revenue-share percentage shown as 5 different numbers, contradicting itself on one page
 **Confidence:** Verified
 
@@ -223,6 +268,45 @@ calculator, on the same page, computes 35–45%. This is the kind of concrete, p
 signing MSSP partner could reasonably treat as a broken promise. **Recommended action:** align the
 marketing copy to whatever the calculator actually computes (or vice versa, if 60% is the intended real
 number and the calculator is wrong). **Complexity:** Medium — same "which number is real" decision as H1.
+
+**2026-07-14 follow-up — traced to the actual payout ledger, not just marketing copy (this validation
+pass, same day):**
+
+- **The real, live payout engine** is `handlers/msspRevenue.js`'s `recordRevenueShare()`, called from the
+  Razorpay payment-webhook path. It splits every attributed payment by `mssp_partners.partner_share_pct`, a
+  column added via `ALTER TABLE mssp_partners ADD COLUMN partner_share_pct REAL NOT NULL DEFAULT 60.0`. This
+  module's own docblock states it was built specifically to "back the 'Revenue Share 60/40' claim advertised
+  on mssp.html" — **60% is a deliberate, real, computed figure, not marketing fiction.**
+- **The gap:** nothing in the codebase ever writes anything other than that schema default into
+  `partner_share_pct`. Partners who sign up through the real, live, self-serve onboarding flow
+  (`mssp-onboarding.html` → `msspOnboardingHandler.js`, see H1 above) are quoted and persisted a *tiered*
+  margin instead — 30% (Reseller) / 40% (Silver) / 50% (Gold) — stored in a *different* column
+  (`mssp_onboarding_partners.margin_pct`, mirrored via `linkMsspPartnerRecord()` into
+  `mssp_partners.margin_pct`). `recordRevenueShare()` reads `partner_share_pct`; it never reads `margin_pct`.
+  Checked every write site of both columns — they are never reconciled anywhere in the codebase. **Every
+  partner who signs up today is actually paid a flat 60%, regardless of the 30/40/50% figure they were
+  quoted at signup.**
+- `mssp.html`'s own "Calculate My Revenue" tool (`msspCalc()`) is pure client-side JS with a *third*,
+  independent set of numbers — `{starter:0.35, professional:0.40, enterprise:0.45}` — using tier names
+  (starter/professional/enterprise) matching none of: this page's own headline (60%), the real onboarding
+  tiers (reseller/silver/gold), or the ledger's actual default (60%). It has no backend connection at all —
+  decorative copy sitting on the same page as six "60% to Partner" mentions.
+
+**Revised business impact:** this is not the customer-trust risk the original framing suggested — the
+headline "60/40" claim is exactly what the ledger pays, today, for every partner. The real issue runs the
+other way: the platform is **structurally unable to pay any partner less than 60%**, even though its own
+tiered onboarding flow promises less (30%/40%) to Reseller/Silver signups — a revenue-integrity gap (giving
+away more margin than the tier structure implies), not a broken promise to partners. The calculator's
+35–45% is disconnected decoration with no computational consequence, not a real liability.
+**Revised recommended action — a business decision, not a code bug:** either (a) wire
+`partner_share_pct` to be set from the partner's onboarding-tier margin at signup/activation, so the ledger
+honors the designed 30/40/50% tiers, or (b) confirm flat 60% is the actual intended policy for every
+partner regardless of tier, and then delete/replace the now-contradicting tiered-margin fields and the
+calculator's 35–45% numbers so nothing on `mssp.html` implies a partner could ever earn less than 60%.
+Either direction is a small, low-risk change once the intended policy is confirmed — the blocker is a
+policy decision (which number the business actually wants to honor), not the implementation. **Complexity:**
+Low for either direction; flagged for approval rather than implemented here since it changes what real
+partners are actually paid.
 
 ### H3 — Enterprise tier advertises "SSO/SAML"; SAML does not exist
 **Confidence:** Verified (both the live claim and the implementation gap)
@@ -391,17 +475,24 @@ plainly when a section's outcome is "no significant findings," rather than paddi
 **Proposed as safe to implement immediately** (self-contained, objectively correct, backward-compatible,
 completes an already-approved decision) — each as its own small, separately-tested PR per governance
 policy, not bundled together:
-1. C4 — `apiKeys.js` Starter price 499→999, plus extend `pricingLineageGuard.test.mjs` to also cover
-   STARTER/ENTERPRISE/MSSP (closing the exact gap that let C4 ship).
-2. M6 — `commercialPlatformHandler.js` `PLAN_PRICES.MSSP` 0→9999.
-3. M7 — `cyberBrain.js` upsell copy prices corrected to match `TIER_LIMITS`.
+1. ~~C4 — `apiKeys.js` Starter price 499→999~~ — **Fixed, PR #232 (merged).**
+2. ~~M6 — `commercialPlatformHandler.js` `PLAN_PRICES.MSSP` 0→9999~~ — **Fixed, PR #236** (surfaced during
+   this pass's H1/H2 validation; see updated H1 above). Full suite 283/283 files, 2963/2963 tests.
+3. M7 — `cyberBrain.js` upsell copy prices corrected to match `TIER_LIMITS`. Still open — out of scope for
+   this pass (unrelated file/feature; recorded per scope-discipline policy rather than bundled in).
 
 **Needs a decision before implementation** (architectural, or the "right" answer depends on business
 intent this audit can't infer):
 - H5 — what to do with the parallel `subscriptionPaywallEngine.js` system (delete / disable / reconcile).
 - H6 — whether to retire or actually wire up `PLAN_FEATURES`/`hasAccess()`.
 - C1 — what Enterprise's revenue-visibility perk was actually supposed to be, if anything.
-- H1/H2 — which MSSP price and revenue-share number is the real one, across ~8-10 pages.
+- H1/H2 — **narrowed by this pass's full backend/reachability trace** (see updated sections above). No
+  longer "which of 6 numbers is real" — four are real, distinct, already-consistent products. What's left
+  to decide: (a) how to rewrite `mssp.html`'s two orphaned pricing cards (₹75,000/₹25,000, content-only,
+  low complexity), (b) whether to remove the dead `MSSP_PARTNER` ₹1,999 razorpay.js entry, (c) whether the
+  real revenue-share ledger should start honoring the 30/40/50% tiered onboarding margins instead of its
+  current flat 60%-for-everyone default, or whether 60% flat is the intended policy and the tiered-margin
+  fields/calculator should be removed instead.
 - H3/H4 — whether to fix the SSO/SAML and uptime copy, or invest in making the claims true.
 
 **Needs a live-environment check before scoping further:**
