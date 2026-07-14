@@ -78,7 +78,7 @@ const PLAN_NAMES = {
   ENTERPRISE: 'Enterprise', MSSP: 'MSSP Partner',
   OWNER: 'Platform Owner', ADMIN: 'Administrator',
 };
-const PLAN_PRICES = { FREE: 0, STARTER: 999, PRO: 1499, ENTERPRISE: 4999, MSSP: 0 };
+const PLAN_PRICES = { FREE: 0, STARTER: 999, PRO: 1499, ENTERPRISE: 4999, MSSP: 9999 };
 
 const TIER_QUOTAS = {
   FREE:       { scans: 50,  api_keys: 2,  seats: 1,  api_calls_day: 5,   storage_gb: 0.1 },
