@@ -28,6 +28,7 @@ import {
   generateAccessToken,
 } from '../lib/razorpay.js';
 import { sendPurchaseConfirmation } from '../services/emailEngine.js';
+import { createInvoice } from '../services/v24/billingEngine.js';
 import { createApiKey } from '../auth/apiKeys.js';
 import { hashPassword } from '../auth/password.js';
 import { generateThreatIntelReport } from '../services/ctiReportEngine.js';
@@ -446,6 +447,17 @@ export async function handleMarketplaceVerify(req, env, authCtx) {
 
   if (!purchase) return Response.json({ error: 'Purchase record not found' }, { status: 404 });
   if (purchase.status === 'paid') {
+    // Backfill: purchases verified before the GST invoice call existed here
+    // have no invoice row. createInvoice() is idempotent by payment_id, so
+    // this is a no-op for every purchase invoiced since that fix.
+    await createInvoice(env.DB, {
+      userId:        purchase.user_id || purchase.buyer_email,
+      email:         purchase.buyer_email,
+      lineItems:     [{ description: purchase.product_name, amount_inr: purchase.amount / 100, quantity: 1 }],
+      paymentId:     purchase.razorpay_payment_id || razorpay_payment_id,
+      paymentMethod: 'razorpay',
+    }, env).catch(e => console.warn('[Marketplace] invoice backfill error:', e.message));
+
     return Response.json({
       message: 'Payment already verified.',
       access_token: purchase.access_token,
@@ -475,6 +487,17 @@ export async function handleMarketplaceVerify(req, env, authCtx) {
       purchase_id: purchase.id, expires_at: expiresAt }),
     { expirationTtl: licenseDays * 86400 }
   ).catch(() => null);
+
+  // GST invoice — canonical v24/billingEngine.js authority (same engine
+  // already wired into /api/payments/verify and every other marketplace
+  // handler; this one was missing it). Idempotent by payment_id.
+  await createInvoice(env.DB, {
+    userId:        purchase.user_id || purchase.buyer_email,
+    email:         purchase.buyer_email,
+    lineItems:     [{ description: product?.name || purchase.product_name, amount_inr: (product?.amount ?? purchase.amount) / 100, quantity: 1 }],
+    paymentId:     razorpay_payment_id,
+    paymentMethod: 'razorpay',
+  }, env).catch(e => console.warn('[Marketplace] invoice error:', e.message));
 
   // Send purchase confirmation (canonical emailEngine.js)
   await sendPurchaseConfirmation(env, {
