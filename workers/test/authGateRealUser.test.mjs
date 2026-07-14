@@ -11,7 +11,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import worker from '../src/index.js';
-import { isRealUser } from '../src/auth/middleware.js';
+import { isRealUser, isOwner } from '../src/auth/middleware.js';
 
 // handleAgentsRun()/handleAgentDispatch() internally call fetchCVEContext(),
 // which hits real NVD/EPSS endpoints for any CVE-containing message (see
@@ -66,6 +66,22 @@ describe('isRealUser() — unit contract', () => {
   });
 });
 
+describe('GET /api/revenue/dashboard — a paying Enterprise customer is not the platform owner', () => {
+  // Was gated on authCtx.tier === 'ENTERPRISE', returning platform-wide
+  // revenue_by_source/affiliate_performance/gumroad_licenses across every
+  // customer with no scoping to the caller. Any customer who self-serve-
+  // purchased Enterprise (₹4,999/mo) could read the vendor's own
+  // confidential business metrics. Now gated on isOwner().
+  it('a real, authenticated Enterprise-tier customer is not an owner', () => {
+    const enterpriseCustomer = { authenticated: true, method: 'jwt', user_id: 'u_real_customer', email: 'paying-customer@example.com', tier: 'ENTERPRISE', isAdmin: false };
+    expect(isOwner(enterpriseCustomer, env())).toBe(false);
+  });
+  it('the platform owner (by email) is still admitted', () => {
+    const owner = { authenticated: true, method: 'jwt', user_id: 'u_owner', email: 'bivash@cyberdudebivash.com', tier: 'ENTERPRISE' };
+    expect(isOwner(owner, env())).toBe(true);
+  });
+});
+
 describe('migrated route gates — anonymous callers get 401', () => {
   const cases = [
     ['GET',  '/api/keys'],                    // API key management
@@ -103,6 +119,11 @@ describe('migrated route gates — anonymous callers get 401', () => {
   it('anonymous GET /api/revenue/dashboard is blocked (owner gate, 403)', async () => {
     const res = await anon('/api/revenue/dashboard');
     expect([401, 403]).toContain(res.status);
+  });
+
+  it('the ADMIN_KEY bypass is admitted to GET /api/revenue/dashboard', async () => {
+    const res = await admin('/api/revenue/dashboard');
+    expect(res.status).not.toBe(403);
   });
 
   it('the anonymous scan funnel is NOT gated (free-tier product entry point)', async () => {
