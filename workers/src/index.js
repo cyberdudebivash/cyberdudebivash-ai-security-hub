@@ -7853,7 +7853,7 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   }
   if (path.startsWith('/api/ai-governance/pdf/') && method === 'GET') {
     const pdfToken = path.replace('/api/ai-governance/pdf/', '');
-    return await handlePdfDownload(request, env, pdfToken);
+    return await handlePdfDownload(request, env, pdfToken, authCtx);
   }
 
   // ── v27: CEO EXECUTIVE DASHBOARD ──────────────────────────────────────────

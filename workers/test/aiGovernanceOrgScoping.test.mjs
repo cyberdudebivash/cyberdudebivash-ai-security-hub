@@ -13,7 +13,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
 import { handleAIGovernancePro } from '../src/handlers/aiGovernancePro.js';
-import { handlePdfGenerate, handlePdfList } from '../src/handlers/aiGovernancePdfHandler.js';
+import { handlePdfGenerate, handlePdfList, handlePdfDownload } from '../src/handlers/aiGovernancePdfHandler.js';
 
 function makeRealD1() {
   const sqlite = new DatabaseSync(':memory:');
@@ -55,6 +55,7 @@ function makeKV() {
 const userA = { authenticated: true, method: 'jwt', user_id: 'user-a', tier: 'ENTERPRISE' };
 const userB = { authenticated: true, method: 'jwt', user_id: 'user-b', tier: 'ENTERPRISE' };
 const anon  = { authenticated: true, method: 'ip_fallback', user_id: null, tier: 'FREE' };
+const freeUser = { authenticated: true, method: 'jwt', user_id: 'user-free', tier: 'FREE' };
 
 describe('handleAIGovernancePro — auth + org scoping (previously unauthenticated, client-controlled org_id)', () => {
   let env;
@@ -166,5 +167,70 @@ describe('handlePdfGenerate/handlePdfList — auth + org scoping (previously una
     const ownRes = await handlePdfList(new Request('https://x/api/ai-governance/pdf/list'), env, userA);
     const ownBody = await ownRes.json();
     expect(ownBody.count).toBe(1);
+  });
+});
+
+describe('handlePdfGenerate — PRO+ entitlement gate (was: login only, any FREE signup could generate)', () => {
+  let env;
+  beforeEach(() => { env = { DB: makeRealD1(), KV: makeKV() }; });
+
+  it('a real, logged-in FREE-tier caller is blocked with 403 feature_locked, not served the report', async () => {
+    const res = await handlePdfGenerate(new Request('https://x/api/ai-governance/pdf/generate', {
+      method: 'POST', body: JSON.stringify({ report_type: 'FULL_GOVERNANCE' }),
+    }), env, freeUser);
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toBe('feature_locked');
+    expect(body.feature).toBe('pdf_reports');
+    expect(body.token).toBeUndefined();
+    expect(body.download_url).toBeUndefined();
+  });
+
+  it('an ENTERPRISE-tier caller (has pdf_reports) still generates successfully', async () => {
+    const res = await handlePdfGenerate(new Request('https://x/api/ai-governance/pdf/generate', {
+      method: 'POST', body: JSON.stringify({ report_type: 'FULL_GOVERNANCE' }),
+    }), env, userA);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.token).toBeTruthy();
+  });
+});
+
+describe('handlePdfDownload — requires a real login (was: bare possession of the token)', () => {
+  let env;
+  beforeEach(() => { env = { DB: makeRealD1(), KV: makeKV() }; });
+
+  async function generateToken(authCtx) {
+    // No explicit frameworks — defaults to all 6, including NIST_CSF, which
+    // is exactly the combination that used to throw
+    // "ReferenceError: totalModels is not defined" on every single call
+    // (buildFrameworkSection's frameworkContent object evaluates all six
+    // framework template strings unconditionally, regardless of which one
+    // is selected) — this covers that regression, not just the auth gate.
+    const res = await handlePdfGenerate(new Request('https://x/api/ai-governance/pdf/generate', {
+      method: 'POST', body: JSON.stringify({ report_type: 'FULL_GOVERNANCE' }),
+    }), env, authCtx);
+    return (await res.json()).token;
+  }
+
+  it('an anonymous caller with a valid token is rejected, not served the report', async () => {
+    const token = await generateToken(userA);
+    const res = await handlePdfDownload(new Request(`https://x/api/ai-governance/pdf/${token}`), env, token, anon);
+    expect(res.status).toBe(401);
+  });
+
+  it('a different, real, logged-in user CAN open a shared report link (deliberate — not ownership-bound), and the default all-frameworks report renders without error', async () => {
+    const token = await generateToken(userA);
+    const res = await handlePdfDownload(new Request(`https://x/api/ai-governance/pdf/${token}`), env, token, userB);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/html');
+    const html = await res.text();
+    expect(html).toContain('AI Governance Compliance Report');
+  });
+
+  it('an invalid/expired token still 404s regardless of who is asking', async () => {
+    const res = await handlePdfDownload(new Request('https://x/api/ai-governance/pdf/not-a-real-token'), env, 'not-a-real-token', userA);
+    expect(res.status).toBe(404);
   });
 });
