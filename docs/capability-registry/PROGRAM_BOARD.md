@@ -262,6 +262,91 @@ already shipped under it:
 
 ## Session log (most recent first)
 
+### 2026-07-14 — Enterprise Production Certification Program, Phase IV: cross-reference verification pass (no new code changes)
+
+- **Context.** Owner requested "Phase IV" of the Enterprise Production
+  Certification Program: architecture/security/ops/commercial/
+  customer-journey certification, feature classification, a 12-dimension
+  scorecard, and a final GO/NO-GO verdict. Before executing a fresh
+  whole-platform audit, checked whether this would duplicate existing
+  work — it substantially would: the *exact same program name* already ran
+  a full whole-platform audit on 2026-07-12 (4 security fixes, 9 P1
+  re-verifications, 3 AI-fabrication fixes, 2 CI/CD gaps closed — see the
+  two session-log entries immediately below). Per this file's own
+  bounded-wave discipline (`EXECUTION_PROCEDURE.md` §1) and this session's
+  governing CLAUDE.md (verify existing claims against current code, don't
+  re-run completed audits, update living documents instead of creating
+  new ones), this pass is a **verification and synthesis** of the current
+  combined state across both active certification tracks — this Capability
+  Registry, and the parallel `docs/audit-history/PRODUCTION_RELEASE_GATE_
+  PHASE2_2026-07-14.md` line (H5/H8 subscription-entitlement integrity,
+  Revenue Intelligence admin gate, rate-limit authority consolidation —
+  PRs #245–#248, all merged and deployed earlier this same session) — not
+  a re-audit from scratch.
+- **Recovery:** confirmed current `main` HEAD (`75baefff`), working tree
+  clean, no divergence.
+- **Regenerated `PRODUCTION_READINESS_REPORT.md` fresh** (was stale —
+  `domains/*.json` had been edited after the last generation): 101
+  capabilities / 22 domains. Backend 90.1%, Frontend 74.8%, Parity 70.3%,
+  dynamic_browser-verified customer journeys 4%. Validator: 0 failures,
+  0 warnings.
+- **Independently re-verified all 3 currently-labeled "Critical/P1" entries
+  from source** (not trusted from the label): `CAP-COMP-001`,
+  `CAP-DEVPORTAL-004`, `CAP-MSSP-001` are all confirmed already-fixed/
+  functioning per their own `notes` fields — this registry's own
+  documented convention deliberately keeps the P1 label as a
+  historical-severity record after a fix, not a live-defect signal (the
+  same meta-finding the 2026-07-12 pass already identified: `priority` is
+  static, never auto-recomputed from `operational_status`). **Zero of the
+  3 represent a currently-broken live customer journey.** `CAP-COMP-001`'s
+  flagged triple-pricing (₹4,999 / ₹3,499 / ₹999 for the same conceptual
+  ISO 27001 pack across 3 non-cross-referencing backend paths —
+  `globalScale.js`, `marketplaceCheckoutHandler.js`, `toolsMarketplace.js`)
+  is real but its own notes explicitly record "no live customer impact
+  today," since fulfillment is a manual, human, within-24-hours process
+  regardless of which price/path a customer used — a commercial-
+  consistency issue, not a payment-without-provisioning defect. Not fixed
+  this pass (a pricing decision — which of 3 prices is canonical — needs
+  owner sign-off, not an engineering unilateral pick).
+- **Verified the 4 "duplicate systems"** the report flags (`CAP-NOTIF-003`,
+  `CAP-CRM-004`, `CAP-CRM-006`, `CAP-MKT-006`): all 4 are P2 (backend
+  exists, zero frontend surface) — dormant/unlaunched capabilities, not
+  live customer-facing drift.
+- **Cross-referenced the parallel Release Gate track**: no overlap or
+  contradiction found between the two tracks' findings. The commercial/
+  payment/entitlement-integrity line (arguably the highest-stakes trust
+  dimension) is clean of any live "customer pays, gets nothing" scenario
+  as of today's Release Gate Phase III close-out.
+- **Test suite (fresh, independent re-run):** 294 files / 3082 tests, 0
+  failures — unchanged from this session's last run; no product code was
+  touched this pass.
+- **No code changes this pass** — verification/synthesis wave only, per
+  the Implementation Policy governing this program (no speculative fixes
+  without a concrete, re-verified, in-scope finding).
+- **Overall verdict:** the platform's own computed instrument says
+  **NOT READY** (parity 70.3%, below the 80% GA threshold) — driven by
+  frontend/parity build-out completeness (25 P2 backend-only capabilities
+  awaiting a frontend surface), **not** by live customer-harming defects.
+  This is a materially different, less severe shape of "not ready" than
+  a broken payment or entitlement path would be, and should be read that
+  way rather than as a single undifferentiated red flag.
+- **Remaining, sized honestly (nothing new found this pass):** carried
+  forward unchanged from the 2026-07-12 pass — a cosmetic recycled
+  "340% YoY" stat in 4 files; `CAP-TIH-014`'s fabrication, open by
+  standing owner instruction; Cloudflare Pages rollback still manual; the
+  new wrangler auto-rollback job not yet fire-tested against a real
+  failure. Plus the Release Gate track's own register: System B ENTERPRISE
+  tier's 10× price divergence pending a product decision; no automated
+  subscription renewal; cancellation doesn't enforce downgrade at period
+  end; several Medium/Low drift and test-coverage items; H2/H7 MSSP
+  revenue-share/pricing-reference business decisions.
+- **Next recommended wave (owner's call):** (a) `CAP-COMP-001`'s
+  triple-pricing reconciliation — pick one canonical ISO 27001 price
+  across the 3 checkout paths; (b) the 25 P2 backend-only capabilities —
+  the single biggest lever on the parity number driving the NOT READY
+  verdict; or (c) continuing the Release Gate track's own next-priority
+  item (the System B ENTERPRISE pricing decision).
+
 ### 2026-07-12 — AI-fabrication follow-up pass (3 findings from the Enterprise Production Certification Program) + 2 CI/CD gaps closed
 
 - **Context.** Direct continuation of the Enterprise Production Certification
