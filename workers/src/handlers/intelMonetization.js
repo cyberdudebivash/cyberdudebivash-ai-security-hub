@@ -23,7 +23,7 @@ const CONTACT      = 'contact@cyberdudebivash.in';
 // tiers degrade to FREE; ENTERPRISE_SOC / MSSP map to ENTERPRISE-grade access.
 export const FEED_TIERS = {
   FREE:       { max_results: 25,   full_detail: false, epss: false, stix: false, kev_full: false, daily_limit: 100,    rpm: 10,  price_inr: 0,      label: 'Free'       },
-  STARTER:    { max_results: 100,  full_detail: true,  epss: true,  stix: false, kev_full: true,  daily_limit: 2000,   rpm: 30,  price_inr: 499,    label: 'Starter'    },
+  STARTER:    { max_results: 100,  full_detail: true,  epss: true,  stix: false, kev_full: true,  daily_limit: 2000,   rpm: 30,  price_inr: 999,    label: 'Starter'    },
   PRO:        { max_results: 500,  full_detail: true,  epss: true,  stix: true,  kev_full: true,  daily_limit: 20000,  rpm: 60,  price_inr: 1499,   label: 'Pro'        },
   ENTERPRISE: { max_results: 2000, full_detail: true,  epss: true,  stix: true,  kev_full: true,  daily_limit: -1,     rpm: 120, price_inr: 4999,   label: 'Enterprise' },
   MSSP:       { max_results: 5000, full_detail: true,  epss: true,  stix: true,  kev_full: true,  daily_limit: -1,     rpm: 240, price_inr: 9999,   label: 'MSSP'       },

@@ -848,7 +848,7 @@ export async function handleRevenueMetrics(request, env, authCtx) {
     const dailyTrend    = isEnterprise ? results[7] : null;
 
     // Build plan MRR
-    const PLAN_PRICE = { starter: 499, pro: 1499, enterprise: 4999 };
+    const PLAN_PRICE = { starter: 999, pro: 1499, enterprise: 4999 };
     let mrr = 0;
     for (const row of (subscribers.results || [])) {
       mrr += (PLAN_PRICE[row.plan] || 0) * row.count;
@@ -944,7 +944,7 @@ export async function handleRevenueProducts(request, env, authCtx) {
         SELECT plan as product_id,
                COUNT(*) as total_sales,
                COUNT(*) * CASE plan
-                 WHEN 'starter' THEN 499
+                 WHEN 'starter' THEN 999
                  WHEN 'pro'     THEN 1499
                  WHEN 'enterprise' THEN 4999
                  ELSE 0 END as total_revenue
@@ -966,7 +966,7 @@ export async function handleRevenueProducts(request, env, authCtx) {
       exec_briefing:     { name: 'Executive Briefing',       price: 299,   category: 'reporting'},
       full_defense_pack: { name: 'Full Defense Pack',        price: 2499,  category: 'bundle'  },
       enterprise_bundle: { name: 'Enterprise Bundle',        price: 9999,  category: 'bundle'  },
-      starter:           { name: 'STARTER Subscription',     price: 499,   category: 'subscription' },
+      starter:           { name: 'STARTER Subscription',     price: 999,   category: 'subscription' },
       pro:               { name: 'PRO Subscription',         price: 1499,  category: 'subscription' },
       enterprise:        { name: 'ENTERPRISE Subscription',  price: 4999,  category: 'subscription' },
     };

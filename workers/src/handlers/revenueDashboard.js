@@ -13,7 +13,7 @@
 //   • KPI cards with period-over-period deltas
 // ═══════════════════════════════════════════════════════════════════════════
 
-const PLAN_PRICE = { starter: 499, pro: 1499, enterprise: 4999 };
+const PLAN_PRICE = { starter: 999, pro: 1499, enterprise: 4999 };
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',

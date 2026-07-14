@@ -17,7 +17,7 @@ from typing import Any, Literal
 # ─────────────────────────────────────────────────────────────────────────────
 
 PLAN_CATALOG_INR: dict[str, int] = {
-    "starter":    499,
+    "starter":    999,
     "pro":        1499,
     "enterprise": 4999,
 }

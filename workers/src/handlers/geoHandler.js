@@ -70,7 +70,7 @@ export function injectCountryIntoHTML(htmlResponse, request) {
  */
 export const PLAN_PRICING = Object.freeze({
   INR: Object.freeze({
-    STARTER:    { monthly: 499,  annual: 4990  },
+    STARTER:    { monthly: 999,  annual: 9990  },
     PRO:        { monthly: 1499, annual: 14990 },
     ENTERPRISE: { monthly: 4999, annual: 49990 },
     MSSP:       { monthly: 9999, annual: 99990 },

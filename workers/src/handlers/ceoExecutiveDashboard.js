@@ -22,7 +22,7 @@ function err(msg, status = 400) {
   return json({ success: false, error: msg }, status);
 }
 
-const PLAN_PRICE = { starter: 499, pro: 1499, enterprise: 4999, mssp: 49999 };
+const PLAN_PRICE = { starter: 999, pro: 1499, enterprise: 4999, mssp: 49999 };
 
 export async function handleCEODashboard(request, env, authCtx) {
   if (!authCtx?.userId) return err('Auth required', 401);

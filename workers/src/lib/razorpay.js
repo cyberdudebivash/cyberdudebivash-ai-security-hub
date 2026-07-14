@@ -22,7 +22,7 @@ export const MODULE_PRICES = {
   threat_intel:   { amount: 1499900, label: '₹14,999', name: 'Threat Intelligence Report'   },
   red_team:       { amount: 2499900, label: '₹24,999', name: 'Red Team Assessment'           },
   // Subscription plans (monthly billing)
-  subscription:   { amount: 49900,   label: '₹499',    name: 'Starter Plan (Monthly)'        },
+  subscription:   { amount: 99900,   label: '₹999',    name: 'Starter Plan (Monthly)'        },
   // Defense marketplace
   defense:        { amount: 0,       label: '',         name: 'Defense Solution'              },
 };
@@ -57,7 +57,7 @@ export const PACKAGE_PRICES = {
 
 // Subscription plan pricing (amount in paise)
 export const SUBSCRIPTION_PRICES = {
-  STARTER:    { amount: 49900,   label: '₹499',    period: 'monthly', name: 'Starter Plan'    },
+  STARTER:    { amount: 99900,   label: '₹999',    period: 'monthly', name: 'Starter Plan'    },
   PRO:        { amount: 149900,  label: '₹1,499',  period: 'monthly', name: 'Pro Plan'         },
   ENTERPRISE: { amount: 499900,  label: '₹4,999',  period: 'monthly', name: 'Enterprise Plan'  },
   MSSP:          { amount: 999900,   label: '₹9,999',   period: 'monthly', name: 'MSSP Plan'             },

@@ -1,7 +1,7 @@
 /**
  * CYBERDUDEBIVASH AI Security Hub — Subscription Engine v1.0
  * Handles SaaS plan management, monthly billing via Razorpay, usage tracking
- * Plans: FREE | STARTER ₹499 | PRO ₹1499 | ENTERPRISE ₹4999
+ * Plans: FREE | STARTER ₹999 | PRO ₹1499 | ENTERPRISE ₹4999
  */
 
 import { TIER_LIMITS, PLAN_FEATURES, hasAccess, resolveApiKeyFromDB } from '../auth/apiKeys.js';
@@ -18,9 +18,9 @@ import { handleCreateOrder, handleVerifyPayment } from './payments.js';
 const SUBSCRIPTION_PLANS = {
   STARTER: {
     name:        'Starter',
-    price_inr:   499,
-    amount:      49900,
-    price_annual_inr: 4990,
+    price_inr:   999,
+    amount:      99900,
+    price_annual_inr: 9990,
     scans:       600,
     description: '600 scans/month, AI Threat Analysis, PDF Reports, Sentinel CVE Feed',
     features:    ['600 scans/month', 'AI Threat Analysis', 'PDF Reports', 'Sentinel CVE Feed', '2 API Keys', 'Email Support'],

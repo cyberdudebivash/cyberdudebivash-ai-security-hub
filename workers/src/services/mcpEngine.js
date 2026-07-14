@@ -62,7 +62,7 @@ const UPSELL_RULES = [
   },
   {
     trigger: { risk_score_gte: 50, tier: 'FREE' },
-    offer:   { product:'STARTER', label:'Starter Plan', price:499, message:'Unlock full findings for this scan + 50 scans/month.', urgency:'high' },
+    offer:   { product:'STARTER', label:'Starter Plan', price:999, message:'Unlock full findings for this scan + 50 scans/month.', urgency:'high' },
   },
   {
     trigger: { module: 'redteam' },
@@ -741,8 +741,8 @@ function buildReturnUserOffer(user_memory, module, tier) {
       type: 'starter_nudge',
       headline: 'Back for more security intel?',
       offer_text: 'Starter Plan gives you 50 scans/month + full PDF reports.',
-      cta_text: 'Get Starter Plan — ₹499/mo',
-      cta_action: "CDB_PAY.open('STARTER',499,'Starter Plan')",
+      cta_text: 'Get Starter Plan — ₹999/mo',
+      cta_action: "CDB_PAY.open('STARTER',999,'Starter Plan')",
       urgency: 'low',
     };
   }

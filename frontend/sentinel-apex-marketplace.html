@@ -1056,7 +1056,7 @@ function renderFallbackPlans(grid) {
   const plans = [
     { name:'FREE', price:'₹0', desc:'Public threat-intel feed — no key required', popular:false,
       features:['25 items per request','Recent CVEs · basic fields','100 requests/day','10 requests/min'] },
-    { name:'STARTER', price:'₹499/mo', desc:'Programmatic CVE/KEV intelligence API', popular:false,
+    { name:'STARTER', price:'₹999/mo', desc:'Programmatic CVE/KEV intelligence API', popular:false,
       features:['100 items per request','Full detail + EPSS exploit scores','Complete CISA KEV feed','2,000 requests/day','30 requests/min'] },
     { name:'PRO', price:'₹1,499/mo', desc:'Programmatic CVE/KEV intelligence API', popular:true,
       features:['500 items per request','Full detail + EPSS exploit scores','Complete CISA KEV feed','STIX 2.1 bundle export (SIEM/TIP)','20,000 requests/day','60 requests/min'] },
@@ -1069,7 +1069,7 @@ function renderFallbackPlans(grid) {
 }
 
 // Plan name → INR price (single source of truth, mirrors FEED_TIERS in intelMonetization.js)
-const PLAN_PRICES = { FREE: 0, STARTER: 499, PRO: 1499, ENTERPRISE: 4999, MSSP: 9999 };
+const PLAN_PRICES = { FREE: 0, STARTER: 999, PRO: 1499, ENTERPRISE: 4999, MSSP: 9999 };
 
 function openPlanCheckout(tier, price) {
   if (tier === 'FREE') { window.location.href = '/api-docs.html'; return; }

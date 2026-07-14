@@ -368,7 +368,7 @@ function templateDay3(lead, scanData = {}) {
     <h2 style="color:#f1f5f9;font-size:17px;margin:28px 0 16px">Choose your protection level:</h2>
 
     ${[
-      { plan: 'STARTER', price: '₹499/mo', color: '#3b82f6', features: ['20 scans/day', 'Full reports', 'Basic IOC data', 'Email alerts'] },
+      { plan: 'STARTER', price: '₹999/mo', color: '#3b82f6', features: ['20 scans/day', 'Full reports', 'Basic IOC data', 'Email alerts'] },
       { plan: 'PRO', price: '₹1,499/mo', color: '#7c3aed', features: ['100 scans/day', 'Full IOC + correlations', 'EPSS scores', 'AI SOC detection', 'API access (1,000 calls/mo)'] },
       { plan: 'ENTERPRISE', price: '₹4,999/mo', color: '#10b981', features: ['Unlimited scans', 'Autonomous defense', 'Full SOC pipeline', 'Telegram alerting', 'Dedicated support'] },
     ].map(({ plan, price, color, features }) => `

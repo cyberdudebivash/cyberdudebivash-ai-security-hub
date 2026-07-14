@@ -82,7 +82,7 @@ const SCAN_MODULES = ['domain','ai','redteam','identity','compliance'];
 
 // ─── Revenue Data Generator ────────────────────────────────────────────────────
 const PRODUCTS = [
-  { id:'STARTER', name:'Starter Plan', price:499 },
+  { id:'STARTER', name:'Starter Plan', price:999 },
   { id:'PRO', name:'Pro Plan', price:1499 },
   { id:'DOMAIN_REPORT', name:'Domain Security Report', price:199 },
   { id:'SOC_PLAYBOOK', name:'SOC Analyst Playbook 2026', price:999 },

@@ -11,7 +11,7 @@
  * Tier is read from authCtx.tier (FREE | STARTER | PRO | ENTERPRISE | MSSP),
  * exactly as resolveAuthV5() produces it. FREE / anonymous callers are gated
  * (full grade + severity counts + top 3 findings; the rest locked behind the
- * ₹499 Starter unlock). STARTER and above get the full report.
+ * ₹999 Starter unlock). STARTER and above get the full report.
  *
  * SECURITY: the plan is taken ONLY from authCtx — never from the request body —
  * so a free caller cannot self-upgrade by sending {"tier":"pro"}.
@@ -26,7 +26,7 @@ import { RULES } from './rules.js';
 
 const FREE_LINE_LIMIT = 800;
 const FREE_PREVIEW_COUNT = 3;
-const UNLOCK_PRICE = '\u20B9499'; // ₹499 — keep in sync with the pricing engine
+const UNLOCK_PRICE = '\u20B9999'; // ₹999 — keep in sync with the pricing engine
 
 function json(body, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(body), {

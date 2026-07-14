@@ -16,7 +16,7 @@
 // ── Plan pricing (INR, monthly) ──────────────────────────────────────────────
 export const PLAN_PRICING = {
   free:       0,
-  starter:    499,
+  starter:    999,
   pro:        1499,
   enterprise: 4999,
 };
@@ -962,7 +962,7 @@ export async function getRevenueSnapshot(env) {
       env.DB.prepare(`
         SELECT COALESCE(SUM(
           CASE plan
-            WHEN 'starter'    THEN 499
+            WHEN 'starter'    THEN 999
             WHEN 'pro'        THEN 1499
             WHEN 'enterprise' THEN 4999
             ELSE 0

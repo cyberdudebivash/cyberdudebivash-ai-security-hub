@@ -744,7 +744,7 @@ window.cdbTriggerReportPurchase = async function(module, target) {
     {
       "@type": "Offer",
       "name": "Starter",
-      "price": "499",
+      "price": "999",
       "priceCurrency": "INR",
       "billingIncrement": "monthly",
       "description": "10 full scans/month, AI Threat Analysis, PDF reports, 2 API keys"
@@ -869,8 +869,8 @@ window.cdbTriggerReportPurchase = async function(module, target) {
         "@type": "Offer",
         "name": "STARTER",
         "priceCurrency": "INR",
-        "price": "499",
-        "priceSpecification": {"@type": "UnitPriceSpecification", "price": "499", "priceCurrency": "INR", "unitText": "MONTH"},
+        "price": "999",
+        "priceSpecification": {"@type": "UnitPriceSpecification", "price": "999", "priceCurrency": "INR", "unitText": "MONTH"},
         "description": "100 items per request, full detail with EPSS scores, complete CISA KEV feed, 2,000 requests/day.",
         "itemOffered": {"@type": "Service", "name": "Sentinel APEX Threat-Intel API — STARTER tier"}
       },
@@ -2619,7 +2619,7 @@ a{color:var(--accent);text-decoration:none}
 <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:16px;margin-bottom:16px">
 <div style="font-size:12px;font-weight:700;color:#f59e0b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em">Paste Your AI-Generated Code</div>
 <textarea aria-label="AI-generated code input for security review" id="vibe-code-input" placeholder="// Paste your AI-generated code here — supports JavaScript, TypeScript, Python, PHP, Java, Go
-// Free: up to 200 lines | Paid (₹499): full codebase analysis
+// Free: up to 200 lines | Paid (₹999): full codebase analysis
 
 const express = require('express');
 const app = express();
@@ -2684,7 +2684,7 @@ app.get('/api/user', (req, res) =&gt; {
 <div style="font-size:32px;margin-bottom:8px">🔒</div>
 <div style="font-weight:700;color:#a78bfa;margin-bottom:6px">STARTER Plan or Above Required</div>
 <div style="color:var(--text-muted);font-size:13px;margin-bottom:12px">Report downloads are available on STARTER, PRO, and ENTERPRISE plans.</div>
-<button class="btn btn-primary" onclick="startSubscription('STARTER')" style="font-size:13px">Get STARTER — ₹499/mo</button>
+<button class="btn btn-primary" onclick="startSubscription('STARTER')" style="font-size:13px">Get STARTER — ₹999/mo</button>
 </div>
 <div id="reports-controls">
 <div class="scan-btn-row">
@@ -6093,7 +6093,7 @@ window.cdbBookAssessment = async function() {
 <!-- STARTER -->
 <div class="price-card" id="plan-card-starter">
 <div class="price-name" style="color:#3b82f6">STARTER</div>
-<div class="price-amount">₹499</div>
+<div class="price-amount">₹999</div>
 <div class="price-period">/month · 10 scans</div>
 <ul class="price-features">
 <li>10 full scans/month · 5 scans/min burst</li>
@@ -6252,7 +6252,7 @@ window.cdbBookAssessment = async function() {
 </div>
 <div class="price-card">
 <div class="price-name" style="color:#3b82f6">STARTER</div>
-<div class="price-amount">₹499</div>
+<div class="price-amount">₹999</div>
 <div class="price-period">/month · per API key</div>
 <ul class="price-features">
 <li>100 items / request</li>
@@ -7881,7 +7881,7 @@ DeviceNetworkEvents | where RemotePort in (445,135,3389) | summarize count() by 
 <a class="v14-footer-link" href="/services">🧠 Intel Report ₹14,999</a>
 <a class="v14-footer-link" href="/services">🎯 Red Team ₹24,999</a>
 <a class="v14-footer-link" href="/services">🏢 Retainer ₹99,999</a>
-<a class="v14-footer-link-dim" href="/#pricing">📦 Starter ₹499/mo</a>
+<a class="v14-footer-link-dim" href="/#pricing">📦 Starter ₹999/mo</a>
 <a class="v14-footer-link-dim" href="/#pricing">🚀 Pro ₹1,499/mo</a>
 <a class="v14-footer-link-dim" href="/#pricing">🏷 Enterprise ₹4,999/mo</a>
 <a class="v14-footer-link-dim" href="/#pricing">♾ MSSP ₹9,999/mo</a>
@@ -11131,7 +11131,7 @@ function showQuotaUpgradeCTA(module) {
   if (!resultsEl) return;
   resultsEl.classList.add('show'); // fix: results-panel is display:none without .show
   const plan = SUBSCRIPTION.getPlan();
-  const nextPlan = plan === 'FREE' ? 'STARTER (₹499/mo)' : plan === 'STARTER' ? 'PRO (₹1,499/mo)' : 'Enterprise';
+  const nextPlan = plan === 'FREE' ? 'STARTER (₹999/mo)' : plan === 'STARTER' ? 'PRO (₹1,499/mo)' : 'Enterprise';
   resultsEl.innerHTML = `
     <div style="background:linear-gradient(135deg,rgba(239,68,68,.1),rgba(124,58,237,.08));border:1px solid rgba(239,68,68,.3);border-radius:12px;padding:28px;text-align:center;margin:20px 0">
       <div style="font-size:36px;margin-bottom:12px">🚫</div>
@@ -11165,7 +11165,7 @@ function applyFeatureGate(targetEl, feature, minPlan, featureLabel) {
         <div class="gate-overlay-icon">🔒</div>
         <div class="gate-overlay-title">${featureLabel || feature} — ${meta.label} Required</div>
         <div class="gate-overlay-sub">Upgrade to <strong>${meta.emoji} ${meta.label}</strong> to unlock this feature.</div>
-        <button class="gate-overlay-btn" onclick="startSubscription('${minPlan}')">Upgrade — ${minPlan === 'STARTER' ? '₹499' : minPlan === 'PRO' ? '₹1,499' : '₹4,999'}/mo</button>
+        <button class="gate-overlay-btn" onclick="startSubscription('${minPlan}')">Upgrade — ${minPlan === 'STARTER' ? '₹999' : minPlan === 'PRO' ? '₹1,499' : '₹4,999'}/mo</button>
       </div>
     </div>`;
 }
@@ -11189,7 +11189,7 @@ function applyAIBrainGating(module) {
 
 // ─── Subscription purchase flow ───────────────────────────────────────────────
 const PLAN_INFO = {
-  STARTER:    { label: 'Starter',    price: '₹499',   amount: 49900,  color: '#3b82f6', emoji: '⚡', desc: '10 scans/month · AI Analyze · PDF Reports' },
+  STARTER:    { label: 'Starter',    price: '₹999',   amount: 99900,  color: '#3b82f6', emoji: '⚡', desc: '10 scans/month · AI Analyze · PDF Reports' },
   PRO:        { label: 'Pro',        price: '₹1,499', amount: 149900, color: '#8b5cf6', emoji: '🚀', desc: 'Unlimited scans · Full AI Suite · API Access' },
   ENTERPRISE: { label: 'Enterprise', price: '₹4,999', amount: 499900, color: '#f59e0b', emoji: '🏢', desc: 'Multi-user · 20 API Keys · Dedicated Support' },
 };
@@ -14272,7 +14272,7 @@ window.addEventListener('load', () => {
       font-size:13px; font-family:sans-serif; box-shadow:0 2px 12px rgba(0,0,0,.3);
     `;
 
-    const plans = { free: { upgrade: 'STARTER', price: '₹499/mo', discount: '₹499/mo' }, starter: { upgrade: 'PRO', price: '₹1,499/mo', discount: '₹1,499/mo' } };
+    const plans = { free: { upgrade: 'STARTER', price: '₹999/mo', discount: '₹999/mo' }, starter: { upgrade: 'PRO', price: '₹1,499/mo', discount: '₹1,499/mo' } };
     const offer = plans[PLAN] || plans.free;
 
     banner.innerHTML = `
@@ -14646,7 +14646,7 @@ window.addEventListener('load', () => {
         <div style="background:#0f0f1e;border:1px solid #4f46e5;border-radius:16px;padding:32px;max-width:420px;width:90%;text-align:center">
           <div style="font-size:48px">😢</div>
           <h2 style="color:#fff;margin:12px 0 8px">Wait — Before You Go</h2>
-          <p style="color:#94a3b8;margin:0 0 20px">Get <strong style="color:#4f46e5">50% off your first month</strong> of STARTER — just ₹249 (reg. ₹499)</p>
+          <p style="color:#94a3b8;margin:0 0 20px">Get <strong style="color:#4f46e5">50% off your first month</strong> of STARTER — just ₹499 (reg. ₹999)</p>
           <button onclick="document.querySelector('.exit-intent-overlay')?.remove();if(typeof CDB_PAYMENT!=='undefined'){CDB_PAYMENT.open({product:'subscription-STARTER-50OFF',productLabel:'Starter Plan — 50% Off First Month',amountLabel:'₹249/month (50% off)'});}else if(typeof startSubscription==='function'){startSubscription('STARTER');}"
              style="display:block;width:100%;background:#4f46e5;color:#fff;padding:14px;border-radius:10px;font-weight:700;border:none;cursor:pointer;margin-bottom:10px;font-size:16px">
             Claim 50% Off — ₹249 →
@@ -15303,9 +15303,9 @@ function addGateOverlay(el,tierLabel,tierKey){if(el.querySelector('.gate-overlay
 function updatePlanUI(){document.querySelectorAll('.nav-tier-badge, #nav-plan-badge').forEach(function(b){b.textContent=window.CDB_PLAN;b.style.background=window.CDB_PLAN==='PRO'?'rgba(139,92,246,.2)':window.CDB_PLAN==='ENTERPRISE'?'rgba(245,158,11,.2)':'rgba(0,212,255,.1)';});}
 
 /* UPGRADE MODAL */
-window.openUpgradeModal=function(tier){logSOC('Upgrade flow: '+tier,'sys','info');var m=document.getElementById('cdb-upgrade-modal');if(!m){m=document.createElement('div');m.id='cdb-upgrade-modal';m.innerHTML='<div class="cdb-upgrade-box"><button class="cdb-upg-close" onclick="closeUpgradeModal()">&#10005;</button><div class="cdb-upg-header"><div class="cdb-upg-icon">&#9889;</div><div class="cdb-upg-title">Upgrade Your Plan</div><div class="cdb-upg-sub">Unlock enterprise-grade AI cybersecurity capabilities</div></div><div class="cdb-plan-cards"><div class="cdb-plan-opt" onclick="selectUpgradePlan(&#39;STARTER&#39;,this)"><div class="cdb-plan-name" style="color:#3b82f6">STARTER</div><div class="cdb-plan-price">&#8377;499</div><div class="cdb-plan-period">/month &middot; 10 scans</div></div><div class="cdb-plan-opt selected" id="upg-pro-opt" onclick="selectUpgradePlan(&#39;PRO&#39;,this)"><div class="cdb-plan-name" style="color:#c4b5fd">PRO <span style="font-size:8px;background:rgba(139,92,246,.2);padding:1px 5px;border-radius:3px">POPULAR</span></div><div class="cdb-plan-price">&#8377;1,499</div><div class="cdb-plan-period">/month &middot; Unlimited</div></div><div class="cdb-plan-opt" onclick="selectUpgradePlan(&#39;ENTERPRISE&#39;,this)" style="grid-column:span 2"><div class="cdb-plan-name" style="color:#f59e0b">ENTERPRISE</div><div class="cdb-plan-price">&#8377;4,999</div><div class="cdb-plan-period">/month &middot; 10 seats + API + SLA</div></div></div><button class="cdb-upg-cta" id="cdb-upg-cta-btn" onclick="proceedUpgrade()">&#9889; Upgrade to Pro &mdash; &#8377;1,499/mo</button><div style="text-align:center;margin-top:8px;font-size:10px;color:var(--text-dim)">UPI &middot; Bank &middot; PayPal &middot; Crypto &middot; 2&ndash;4 hr activation</div></div>';m.addEventListener('click',function(e){if(e.target===m)closeUpgradeModal();});document.body.appendChild(m);}if(tier==='ENTERPRISE'){var eo=document.querySelector('.cdb-plan-opt:last-child');selectUpgradePlan('ENTERPRISE',eo);}m.classList.add('open');};
+window.openUpgradeModal=function(tier){logSOC('Upgrade flow: '+tier,'sys','info');var m=document.getElementById('cdb-upgrade-modal');if(!m){m=document.createElement('div');m.id='cdb-upgrade-modal';m.innerHTML='<div class="cdb-upgrade-box"><button class="cdb-upg-close" onclick="closeUpgradeModal()">&#10005;</button><div class="cdb-upg-header"><div class="cdb-upg-icon">&#9889;</div><div class="cdb-upg-title">Upgrade Your Plan</div><div class="cdb-upg-sub">Unlock enterprise-grade AI cybersecurity capabilities</div></div><div class="cdb-plan-cards"><div class="cdb-plan-opt" onclick="selectUpgradePlan(&#39;STARTER&#39;,this)"><div class="cdb-plan-name" style="color:#3b82f6">STARTER</div><div class="cdb-plan-price">&#8377;999</div><div class="cdb-plan-period">/month &middot; 10 scans</div></div><div class="cdb-plan-opt selected" id="upg-pro-opt" onclick="selectUpgradePlan(&#39;PRO&#39;,this)"><div class="cdb-plan-name" style="color:#c4b5fd">PRO <span style="font-size:8px;background:rgba(139,92,246,.2);padding:1px 5px;border-radius:3px">POPULAR</span></div><div class="cdb-plan-price">&#8377;1,499</div><div class="cdb-plan-period">/month &middot; Unlimited</div></div><div class="cdb-plan-opt" onclick="selectUpgradePlan(&#39;ENTERPRISE&#39;,this)" style="grid-column:span 2"><div class="cdb-plan-name" style="color:#f59e0b">ENTERPRISE</div><div class="cdb-plan-price">&#8377;4,999</div><div class="cdb-plan-period">/month &middot; 10 seats + API + SLA</div></div></div><button class="cdb-upg-cta" id="cdb-upg-cta-btn" onclick="proceedUpgrade()">&#9889; Upgrade to Pro &mdash; &#8377;1,499/mo</button><div style="text-align:center;margin-top:8px;font-size:10px;color:var(--text-dim)">UPI &middot; Bank &middot; PayPal &middot; Crypto &middot; 2&ndash;4 hr activation</div></div>';m.addEventListener('click',function(e){if(e.target===m)closeUpgradeModal();});document.body.appendChild(m);}if(tier==='ENTERPRISE'){var eo=document.querySelector('.cdb-plan-opt:last-child');selectUpgradePlan('ENTERPRISE',eo);}m.classList.add('open');};
 window._selectedUpgradePlan='PRO';
-window.selectUpgradePlan=function(plan,el){window._selectedUpgradePlan=plan;document.querySelectorAll('.cdb-plan-opt').forEach(function(o){o.classList.remove('selected');});if(el)el.classList.add('selected');var prices={STARTER:'&#8377;499',PRO:'&#8377;1,499',ENTERPRISE:'&#8377;4,999'};var btn=document.getElementById('cdb-upg-cta-btn');if(btn)btn.innerHTML='&#9889; Upgrade to '+plan+' &mdash; '+prices[plan]+'/mo';};
+window.selectUpgradePlan=function(plan,el){window._selectedUpgradePlan=plan;document.querySelectorAll('.cdb-plan-opt').forEach(function(o){o.classList.remove('selected');});if(el)el.classList.add('selected');var prices={STARTER:'&#8377;999',PRO:'&#8377;1,499',ENTERPRISE:'&#8377;4,999'};var btn=document.getElementById('cdb-upg-cta-btn');if(btn)btn.innerHTML='&#9889; Upgrade to '+plan+' &mdash; '+prices[plan]+'/mo';};
 window.closeUpgradeModal=function(){var m=document.getElementById('cdb-upgrade-modal');if(m)m.classList.remove('open');};
 window.proceedUpgrade=function(){closeUpgradeModal();if(typeof startSubscription==='function')startSubscription(window._selectedUpgradePlan);else document.getElementById('pricing')?.scrollIntoView({behavior:'smooth'});};
 
@@ -22276,7 +22276,7 @@ window.startSubscription = function(plan) {
   // PRICING — SOURCE OF TRUTH (matches pricingConfig.js)
   var plans = {
     FREE:       { id: 'FREE',       inr: 0,    label: 'Free Plan — Freemium'               },
-    STARTER:    { id: 'STARTER',    inr: 499,  label: 'Starter Plan — ₹499/month'          },
+    STARTER:    { id: 'STARTER',    inr: 999,  label: 'Starter Plan — ₹999/month'          },
     PRO:        { id: 'PRO',        inr: 1499, label: 'Pro Plan — ₹1,499/month'            },
     ENTERPRISE: { id: 'ENTERPRISE', inr: 4999, label: 'Enterprise Plan — ₹4,999/month'     },
     MSSP:       { id: 'MSSP',       inr: 9999, label: 'MSSP Command — ₹9,999/month'        },
@@ -22319,7 +22319,7 @@ window.showPaymentInstructions = function() {
 (function() {
   var origP4Paywall = window.p4ShowPaywallModal;
   window.p4ShowPaywallModal = function(featureName, requiredPlan, roiMsg) {
-    var planPrices = { FREE: 0, STARTER: 499, PRO: 1499, ENTERPRISE: 4999, MSSP: 9999 };
+    var planPrices = { FREE: 0, STARTER: 999, PRO: 1499, ENTERPRISE: 4999, MSSP: 9999 };
     var price = planPrices[requiredPlan] || 1499;
     var label = featureName + ' — ' + (requiredPlan || 'PRO') + ' Plan';
     window.openManualPayment(requiredPlan || 'PRO', price, label);
@@ -23224,7 +23224,7 @@ function v21TriggerUrgencyPayment(){
 (function(){
   'use strict';
 
-  const PRICING_INR = { starter:499, pro:1499, enterprise:4999, mssp:9999 };
+  const PRICING_INR = { starter:999, pro:1499, enterprise:4999, mssp:9999 };
   const PRICING_USD = { starter:6,   pro:19,   enterprise:59,   mssp:119  };
   const CRYPTO_WALLETS = {
     ETH:        '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',

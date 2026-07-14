@@ -19,7 +19,7 @@ Everything below is stated from verified behavior (regression suite + same-day l
 | Tier | Price (INR/mo) | API daily | Burst/min | API keys |
 |---|---|---|---|---|
 | FREE | 0 | 5 | 2 | 2 |
-| STARTER | 499 | 20 | 5 | 2 |
+| STARTER | 999 | 20 | 5 | 2 |
 | PRO | 1,499 | 500 | 20 | 5 |
 | ENTERPRISE | 4,999 | unlimited | 60 | 20 |
 | MSSP | 9,999 | unlimited | 120 | unlimited |

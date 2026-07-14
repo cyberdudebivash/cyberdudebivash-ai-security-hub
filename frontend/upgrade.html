@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#7c3aed">
 <title>Upgrade Your Plan | CYBERDUDEBIVASH AI Security Hub</title>
-<meta name="description" content="Unlock full AI security intelligence. Upgrade to Starter, Pro, Enterprise, or MSSP — starting from ₹499/mo.">
+<meta name="description" content="Unlock full AI security intelligence. Upgrade to Starter, Pro, Enterprise, or MSSP — starting from ₹999/mo.">
 <link rel="canonical" href="https://cyberdudebivash.in/upgrade">
 <style>
 :root{--bg:#0a0a1a;--surface:#0f0f2e;--border:#1e1e4a;--accent:#00d4ff;--purple:#a78bfa;--green:#00ff88;--text:#e2e8f0;--muted:#94a3b8;--dim:#64748b}
@@ -64,7 +64,7 @@ footer{border-top:1px solid var(--border);padding:24px;text-align:center;font-si
 <meta property="og:site_name" content="CYBERDUDEBIVASH® AI SECURITY HUB™"/>
 <meta property="og:locale" content="en_IN"/>
 <meta property="og:title" content="Upgrade Your Plan | CYBERDUDEBIVASH AI Security Hub"/>
-<meta property="og:description" content="Unlock full AI security intelligence. Upgrade to Starter, Pro, Enterprise, or MSSP — starting from ₹499/mo."/>
+<meta property="og:description" content="Unlock full AI security intelligence. Upgrade to Starter, Pro, Enterprise, or MSSP — starting from ₹999/mo."/>
 <meta property="og:image" content="https://cyberdudebivash.in/og-image-v2.png"/>
 <meta property="og:image:secure_url" content="https://cyberdudebivash.in/og-image-v2.png"/>
 <meta property="og:image:type" content="image/png"/>
@@ -74,14 +74,14 @@ footer{border-top:1px solid var(--border);padding:24px;text-align:center;font-si
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:site" content="@cyberdudebivash"/>
 <meta name="twitter:title" content="Upgrade Your Plan | CYBERDUDEBIVASH AI Security Hub"/>
-<meta name="twitter:description" content="Unlock full AI security intelligence. Upgrade to Starter, Pro, Enterprise, or MSSP — starting from ₹499/mo."/>
+<meta name="twitter:description" content="Unlock full AI security intelligence. Upgrade to Starter, Pro, Enterprise, or MSSP — starting from ₹999/mo."/>
 <meta name="twitter:image" content="https://cyberdudebivash.in/og-image-v2.png"/>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebPage",
   "name": "Upgrade Your Plan | CYBERDUDEBIVASH AI Security Hub",
-  "description": "Unlock full AI security intelligence. Upgrade to Starter, Pro, Enterprise, or MSSP — starting from ₹499/mo.",
+  "description": "Unlock full AI security intelligence. Upgrade to Starter, Pro, Enterprise, or MSSP — starting from ₹999/mo.",
   "publisher": {"@id": "https://cyberdudebivash.in/#organization"},
   "url": "https://cyberdudebivash.in/upgrade"
 }
@@ -135,8 +135,8 @@ footer{border-top:1px solid var(--border);padding:24px;text-align:center;font-si
   <div class="plan-card">
     <div class="plan-badge" style="color:#00d4ff">⚡ STARTER</div>
     <div class="plan-name">Starter</div>
-    <div class="plan-price-inr" id="starter-price-inr">₹499</div>
-    <div class="plan-price-usd" id="starter-price-usd">$6 / month</div>
+    <div class="plan-price-inr" id="starter-price-inr">₹999</div>
+    <div class="plan-price-usd" id="starter-price-usd">$12 / month</div>
     <div class="plan-desc">For security professionals who need full scan reports and PDF exports.</div>
     <ul class="plan-features">
       <li>50 scans / day</li>
@@ -147,7 +147,7 @@ footer{border-top:1px solid var(--border);padding:24px;text-align:center;font-si
       <li>30-day report retention</li>
       <li class="locked">SOAR rule generation</li>
     </ul>
-    <a href="#" onclick="openCheckout('STARTER',499,'Starter Plan')" class="plan-cta cta-purple">⚡ Get Starter</a>
+    <a href="#" onclick="openCheckout('STARTER',999,'Starter Plan')" class="plan-cta cta-purple">⚡ Get Starter</a>
   </div>
 
   <!-- PRO -->
@@ -241,7 +241,7 @@ document.addEventListener('cdb:currency:applied', function(e) {
   if (!geo) return;
   const m = geo.matrix;
   const plans = {
-    STARTER:    {inr:'₹499',   usd:'$6',   monthly_inr:499,  monthly_usd:6  },
+    STARTER:    {inr:'₹999',   usd:'$12',  monthly_inr:999,  monthly_usd:12 },
     PRO:        {inr:'₹1,499', usd:'$19',  monthly_inr:1499, monthly_usd:19 },
     ENTERPRISE: {inr:'₹4,999', usd:'$59',  monthly_inr:4999, monthly_usd:59 },
     MSSP:       {inr:'₹9,999', usd:'$119', monthly_inr:9999, monthly_usd:119},
@@ -259,8 +259,8 @@ function openCheckout(planId, amountInr, label) {
   if (!window.CDB_CHECKOUT_MODAL) { window.location.href = '/#pricing'; return; }
   const geo = window.__CDB_GEO || {};
   const isIN = (geo.countryCode || 'IN') === 'IN';
-  const amounts = { STARTER:6, PRO:19, ENTERPRISE:59, MSSP:119 };
-  const inrAmounts = { STARTER:499, PRO:1499, ENTERPRISE:4999, MSSP:9999 };
+  const amounts = { STARTER:12, PRO:19, ENTERPRISE:59, MSSP:119 };
+  const inrAmounts = { STARTER:999, PRO:1499, ENTERPRISE:4999, MSSP:9999 };
   CDB_CHECKOUT_MODAL.open({
     amount:       isIN ? inrAmounts[planId] : amounts[planId],
     tierName:     planId,

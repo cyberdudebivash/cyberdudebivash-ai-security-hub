@@ -6,7 +6,7 @@
 // ── Plan pricing (INR) ───────────────────────────────────────────────────────
 const PLAN_MRR = {
   free:       0,
-  starter:    499,
+  starter:    999,
   pro:        1499,
   enterprise: 4999,
   mssp:       9999,

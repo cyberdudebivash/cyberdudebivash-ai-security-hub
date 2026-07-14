@@ -19,7 +19,7 @@ describe('pricing config — paise integrity (Razorpay charges in paise)', () =>
 describe('pricing config — known plan prices (regression lock)', () => {
   it('matches the published tier prices', () => {
     expect(getPlanPrice('FREE')).toBe(0);
-    expect(getPlanPrice('STARTER')).toBe(499);
+    expect(getPlanPrice('STARTER')).toBe(999);
     expect(getPlanPrice('PRO')).toBe(1499);
     expect(getPlanPrice('ENTERPRISE')).toBe(4999);
   });
