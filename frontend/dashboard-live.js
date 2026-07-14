@@ -527,25 +527,32 @@
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Command Center tab switcher
+  // Command Center nav — public sections (Executive/SOC/Sentinel) are always
+  // visible; their nav buttons just scroll into view. AI SecOps and MSSP
+  // Operations are customer/revenue sections and keep the original
+  // exclusive show/hide toggle, scoped to just the two of them so opening
+  // one never hides the always-visible public panels.
   // ─────────────────────────────────────────────────────────────────────────
   function initCommandCenterTabs() {
-    document.querySelectorAll('.cdb-cc-tab').forEach(tab => {
+    document.querySelectorAll('.cdb-cc-tab[data-cc-jump="true"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        $(btn.dataset.scrollto)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+
+    document.querySelectorAll('.cdb-cc-tab[data-target]').forEach(tab => {
       tab.addEventListener('click', () => {
         const target = tab.dataset.target;
-        document.querySelectorAll('.cdb-cc-tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.cdb-cc-panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.cdb-cc-tab[data-target]').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
+        document.querySelectorAll('#cdb-panel-ai, #cdb-panel-mssp').forEach(p => p.classList.remove('active'));
         tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
         const panel = $(target);
         if (panel) panel.classList.add('active');
+        panel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
         // Lazy load data for newly activated center
-        const loaders = {
-          'cdb-panel-soc':      loadSOCFeed,
-          'cdb-panel-sentinel': loadSentinelIntel,
-          'cdb-panel-ai':       loadAISecOps,
-          'cdb-panel-mssp':     loadMSSPCenter,
-        };
+        const loaders = { 'cdb-panel-ai': loadAISecOps, 'cdb-panel-mssp': loadMSSPCenter };
         if (loaders[target]) loaders[target]();
       });
     });

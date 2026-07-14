@@ -23514,6 +23514,15 @@ function v21TriggerUrgencyPayment(){
     .cdb-cc-body { padding: 28px 32px; }
     .cdb-cc-panel { display: none; }
     .cdb-cc-panel.active { display: block; animation: cdb-slide-in .25s ease; }
+    /* Divider for panels stacked below the first (Executive) when shown together. */
+    .cdb-cc-panel-divider {
+      display: flex; align-items: center; gap: 8px;
+      margin: 30px 0 16px; padding-top: 24px;
+      border-top: 1px solid rgba(99,102,241,.14);
+      font-size: 13px; font-weight: 800; letter-spacing: .04em;
+      color: #cbd5e1; text-transform: uppercase;
+    }
+    .cdb-cc-panel-divider-icon { font-size: 15px; }
 
     /* ═══════════════════════════════════════════════════════════════════════
        KPI GRID — GOD MODE v32.1
@@ -23800,11 +23809,14 @@ function v21TriggerUrgencyPayment(){
 </div>
 <span class="cdb-last-refresh">Updated: <span class="cdb-last-updated">—</span></span>
 </div>
-<!-- Nav tabs -->
-<div class="cdb-cc-nav" role="tablist">
-<button aria-selected="true" class="cdb-cc-tab active" data-target="cdb-panel-exec" role="tab">Executive</button>
-<button aria-selected="false" class="cdb-cc-tab" data-target="cdb-panel-soc" role="tab">SOC Operations</button>
-<button aria-selected="false" class="cdb-cc-tab" data-target="cdb-panel-sentinel" role="tab">Sentinel APEX Intel</button>
+<!-- Nav — Executive/SOC Operations/Sentinel APEX Intel are public and always
+     shown below (jump links, not show/hide toggles). AI SecOps and MSSP
+     Operations are customer/revenue sections, gated behind a real exclusive
+     tab toggle so they stay hidden until a signed-in visitor opens them. -->
+<div class="cdb-cc-nav" role="navigation" aria-label="Command center sections">
+<button class="cdb-cc-tab active" data-scrollto="cdb-panel-exec" data-cc-jump="true">Executive</button>
+<button class="cdb-cc-tab active" data-scrollto="cdb-panel-soc" data-cc-jump="true">SOC Operations</button>
+<button class="cdb-cc-tab active" data-scrollto="cdb-panel-sentinel" data-cc-jump="true">Sentinel APEX Intel</button>
 <button aria-selected="false" class="cdb-cc-tab" data-target="cdb-panel-ai" role="tab">AI SecOps</button>
 <button aria-selected="false" class="cdb-cc-tab" data-target="cdb-panel-mssp" role="tab">MSSP Operations</button>
 </div>
@@ -23889,7 +23901,14 @@ function v21TriggerUrgencyPayment(){
 </div>
 <!-- END Executive panel -->
 <!-- ══════════════════ PANEL 2 — SOC Operations ══════════════════ -->
-<div aria-label="SOC Operations" class="cdb-cc-panel" id="cdb-panel-soc" role="tabpanel">
+<!-- Public section (platform-wide SOC stats + the Sentinel APEX live feed);
+     the Case Management sub-section soc-investigations.js injects below
+     already self-gates behind a real 401/login prompt for anonymous
+     visitors, so the panel as a whole is safe to show by default. -->
+<div aria-label="SOC Operations" class="cdb-cc-panel active" id="cdb-panel-soc" role="region">
+<div class="cdb-cc-panel-divider">
+<span class="cdb-cc-panel-divider-icon">🖥</span> SOC Operations
+</div>
 <div class="cdb-kpi-grid">
 <div class="cdb-kpi-card accent-blue">
 <div class="cdb-kpi-label">Scans Processed</div>
@@ -23913,7 +23932,11 @@ function v21TriggerUrgencyPayment(){
 </div>
 </div>
 <!-- ══════════════════ PANEL 3 — Sentinel APEX Intel ══════════════════ -->
-<div aria-label="Sentinel APEX Intel" class="cdb-cc-panel" id="cdb-panel-sentinel" role="tabpanel">
+<!-- Public section — live CVE/incident intelligence, no customer or revenue data. -->
+<div aria-label="Sentinel APEX Intel" class="cdb-cc-panel active" id="cdb-panel-sentinel" role="region">
+<div class="cdb-cc-panel-divider">
+<span class="cdb-cc-panel-divider-icon">🛰</span> Sentinel APEX Intel
+</div>
 <div class="cdb-kpi-grid">
 <div class="cdb-kpi-card accent-orange">
 <div class="cdb-kpi-label">CVEs Tracked</div>
@@ -23937,6 +23960,9 @@ function v21TriggerUrgencyPayment(){
 </div>
 </div>
 <!-- ══════════════════ PANEL 4 — AI SecOps ══════════════════ -->
+<!-- Customer dashboard section (each account's own AI asset inventory —
+     loadAISecOps() shows a "Sign in to view..." prompt with no data for
+     anonymous visitors) — stays tab-gated, not shown by default. -->
 <div aria-label="AI SecOps" class="cdb-cc-panel" id="cdb-panel-ai" role="tabpanel">
 <div class="cdb-kpi-grid">
 <div class="cdb-kpi-card accent-purple">
@@ -23961,6 +23987,9 @@ function v21TriggerUrgencyPayment(){
 </div>
 </div>
 <!-- ══════════════════ PANEL 5 — MSSP Operations ══════════════════ -->
+<!-- Customer/revenue dashboard section (managed client count via the
+     auth-gated /api/mssp/clients, partner revenue-share terms) — stays
+     tab-gated, not shown by default. -->
 <div aria-label="MSSP Operations" class="cdb-cc-panel" id="cdb-panel-mssp" role="tabpanel">
 <div class="cdb-kpi-grid">
 <div class="cdb-kpi-card accent-blue">
