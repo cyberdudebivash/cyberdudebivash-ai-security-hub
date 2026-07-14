@@ -3,11 +3,12 @@
  * Autonomous pipeline: Fetch → Normalize → Deduplicate → Store in D1
  *
  * Sources:
- *   1. NIST NVD CVE API v2  — CRITICAL + HIGH CVEs (last 7 days)
- *   2. CISA KEV catalog     — actively exploited CVEs
- *   3. CERT-In advisories   — India-specific security bulletins
- *   4. GitHub Security RSS  — GitHub advisory feed (Atom XML)
- *   5. Built-in seed        — curated high-value entries for cold-start
+ *   1. Sentinel APEX (CYBERDUDEBIVASH) — highest-priority internal proprietary feed
+ *   2. NIST NVD CVE API v2  — CRITICAL + HIGH CVEs (last 7 days)
+ *   3. CISA KEV catalog     — actively exploited CVEs
+ *   4. CERT-In advisories   — India-specific security bulletins
+ *   5. GitHub Security RSS  — GitHub advisory feed (Atom XML)
+ *   6. Built-in seed        — curated high-value entries for cold-start
  *
  * BINDING NOTE: D1 binding name is SECURITY_HUB_DB (not DB).
  * All env.DB references here use env.SECURITY_HUB_DB — do not change.
@@ -23,6 +24,7 @@ const NVD_API_BASE   = 'https://services.nvd.nist.gov/rest/json/cves/2.0';
 const CISA_KEV_URL   = 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json';
 const GITHUB_RSS_URL = 'https://github.com/advisories.atom';
 const EPSS_API_BASE  = 'https://api.first.org/data/v1/epss';
+const SENTINEL_APEX_URL = 'https://intel.cyberdudebivash.com/api/v1/intel/latest.json';
 const FETCH_TIMEOUT  = 10000; // 10s per source
 
 // ─── Built-in seed data — REAL current CVEs, never empty feed ─────────────────
@@ -580,8 +582,76 @@ export function applyEPSSScores(entries, epssMap) {
   return entries;
 }
 
+// ─── MODULE 5: Fetch Sentinel APEX (CYBERDUDEBIVASH proprietary feed) ────────
+// Sentinel APEX (https://intel.cyberdudebivash.com) is CYBERDUDEBIVASH's sister
+// threat-intelligence platform. Its /latest.json endpoint returns STIX-derived
+// records that mix genuine CVE/vulnerability items with narrative intel (APT,
+// data-breach, malware campaign reports) that don't fit this table's
+// vulnerability-shaped schema (no cve_id, no cvss) — those are skipped here,
+// not dropped due to a fetch failure. TLP:RED items are excluded (the one TLP
+// label that unambiguously means "do not redistribute"); TLP:AMBER items are
+// kept but flagged with a tag since this endpoint is Sentinel APEX's own
+// public, unauthenticated feed. epss_score on this feed is a 0–100 percentage
+// (verified against a live response, e.g. "epss_score": 12.04, "epss": "12.04%")
+// — NOT the FIRST.org 0–1 probability every other row in this table uses — so
+// it is deliberately never copied here; fetchEPSSScores()/applyEPSSScores()
+// (MODULE 4, run later in runIngestion over every deduped CVE-shaped entry)
+// supplies the authoritative FIRST.org value for these rows same as any other
+// source. Likewise risk_score/confidence_score/iq_score have no corresponding
+// column in threat_intel and are intentionally not force-fit into `cvss`.
+export async function fetchSentinelAPEX(maxEntries = 40) {
+  const data = await safeFetch(SENTINEL_APEX_URL, {
+    headers: { 'User-Agent': 'CYBERDUDEBIVASH-SecurityHub/2.0' },
+  }, 15000);
+  if (!data?.items || !Array.isArray(data.items)) return [];
+
+  const results = [];
+  for (const item of data.items) {
+    if (item.tlp === 'TLP:RED') continue;
+
+    const cveId = item.cve_id || item.cve_ids?.[0] || item.cves?.[0] ||
+      (item.title || '').match(/CVE-\d{4}-\d{4,}/)?.[0] || null;
+    if (!cveId) continue;
+
+    const desc = (item.description || item.title || '').trim();
+    const cpes = Array.isArray(item.affected_products) ? item.affected_products : [];
+    const tags = buildTags(desc, cpes, []);
+    tags.push('SentinelAPEX');
+    if (item.kev_present) tags.push('ActiveExploitation');
+    if (item.tlp === 'TLP:AMBER') tags.push('TLP-AMBER');
+    const actor = item.actor_tag;
+    if (actor && actor !== 'UNC-CDB-INGEST' && !actor.startsWith('CDB-UNATTR-')) tags.push(actor);
+
+    const pub = item.published_at || item.published || null;
+    const confirmed = !!(item.kev_present || item._score_details?.active_exploit);
+
+    results.push({
+      id:                cveId,
+      title:             (item.title || cveId).slice(0, 200),
+      severity:          normalizeSeverity(item.severity),
+      cvss:              typeof item.cvss_score === 'number' ? item.cvss_score : null,
+      cvss_vector:       item.cvss_vector || null,
+      description:       desc.length > 400 ? desc.slice(0, 397) + '...' : desc,
+      source:            'sentinel_apex',
+      source_url:        item.source_url || item.blog_url || 'https://intel.cyberdudebivash.com',
+      published_at:      pub ? pub.split('T')[0] : null,
+      exploit_status:    confirmed ? 'confirmed' : 'unconfirmed',
+      known_ransomware:  item._score_details?.ransomware ? 1 : 0,
+      tags:              JSON.stringify([...new Set(tags)]),
+      affected_products: JSON.stringify(cpes),
+      weakness_types:    '[]',
+      iocs:              '[]',
+      enriched:          0,
+    });
+
+    if (results.length >= maxEntries) break;
+  }
+
+  return results;
+}
+
 // ─── Deduplicate entries by ID ────────────────────────────────────────────────
-function deduplicateEntries(entries) {
+export function deduplicateEntries(entries) {
   const seen = new Map();
   for (const e of entries) {
     if (!seen.has(e.id)) {
@@ -783,6 +853,23 @@ export async function runIngestion(env) {
   const seedEntries = SEED_ENTRIES.map(e => ({ ...e }));
   allEntries.push(...seedEntries);
   sources.push('seed');
+
+  // 1b. Fetch Sentinel APEX (CYBERDUDEBIVASH proprietary feed) — pushed before
+  // every other live source so it wins as the base record in
+  // deduplicateEntries() for any CVE it also covers: later sources can still
+  // raise severity/cvss or flag confirmed exploitation on that record, but
+  // never overwrite Sentinel APEX's title/description/source attribution.
+  // This realizes "Sentinel APEX is the highest-priority intelligence source"
+  // entirely through push-order, with zero changes to the shared dedup logic.
+  try {
+    const apex = await fetchSentinelAPEX();
+    if (apex.length > 0) {
+      allEntries.push(...apex);
+      sources.push(`sentinel_apex(${apex.length})`);
+    }
+  } catch (e) {
+    errors.push(`Sentinel APEX: ${e.message}`);
+  }
 
   // 2. Fetch CISA KEV (most reliable, no rate limits)
   try {
