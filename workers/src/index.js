@@ -1624,8 +1624,15 @@ export async function routeRequest(request, env, ctx, requestId) {
         details.db = { ok: false, error: 'DB_binding_missing' };
       }
 
-      // 3. Threat Intel probe — check threat_intel table for recent records
-      if (env.DB && checks.db) {
+      // 3. Threat Intel probe — check threat_intel table for recent records.
+      // Gated on `env.DB` only (not `checks.db`) — this used to require the DB
+      // self-check (step 2) to have already succeeded in THIS SAME request, so
+      // any time that probe's own 2-attempt retry didn't recover in time, intel
+      // was force-failed without ever running its own query. Since intel/revenue
+      // never got their own chance, one D1 blip always painted all three
+      // ("Database, Threat Intel, Payments") degraded together on the public
+      // banner, even when intel/revenue's own queries would have succeeded.
+      if (env.DB) {
         try {
           // threat_intel.created_at is an unpopulated legacy column (every row is NULL);
           // ingestion actually stamps ingested_at — query that instead (H-5 fix).
@@ -1646,8 +1653,9 @@ export async function routeRequest(request, env, ctx, requestId) {
         details.intel = { ok: false, error: 'db_unavailable' };
       }
 
-      // 4. Revenue probe — check payments table for system readiness
-      if (env.DB && checks.db) {
+      // 4. Revenue probe — check payments table for system readiness.
+      // Same independent-probe fix as intel above — no longer gated on checks.db.
+      if (env.DB) {
         try {
           const row = await withRetry(
             () => env.DB.prepare(
