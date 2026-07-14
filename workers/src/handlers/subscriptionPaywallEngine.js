@@ -22,6 +22,8 @@
  * PAYMENT METHOD MANDATE (Threat Intel Platform repo).
  */
 
+import { TIER_LIMITS } from '../auth/apiKeys.js';
+
 // ─── Tier Definitions (single source of truth, imported by auth middleware) ───
 export const SUBSCRIPTION_TIERS = {
   COMMUNITY:    {
@@ -269,6 +271,30 @@ export async function handleSubscriptionCheckout(request, env, authCtx = {}) {
 
   if (!def || def.free) {
     return new Response(JSON.stringify({ error: 'Invalid plan or plan is free' }), { status: 400, headers: cors });
+  }
+
+  // This tier vocabulary (COMMUNITY/PROFESSIONAL/TEAM/BUSINESS/ENTERPRISE) is
+  // independent of the vocabulary the rest of the platform actually enforces
+  // entitlements with — auth/apiKeys.js's TIER_LIMITS/PLAN_FEATURES (consulted
+  // by every real quota/feature check) and the live users.tier schema CHECK
+  // constraint both only recognize FREE/STARTER/PRO/ENTERPRISE/MSSP. The
+  // webhook grant step (handlers/payments.js) writes tierKey verbatim into
+  // users.tier — for PROFESSIONAL/TEAM/BUSINESS that write either violates
+  // the CHECK constraint outright (silently caught) or, if it somehow
+  // succeeded, TIER_LIMITS[tierKey] would be undefined and every downstream
+  // quota/feature check would fall back to FREE: a customer charged real
+  // money with no effective entitlement. Reconciling the two tier
+  // vocabularies (what PROFESSIONAL/TEAM/BUSINESS should map to, and this
+  // endpoint's own price divergence from the catalog actually charged
+  // elsewhere for identically-named plans) is a product/pricing decision,
+  // not made here. The narrow, no-business-judgment fix: refuse checkout for
+  // any tier this platform cannot currently grant, rather than take payment
+  // for one (2026-07-14 commercial-integrity audit, H5).
+  if (!TIER_LIMITS[tierKey]) {
+    return new Response(JSON.stringify({
+      error: `The "${def.label}" plan is not yet available for self-serve checkout — contact support@cyberdudebivash.com to subscribe.`,
+      code:  'PLAN_NOT_PROVISIONABLE',
+    }), { status: 409, headers: cors });
   }
 
   // A paid tier must land on a real account row (UPDATE users SET tier WHERE id = ?

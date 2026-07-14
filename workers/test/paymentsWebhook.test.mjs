@@ -78,19 +78,43 @@ async function webhookRequest(eventObj) {
 }
 
 describe('handleRazorpayWebhook — subscription tier upgrade', () => {
-  it('applies UPDATE users SET tier when notes carry tenant_id + a paid plan', async () => {
+  it('applies UPDATE users SET tier when notes carry tenant_id + a paid, grantable plan', async () => {
     const db  = memDB();
     const env = { RAZORPAY_WEBHOOK_SECRET: WEBHOOK_SECRET, DB: db };
     const request = await webhookRequest({
       id: 'evt_1', event: 'payment.captured',
       payload: { payment: { entity: {
-        id: 'pay_1', order_id: 'order_1', notes: { tenant_id: 'user_123', plan: 'PRO' },
+        id: 'pay_1', order_id: 'order_1', notes: { tenant_id: 'user_123', plan: 'ENTERPRISE' },
       } } },
     });
 
     const res = await handleRazorpayWebhook(request, env);
     expect(res.status).toBe(200);
-    expect(db.tierUpdates).toEqual([{ tier: 'PROFESSIONAL', userId: 'user_123' }]);
+    expect(db.tierUpdates).toEqual([{ tier: 'ENTERPRISE', userId: 'user_123' }]);
+  });
+
+  // 2026-07-14 Production Release Gate Phase II (H5): 'PRO' normalizes to
+  // 'PROFESSIONAL' (subscriptionPaywallEngine.js's SUBSCRIPTION_TIERS
+  // vocabulary), which auth/apiKeys.js's TIER_LIMITS (every real
+  // quota/feature check) and the live users.tier schema CHECK constraint
+  // don't recognize. Previously this write was still attempted — either
+  // silently failing the CHECK constraint or, if it somehow succeeded,
+  // leaving the customer's real entitlement unresolvable (TIER_LIMITS.PRO
+  // vs TIER_LIMITS.PROFESSIONAL === undefined). Now skipped outright rather
+  // than attempting a write to an entitlement that can't be resolved.
+  it('does NOT apply a tier upgrade when the normalized tier has no TIER_LIMITS/schema-compatible entry (PRO -> PROFESSIONAL)', async () => {
+    const db  = memDB();
+    const env = { RAZORPAY_WEBHOOK_SECRET: WEBHOOK_SECRET, DB: db };
+    const request = await webhookRequest({
+      id: 'evt_1b', event: 'payment.captured',
+      payload: { payment: { entity: {
+        id: 'pay_1b', order_id: 'order_1b', notes: { tenant_id: 'user_123', plan: 'PRO' },
+      } } },
+    });
+
+    const res = await handleRazorpayWebhook(request, env);
+    expect(res.status).toBe(200);
+    expect(db.tierUpdates).toHaveLength(0);
   });
 
   it('does not touch users.tier for a regular per-report payment (no plan/tenant_id in notes)', async () => {

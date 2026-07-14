@@ -28,6 +28,7 @@ import { sendPurchaseConfirmation, sendPaymentFailedEmail } from '../services/em
 import { createInvoice }            from '../services/v24/billingEngine.js';
 import { triggerPostPurchase }      from '../services/lifecycleEngine.js';
 import { normalizeTier, getTierDef } from './subscriptionPaywallEngine.js';
+import { TIER_LIMITS } from '../auth/apiKeys.js';
 import { resolvePartnerIdForEmail, recordRevenueShare } from './msspRevenue.js';
 import { hashPassword } from '../auth/password.js';
 import { createAccessToken, createRefreshToken, storeRefreshToken } from '../auth/jwt.js';
@@ -48,6 +49,15 @@ const SCAN_HANDLERS = {
   identity:   handleIdentityScan,
   compliance: handleCompliance,
 };
+
+// Subscription plans this file can actually grant a tier for — i.e. every
+// value the live users.tier schema CHECK constraint accepts
+// (schema_v45_users_tier_starter_mssp.sql). SUBSCRIPTION_PRICES (lib/razorpay.js)
+// also prices ENTERPRISE_SOC, but nothing grants a tier for it (no schema
+// value, no self-serve provisioning path) — self-serve checkout for it is
+// rejected below rather than taking payment for an unfulfillable plan
+// (2026-07-14 commercial-integrity audit, H8).
+const GRANTABLE_SUBSCRIPTION_PLANS = ['STARTER', 'PRO', 'ENTERPRISE', 'MSSP'];
 
 // ─── Dynamic paid-scan auth context (scoped to a verified payment order) ─────
 // SECURITY: Never use a static hardcoded ENTERPRISE context.
@@ -106,6 +116,24 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
     }, { status: 400 });
   }
 
+  // Subscription plan is a server-side allow-list, matching the 'package'
+  // module's product_id check above. An unrecognized/missing plan previously
+  // fell back silently to STARTER pricing while the raw (unvalidated) string
+  // was still stored on the order (plan below) — that stored value then
+  // fails the exact-match allow-list at both handleVerifyPayment's tier-grant
+  // step and the Razorpay webhook's fallback grant, so the payment gets
+  // marked 'paid' and a subscriptions row is created, but no users.tier
+  // update and no access token are ever issued: charged, zero entitlement
+  // (2026-07-14 commercial-integrity audit, H8). Now rejected before any
+  // Razorpay order is created — no silent coercion.
+  const subscriptionPlanKey = module === 'subscription' ? String(body.plan || '').toUpperCase() : null;
+  if (module === 'subscription' && !GRANTABLE_SUBSCRIPTION_PLANS.includes(subscriptionPlanKey)) {
+    return Response.json({
+      error: 'Invalid plan',
+      valid: GRANTABLE_SUBSCRIPTION_PLANS,
+    }, { status: 400 });
+  }
+
   if (!target || typeof target !== 'string' || target.length < 2 || target.length > 253) {
     return Response.json({ error: 'target is required (domain name or org name)' }, { status: 400 });
   }
@@ -117,10 +145,9 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
   let price;
 
   if (module === 'subscription') {
-    // Subscription: look up plan from server-side SUBSCRIPTION_PRICES table only.
-    // body.plan is used as a key lookup — the price value comes from the table, not the client.
-    const planKey = (body.plan || target || 'STARTER').toUpperCase();
-    price = SUBSCRIPTION_PRICES[planKey] || SUBSCRIPTION_PRICES['STARTER'];
+    // Subscription: look up plan from server-side SUBSCRIPTION_PRICES table
+    // only — already validated above, so this lookup always succeeds.
+    price = SUBSCRIPTION_PRICES[subscriptionPlanKey];
   } else if (module === 'package') {
     // One-time marketing-page product: price comes from PACKAGE_PRICES by
     // product_id only — body.price_inr / amount are never trusted.
@@ -148,7 +175,7 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
   // come from discount_coupons (lib/coupons.js), never the client. An
   // invalid/expired/exhausted code fails the request outright rather than
   // silently charging full price, so a customer knows to fix/remove it.
-  const planKeyForCoupon = module === 'subscription' ? (body.plan || target || 'STARTER').toUpperCase() : null;
+  const planKeyForCoupon = subscriptionPlanKey;
   const couponEmail = email || authCtx.email || null;
   let finalAmount = price.amount;
   let couponApplied = null;
@@ -227,7 +254,7 @@ export async function handleCreateOrder(request, env, authCtx = {}) {
   // Store pending payment record in D1
   if (env.DB) {
     const paymentId = crypto.randomUUID?.() || Date.now().toString(36);
-    const planLabel = module === 'subscription' ? (body.plan || 'STARTER').toUpperCase()
+    const planLabel = module === 'subscription' ? subscriptionPlanKey
                      : module === 'package'      ? packageId
                      : 'pay_per_report';
     const payerEmail = email || authCtx.email || null;
@@ -449,8 +476,23 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
 
   // ─── Subscription: activate plan, write subscriptions row, return session token ─
   if (module === 'subscription') {
-    const plan         = (body.plan || target || 'STARTER').toUpperCase();
-    const subPlan      = SUBSCRIPTION_PRICES?.[plan] || { amount: 99900, name: `${plan} Plan`, price_inr: 999 };
+    const plan = (body.plan || target || 'STARTER').toUpperCase();
+    // Defense in depth: handleCreateOrder now rejects any plan outside
+    // GRANTABLE_SUBSCRIPTION_PLANS before a Razorpay order can even be
+    // created, so this is normally unreachable — it only guards a
+    // pre-existing bad order (created before that fix shipped) or a missing
+    // D1 order row (the authoritative-order-lookup above only overrides
+    // body.plan when a payments row exists). Previously this fabricated a
+    // fake-priced subPlan object and silently skipped the tier grant below
+    // while still marking the payment 'paid' — charged, zero entitlement
+    // (2026-07-14 commercial-integrity audit, H8).
+    if (!GRANTABLE_SUBSCRIPTION_PLANS.includes(plan)) {
+      return Response.json({
+        error: 'Unrecognized subscription plan — contact support@cyberdudebivash.in to complete your purchase',
+        code:  'INVALID_PLAN',
+      }, { status: 400 });
+    }
+    const subPlan      = SUBSCRIPTION_PRICES[plan];
     const priceInr     = Math.round((subPlan.amount || 99900) / 100);
     const sessionToken = generateAccessToken();
     const expiresAt    = Date.now() + 90 * 24 * 60 * 60 * 1000;
@@ -469,7 +511,7 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
     let issuedAccessToken  = null;
     let issuedRefreshToken = null;
     let issuedUserId       = null;
-    if (env.DB && confirmedEmail && ['STARTER', 'PRO', 'ENTERPRISE', 'MSSP'].includes(plan)) {
+    if (env.DB && confirmedEmail && GRANTABLE_SUBSCRIPTION_PLANS.includes(plan)) {
       try {
         const existing = await env.DB.prepare(
           `SELECT id FROM users WHERE email = ?`
@@ -1058,7 +1100,13 @@ export async function handleRazorpayWebhook(request, env) {
     if (env.DB && subTenantId && subPlanRaw) {
       const tierKey = normalizeTier(subPlanRaw);
       const def     = getTierDef(tierKey);
-      if (def && !def.free) {
+      // handleSubscriptionCheckout now refuses to create an order for any
+      // tierKey outside TIER_LIMITS (2026-07-14 commercial-integrity audit,
+      // H5) — this guard is defense in depth for any order created before
+      // that fix shipped, so this write is never attempted knowing it would
+      // either violate the users.tier schema CHECK constraint or succeed
+      // with an entitlement TIER_LIMITS can't resolve.
+      if (def && !def.free && TIER_LIMITS[tierKey]) {
         await env.DB.prepare(
           `UPDATE users SET tier = ?, updated_at = datetime('now') WHERE id = ?`
         ).bind(tierKey, subTenantId).run().catch(e =>
@@ -1092,7 +1140,7 @@ export async function handleRazorpayWebhook(request, env) {
         const grantEmail = payRow?.email || payload.email || null;
 
         if (payRow?.module === 'subscription' && grantEmail &&
-            ['STARTER', 'PRO', 'ENTERPRISE', 'MSSP'].includes(payRow.plan)) {
+            GRANTABLE_SUBSCRIPTION_PLANS.includes(payRow.plan)) {
           const existingUser = await env.DB.prepare(
             `SELECT id, tier FROM users WHERE email = ?`
           ).bind(grantEmail).first();
