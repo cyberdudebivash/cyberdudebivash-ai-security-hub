@@ -456,9 +456,11 @@ async function loadInvoices() {
   document.getElementById('inv-loading').style.display = 'block';
   document.getElementById('inv-content').style.display = 'none';
   try {
-    // The real, working GST invoice ledger (derived from actual Razorpay
-    // payments) — /api/customer/billing/invoices queries a separate table
-    // that per-scan-report and subscription purchases don't reliably populate.
+    // Both this endpoint and /api/customer/billing/invoices now read the
+    // same persisted `invoices` ledger (gstInvoice.js is a façade over the
+    // v24 billing engine, not a second numbering source) — kept as-is since
+    // this one lazily backfills a missing invoice for a legacy payment on
+    // first access, which the plain customer endpoint does not.
     const r = await authedFetch('/api/billing/invoices');
     const d = await r.json();
     document.getElementById('inv-loading').style.display = 'none';
