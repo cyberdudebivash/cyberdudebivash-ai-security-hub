@@ -15,8 +15,16 @@
  */
 
 import { Alerts } from '../../lib/alertEngine.js';
+import { withRetry } from '../../lib/resilience.js';
 
 const LATENCY_WARN_MS = 1000; // flag as degraded if any component exceeds this
+// D1 occasionally returns a transient "requests queued for too long" overload
+// error under concurrent load (verified live) that clears within seconds —
+// each probe retries once before reporting the component unhealthy, so a
+// momentary blip doesn't get permanently baked into operational_history's
+// rolling 24h uptime stats (recordHistory below) or trip the public status page.
+const D1_PROBE_RETRIES = 2;
+const D1_PROBE_BACKOFF_MS = 150;
 
 // ─── Phase 1: Enhanced public health ─────────────────────────────────────────
 export async function handleHealthV2(request, env) {
@@ -143,11 +151,14 @@ function probeWorker() {
   return { name: 'Worker', type: 'compute', status: 'operational', latency_ms: 0, detail: 'executing' };
 }
 
-async function probeD1(env) {
+export async function probeD1(env) {
   if (!env.DB) return { name: 'D1 Database', type: 'database', status: 'major_outage', latency_ms: -1, error: 'binding_missing' };
   const t0 = Date.now();
   try {
-    const row = await env.DB.prepare('SELECT 1 AS alive').first();
+    const row = await withRetry(
+      () => env.DB.prepare('SELECT 1 AS alive').first(),
+      D1_PROBE_RETRIES, D1_PROBE_BACKOFF_MS, 'eop:probeD1'
+    );
     const latency = Date.now() - t0;
     const status = row?.alive === 1
       ? (latency > LATENCY_WARN_MS ? 'degraded' : 'operational')
@@ -186,13 +197,16 @@ async function probeR2(env) {
   }
 }
 
-async function probeIntel(env) {
+export async function probeIntel(env) {
   if (!env.DB) return { name: 'Threat Intelligence', type: 'intelligence', status: 'unknown', latency_ms: -1 };
   const t0 = Date.now();
   try {
-    const row = await env.DB.prepare(
-      "SELECT COUNT(*) as c FROM threat_intel WHERE ingested_at > datetime('now','-7 days')"
-    ).first();
+    const row = await withRetry(
+      () => env.DB.prepare(
+        "SELECT COUNT(*) as c FROM threat_intel WHERE ingested_at > datetime('now','-7 days')"
+      ).first(),
+      D1_PROBE_RETRIES, D1_PROBE_BACKOFF_MS, 'eop:probeIntel'
+    );
     const latency = Date.now() - t0;
     const count = row?.c ?? 0;
     const status = count > 0 ? 'operational' : 'degraded';
@@ -202,11 +216,14 @@ async function probeIntel(env) {
   }
 }
 
-async function probePayments(env) {
+export async function probePayments(env) {
   if (!env.DB) return { name: 'Payment System', type: 'payments', status: 'unknown', latency_ms: -1 };
   const t0 = Date.now();
   try {
-    const row = await env.DB.prepare('SELECT COUNT(*) as c FROM orders').first().catch(() => null);
+    const row = await withRetry(
+      () => env.DB.prepare('SELECT COUNT(*) as c FROM orders').first(),
+      D1_PROBE_RETRIES, D1_PROBE_BACKOFF_MS, 'eop:probePayments'
+    ).catch(() => null);
     const latency = Date.now() - t0;
     const razorpayConfigured = !!(env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET);
     return {
@@ -220,13 +237,16 @@ async function probePayments(env) {
   }
 }
 
-async function probeAuth(env) {
+export async function probeAuth(env) {
   if (!env.DB || !env.JWT_SECRET) {
     return { name: 'Authentication', type: 'auth', status: env.JWT_SECRET ? 'operational' : 'major_outage', latency_ms: -1, detail: env.JWT_SECRET ? 'db_missing' : 'jwt_secret_not_set' };
   }
   const t0 = Date.now();
   try {
-    const row = await env.DB.prepare('SELECT COUNT(*) as c FROM users WHERE status = ?').bind('active').first();
+    const row = await withRetry(
+      () => env.DB.prepare('SELECT COUNT(*) as c FROM users WHERE status = ?').bind('active').first(),
+      D1_PROBE_RETRIES, D1_PROBE_BACKOFF_MS, 'eop:probeAuth'
+    );
     const latency = Date.now() - t0;
     return { name: 'Authentication', type: 'auth', status: 'operational', latency_ms: latency, detail: `${row?.c ?? 0} active users` };
   } catch (e) {
