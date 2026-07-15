@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-15T15:54:31.112Z
+Generated: 2026-07-15T16:04:26.980Z
 Capabilities catalogued: 102
 
 ## Overall Completion
@@ -18,8 +18,8 @@ Capabilities catalogued: 102
 | Dimension | % |
 |---|---|
 | Backend | 92.2% |
-| Frontend | 76% |
-| Parity (backend **and** frontend both exist) | 70.6% |
+| Frontend | 77% |
+| Parity (backend **and** frontend both exist) | 71.6% |
 | Customer Journeys complete (dynamic_browser-verified) | 3.9% |
 
 ## Gaps by Priority
@@ -27,21 +27,21 @@ Capabilities catalogued: 102
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
 | Critical | P1 | 3 | Broken customer journey |
-| High | P2 | 14 | Backend exists, frontend missing |
+| High | P2 | 13 | Backend exists, frontend missing |
 | Medium | P3 | 9 | Backend+frontend exist, navigation missing |
-| Medium | P4 | 7 | RBAC not enforced |
+| Medium | P4 | 8 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
 | Low | P6 | 55 | No test coverage |
 | Low | P7 | 14 | Documentation missing |
 
-**Rollup:** Critical 3 · High 14 · Medium 16 · Low 69
+**Rollup:** Critical 3 · High 13 · Medium 17 · Low 69
 
 ## Structural Findings
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 18 | Backend exists, but not discoverable via navigation |
-| Backend-only features | 14 | Backend exists, zero frontend surface |
+| Hidden features | 17 | Backend exists, but not discoverable via navigation |
+| Backend-only features | 13 | Backend exists, zero frontend surface |
 | Duplicate systems | 3 | Backend marked `duplicate` (two implementations of one capability) |
 | Broken journeys | 3 | Priority P1 |
 
@@ -104,7 +104,7 @@ complete", "bug free", or "guaranteed".
 | CAP-PORTAL-001 | Profile & Security Settings | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 | CAP-PORTAL-002 | Scan History & Reports | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 | CAP-PORTAL-003 | Session Management (Active Sessions / Per-Session Revoke) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
-| CAP-PORTAL-004 | Support Ticket System | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-PORTAL-004 | Support Ticket System | ✓ | ✓ | ✓ | PILOT ONLY | P4 |
 
 ### dashboard-personalization (3 capabilities)
 

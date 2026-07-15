@@ -202,32 +202,58 @@
         "workers/src/handlers/support.js"
       ],
       "entry_points": [
-        "handlePOST /api/support/ticket (and FAQ/status/SLA endpoints)"
+        "POST /api/support/ticket, GET /api/support/tickets/mine, GET /api/support/ticket/:id, POST /api/support/ticket/:id/comment, POST /api/support/ticket/:id/status (plus pre-existing FAQ/status/SLA/docs/admin-list endpoints)"
       ],
       "routes_sampled": [
         {
           "path": "/api/support/ticket",
           "method": "POST",
           "evidence": "workers/src/index.js:7643-7647"
+        },
+        {
+          "path": "/api/support/tickets/mine",
+          "method": "GET",
+          "evidence": "workers/src/handlers/support.js:504"
+        },
+        {
+          "path": "/api/support/ticket/:id",
+          "method": "GET",
+          "evidence": "workers/src/handlers/support.js:516-517"
+        },
+        {
+          "path": "/api/support/ticket/:id/comment",
+          "method": "POST",
+          "evidence": "workers/src/handlers/support.js:510-511"
+        },
+        {
+          "path": "/api/support/ticket/:id/status",
+          "method": "POST",
+          "evidence": "workers/src/handlers/support.js:513-514 -- POST, not PATCH: workers/src/middleware/cors.js:49's Access-Control-Allow-Methods omits PATCH platform-wide (a pre-existing, cross-cutting gap affecting several other routes already, e.g. workers/src/index.js:5570 and :8309 -- out of scope to fix in this pass, flagged separately below)."
         }
       ],
-      "routes_fully_enumerated": false,
+      "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "missing",
-      "evidence": "frontend/user-dashboard.html:2720 and :4161 are the only 'support' touchpoints found, and both are static mailto: links (mailto:enterprise@cyberdudebivash.in and mailto:support@cyberdudebivash.com respectively) \u2014 no in-product ticket form, ticket list, or ticket-status API exists anywhere in the repo."
+      "surface_type": "dedicated_page",
+      "pages": [
+        "frontend/user-dashboard.html#page-support"
+      ],
+      "status": "exists",
+      "evidence": "frontend/user-dashboard.html:974 (nav item), :2581 (page-support dedicated page: My Tickets list + ticket detail/comment thread view + Help Center tab), :2736 (Create Ticket modal), :5827 (loadSupport() and the full loadMyTickets/createTicket/openTicketDetail/addTicketComment/updateTicketStatus/loadHelpCenter function set). Reuses apiFetch()/showToast()/openModal()/closeModal() -- no new client-side helpers introduced."
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "No nav entry links to a support/ticketing page because none exists; the mailto: links are inline text, not nav items."
+      "discoverable": true,
+      "evidence": "frontend/user-dashboard.html:974 -- a real sidebar nav-item (\"\ud83c\udfab Support\") in the Account section, same pattern as Billing/Settings."
     },
-    "auth_enforced": false,
+    "auth_enforced": true,
     "rbac": {
-      "enforced": false,
-      "permissions": []
+      "enforced": true,
+      "permissions": [
+        "org_members: any active role (OWNER/ADMIN/ANALYST/MEMBER/VIEWER) may view/comment on their org's tickets",
+        "ticket_owner: user_id match on a personal (org-less) ticket",
+        "isAdmin: platform staff, full access incl. staff-only 'closed' status"
+      ]
     },
     "subscription_gated": false,
     "feature_flag": {
@@ -235,8 +261,8 @@
       "mechanism": "none"
     },
     "test_coverage": {
-      "has_tests": false,
-      "evidence": "No test file references a ticket/support-case handler, because none exists."
+      "has_tests": true,
+      "evidence": "workers/test/supportTicketOrgScopeAndComments.test.mjs (25 tests: auth requirement, org scoping incl. cross-org 403/404 isolation, personal vs org-scoped ticket lists, comment authorization, staff-vs-customer notification behavior, status-transition RBAC). workers/test/copilotSalesSupportTools.test.mjs updated (ad-hoc CREATE TABLE gained organization_id/updated_at columns to match the new schema) and still green (7 tests, unchanged count)."
     },
     "docs": [
       {
@@ -249,13 +275,13 @@
       }
     ],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
-    "priority": "P2",
+    "operational_status": "PILOT ONLY",
+    "priority": "P4",
     "verification": {
-      "method": "static",
-      "last_verified": "2026-07-14",
-      "evidence": "Case-insensitive search for 'support ticket' and 'mailto:' across frontend/user-dashboard.html; no handler file in workers/src/handlers/ named or grepped for ticket-related exports. | CORRECTED 2026-07-14 (Enterprise Capability Completion Program triage): backend.status was 'missing' but workers/src/handlers/support.js is real -- wired at workers/src/index.js:7643-7647, implements POST /api/support/ticket with a genuine INSERT INTO support_tickets (table present in workers/schema_master.sql), plus FAQ/status/SLA endpoints. Added 2026-07-13 (git log), i.e. after this registry's prior 2026-07-08 verification -- the registry had not caught up. Also exercised via an AI-copilot tool (create_support_ticket, tested in workers/test/copilotSalesSupportTools.test.mjs). Frontend remains genuinely empty (confirmed zero matches for /api/support/, submitTicket, supportTicket anywhere in frontend/; only static mailto: links exist). Priority stays P2 -- now an accurate 'backend exists, frontend missing' gap, not a from-scratch build."
+      "method": "dynamic_api",
+      "last_verified": "2026-07-15",
+      "evidence": "Customer Lifecycle Completion Program, Phase 3: workers/schema_v51_support_ticket_org_scope.sql adds support_tickets.organization_id (nullable, additive) + support_ticket_comments; workers/src/handlers/support.js extended with handleMyTickets/handleTicketDetail/handleAddComment/handleUpdateStatus, org-membership checks against org_members (same pattern as workers/src/handlers/aiMaturityHandler.js, PR #257), and in-app notifications via workers/src/handlers/notificationPlatform.js's deliverNotification(). Ticket creation (workers/src/handlers/support.js:222-225) now requires a real user id -- closes a prior unauthenticated-ticket-spam gap; the AI-copilot create_support_ticket tool (workers/src/handlers/aiSecurityCopilot.js:1841-1856) forwards its own session authCtx unchanged and continues to work. Verified dynamically: all 25 new tests plus the full worker suite (300 files / 3169 tests, up from the pre-change 299/3144) pass against a real node:sqlite-backed D1 double driving the actual handleSupport() dispatcher end-to-end -- not a static code read. customer_journey_complete stays false and operational_status stays 'PILOT ONLY' (not 'GA APPROVED') pending a real dynamic_browser click-through pass, per this registry's own Production Truth Law (docs/ENGINEERING_STANDARDS.md \u00a711) -- no live browser session was available in this environment. Deliberately out of scope, disclosed not silently skipped: file attachments (no upload infrastructure exists anywhere in the repo to build on -- confirmed via repo-wide search; would need new R2 wiring, out of scope per this task's own 'if backend supports them' framing), and an admin/support-staff ticket-triage UI (the existing admin-only GET /api/support/tickets list API is untouched; a dedicated queue UI is a separate future concern, likely in the existing staff-facing admin portal page)."
     },
-    "notes": "Confirms docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:229's 'Missing \u2014 only static mailto: links found' finding exactly as written; no change since that audit. SUPPORT_PLAYBOOK.md documents the operational process for handling support over email/WhatsApp, which is the current real workflow \u2014 this entry tracks the absence of in-product tooling, not an absence of any support process at all."
+    "notes": "Supersedes the 2026-07-14 finding above ('backend exists, frontend missing') -- both sides now exist and are wired together. The pre-existing CORS Access-Control-Allow-Methods gap (workers/src/middleware/cors.js:49 omits PATCH) was found while building this feature but is a separate, cross-cutting, pre-existing issue affecting other already-shipped PATCH routes (e.g. workers/src/index.js:5570, :8309, :8342) -- recorded here per this repo's scope-discipline rule rather than folded into this PR; this feature's own status-update route was designed to use POST instead specifically to avoid depending on that bug. SUPPORT_PLAYBOOK.md's email/WhatsApp workflow remains the escalation path for logged-out visitors, who still see the mailto: links (frontend/user-dashboard.html:2720, :4161, unchanged)."
   }
 ]

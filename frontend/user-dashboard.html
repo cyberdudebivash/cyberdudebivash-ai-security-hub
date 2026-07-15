@@ -971,6 +971,9 @@
       <div class="nav-item" data-page="billing" onclick="showPage('billing',this)">
         <span class="nav-icon">💳</span> Billing & Plan
       </div>
+      <div class="nav-item" data-page="support" onclick="showPage('support',this);loadSupport()">
+        <span class="nav-icon">🎫</span> Support
+      </div>
       <div class="nav-item" data-page="settings" onclick="showPage('settings',this)">
         <span class="nav-icon">⚙️</span> Settings
       </div>
@@ -2574,6 +2577,85 @@
       </div>
     </div>
 
+    <!-- CAP-PORTAL-004: Customer Support Ticket UI -->
+    <div id="page-support" class="page">
+      <div id="support-list-view">
+        <div class="page-title">Support</div>
+        <div class="page-subtitle">File a ticket, track responses, or browse the Help Center</div>
+
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button class="btn btn-sm" id="support-tab-tickets" onclick="switchSupportTab('tickets')">🎫 My Tickets</button>
+          <button class="btn btn-outline btn-sm" id="support-tab-help" onclick="switchSupportTab('help')">❓ Help Center</button>
+        </div>
+
+        <div id="support-tickets-tab">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Your Tickets</span>
+              <div style="display:flex;gap:8px;align-items:center">
+                <select class="form-input" id="support-scope-select" style="max-width:220px" onchange="loadMyTickets()">
+                  <option value="">Personal tickets</option>
+                </select>
+                <button class="btn btn-primary btn-sm" onclick="openCreateTicketModal()">+ New Ticket</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <table>
+                <thead><tr><th>Subject</th><th>Category</th><th>Priority</th><th>Status</th><th>Created</th><th></th></tr></thead>
+                <tbody id="support-tickets-table">
+                  <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px"><span class="spinner"></span> Loading tickets…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="support-help-tab" style="display:none">
+          <div class="card" style="margin-bottom:16px" id="support-status-card">
+            <div class="card-body" style="padding:16px">Loading platform status…</div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Frequently Asked Questions</span>
+              <input class="form-input" id="support-faq-search" style="max-width:240px" placeholder="Search FAQs…" oninput="loadHelpCenter()" />
+            </div>
+            <div class="card-body" id="support-faq-body">
+              <span class="spinner"></span> Loading…
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="support-detail-view" style="display:none">
+        <button class="btn-ghost" onclick="showSupportTicketList()" style="margin-bottom:12px">← Back to Tickets</button>
+        <div class="page-title" id="support-detail-subject">—</div>
+        <div class="page-subtitle">
+          <span class="badge" id="support-detail-status-badge">—</span>
+          Ticket <code id="support-detail-id" style="font-family:var(--mono)"></code> · <span id="support-detail-created"></span>
+        </div>
+
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-body" style="padding:16px" id="support-detail-body"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Conversation</span>
+            <div id="support-detail-actions"></div>
+          </div>
+          <div class="card-body">
+            <div id="support-comments-list" style="margin-bottom:16px"></div>
+            <div class="form-group">
+              <label class="form-label" for="support-comment-input">Add a reply</label>
+              <textarea id="support-comment-input" class="form-input" rows="3" placeholder="Type your reply…"></textarea>
+            </div>
+            <div id="support-comment-err" class="alert alert-error" style="display:none"></div>
+            <button class="btn btn-primary btn-sm" onclick="addTicketComment()">Send Reply</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -2646,6 +2728,53 @@
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-create-org')">Cancel</button>
       <button class="btn btn-primary" onclick="createOrg()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Support Ticket -->
+<div class="modal-overlay" id="modal-create-ticket">
+  <div class="modal">
+    <div class="modal-title">🎫 New Support Ticket</div>
+    <div class="form-group">
+      <label class="form-label" for="new-ticket-subject">Subject</label>
+      <input id="new-ticket-subject" class="form-input" placeholder="Brief summary of the issue" />
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="new-ticket-description">Description</label>
+      <textarea id="new-ticket-description" class="form-input" rows="4" placeholder="Describe the issue, including any error messages"></textarea>
+    </div>
+    <div style="display:flex;gap:12px">
+      <div class="form-group" style="flex:1">
+        <label class="form-label" for="new-ticket-category">Category</label>
+        <select id="new-ticket-category" class="form-input">
+          <option value="general">General</option>
+          <option value="billing">Billing</option>
+          <option value="technical">Technical</option>
+          <option value="security">Security</option>
+          <option value="account">Account</option>
+        </select>
+      </div>
+      <div class="form-group" style="flex:1">
+        <label class="form-label" for="new-ticket-priority">Priority</label>
+        <select id="new-ticket-priority" class="form-input">
+          <option value="normal">Normal</option>
+          <option value="low">Low</option>
+          <option value="high">High</option>
+          <option value="urgent">Urgent</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" id="new-ticket-org-group" style="display:none">
+      <label class="form-label" for="new-ticket-org">Organization <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+      <select id="new-ticket-org" class="form-input">
+        <option value="">Personal ticket (not tied to an org)</option>
+      </select>
+    </div>
+    <div id="create-ticket-err" class="alert alert-error" style="display:none"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-create-ticket')">Cancel</button>
+      <button class="btn btn-primary" onclick="createTicket()">Submit Ticket</button>
     </div>
   </div>
 </div>
@@ -5669,6 +5798,250 @@ Be concise, technical, and board-ready. Use markdown-style headers.`;
 
   function copyText(text) {
     navigator.clipboard.writeText(text).then(() => showToast('Copied!')).catch(() => {});
+  }
+
+  // ── Support (CAP-PORTAL-004) ────────────────────────────────────────────────
+  let _supportOrgs    = [];
+  let _supportTickets = [];
+  let _currentTicket  = null;
+
+  function supportEsc(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+
+  function supportStatusBadge(status) {
+    const cls = { open: 'badge-blue', resolved: 'badge-green', closed: 'badge-gray' }[status] || 'badge-gray';
+    return `<span class="badge ${cls}">${supportEsc(status)}</span>`;
+  }
+
+  function switchSupportTab(tab) {
+    document.getElementById('support-tickets-tab').style.display = tab === 'tickets' ? 'block' : 'none';
+    document.getElementById('support-help-tab').style.display    = tab === 'help'    ? 'block' : 'none';
+    document.getElementById('support-tab-tickets').className = tab === 'tickets' ? 'btn btn-sm' : 'btn btn-outline btn-sm';
+    document.getElementById('support-tab-help').className    = tab === 'help'    ? 'btn btn-sm' : 'btn btn-outline btn-sm';
+    if (tab === 'help') loadHelpCenter();
+  }
+
+  async function loadSupport() {
+    await populateSupportOrgSelector();
+    await loadMyTickets();
+  }
+
+  async function populateSupportOrgSelector() {
+    try {
+      const res = await apiFetch('/api/orgs');
+      const d   = await res.json();
+      _supportOrgs = res.ok ? (d.organizations || []) : [];
+    } catch { _supportOrgs = []; }
+
+    const scopeSel = document.getElementById('support-scope-select');
+    const orgSel   = document.getElementById('new-ticket-org');
+    const orgGroup = document.getElementById('new-ticket-org-group');
+
+    scopeSel.innerHTML = ['<option value="">Personal tickets</option>']
+      .concat(_supportOrgs.map(o => `<option value="${supportEsc(o.id)}">${supportEsc(o.name)}</option>`))
+      .join('');
+
+    if (_supportOrgs.length) {
+      orgGroup.style.display = 'block';
+      orgSel.innerHTML = ['<option value="">Personal ticket (not tied to an org)</option>']
+        .concat(_supportOrgs.map(o => `<option value="${supportEsc(o.id)}">${supportEsc(o.name)}</option>`))
+        .join('');
+    } else {
+      orgGroup.style.display = 'none';
+    }
+  }
+
+  async function loadMyTickets() {
+    const tbody = document.getElementById('support-tickets-table');
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px"><span class="spinner"></span> Loading tickets…</td></tr>`;
+    const orgId = document.getElementById('support-scope-select').value;
+    try {
+      const qs  = orgId ? `?org_id=${encodeURIComponent(orgId)}` : '';
+      const res = await apiFetch('/api/support/tickets/mine' + qs);
+      const d   = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to load tickets');
+      _supportTickets = d.data || [];
+      if (!_supportTickets.length) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:28px">
+          <div style="color:var(--muted);font-size:.9rem">No tickets yet. Click "+ New Ticket" if you need help.</div>
+        </td></tr>`;
+        return;
+      }
+      tbody.innerHTML = _supportTickets.map(t => `
+        <tr>
+          <td style="font-weight:600">${supportEsc(t.subject)}</td>
+          <td>${supportEsc(t.category)}</td>
+          <td>${supportEsc(t.priority)}</td>
+          <td>${supportStatusBadge(t.status)}</td>
+          <td>${fmtDate(t.created_at)}</td>
+          <td><button class="btn btn-outline btn-sm" onclick="openTicketDetail('${t.id}')">View →</button></td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--danger);padding:24px">Could not load tickets. ${supportEsc(e.message)}</td></tr>`;
+    }
+  }
+
+  function openCreateTicketModal() {
+    document.getElementById('new-ticket-subject').value = '';
+    document.getElementById('new-ticket-description').value = '';
+    document.getElementById('new-ticket-category').value = 'general';
+    document.getElementById('new-ticket-priority').value = 'normal';
+    const orgSel = document.getElementById('new-ticket-org');
+    if (orgSel) orgSel.value = '';
+    document.getElementById('create-ticket-err').style.display = 'none';
+    openModal('modal-create-ticket');
+  }
+
+  async function createTicket() {
+    const subject     = document.getElementById('new-ticket-subject').value.trim();
+    const description = document.getElementById('new-ticket-description').value.trim();
+    const category     = document.getElementById('new-ticket-category').value;
+    const priority     = document.getElementById('new-ticket-priority').value;
+    const orgSel        = document.getElementById('new-ticket-org');
+    const orgId         = orgSel ? orgSel.value : '';
+    const errEl        = document.getElementById('create-ticket-err');
+    errEl.style.display = 'none';
+    if (!subject || !description) { errEl.textContent = 'Subject and description are required.'; errEl.style.display = 'block'; return; }
+    try {
+      const res = await apiFetch('/api/support/ticket', {
+        method: 'POST',
+        body: JSON.stringify({ subject, description, category, priority, org_id: orgId || undefined }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to submit ticket');
+      closeModal('modal-create-ticket');
+      showToast(`Ticket ${d.ticket_id} submitted.`);
+      await loadMyTickets();
+    } catch (e) {
+      errEl.textContent = e.message; errEl.style.display = 'block';
+    }
+  }
+
+  async function openTicketDetail(id) {
+    document.getElementById('support-list-view').style.display   = 'none';
+    document.getElementById('support-detail-view').style.display = 'block';
+    document.getElementById('support-detail-subject').textContent = 'Loading…';
+    document.getElementById('support-comments-list').innerHTML    = `<span class="spinner"></span> Loading…`;
+    try {
+      const res = await apiFetch('/api/support/ticket/' + encodeURIComponent(id));
+      const d   = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to load ticket');
+      _currentTicket = d.data.ticket;
+      renderTicketDetail(d.data.ticket, d.data.comments || []);
+    } catch (e) {
+      showToast(e.message, 'err');
+      showSupportTicketList();
+    }
+  }
+
+  function renderTicketDetail(ticket, comments) {
+    document.getElementById('support-detail-subject').textContent = ticket.subject;
+    document.getElementById('support-detail-status-badge').outerHTML =
+      `<span id="support-detail-status-badge">${supportStatusBadge(ticket.status)}</span>`;
+    document.getElementById('support-detail-id').textContent = ticket.id;
+    document.getElementById('support-detail-created').textContent = fmtDate(ticket.created_at);
+    document.getElementById('support-detail-body').innerHTML = `
+      <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:.85rem;color:var(--muted);margin-bottom:12px">
+        <div>Category: <strong style="color:var(--text)">${supportEsc(ticket.category)}</strong></div>
+        <div>Priority: <strong style="color:var(--text)">${supportEsc(ticket.priority)}</strong></div>
+      </div>
+      <div style="white-space:pre-wrap">${supportEsc(ticket.description)}</div>
+    `;
+    const canReopen  = ['resolved', 'closed'].includes(ticket.status);
+    const canResolve = ticket.status === 'open';
+    document.getElementById('support-detail-actions').innerHTML = `
+      ${canResolve ? `<button class="btn btn-outline btn-sm" onclick="updateTicketStatus('resolved')">Mark Resolved</button>` : ''}
+      ${canReopen  ? `<button class="btn btn-outline btn-sm" onclick="updateTicketStatus('open')">Reopen</button>` : ''}
+    `;
+    document.getElementById('support-comments-list').innerHTML = comments.length
+      ? comments.map(c => `
+        <div style="padding:10px 12px;margin-bottom:8px;border-radius:8px;background:${c.is_staff ? 'rgba(0,212,255,.08)' : 'rgba(255,255,255,.03)'};border:1px solid var(--border)">
+          <div style="font-size:.78rem;color:var(--muted);margin-bottom:4px">${c.is_staff ? '🛡️ Support Team' : '👤 You'} · ${fmtDate(c.created_at)}</div>
+          <div style="white-space:pre-wrap">${supportEsc(c.body)}</div>
+        </div>
+      `).join('')
+      : `<div style="color:var(--muted);font-size:.85rem">No replies yet.</div>`;
+  }
+
+  async function addTicketComment() {
+    if (!_currentTicket) return;
+    const input = document.getElementById('support-comment-input');
+    const errEl = document.getElementById('support-comment-err');
+    const text  = input.value.trim();
+    errEl.style.display = 'none';
+    if (!text) { errEl.textContent = 'Reply cannot be empty.'; errEl.style.display = 'block'; return; }
+    try {
+      const res = await apiFetch(`/api/support/ticket/${encodeURIComponent(_currentTicket.id)}/comment`, {
+        method: 'POST',
+        body: JSON.stringify({ body: text }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to send reply');
+      input.value = '';
+      showToast('Reply sent.');
+      await openTicketDetail(_currentTicket.id);
+    } catch (e) {
+      errEl.textContent = e.message; errEl.style.display = 'block';
+    }
+  }
+
+  async function updateTicketStatus(status) {
+    if (!_currentTicket) return;
+    try {
+      const res = await apiFetch(`/api/support/ticket/${encodeURIComponent(_currentTicket.id)}/status`, {
+        method: 'POST',
+        body: JSON.stringify({ status }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to update ticket');
+      showToast(status === 'open' ? 'Ticket reopened.' : 'Ticket marked resolved.');
+      await openTicketDetail(_currentTicket.id);
+      await loadMyTickets();
+    } catch (e) {
+      showToast(e.message, 'err');
+    }
+  }
+
+  function showSupportTicketList() {
+    document.getElementById('support-detail-view').style.display = 'none';
+    document.getElementById('support-list-view').style.display   = 'block';
+    _currentTicket = null;
+  }
+
+  async function loadHelpCenter() {
+    const statusCard = document.getElementById('support-status-card');
+    const faqBody     = document.getElementById('support-faq-body');
+    const q = document.getElementById('support-faq-search')?.value.trim() || '';
+    try {
+      const [statusRes, faqRes] = await Promise.all([
+        apiFetch('/api/support/status'),
+        apiFetch('/api/support/faq' + (q ? `?q=${encodeURIComponent(q)}` : '')),
+      ]);
+      const statusData = await statusRes.json();
+      const faqData     = await faqRes.json();
+
+      const statusColor = statusData.status === 'operational' ? 'var(--accent)' : 'var(--danger)';
+      statusCard.innerHTML = `<div class="card-body" style="padding:16px;display:flex;align-items:center;gap:10px">
+        <span style="width:10px;height:10px;border-radius:50%;background:${statusColor}"></span>
+        <span>${supportEsc(statusData.message || 'Status unavailable')}</span>
+      </div>`;
+
+      const faqs = faqData.faqs || [];
+      faqBody.innerHTML = faqs.length
+        ? faqs.map(f => `
+          <details style="margin-bottom:10px;border:1px solid var(--border);border-radius:8px;padding:10px 14px">
+            <summary style="cursor:pointer;font-weight:600">${supportEsc(f.question)}</summary>
+            <div style="margin-top:8px;color:var(--muted);font-size:.88rem;white-space:pre-wrap">${supportEsc(f.answer)}</div>
+          </details>
+        `).join('')
+        : `<div style="color:var(--muted);font-size:.85rem">No FAQs match your search.</div>`;
+    } catch (e) {
+      faqBody.innerHTML = `<div style="color:var(--danger)">Could not load Help Center. ${supportEsc(e.message)}</div>`;
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════════

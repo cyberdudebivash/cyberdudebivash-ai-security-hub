@@ -104,7 +104,7 @@ describe('copilot quick-action: create_support_ticket', () => {
     env = { DB: makeRealD1() };
     env.DB._sqlite.exec(`CREATE TABLE support_tickets (
       id TEXT PRIMARY KEY, user_id TEXT, tier TEXT, subject TEXT, description TEXT,
-      category TEXT, priority TEXT, status TEXT, created_at TEXT
+      category TEXT, priority TEXT, status TEXT, organization_id TEXT, created_at TEXT, updated_at TEXT
     )`);
   });
 
