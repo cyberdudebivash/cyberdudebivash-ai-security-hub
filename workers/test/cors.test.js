@@ -48,6 +48,21 @@ describe('corsHeaders', () => {
     expect(h['Access-Control-Allow-Credentials']).toBe('true');
   });
 
+  // Same bug class as the X-Scan-Token incident below, different axis: at
+  // least 8 real routes dispatch on method === 'PATCH' (SOC case updates,
+  // admin incident/maintenance updates, workflow updates, API key updates,
+  // admin user status, MSSP partner status, webhook management), but PATCH
+  // was never in this allowlist. The global preflight handler
+  // (index.js: `if (method === 'OPTIONS') return new Response(null, {
+  // status: 204, headers: corsHeaders(request) })`) is the sole preflight
+  // path for every route, so this one list gates all of them. Any browser
+  // fetch() with method:'PATCH' silently failed preflight -- "Failed to
+  // fetch" in the browser, unaffected via curl/direct server calls.
+  it('allows PATCH so browser-based PATCH routes (SOC cases, admin incidents/maintenance, workflows, API keys, admin user status, MSSP partner status, webhook mgmt) pass preflight', () => {
+    const h = corsHeaders(reqWithOrigin('https://cyberdudebivash.in'), {});
+    expect(h['Access-Control-Allow-Methods']).toContain('PATCH');
+  });
+
   // P0 incident 2026-07-08: frontend/index.html's domain-scan flow sends
   // 'X-Scan-Token' (the P1 abuse-prevention token from POST /api/scan/token,
   // see executeScan() around frontend/index.html:9598). That header was never
