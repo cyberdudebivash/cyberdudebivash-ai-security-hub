@@ -311,11 +311,21 @@ export async function handleEnterpriseSSoCallback(request, env) {
   try {
     if (env?.DB) {
       await env.DB.prepare(
-        `INSERT OR IGNORE INTO audit_log (user_id, action, detail, ip, created_at)
-         VALUES (?, 'sso.login', ?, ?, datetime('now'))`
-      ).bind(userId, JSON.stringify({ idp: config.idp_type, org: orgSlug, email }), request.headers.get('CF-Connecting-IP') || 'unknown').run();
+        `INSERT OR IGNORE INTO audit_log (user_id, action, resource, resource_id, status, metadata, ip, created_at)
+         VALUES (?, 'sso.login', 'sso', ?, 'ok', ?, ?, datetime('now'))`
+      ).bind(
+        userId,
+        orgSlug,
+        JSON.stringify({ idp: config.idp_type, org: orgSlug, email }),
+        request.headers.get('CF-Connecting-IP') || 'unknown'
+      ).run();
     }
-  } catch {}
+  } catch (err) {
+    // Never block SSO login on an audit-write failure — but a fully silent
+    // catch is what let this INSERT reference a non-existent `detail` column
+    // (schema has `metadata`) for an unknown period without anyone noticing.
+    console.error('sso_audit_log_write_failed', { userId, orgSlug, error: err?.message });
+  }
 
   // Redirect to dashboard with tokens in fragment (never in query string for security)
   return Response.redirect(
