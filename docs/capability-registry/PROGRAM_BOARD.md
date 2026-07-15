@@ -313,6 +313,92 @@ Per the owner's explicit Phase 4 instruction ("do not implement medium items yet
 
 ## Session log (most recent first)
 
+### 2026-07-14/15 — ECCP Wave 1: revenue validation, duplicate-system investigation, SSRF fix, 2 quick wins shipped
+
+- **Context.** Direct continuation of the triage wave below. Owner scoped
+  a 4-phase wave: (1) validate `CAP-CRM-006` as a revenue opportunity,
+  (2) compare `CAP-NOTIF-003`'s two webhook backends and recommend a
+  migration, (3) implement the Trivial/Small items from the triage,
+  (4) prepare (not implement) designs for the 5 Medium items. Explicit
+  guardrails: don't activate/retire either duplicate system without a
+  business decision, don't merge the webhook systems until validated.
+- **Phase 1 (`CAP-CRM-006`) — corrected the original framing.** Investigation
+  found this is **not** a dormant revenue opportunity: the ₹9,999 "Security
+  Assessment" it sells is already live through two homepage buttons hitting
+  the generic, more complete `payments.js` flow (invoice, coupons, webhook
+  fallback, confirmation email — all absent from `assessmentBooking.js`).
+  Activating it would also introduce a non-matching ₹19,999 mid-tier price
+  (real SKU ₹24,999) and duplicate the ₹49,999 enterprise SKU exactly.
+  Classified as superseded/duplicate, not a gap. Not activated or removed —
+  awaiting owner decision (retire, or keep for its 3-tier pricing/lifecycle
+  table if that's specifically wanted).
+- **Phase 2 (`CAP-NOTIF-003`) — comparison + one urgent fix, migration not yet
+  applied.** `enterpriseAutomation.js` confirmed production-authoritative
+  (frontend calls it); `developerPortal.js`'s parallel system has zero
+  callers despite being better-tested and SSRF-guarded. New finding: the
+  live path's webhook *creation* is itself broken for real users — the UI's
+  5 hardcoded event names share zero overlap with the backend's 12-event
+  whitelist, so every real creation attempt 400s; only list/delete work.
+  **Found a live, exploitable SSRF vulnerability** in the production path's
+  webhook create/test (no private-IP guard, unlike this same file's own
+  `handleIntegrationTest` and unlike the unused sibling) — fixed
+  immediately as its own isolated change (`claude/eccp-webhook-ssrf-guard`,
+  6 new tests), separate from the broader migration question per "don't
+  merge until validated." Full migration recommendation (rewrite 5
+  frontend functions, replace event vocabulary, decide on active/inactive
+  toggle + delivery-log parity) written up, not applied — awaiting
+  approval.
+- **Phase 3 — 2 of 2 quick wins shipped, each its own branch/PR:**
+  - `CAP-DASH-003` (`claude/eccp-cap-dash-003-growth-analytics`): wired
+    `frontend/growth-analytics.js` into `frontend/index.html` (was dead
+    code, complete and correctly admin-gated server-side, never loaded by
+    any page). Surfaced and fixed 2 real shape mismatches this exposed for
+    the first time: `handleGrowthMetrics` returned its payload flat
+    instead of `{ metrics, period }` like its sibling endpoints; frontend
+    read `activation_rate` but the backend computed `activation_rate_7d`.
+    6 new tests.
+  - `CAP-MSSP-003` (`claude/eccp-cap-mssp-003-drilldown-completion`):
+    closed all 4 gaps the prior wave explicitly disclosed as not-yet-wired
+    — label add/remove, hierarchy tab (parent + children), notifications
+    tab (real 5-channel × 12-event matrix sourced from the backend's own
+    enums), and Ticket Routing Rules (deliberately built as a top-level
+    card, not nested under a client, since that resource has no
+    `customer_id` column at all). No backend changes needed — all 4
+    handlers were already complete. 16 new tests (existing file extended,
+    not duplicated).
+- **Phase 4 — designs only, not implemented,** for `CAP-BILL-002`,
+  `CAP-MYTHOS-003`, `CAP-DEVPORTAL-003`, `CAP-PORTAL-004`, `CAP-ADMIN-004`;
+  see the dedicated section above this log. Key finding:
+  `CAP-DEVPORTAL-003`'s `/api/developer/keys*` already delegates to the
+  same canonical backend the working dashboard API Keys tab uses — lowest
+  risk of the 5, not a second system to reconcile. `CAP-ADMIN-004` is a
+  different shape of work: zero backend exists for any of its 5 named
+  sub-domains (confirmed via grep) — needs per-sub-domain triage, not one
+  estimate.
+- **Registry corrections (evidence-backed, not implementation):**
+  `CAP-MSSP-003` priority P2→P6 (frontend now complete). Regenerated
+  `PRODUCTION_READINESS_REPORT.md`: Frontend 74.8%→75.2%, Parity
+  70.3%→71.3%, High/P2 16→15.
+- **Verification:** full suite independently re-run after every change,
+  on each isolated branch — 296 files/3094 tests (SSRF fix + CAP-DASH-003
+  branches, independently), 294 files/3098 tests (CAP-MSSP-003 branch, off
+  the un-merged base). Registry validator: 0 failures, 0 warnings
+  throughout (also caught and required fixing 9 bare-filename evidence
+  citations in an earlier pass this same day).
+- **GitHub tooling note:** the GitHub MCP connection dropped mid-wave: all
+  3 branches above are pushed and ready, but the PR objects themselves were
+  not created (need reauthorization or manual creation from the pushed
+  branches).
+- **What remains, sized honestly:** `CAP-CRM-006`'s retire-vs-keep decision
+  (owner); `CAP-NOTIF-003`'s migration approval (owner) — the SSRF fix
+  closes the urgent security gap regardless of which way that decision
+  goes; the 5 Medium items are designed but unbuilt; the 21 remaining P2
+  items and all P3/P4/P6/P7 gaps are untouched this wave.
+- **Next recommended wave (owner's call):** approve/reject the
+  `CAP-NOTIF-003` migration; decide `CAP-CRM-006`; or pick a Medium item
+  from Phase 4's designs to build (`CAP-DEVPORTAL-003` is the
+  lowest-risk starting point).
+
 ### 2026-07-14 — Enterprise Capability Completion Program (ECCP) launched: full triage of the 25 P2 backlog
 
 - **Context.** Following the certification synthesis below, the owner
