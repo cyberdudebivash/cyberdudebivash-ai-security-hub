@@ -244,6 +244,26 @@ const WEBHOOK_EVENTS = [
   'api.quota_80pct', 'api.quota_exceeded', 'api.key_revoked',
 ];
 
+// SSRF guard: reject private/loopback/link-local hostnames and non-FQDN
+// targets. Identical to the check handleIntegrationTest already applies to
+// its own outbound fetch (below) — factored out so the webhook create/test
+// paths, which perform the same class of "fetch a customer-supplied URL"
+// operation, get the same protection instead of a second, independently
+// drifting copy (or, as found, no copy at all).
+function validateOutboundUrl(targetUrl) {
+  if (!targetUrl || !/^https:\/\//.test(targetUrl)) return 'HTTPS url required';
+  try {
+    const parsed = new URL(targetUrl);
+    const hostname = parsed.hostname.toLowerCase();
+    const BLOCKED = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1|0\.0\.0\.0|fc00:|fd)/;
+    if (BLOCKED.test(hostname) || hostname === '[::1]') return 'Private/loopback URLs are not permitted';
+    if (!hostname.includes('.') || hostname.endsWith('.local') || hostname.endsWith('.internal')) return 'URL must point to a public FQDN';
+  } catch {
+    return 'Invalid URL';
+  }
+  return null;
+}
+
 async function handleWebhookCreate(req, env, authCtx) {
   const deny = requireAuth(authCtx); if (deny) return deny;
   const D = db(env); if (!D) return Response.json({ error: 'DB unavailable' }, { status: 503 });
@@ -251,7 +271,8 @@ async function handleWebhookCreate(req, env, authCtx) {
   let body = {};
   try { body = await req.json(); } catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
   const { url, events, secret } = body;
-  if (!url || !/^https:\/\//.test(url)) return Response.json({ error: 'HTTPS url required' }, { status: 400 });
+  const urlError = validateOutboundUrl(url);
+  if (urlError) return Response.json({ error: urlError }, { status: 400 });
   if (!Array.isArray(events) || events.length === 0) return Response.json({ error: 'events array required' }, { status: 400 });
   const validEvents = events.filter(e => WEBHOOK_EVENTS.includes(e));
   if (validEvents.length === 0) return Response.json({ error: 'No valid events', valid_events: WEBHOOK_EVENTS }, { status: 400 });
@@ -288,6 +309,10 @@ async function handleWebhookTest(req, env, authCtx, whId) {
   const D = db(env); if (!D) return Response.json({ error: 'DB unavailable' }, { status: 503 });
   const row = await D.prepare(`SELECT * FROM org_webhooks WHERE id=? AND org_id=?`).bind(whId, orgId(authCtx)).first();
   if (!row) return Response.json({ error: 'Webhook not found' }, { status: 404 });
+  // Defense in depth: re-validate the stored URL before the outbound fetch,
+  // in case a row predates this guard (registered before this fix shipped).
+  const urlError = validateOutboundUrl(row.url);
+  if (urlError) return Response.json({ error: urlError }, { status: 400 });
   const testPayload = JSON.stringify({ event: 'webhook.test', webhook_id: whId, ts: new Date().toISOString(), data: { message: 'Test delivery from CYBERDUDEBIVASH® AI Security Hub' } });
   const sig = row.secret ? await signPayload(row.secret, testPayload) : null;
   try {
@@ -890,23 +915,8 @@ async function handleIntegrationTest(req, env, authCtx) {
   let body = {};
   try { body = await req.json(); } catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
   const { type, url: targetUrl, token } = body;
-  if (!targetUrl || !/^https:\/\//.test(targetUrl)) return Response.json({ error: 'HTTPS url required' }, { status: 400 });
-
-  // SSRF guard: reject private/loopback/link-local hostnames
-  try {
-    const parsed = new URL(targetUrl);
-    const hostname = parsed.hostname.toLowerCase();
-    const BLOCKED = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1|0\.0\.0\.0|fc00:|fd)/;
-    if (BLOCKED.test(hostname) || hostname === '[::1]') {
-      return Response.json({ error: 'Private/loopback URLs are not permitted' }, { status: 400 });
-    }
-    // Restrict to known SIEM/integration hostnames — must be public FQDNs with a dot
-    if (!hostname.includes('.') || hostname.endsWith('.local') || hostname.endsWith('.internal')) {
-      return Response.json({ error: 'URL must point to a public FQDN' }, { status: 400 });
-    }
-  } catch {
-    return Response.json({ error: 'Invalid URL' }, { status: 400 });
-  }
+  const urlError = validateOutboundUrl(targetUrl);
+  if (urlError) return Response.json({ error: urlError }, { status: 400 });
 
   try {
     const headers = { 'Content-Type': 'application/json' };
