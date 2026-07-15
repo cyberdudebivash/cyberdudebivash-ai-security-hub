@@ -127,7 +127,7 @@ export async function handleOnboardingWizard(request, env, authCtx) {
 
   const db = env.DB;
 
-  const [profileRow, keyRows, assetRows, scanRow] = await Promise.all([
+  const [profileRow, keyRows, assetRows, scanRow, notifPrefsRow] = await Promise.all([
     db ? db.prepare(
       `SELECT id FROM customer_profiles WHERE id = ? LIMIT 1`
     ).bind(userId).first().catch(() => null) : Promise.resolve(null),
@@ -140,6 +140,9 @@ export async function handleOnboardingWizard(request, env, authCtx) {
     db ? db.prepare(
       `SELECT id FROM scan_jobs WHERE user_id = ? LIMIT 1`
     ).bind(userId).first().catch(() => null) : Promise.resolve(null),
+    db ? db.prepare(
+      `SELECT user_id FROM notification_preferences WHERE user_id = ? LIMIT 1`
+    ).bind(userId).first().catch(() => null) : Promise.resolve(null),
   ]);
 
   const steps = [
@@ -147,7 +150,7 @@ export async function handleOnboardingWizard(request, env, authCtx) {
     { id: 'api_key',       title: 'API Key Created',       completed: keyRows.length > 0,  description: 'Generate your first API key to integrate' },
     { id: 'first_scan',    title: 'First Security Scan',   completed: !!scanRow,           description: 'Run a domain or asset scan to baseline posture' },
     { id: 'assets',        title: 'Asset Inventory',       completed: !!assetRows,         description: 'Register your critical business assets' },
-    { id: 'notifications', title: 'Alert Preferences',     completed: false,               description: 'Configure notification channels (email/webhook)' },
+    { id: 'notifications', title: 'Alert Preferences',     completed: !!notifPrefsRow,     description: 'Configure notification channels (email/webhook)' },
   ];
 
   const completedCount = steps.filter(s => s.completed).length;

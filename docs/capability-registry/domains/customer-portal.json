@@ -283,5 +283,62 @@
       "evidence": "Customer Lifecycle Completion Program, Phase 3: workers/schema_v51_support_ticket_org_scope.sql adds support_tickets.organization_id (nullable, additive) + support_ticket_comments; workers/src/handlers/support.js extended with handleMyTickets/handleTicketDetail/handleAddComment/handleUpdateStatus, org-membership checks against org_members (same pattern as workers/src/handlers/aiMaturityHandler.js, PR #257), and in-app notifications via workers/src/handlers/notificationPlatform.js's deliverNotification(). Ticket creation (workers/src/handlers/support.js:222-225) now requires a real user id -- closes a prior unauthenticated-ticket-spam gap; the AI-copilot create_support_ticket tool (workers/src/handlers/aiSecurityCopilot.js:1841-1856) forwards its own session authCtx unchanged and continues to work. Verified dynamically: all 25 new tests plus the full worker suite (300 files / 3169 tests, up from the pre-change 299/3144) pass against a real node:sqlite-backed D1 double driving the actual handleSupport() dispatcher end-to-end -- not a static code read. customer_journey_complete stays false and operational_status stays 'PILOT ONLY' (not 'GA APPROVED') pending a real dynamic_browser click-through pass, per this registry's own Production Truth Law (docs/ENGINEERING_STANDARDS.md \u00a711) -- no live browser session was available in this environment. Deliberately out of scope, disclosed not silently skipped: file attachments (no upload infrastructure exists anywhere in the repo to build on -- confirmed via repo-wide search; would need new R2 wiring, out of scope per this task's own 'if backend supports them' framing), and an admin/support-staff ticket-triage UI (the existing admin-only GET /api/support/tickets list API is untouched; a dedicated queue UI is a separate future concern, likely in the existing staff-facing admin portal page)."
     },
     "notes": "Supersedes the 2026-07-14 finding above ('backend exists, frontend missing') -- both sides now exist and are wired together. The pre-existing CORS Access-Control-Allow-Methods gap (workers/src/middleware/cors.js:49 omits PATCH) was found while building this feature but is a separate, cross-cutting, pre-existing issue affecting other already-shipped PATCH routes (e.g. workers/src/index.js:5570, :8309, :8342) -- recorded here per this repo's scope-discipline rule rather than folded into this PR; this feature's own status-update route was designed to use POST instead specifically to avoid depending on that bug. SUPPORT_PLAYBOOK.md's email/WhatsApp workflow remains the escalation path for logged-out visitors, who still see the mailto: links (frontend/user-dashboard.html:2720, :4161, unchanged)."
+  },
+  {
+    "id": "CAP-PORTAL-005",
+    "domain": "customer-portal",
+    "name": "First-Login Onboarding Checklist",
+    "description": "ADDED 2026-07-15 (Customer Lifecycle Completion Program, Phase 6): a per-user setup checklist (organization profile, API key, first scan, asset inventory, alert preferences) showing real completion state, now reachable from the real post-login dashboard. Backend (handleOnboardingWizard, workers/src/handlers/commercialPlatformHandler.js, P15.1) already existed and was correctly computing 4 of 5 signals; its only UI was frontend/customer-success-dashboard.html, a page not linked from user-dashboard.html (the confirmed real post-login landing page, CAP-IDN-001) or any other reachable nav -- customer-facing, this feature was invisible. Ported the checklist UI into user-dashboard.html as a new 'Getting Started' page (real session auth via the page's existing apiFetch(), not the old page's weaker paste-your-API-key gate).",
+    "backend": {
+      "handlers": [
+        "workers/src/handlers/commercialPlatformHandler.js"
+      ],
+      "entry_points": [
+        "handleOnboardingWizard"
+      ],
+      "routes_sampled": [
+        { "path": "/api/customer/onboarding/wizard", "method": "GET", "evidence": "workers/src/index.js:5577-5580" }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "dedicated_page",
+      "pages": [
+        "frontend/user-dashboard.html#page-onboarding"
+      ],
+      "status": "exists",
+      "evidence": "frontend/user-dashboard.html: nav item (\"🚀 Getting Started\", placed directly under \"Dashboard\" in the Overview section, the most prominent slot in the sidebar), #page-onboarding (progress bar + step list), loadOnboarding() calling the real GET /api/customer/onboarding/wizard via the page's existing apiFetch() (same session-token auth every other page on this dashboard uses). Browser-verified via a real headless-Chromium Playwright session against the served, modified file (python3 -m http.server locally, not live production) with contract-accurate mocked API responses (response shape copied directly from handleOnboardingWizard's source, not guessed): completion %, progress bar width, status badge, and all 5 step titles/descriptions render correctly for both a partial (60%, 3/5) and complete (100%, 5/5, status COMPLETE, next_step null) response; zero new console/page errors (the only 2 errors captured were pre-existing Google Fonts CDN failures from this sandbox's lack of external network access, unrelated to this change); existing Dashboard/Overview nav confirmed unaffected. NOT YET verified against the live deployed backend/D1 with a real account -- this was a local-mock dynamic_browser pass, not a live-production one."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "Real nav-item in the Overview section of the sidebar, second position (directly below the Dashboard/Overview link itself) -- the most prominent placement available, chosen specifically because this feature's whole purpose is guiding new customers."
+    },
+    "auth_enforced": true,
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
+    "subscription_gated": false,
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/commercialPlatform.test.mjs: 2 new tests (of 78 total in the file, up from 76) proving (a) the 'notifications' step (title 'Alert Preferences') now reflects a real notification_preferences row instead of a hardcoded false, and (b) completion_pct can now reach 100% when all 5 real signals are true -- both scenarios were previously impossible to test meaningfully because the 5th step could never complete. A latent pre-existing gap in this test file's own DB mock was found and fixed in the same pass: the mock's assetExists option was only wired into the .all() query path, but handleOnboardingWizard's real assets check calls .first() -- so assetExists:true was silently a no-op for this handler's own tests before now (harmless: no prior test asserted on it), fixed by adding the missing .first() branch."
+    },
+    "docs": [
+      { "path": "docs/audit-history/PHASE6_CUSTOMER_ENGAGEMENT_AUDIT_2026-07-15.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P6",
+    "verification": {
+      "method": "dynamic_browser",
+      "last_verified": "2026-07-15",
+      "evidence": "workers/src/handlers/commercialPlatformHandler.js read directly in full. Found and fixed a second, real defect beyond the discoverability gap this entry primarily addresses: the 'notifications' step was hardcoded completed:false with no query at all -- meaning completion_pct could never reach 100% regardless of what a real customer did. Fixed to check notification_preferences (the same table CAP-NOTIF-001's real Settings 'Team Alert Channels' card writes to). Both fixes (frontend port + backend completion-check fix) verified together: full worker suite (308 files/3217 tests) green, and a real headless-Chromium Playwright session against the served, modified frontend/user-dashboard.html (locally served, contract-accurate mocked API responses, not live production) confirmed the checklist renders correctly end-to-end, including the previously-broken 'Alert Preferences' step, for both partial and 100%-complete states. customer_journey_complete stays false pending a post-merge production smoke test against the live deployed backend/D1 with a real account, per this registry's own Production Truth Law (docs/ENGINEERING_STANDARDS.md §11) -- consistent with how CAP-NOTIF-002 treated the same local-mock-vs-live-production distinction."
+    },
+    "notes": "Scope note: frontend/customer-success-dashboard.html is a much larger page than this single feature -- it also contains License Center (P15.2), Usage Analytics (P15.3), Success Score (P15.4), API Key Management V2 (P15.6), Report Archive (P15.7), Notification Center (P15.8), and Commercial Observability (P15.9), none of which were audited or ported in this pass. Several likely duplicate already-working equivalents elsewhere in user-dashboard.html (API keys, subscriptions/billing, reports/downloads are all separately confirmed CAP-PORTAL-001/002 'exists'), and sales-crm.json's CAP entry for a 'customer success score' documents a THIRD, separate implementation of that specific concept -- a real, pre-existing duplication this pass did not attempt to reconcile. frontend/customer-success-dashboard.html itself was deliberately left untouched (not deleted, not redirected) rather than guessed at, since 7 of its 9 sections were never individually verified as live-vs-duplicate-vs-dead. Recommended as a dedicated future audit, not a quick follow-on. Notification Center (P15.8) specifically was evaluated and NOT ported: its backend (handleNotificationCenter) reads ops_notifications, a table nothing in the codebase ever writes to (Finding 4, docs/audit-history/PHASE6_CUSTOMER_ENGAGEMENT_AUDIT_2026-07-15.md -- not yet its own registry entry, flagged as an open architecture decision) -- porting it now would only relocate a permanently-empty page, and it would sit confusingly next to the already-real, already-populated 'Team Alert Channels' delivery log already in Settings (CAP-NOTIF-001)."
   }
 ]
