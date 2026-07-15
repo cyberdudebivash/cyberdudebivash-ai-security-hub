@@ -20,19 +20,22 @@ function makeEnv() {
           bind(...a) { b = a; return this; },
           async run() {
             if (/INSERT INTO api_keys/.test(sql)) {
-              // (id, email, tier, api_key, key_hash, key_prefix, active, created_at)
-              rows.push({ id: b[0], email: b[1], tier: b[2], api_key: b[3], key_hash: b[4], key_prefix: b[5], active: 1 });
+              // (id, user_id, email, tier, api_key, key_hash, key_prefix, active, created_at)
+              rows.push({ id: b[0], user_id: b[1], email: b[2], tier: b[3], api_key: b[4], key_hash: b[5], key_prefix: b[6], active: 1 });
             } else if (/UPDATE api_keys SET tier/.test(sql)) {
-              // (tier, api_key, key_hash, key_prefix, id)
-              const row = rows.find(r => r.id === b[4]);
-              if (row) Object.assign(row, { tier: b[0], api_key: b[1], key_hash: b[2], key_prefix: b[3] });
+              // (tier, api_key, key_hash, key_prefix, user_id, id)
+              const row = rows.find(r => r.id === b[5]);
+              if (row) Object.assign(row, { tier: b[0], api_key: b[1], key_hash: b[2], key_prefix: b[3], user_id: b[4] ?? row.user_id });
             }
           },
           async first() {
-            if (/SELECT id FROM api_keys WHERE email/.test(sql)) {
+            if (/SELECT id FROM users WHERE email/.test(sql)) {
+              return null; // no linked account in this test's fixture — growth-funnel keys stay email-only
+            }
+            if (/SELECT id, key_hash FROM api_keys WHERE email/.test(sql)) {
               const [email] = b;
               const r = rows.find(x => x.email === email && x.active === 1);
-              return r ? { id: r.id } : null;
+              return r ? { id: r.id, key_hash: r.key_hash } : null;
             }
             if (/SELECT email, tier FROM api_keys/.test(sql)) {
               const [h, raw] = b;
