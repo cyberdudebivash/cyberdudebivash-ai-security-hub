@@ -54,7 +54,7 @@ export async function handleGrowthMetrics(req, env) {
     return Response.json({ error: 'Admin required' }, { status: 403 });
   }
 
-  const cacheKey = 'growth_metrics_v3';
+  const cacheKey = 'growth_metrics_v4';
   const cached = await env.KV?.get(cacheKey, 'json').catch(() => null);
   if (cached) return Response.json({ ...cached, cached: true });
 
@@ -119,8 +119,9 @@ export async function handleGrowthMetrics(req, env) {
       computed_at: new Date().toISOString(),
     };
 
-    await env.KV?.put(cacheKey, JSON.stringify(metrics), { expirationTtl: 300 }).catch(() => null);
-    return Response.json(metrics);
+    const payload = { metrics, period: '30d' };
+    await env.KV?.put(cacheKey, JSON.stringify(payload), { expirationTtl: 300 }).catch(() => null);
+    return Response.json(payload);
   } catch (e) {
     return Response.json({ error: e.message }, { status: 500 });
   }

@@ -131,7 +131,7 @@
       setText('cdb-g-dau',        fmtNum(metrics.dau));
       setText('cdb-g-wau',        fmtNum(metrics.wau));
       setText('cdb-g-mau',        fmtNum(metrics.mau));
-      setText('cdb-g-activation', (metrics.activation_rate || 0) + '%');
+      setText('cdb-g-activation', (metrics.activation_rate_7d || 0) + '%');
       setText('cdb-g-events',     fmtNum(metrics.total_events_30d));
       setText('cdb-g-conv',       fmtNum(metrics.conversions_30d));
 

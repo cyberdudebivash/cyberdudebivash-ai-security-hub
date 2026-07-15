@@ -24081,6 +24081,8 @@ function v21TriggerUrgencyPayment(){
 <!-- SOC case management + full investigation workspace — self-inject into the SOC Operations command-center panel (built, backed by real /api/soc/cases and /api/soc/inv/* endpoints, but never previously included on any page) -->
 <script defer="" src="/soc-investigations.js"></script>
 <script defer="" src="/soc-case-detail.js"></script>
+<!-- Growth Intelligence & Product Analytics — self-inject into the command-center nav (built, backed by real /api/analytics/p3/{growth,funnel,adoption} endpoints, admin-gated server-side, but never previously included on any page) -->
+<script defer="" src="/growth-analytics.js"></script>
 
 <!-- Global Threat Intel Firehose — homepage dashboard loader (tier-gated feed) -->
 <script>
