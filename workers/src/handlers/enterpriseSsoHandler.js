@@ -297,12 +297,23 @@ export async function handleEnterpriseSSoCallback(request, env) {
     userId = `sso_${Date.now().toString(36)}`;
   }
 
-  // Issue platform JWT
-  let accessToken, refreshToken;
+  // Issue platform JWT. Matches every other real caller's signature exactly
+  // (see auth.js:106-110, googleAuth.js:165-171, mfa.js:192-194) — a prior
+  // version called createAccessToken(env, {...}) and storeRefreshToken(env, ...)
+  // with the wrong argument shapes: createAccessToken's 2nd arg is the signing
+  // secret, so passing `env` there silently coerced to the literal string
+  // "[object Object]" (via TextEncoder), meaning every SSO-issued JWT was
+  // signed with a constant, not env.JWT_SECRET, and would be rejected by
+  // verifyJWT() everywhere else in the app. storeRefreshToken's 1st arg is a
+  // D1 database (env.DB), not env itself — env.prepare doesn't exist, so the
+  // insert threw and was silently swallowed, leaving the refresh token never
+  // persisted. Customers completing this flow got a "successful" redirect
+  // carrying a session that couldn't authenticate anywhere.
+  let accessToken, refreshData;
   try {
-    accessToken  = await createAccessToken(env, { user_id: userId, email, name, tier: orgTier, org: orgName, sso: config.idp_type });
-    refreshToken = await createRefreshToken(env, userId);
-    await storeRefreshToken(env, userId, refreshToken).catch(() => {});
+    accessToken = await createAccessToken({ id: userId, email, tier: orgTier }, env.JWT_SECRET);
+    refreshData = await createRefreshToken();
+    await storeRefreshToken(env.DB, userId, refreshData, request.headers.get('CF-Connecting-IP') || null, request.headers.get('User-Agent') || null);
   } catch {
     return Response.redirect(`${frontendBase}/?sso_error=jwt_issue_failed`, 302);
   }
@@ -329,7 +340,7 @@ export async function handleEnterpriseSSoCallback(request, env) {
 
   // Redirect to dashboard with tokens in fragment (never in query string for security)
   return Response.redirect(
-    `${frontendBase}/user-dashboard?sso=1&org=${encodeURIComponent(orgSlug)}#access_token=${encodeURIComponent(accessToken)}&refresh_token=${encodeURIComponent(refreshToken)}&tier=${orgTier}`,
+    `${frontendBase}/user-dashboard?sso=1&org=${encodeURIComponent(orgSlug)}#access_token=${encodeURIComponent(accessToken)}&refresh_token=${encodeURIComponent(refreshData.token)}&tier=${orgTier}`,
     302
   );
 }

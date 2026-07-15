@@ -6,6 +6,7 @@
 // Canonical SHA-256 key hashing (shared with auth/apiKeys.js) — sap_ keys are
 // stored and matched as hashes, never plaintext.
 import { hashApiKey, getKeyPrefix } from '../auth/apiKeys.js';
+import { triggerPostPurchase } from './lifecycleEngine.js';
 
 // Mask a raw key for safe logging: keep the sap_ prefix + last 4 chars only.
 function maskKey(raw) {
@@ -295,8 +296,26 @@ export async function handlePaymentSuccess(env, webhookData = {}) {
       VALUES (?, ?, ?, ?, ?, 'payment_success', ?)
     `).bind(crypto.randomUUID(), email, plan, payment_id || '', order_id || '', now).run();
 
-    // Provision API key if not exists
-    await provisionApiKey(env, email, plan);
+    // Provision API key if not exists. The raw key only ever exists in this
+    // return value — provisionApiKey persists only its hash — so it MUST be
+    // captured and delivered here or it is permanently unrecoverable.
+    // Previously this return value was discarded entirely: the key was
+    // generated, hashed into D1, and then gone forever, with no email and no
+    // dashboard visibility (CAP-DEVPORTAL-005). triggerPostPurchase is the
+    // same lifecycle entry point payments.js's core checkout flow already
+    // uses for this exact sequence — templateSubscriptionDay0 already knows
+    // how to render meta.api_key, it just never received one from this path.
+    const keyResult = await provisionApiKey(env, email, plan);
+    await triggerPostPurchase(env, {
+      email,
+      product: `SUBSCRIPTION_${(plan || 'starter').toUpperCase()}`,
+      product_name: `${plan || 'Starter'} Plan`,
+      event_type: 'subscription_activated',
+      source: 'growth_funnel',
+      payment_id,
+      plan,
+      meta: { api_key: keyResult?.api_key || '' },
+    }).catch(() => {});
 
     return { success: true, plan, email };
   } catch (err) {
@@ -327,14 +346,25 @@ export async function provisionApiKey(env, email, plan) {
     // are not real columns (the table has `tier`, no `updated_at`), and
     // `key_hash`/`key_prefix` are NOT NULL with no default — every INSERT
     // must supply them or the row throws.
+    // CAP-DEVPORTAL-005: link this row to a real account when the lead's email
+    // matches an existing user, so the key becomes visible on the customer's
+    // existing "API Keys" dashboard page (auth/apiKeys.js's listUserApiKeys(),
+    // which queries WHERE user_id = ?) without needing any new frontend —
+    // growth-funnel keys were previously invisible to that query because
+    // user_id was never populated. Pre-signup leads with no matching account
+    // yet correctly stay unlinked (user_id NULL); email remains their only
+    // delivery channel, which is appropriate since they have no dashboard to log into.
+    const account = await env.DB.prepare(`SELECT id FROM users WHERE email = ?`).bind(email).first().catch(() => null);
+    const userId = account?.id || null;
+
     const existing = await env.DB.prepare(
       `SELECT id, key_hash FROM api_keys WHERE email = ? AND active = 1 LIMIT 1`
     ).bind(email).first();
 
     if (existing) {
       await env.DB.prepare(
-        `UPDATE api_keys SET tier = ?, api_key = ?, key_hash = ?, key_prefix = ? WHERE id = ?`
-      ).bind(tier, keyHash, keyHash, prefix, existing.id).run();
+        `UPDATE api_keys SET tier = ?, api_key = ?, key_hash = ?, key_prefix = ?, user_id = COALESCE(?, user_id) WHERE id = ?`
+      ).bind(tier, keyHash, keyHash, prefix, userId, existing.id).run();
       // Invalidate the rotated-away key's own KV cache entry. Without this,
       // the OLD key keeps authenticating (via KV, bypassing the D1 row this
       // UPDATE just repointed to the NEW hash) for up to its 1-year TTL.
@@ -343,9 +373,9 @@ export async function provisionApiKey(env, email, plan) {
       }
     } else {
       await env.DB.prepare(`
-        INSERT INTO api_keys (id, email, tier, api_key, key_hash, key_prefix, active, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, 1, ?)
-      `).bind(crypto.randomUUID(), email, tier, keyHash, keyHash, prefix, now).run();
+        INSERT INTO api_keys (id, user_id, email, tier, api_key, key_hash, key_prefix, active, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+      `).bind(crypto.randomUUID(), userId, email, tier, keyHash, keyHash, prefix, now).run();
     }
 
     // Cache under the HASHED KV name (raw key never appears in the key-space)

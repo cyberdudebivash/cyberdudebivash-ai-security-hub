@@ -45,6 +45,8 @@ import {
   buildRazorpayPayload, calculateOverage, API_QUOTAS,
 }                                            from '../services/apiRevenueEngine.js';
 
+import { triggerPostPurchase }              from '../services/lifecycleEngine.js';
+
 import {
   buildRevenueDashboard, getCachedDashboard,
   computeConversionMetrics, computeGrowthMetrics,
@@ -321,6 +323,20 @@ export const handleProvisionApiKey = withErrorBoundary(async (request, env) => {
   const keyResult = await provisionApiKey(env, email, effectivePlan);
   if (!keyResult) return fail(request, 'key_provisioning_failed', 500);
 
+  // The response below already carries the raw key (this is the one place
+  // in the growth funnel where a synchronous caller CAN show/copy it
+  // immediately) — the email is a durable backup for the common case of a
+  // caller that never persists or displays this response body.
+  await triggerPostPurchase(env, {
+    email,
+    product: `SUBSCRIPTION_${effectivePlan.toUpperCase()}`,
+    product_name: `${effectivePlan} Plan`,
+    event_type: 'subscription_activated',
+    source: 'growth_funnel',
+    plan: effectivePlan,
+    meta: { api_key: keyResult.api_key },
+  }).catch(() => {});
+
   return ok(request, {
     api_key:  keyResult.api_key,
     plan:     effectivePlan,
@@ -447,9 +463,24 @@ export const handleUpgradeLead = withErrorBoundary(async (request, env) => {
   const result = await upgradeLead(env, email, plan);
   if (!result.success) return fail(request, result.error, 400);
 
-  // Provision API key for paid plans
+  // Provision API key for paid plans. Previously discarded the return value
+  // entirely — provisionApiKey persists only the key's hash, so the raw
+  // value generated here was permanently lost the moment this call returned
+  // (CAP-DEVPORTAL-005). Now delivered via the same post-purchase email
+  // sequence the core checkout flow already uses.
   if (plan !== 'free') {
-    await provisionApiKey(env, email, plan).catch(() => {});
+    const keyResult = await provisionApiKey(env, email, plan).catch(() => null);
+    if (keyResult?.api_key) {
+      await triggerPostPurchase(env, {
+        email,
+        product: `SUBSCRIPTION_${plan.toUpperCase()}`,
+        product_name: `${plan} Plan`,
+        event_type: 'subscription_activated',
+        source: 'growth_funnel',
+        plan,
+        meta: { api_key: keyResult.api_key },
+      }).catch(() => {});
+    }
   }
 
   await trackGrowthEvent(env, 'lead_upgraded', { email, plan });
