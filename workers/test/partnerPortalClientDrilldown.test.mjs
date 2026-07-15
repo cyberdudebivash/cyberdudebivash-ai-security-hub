@@ -16,13 +16,20 @@
 // FIX: partner-portal.html's client list rows are now clickable (previously
 // GET /api/mssp/customers's response data — c.id/c.org_slug — was fetched but
 // discarded, never reaching the DOM); clicking one opens a drill-down view
-// with Overview/Sub-Tenants/API Keys/Billing & Usage tabs, wired to 8 of the
-// remaining 16 handlers. Deliberately NOT wired this pass: Notification
-// Preferences (a 5-channel x 12-event settings matrix) and Ticket Routing
-// Rules (partner-wide, not customer-scoped — the earlier research explicitly
-// flagged that nesting it under a specific client's drill-down would mislead
-// partners into thinking a rule only applies to that one client) — disclosed
-// as known remaining gaps rather than rushed in or mislabeled.
+// with Overview/Sub-Tenants/Hierarchy/API Keys/Notifications/Billing & Usage
+// tabs, wired to all remaining customer-scoped handlers.
+//
+// ECCP Wave 1 follow-up (this pass): the two gaps the prior pass explicitly
+// disclosed are now closed too — label add/remove (extends the existing
+// read-only Overview labels display), the Hierarchy tab (parent + children,
+// a superset of the flat Sub-Tenants list), the Notifications tab (the real
+// 5-channel x 12-event matrix, sourced from the backend's own
+// valid_channels/valid_events so the UI can never drift from what the server
+// actually accepts), and Ticket Routing Rules — deliberately built as its own
+// top-level dashboard card, NOT nested under a client's drill-down, exactly
+// per the prior pass's own note: this resource is partner-wide
+// (mssp_ticket_rules has no customer_id column at all), so nesting it under
+// one client would misleadingly imply per-client scoping that doesn't exist.
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -97,6 +104,10 @@ describe('Backend contract this UI relies on really exists as documented', () =>
     expect(INDEX).toMatch(/mssp\\\/customers\\\/\[\^\/\]\+\\\/\(dashboard\|labels\|hierarchy\|sub-tenants\|notifications\|api-keys\|billing\|usage\)/);
   });
 
+  it('the partner-wide ticket-rules route is really registered', () => {
+    expect(INDEX).toMatch(/mssp\\\/ticket-rules/);
+  });
+
   it('handleMsspTenantRoute really dispatches dashboard/sub-tenants/api-keys/billing/usage by method', () => {
     expect(TENANT).toContain("case 'dashboard':");
     expect(TENANT).toContain("case 'sub-tenants':");
@@ -105,11 +116,112 @@ describe('Backend contract this UI relies on really exists as documented', () =>
     expect(TENANT).toContain("case 'usage':");
   });
 
+  it('handleMsspTenantRoute really dispatches labels/hierarchy/notifications by method', () => {
+    expect(TENANT).toContain("case 'labels':");
+    expect(TENANT).toContain("case 'hierarchy':");
+    expect(TENANT).toContain("case 'notifications':");
+  });
+
   it('requireMSSPAdmin() now admits a real partner session (the fix this UI depends on)', () => {
     expect(TENANT).toContain("authCtx?.role === 'partner'");
   });
 
   it('partnerScope() now prefers the real partner-session scope over a legacy userId', () => {
     expect(TENANT).toMatch(/authCtx\?\.partnerId\s*\?\?\s*authCtx\?\.userId/);
+  });
+});
+
+describe('Label add/remove — extends the existing read-only Overview display', () => {
+  it('loadClientOverview() still renders labels via the shared renderLabelsList() helper', () => {
+    const fn = fnBody('loadClientOverview');
+    expect(fn).toContain('renderLabelsList(data.labels');
+  });
+
+  it('addClientLabel() POSTs to the dedicated /labels endpoint, not the read-only /dashboard one', () => {
+    const fn = fnBody('addClientLabel');
+    expect(fn).toContain('/labels');
+    expect(fn).toMatch(/method:\s*'POST'/);
+    expect(fn).toContain('label');
+  });
+
+  it('removeClientLabel() DELETEs the specific label, URI-encoded (backend requires decodeURIComponent-safe input)', () => {
+    const fn = fnBody('removeClientLabel');
+    expect(fn).toContain('/labels/');
+    expect(fn).toMatch(/method:\s*'DELETE'/);
+    expect(fn).toContain('encodeURIComponent(label)');
+  });
+
+  it('renderLabelsList() escapes label text (no raw interpolation into innerHTML)', () => {
+    const fn = fnBody('renderLabelsList');
+    expect(fn).toContain('esc(l)');
+  });
+});
+
+describe('Hierarchy tab — parent link + children, wired to the real endpoint', () => {
+  it('loadClientHierarchy() calls the real hierarchy endpoint and reads root/parent/children', () => {
+    const fn = fnBody('loadClientHierarchy');
+    expect(fn).toContain('/hierarchy');
+    expect(fn).toContain('parent');
+    expect(fn).toContain('children');
+    expect(fn).toContain('total_children');
+  });
+
+  it('switchClientTab() loads hierarchy data when that tab is opened', () => {
+    const fn = fnBody('switchClientTab');
+    expect(fn).toMatch(/hierarchy.*loadClientHierarchy/s);
+  });
+});
+
+describe('Notification preferences — real 5x12 matrix sourced from the backend\'s own enums', () => {
+  it('loadClientNotifPrefs() builds the matrix from valid_channels/valid_events, not a hardcoded list', () => {
+    const fn = fnBody('loadClientNotifPrefs');
+    expect(fn).toContain('/notifications');
+    expect(fn).toContain('data.valid_channels');
+    expect(fn).toContain('data.valid_events');
+  });
+
+  it('saveClientNotifPrefs() PUTs the full prefs array (matches the backend\'s bulk-upsert contract, not a per-row endpoint)', () => {
+    const fn = fnBody('saveClientNotifPrefs');
+    expect(fn).toMatch(/method:\s*'PUT'/);
+    expect(fn).toContain('prefs');
+  });
+
+  it('switchClientTab() loads notification prefs when that tab is opened', () => {
+    const fn = fnBody('switchClientTab');
+    expect(fn).toMatch(/notifications.*loadClientNotifPrefs/s);
+  });
+});
+
+describe('Ticket Routing Rules — partner-wide top-level card, not nested under a client', () => {
+  it('the Ticket Routing Rules card lives in renderDashboardShell (partner-wide), not inside openClientDetail (customer-scoped)', () => {
+    const shellStart = PORTAL.indexOf('function renderDashboardShell');
+    const detailStart = PORTAL.indexOf('async function openClientDetail');
+    const cardIdx = PORTAL.indexOf('Ticket Routing Rules');
+    expect(cardIdx).toBeGreaterThan(shellStart);
+    expect(cardIdx).toBeLessThan(detailStart);
+  });
+
+  it('loadTicketRules() calls the partner-wide endpoint with no customer id in the path', () => {
+    const fn = fnBody('loadTicketRules');
+    expect(fn).toContain("'/api/mssp/ticket-rules'");
+  });
+
+  it('createTicketRule() POSTs rule_name/conditions/actions/priority and validates JSON client-side before sending', () => {
+    const fn = fnBody('createTicketRule');
+    expect(fn).toMatch(/method:\s*'POST'/);
+    expect(fn).toContain('rule_name');
+    expect(fn).toContain('JSON.parse(conditionsRaw)');
+    expect(fn).toContain('JSON.parse(actionsRaw)');
+  });
+
+  it('deleting a rule goes through a confirm modal, not an immediate DELETE (matches the API-key-revoke pattern)', () => {
+    expect(fnBody('confirmDeleteTicketRule')).toContain('openModal');
+    const del = fnBody('deleteTicketRuleConfirmed');
+    expect(del).toMatch(/method:\s*'DELETE'/);
+  });
+
+  it('both dashboard boot paths (magic-link verify and session resume) load ticket rules', () => {
+    const matches = PORTAL.match(/loadRevenue\(\); loadCustomers\(\); loadBranding\(\); loadDomainStatus\(\); loadTicketRules\(\);/g) || [];
+    expect(matches.length).toBe(2);
   });
 });

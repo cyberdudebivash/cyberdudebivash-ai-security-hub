@@ -260,7 +260,87 @@ already shipped under it:
   own residual sap_-key auth-resolution gap closed 2026-07-11) — see the
   remediation section above and today's session log entry below.
 
+## ECCP Wave 1 — Medium-backlog implementation designs (not implemented; planning only)
+
+Per the owner's explicit Phase 4 instruction ("do not implement medium items yet — prepare implementation designs"). Each below is scoped from direct source reading, not estimated blind.
+
+### CAP-BILL-002 — Coupon Administration UI
+
+- **Scope**: an admin panel (list, create, view redemptions, enable/disable/delete) for `workers/src/lib/coupons.js`'s 10 already-real admin functions (`handleAdminListCoupons` through `handleAdminRevokeRedemption`), all already routed at `/api/admin/coupons*` (`workers/src/index.js:3021-3078`).
+- **Dependencies**: none — backend is complete, tested independently of any UI. Reuse `frontend/admin-portal.html`'s existing section pattern (`<h2 class="section-title">`, e.g. "Customer Accounts" at line 285) as the template.
+- **Customer impact**: none directly (admin-only tool); indirectly enables running promotions/discounts without a manual DB write, which today is presumably how coupons get created.
+- **Revenue impact**: enables marketing/growth levers (time-boxed discounts, referral codes) that are currently blocked by having no UI to create them.
+- **Security impact**: none new — must gate identically to `admin-portal.html`'s existing owner/admin check; no new attack surface since the backend already exists and is presumably already exercised by *someone* today (worth confirming during implementation how coupons are created today — direct DB write, or an as-yet-unfound UI).
+- **Engineering effort**: Small-Medium. One new admin-portal.html section, list/create/disable UI, no new backend, no new tests needed for the backend (already covered) — new tests only for the added frontend behavior, following the CAP-COMP-002/004 dashboard-tab test convention (`readFileSync` + DOM-string assertions).
+
+### CAP-MYTHOS-003 — MYTHOS Revenue Engine dashboard tab
+
+- **Scope**: one new dashboard tab (domain-scan + compliance-benchmark, paywall-aware) calling `handleMythosScan`/`handleMythosCompliance`. The dangerous fabrication + duplicate-payment-path issue this capability originally flagged was already fixed (2026-07-12, PROGRAM_BOARD.md "Item 2" entry) — this design is purely about the now-safe, now-honest UI that was never built for it.
+- **Dependencies**: none blocking. Reuse the exact tab/form/render convention already proven twice in this program (`CAP-COMP-002`, `CAP-COMP-004` — nav-item + `page-X` section + form matching the handler's real input fields + `runXAssessment()` POST pattern).
+- **Customer impact**: currently zero (feature unreachable); once built, gives paying customers a path to a real domain-scan + compliance-benchmark product that today has no UI at all.
+- **Revenue impact**: unclear/unquantified — this product's price point and target tier need confirming (check `getTierDef`/pricing tie-in) before sizing revenue impact; flagged as a gap in this design, not assumed.
+- **Security impact**: none new — the capability's own security issue is already closed; this design only adds a UI on top of the already-safe path.
+- **Engineering effort**: Medium. Net-new tab following an established pattern (lower risk than inventing a new convention), but the underlying scan/compliance calls are heavier-weight (real analysis, not a simple CRUD form) so the loading/error/empty states need more care than the compliance-store tabs did.
+
+### CAP-DEVPORTAL-003 — Developer Portal API Explorer / self-serve key panel
+
+- **Scope**: `frontend/api-docs.html`'s "Developer API Keys" section (lines 313-388) currently only *displays* `/api/developer/keys*` as documentation text — no working create/list/revoke UI. **Key finding this design surfaced**: `/api/developer/keys*` (`workers/src/handlers/developerPortal.js`) fully delegates to the *same canonical* `handleCreateKey`/`handleListKeys`/`handleRevokeKey`/`handleRotateKey` in `handlers/apikeys.js` that the dashboard's existing, working API Keys tab already calls (confirmed: `developerPortal.js` imports these 4 functions directly, no reimplementation). This is **not** a second system needing reconciliation — it's the same one, differently branded.
+- **Dependencies**: none blocking. Lowest-risk of the 5 designs here specifically *because* the backend is already proven and shared with a working UI elsewhere — this is a matter of adapting existing, working client-side key-management logic (from wherever the dashboard's API Keys tab implements it) into this page's layout, not inventing new logic.
+- **Customer impact**: today, a developer landing on the branded API docs page cannot self-serve a key without navigating away to the main dashboard — a discoverability/friction gap, not a broken feature (the dashboard path already works).
+- **Revenue impact**: minor — smoother developer onboarding could marginally improve API-tier conversion, not directly quantifiable.
+- **Security impact**: none new, and importantly, no *new* risk — since it calls the same already-tested backend, there's no second implementation to drift out of sync (avoiding a repeat of the CAP-NOTIF-003 lesson).
+- **Engineering effort**: Small. Least effort of the 5 — port/adapt existing working UI logic rather than build from zero.
+
+### CAP-PORTAL-004 — Support Ticket System UI
+
+- **Scope**: `workers/src/handlers/support.js` fully implements ticket creation (`POST /api/support/ticket`), listing (`GET /api/support/tickets`), plus FAQ/status/SLA/errors/docs endpoints (all registered, confirmed backend `exists` per this program's earlier registry correction) — shipped 2026-07-13. Frontend today only has static `mailto:` links (`frontend/user-dashboard.html:4831,6609`). Needs: a ticket submission form, a ticket list/status view, replacing (or supplementing) the mailto links.
+- **Dependencies**: none blocking on backend; does depend on deciding *where* this lives (a new "Support" tab in `user-dashboard.html`, matching `CAP-ADMIN-004`'s missing admin-side support panel — worth coordinating these two so the customer-facing and admin-facing halves of the same feature ship together or at least consistently).
+- **Customer impact**: currently, customers can only email for support (no in-product ticket trail, no status visibility). Building this gives customers a real, trackable support channel.
+- **Revenue impact**: indirect — support-experience quality affects retention/trust more than direct revenue; no direct pricing tie-in found.
+- **Security impact**: must ensure ticket read/list is scoped to the authenticated customer's own tickets only (verify `handleListTickets`'s ownership scoping during implementation — not yet confirmed in this design pass, flagged as a pre-implementation check, not assumed safe).
+- **Engineering effort**: Medium. New UI section + form + list view; backend already complete.
+
+### CAP-ADMIN-004 — Admin Surfaces for Marketplace/Academy/Affiliate/CRM/Support
+
+- **Scope**: `frontend/admin-portal.html` already has working Customer Accounts and Organization Oversight sections; 5 more are named as missing: Marketplace, Academy, Affiliate, CRM, Support. **This one is a different shape of work than the other 4 designs above**: a repo-wide check found **zero** `/api/admin/(marketplace|academy|affiliate|crm|support)` routes anywhere — confirmed via direct grep, not assumed. Some partial, non-admin-branded backend exists for pieces of this (e.g. `academyMarketplace.js` already has `handleListAcademyOrders`/`handleMarkAcademyDelivered` with an `authCtx` param — an order-fulfillment capability that could underpin an Academy admin view without being a full admin CRUD surface), but this needs a **per-sub-domain investigation**, not a single estimate — each of the 5 may have a different starting point (some may need real backend work, not just a UI).
+- **Dependencies**: this should likely be split into up to 5 separate bounded waves (one per sub-domain: Marketplace, Academy, Affiliate, CRM, Support admin), each independently investigated for what backend already exists (as the CAP-PORTAL-004 backend discovery in this same program shows can happen — code shipping between registry checks) before sizing.
+- **Customer impact**: indirect (admin/ops tooling, not customer-facing) — but *operationally* significant: without these, staff presumably manage marketplace/academy/affiliate/CRM/support state via direct DB access or not at all.
+- **Revenue impact**: operational efficiency for revenue-adjacent programs (affiliate payouts, academy fulfillment, marketplace catalog) — not customer-facing revenue itself.
+- **Security impact**: unknown until each sub-domain's backend is confirmed — if any of the 5 currently rely on direct DB access as the only "admin" mechanism, building a real gated UI is a security *improvement* (auditable, RBAC'd) over the status quo, not a new risk.
+- **Engineering effort**: Large overall (treat as 5 separate small-to-medium items once triaged, not one estimate) — recommend triaging each sub-domain's actual backend state as its own first step, mirroring how this session's P2 triage found real, split-second-mover advantages (stale labels, existing-but-unbranded backends) rather than assuming "missing" means "build from zero."
+
+---
+
 ## Session log (most recent first)
+
+### 2026-07-15 — CAP-MSSP-003 client drill-down completion merged to main
+
+- **Context.** ECCP Wave 1 Phase 3b (`claude/eccp-cap-mssp-003-drilldown-completion`)
+  closed the 4 sub-features the earlier CAP-MSSP-003 drill-down pass
+  (2026-07-09, see below) deliberately left as disclosed gaps: Notification
+  Preferences (5-channel × 12-event matrix), Ticket Routing Rules
+  (partner-wide, not customer-scoped), Label CRUD, and the Sub-Tenant
+  Hierarchy view — all reusing `frontend/partner-portal.html`'s existing
+  tab/modal conventions against `msspTenantPlatform.js`'s already-real,
+  already-tested backend (no new backend endpoints needed).
+- **Merge process.** This branch had no open PR and predated both
+  `claude/eccp-webhook-ssrf-guard` (#250) and `claude/eccp-cap-dash-003-
+  growth-analytics` (#251), both merged to `main` earlier today. Verified
+  with `git merge-tree --write-tree` (the reliable modern form — see the
+  entry below for why the legacy 3-arg form is not trusted for this
+  anymore) before touching anything: clean against `main` pre-#251, then
+  a real conflict appeared in this same file after #251 landed (the same
+  session-log insertion-point collision pattern, not a new kind of
+  problem). This branch's own delta to this file is entirely the "Medium-
+  backlog implementation designs" section above (its `ef7ab389` ancestry
+  commit, shared with the now-merged phase-2 branch) — it carries no
+  colliding session-log entry of its own, so resolution was a straight
+  keep-both: main's CAP-DASH-003 entry stays intact, nothing lost from
+  either side.
+- **Verification.** Full suite re-run on the merged working tree: 296
+  files / 3114 tests passing (the +16 over PR #251's merged count are
+  this branch's own `partnerPortalClientDrilldown.test.mjs` additions,
+  11→27 tests). No regressions.
 
 ### 2026-07-15 — CAP-DASH-003 follow-up: CI accessibility gate fix on PR #251
 

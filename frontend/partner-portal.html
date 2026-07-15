@@ -128,6 +128,18 @@
   </div>
 </div>
 
+<!-- Delete Ticket Rule confirm -->
+<div class="modal-overlay" id="modal-delete-ticket-rule">
+  <div class="modal-box">
+    <div class="card-title" style="color:var(--danger)">Delete Ticket Rule?</div>
+    <div class="card-subtitle">Tickets will no longer be routed by this rule. This cannot be undone.</div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-outline" onclick="closeModal('modal-delete-ticket-rule')">Cancel</button>
+      <button class="btn btn-primary" style="background:var(--danger);color:#fff" onclick="deleteTicketRuleConfirmed()">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SESSION_KEY = 'cdb_partner_session';
 
@@ -186,7 +198,7 @@ async function verifyMagicToken(token) {
     setSession(data.session_token);
     history.replaceState({}, '', location.pathname); // scrub the one-time token out of the URL/history
     renderDashboardShell(data.partner);
-    loadRevenue(); loadCustomers(); loadBranding(); loadDomainStatus();
+    loadRevenue(); loadCustomers(); loadBranding(); loadDomainStatus(); loadTicketRules();
   } catch (err) {
     renderLogin(err.message);
   }
@@ -300,6 +312,19 @@ function renderDashboardShell(partner) {
         <div class="card-subtitle">Prove you own a domain by publishing a DNS TXT record — the first real step toward serving your branded portal there.</div>
         <div id="domain-section"><div class="empty-row">Loading…</div></div>
       </div>
+
+      <div class="card">
+        <div class="card-title">Ticket Routing Rules <button class="btn btn-outline" style="padding:6px 14px;font-size:9pt" onclick="toggleAddTicketRule()">+ Add Rule</button></div>
+        <div class="card-subtitle">Applies across all your clients — not scoped to one client, since a rule here typically governs how tickets route regardless of which client filed them.</div>
+        <div id="add-ticket-rule-form" style="display:none;margin-bottom:16px;padding:14px;background:var(--surface2);border-radius:8px">
+          <div class="form-group"><label>Rule Name</label><input id="new-rule-name" type="text" placeholder="e.g. Critical severity to on-call" /></div>
+          <div class="form-group"><label>Conditions (JSON)</label><input id="new-rule-conditions" type="text" placeholder='{"field":"severity","op":"eq","value":"critical"}' /></div>
+          <div class="form-group"><label>Actions (JSON)</label><input id="new-rule-actions" type="text" placeholder='{"assign_to":"on-call","notify":"slack"}' /></div>
+          <div class="form-group"><label>Priority</label><input id="new-rule-priority" type="number" value="0" /></div>
+          <button class="btn btn-primary btn-block" onclick="createTicketRule()">Add Rule</button>
+        </div>
+        <table id="ticket-rules-table"><tbody><tr><td class="empty-row">Loading…</td></tr></tbody></table>
+      </div>
     </div>`;
 }
 
@@ -309,7 +334,7 @@ async function loadDashboard() {
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.error || 'Could not load your account');
     renderDashboardShell(data.partner);
-    loadRevenue(); loadCustomers(); loadBranding(); loadDomainStatus();
+    loadRevenue(); loadCustomers(); loadBranding(); loadDomainStatus(); loadTicketRules();
   } catch (err) {
     if (err.message !== 'session_expired') renderLogin(err.message);
   }
@@ -406,13 +431,19 @@ async function openClientDetail(customerId) {
         <div class="tab-bar">
           <button class="tab-btn active" data-tab="overview" onclick="switchClientTab('overview')">Overview</button>
           <button class="tab-btn" data-tab="subtenants" onclick="switchClientTab('subtenants')">Sub-Tenants</button>
+          <button class="tab-btn" data-tab="hierarchy" onclick="switchClientTab('hierarchy')">Hierarchy</button>
           <button class="tab-btn" data-tab="apikeys" onclick="switchClientTab('apikeys')">API Keys</button>
+          <button class="tab-btn" data-tab="notifications" onclick="switchClientTab('notifications')">Notifications</button>
           <button class="tab-btn" data-tab="billing" onclick="switchClientTab('billing')">Billing &amp; Usage</button>
         </div>
 
         <div class="tab-panel active" id="tab-overview">
           <div class="stat-grid" id="client-overview-stats"><div class="empty-row">Loading…</div></div>
-          <div style="margin-top:16px" id="client-overview-labels"></div>
+          <div style="margin-top:16px;display:flex;align-items:center;gap:8px">
+            <input id="new-label-input" type="text" placeholder="Add label (e.g. vip)" style="max-width:200px" />
+            <button class="btn btn-outline" style="padding:5px 12px;font-size:8.5pt" onclick="addClientLabel()">+ Add Label</button>
+          </div>
+          <div style="margin-top:10px" id="client-overview-labels"></div>
         </div>
 
         <div class="tab-panel" id="tab-subtenants">
@@ -424,9 +455,19 @@ async function openClientDetail(customerId) {
           <table id="subtenants-table"><tbody><tr><td class="empty-row">Loading…</td></tr></tbody></table>
         </div>
 
+        <div class="tab-panel" id="tab-hierarchy">
+          <div id="hierarchy-container"><div class="empty-row">Loading…</div></div>
+        </div>
+
         <div class="tab-panel" id="tab-apikeys">
           <div class="card-title" style="font-size:10.5pt">API Keys <button class="btn btn-outline" style="padding:6px 14px;font-size:9pt" onclick="openGenerateKeyModal()">+ Generate Key</button></div>
           <table id="apikeys-table"><tbody><tr><td class="empty-row">Loading…</td></tr></tbody></table>
+        </div>
+
+        <div class="tab-panel" id="tab-notifications">
+          <div class="card-title" style="font-size:10.5pt">Notification Preferences</div>
+          <div class="card-subtitle">Choose which events alert this client, and on which channels.</div>
+          <div id="notif-prefs-container"><div class="empty-row">Loading…</div></div>
         </div>
 
         <div class="tab-panel" id="tab-billing">
@@ -446,7 +487,9 @@ function switchClientTab(tab) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
   if (tab === 'subtenants') loadClientSubTenants(_currentClientId);
+  else if (tab === 'hierarchy') loadClientHierarchy(_currentClientId);
   else if (tab === 'apikeys') loadClientApiKeys(_currentClientId);
+  else if (tab === 'notifications') loadClientNotifPrefs(_currentClientId);
   else if (tab === 'billing') loadClientBilling(_currentClientId);
 }
 
@@ -468,12 +511,56 @@ async function loadClientOverview(customerId) {
       <div class="stat-box"><div class="stat-val">${data.assets?.total ?? 0}</div><div class="stat-lbl">Assets</div></div>
       <div class="stat-box"><div class="stat-val">${data.sub_tenants?.total ?? 0}</div><div class="stat-lbl">Sub-Tenants</div></div>`;
 
-    const labels = data.labels || [];
-    document.getElementById('client-overview-labels').innerHTML = labels.length
-      ? labels.map(l => `<span class="badge badge-pending" style="margin-right:6px">${esc(l)}</span>`).join('')
-      : '<span style="color:var(--muted);font-size:9.5pt">No labels yet.</span>';
+    document.getElementById('client-overview-labels').innerHTML = renderLabelsList(data.labels || []);
   } catch (err) {
     if (err.message !== 'session_expired') statsEl.innerHTML = '<div class="empty-row">Unable to load client dashboard.</div>';
+  }
+}
+
+function renderLabelsList(labels) {
+  return labels.length
+    ? labels.map(l => `<span class="badge badge-pending" style="margin-right:6px">${esc(l)} <a href="#" onclick="removeClientLabel('${esc(l)}');return false" style="color:inherit;margin-left:4px;text-decoration:none" title="Remove label">×</a></span>`).join('')
+    : '<span style="color:var(--muted);font-size:9.5pt">No labels yet.</span>';
+}
+
+// ── Labels (add/remove) ───────────────────────────────────────────────────────
+async function loadClientLabels(customerId) {
+  const el = document.getElementById('client-overview-labels');
+  try {
+    const res = await authFetch(`/api/mssp/customers/${encodeURIComponent(customerId)}/labels`);
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load labels');
+    el.innerHTML = renderLabelsList(data.labels || []);
+  } catch (err) {
+    if (err.message !== 'session_expired') el.innerHTML = '<span style="color:var(--muted);font-size:9.5pt">Unable to load labels.</span>';
+  }
+}
+
+async function addClientLabel() {
+  const input = document.getElementById('new-label-input');
+  const label = input.value.trim();
+  if (!label) { toast('Label is required.'); return; }
+  try {
+    const res = await authFetch(`/api/mssp/customers/${encodeURIComponent(_currentClientId)}/labels`, {
+      method: 'POST', body: JSON.stringify({ label }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Could not add label');
+    input.value = '';
+    loadClientLabels(_currentClientId);
+  } catch (err) {
+    if (err.message !== 'session_expired') toast(`Error: ${err.message}`);
+  }
+}
+
+async function removeClientLabel(label) {
+  try {
+    const res = await authFetch(`/api/mssp/customers/${encodeURIComponent(_currentClientId)}/labels/${encodeURIComponent(label)}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Could not remove label');
+    loadClientLabels(_currentClientId);
+  } catch (err) {
+    if (err.message !== 'session_expired') toast(`Error: ${err.message}`);
   }
 }
 
@@ -622,6 +709,68 @@ async function loadClientBilling(customerId) {
   }
 }
 
+// ── Hierarchy (parent + children) ─────────────────────────────────────────────
+async function loadClientHierarchy(customerId) {
+  const el = document.getElementById('hierarchy-container');
+  try {
+    const res = await authFetch(`/api/mssp/customers/${encodeURIComponent(customerId)}/hierarchy`);
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load hierarchy');
+    const { root, parent, children = [], total_children = 0 } = data;
+    el.innerHTML = `
+      ${parent ? `<div style="margin-bottom:14px;font-size:9.5pt;color:var(--muted)">Parent account: <a href="#" onclick="openClientDetail('${esc(parent.id)}');return false">${esc(parent.org_name)}</a> (${esc(parent.tier || '—')})</div>` : '<div style="margin-bottom:14px;font-size:9.5pt;color:var(--muted)">This is a top-level account (no parent).</div>'}
+      <div class="card-title" style="font-size:10.5pt">Child Accounts (${total_children})</div>
+      <table><thead><tr><th>Name</th><th>Tier</th><th>Status</th><th>Risk</th></tr></thead><tbody>${
+        children.length
+          ? children.map(c => `<tr><td><a href="#" onclick="openClientDetail('${esc(c.id)}');return false">${esc(c.org_name)}</a></td><td>${esc(c.tier || '—')}</td><td><span class="badge badge-active">${esc(c.status)}</span></td><td>${c.risk_score ?? '—'}</td></tr>`).join('')
+          : '<tr><td class="empty-row" colspan="4">No child accounts.</td></tr>'
+      }</tbody></table>`;
+  } catch (err) {
+    if (err.message !== 'session_expired') el.innerHTML = '<div class="empty-row">Unable to load hierarchy.</div>';
+  }
+}
+
+// ── Notification preferences ──────────────────────────────────────────────────
+async function loadClientNotifPrefs(customerId) {
+  const el = document.getElementById('notif-prefs-container');
+  try {
+    const res = await authFetch(`/api/mssp/customers/${encodeURIComponent(customerId)}/notifications`);
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load notification preferences');
+    const channels = data.valid_channels || [];
+    const events   = data.valid_events || [];
+    const enabled  = new Set((data.prefs || []).filter(p => p.enabled).map(p => `${p.channel}:${p.event_type}`));
+    el.innerHTML = `
+      <table id="notif-prefs-table"><thead><tr><th>Event</th>${
+        channels.map(c => `<th style="text-align:center">${esc(c)}</th>`).join('')
+      }</tr></thead><tbody>${
+        events.map(ev => `<tr><td>${esc(ev)}</td>${
+          channels.map(c => `<td style="text-align:center"><input type="checkbox" data-channel="${esc(c)}" data-event="${esc(ev)}" ${enabled.has(`${c}:${ev}`) ? 'checked' : ''} /></td>`).join('')
+        }</tr>`).join('')
+      }</tbody></table>
+      <button class="btn btn-primary" style="margin-top:14px" onclick="saveClientNotifPrefs()">Save Preferences</button>`;
+  } catch (err) {
+    if (err.message !== 'session_expired') el.innerHTML = '<div class="empty-row">Unable to load notification preferences.</div>';
+  }
+}
+
+async function saveClientNotifPrefs() {
+  const checkboxes = document.querySelectorAll('#notif-prefs-table input[type=checkbox]');
+  const prefs = Array.from(checkboxes).map(cb => ({
+    channel: cb.dataset.channel, event_type: cb.dataset.event, enabled: cb.checked,
+  }));
+  try {
+    const res = await authFetch(`/api/mssp/customers/${encodeURIComponent(_currentClientId)}/notifications`, {
+      method: 'PUT', body: JSON.stringify({ prefs }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Could not save preferences');
+    toast(`Saved ${data.saved} preference(s).`);
+  } catch (err) {
+    if (err.message !== 'session_expired') toast(`Error: ${err.message}`);
+  }
+}
+
 // ── Branding ─────────────────────────────────────────────────────────────────
 async function loadBranding() {
   try {
@@ -714,6 +863,80 @@ async function verifyDomain(domain) {
     else toast(data.error || 'Not verified yet — DNS may still be propagating.');
   } catch (err) {
     if (err.message !== 'session_expired') toast(`Error: ${err.message}`);
+  }
+}
+
+// ── Ticket Routing Rules (partner-wide — not scoped to one client) ────────────
+let _deleteRuleTarget = null;
+
+function toggleAddTicketRule() {
+  const el = document.getElementById('add-ticket-rule-form');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function loadTicketRules() {
+  const tbody = document.getElementById('ticket-rules-table');
+  try {
+    const res = await authFetch('/api/mssp/ticket-rules');
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load ticket rules');
+    const rows = data.rules || [];
+    tbody.innerHTML = `<thead><tr><th>Rule</th><th>Priority</th><th>Status</th><th></th></tr></thead><tbody>${
+      rows.length
+        ? rows.map(r => `<tr><td>${esc(r.rule_name)}</td><td>${r.priority}</td><td><span class="badge ${r.enabled ? 'badge-active' : 'badge-pending'}">${r.enabled ? 'Enabled' : 'Disabled'}</span></td><td style="text-align:right"><button class="btn btn-outline" style="padding:5px 12px;font-size:8.5pt;color:var(--danger)" onclick="confirmDeleteTicketRule('${esc(r.id)}')">Delete</button></td></tr>`).join('')
+        : '<tr><td class="empty-row" colspan="4">No ticket routing rules yet.</td></tr>'
+    }</tbody>`;
+  } catch (err) {
+    if (err.message !== 'session_expired') tbody.innerHTML = '<tbody><tr><td class="empty-row">Unable to load ticket rules.</td></tr></tbody>';
+  }
+}
+
+async function createTicketRule() {
+  const rule_name = document.getElementById('new-rule-name').value.trim();
+  const conditionsRaw = document.getElementById('new-rule-conditions').value.trim();
+  const actionsRaw = document.getElementById('new-rule-actions').value.trim();
+  const priority = parseInt(document.getElementById('new-rule-priority').value, 10) || 0;
+  if (!rule_name || !conditionsRaw || !actionsRaw) { toast('Rule name, conditions, and actions are all required.'); return; }
+
+  let conditions, actions;
+  try { conditions = JSON.parse(conditionsRaw); } catch { toast('Conditions must be valid JSON.'); return; }
+  try { actions = JSON.parse(actionsRaw); } catch { toast('Actions must be valid JSON.'); return; }
+
+  try {
+    const res = await authFetch('/api/mssp/ticket-rules', {
+      method: 'POST', body: JSON.stringify({ rule_name, conditions, actions, priority, enabled: true }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Could not create rule');
+    toast('Rule added.');
+    document.getElementById('new-rule-name').value = '';
+    document.getElementById('new-rule-conditions').value = '';
+    document.getElementById('new-rule-actions').value = '';
+    document.getElementById('new-rule-priority').value = '0';
+    toggleAddTicketRule();
+    loadTicketRules();
+  } catch (err) {
+    if (err.message !== 'session_expired') toast(`Error: ${err.message}`);
+  }
+}
+
+function confirmDeleteTicketRule(ruleId) {
+  _deleteRuleTarget = ruleId;
+  openModal('modal-delete-ticket-rule');
+}
+
+async function deleteTicketRuleConfirmed() {
+  if (!_deleteRuleTarget) return;
+  try {
+    const res = await authFetch(`/api/mssp/ticket-rules/${encodeURIComponent(_deleteRuleTarget)}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Could not delete rule');
+    toast('Rule deleted.');
+  } catch (err) {
+    if (err.message !== 'session_expired') toast(`Error: ${err.message}`);
+  } finally {
+    closeModal('modal-delete-ticket-rule');
+    loadTicketRules();
   }
 }
 
