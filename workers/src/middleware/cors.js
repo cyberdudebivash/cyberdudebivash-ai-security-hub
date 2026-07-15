@@ -46,7 +46,7 @@ export function corsHeaders(request, env) {
   const allowedOrigin = allowed.includes(origin) ? origin : PROD_ORIGINS[0];
   return {
     'Access-Control-Allow-Origin':      allowedOrigin,
-    'Access-Control-Allow-Methods':     'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Methods':     'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers':     'Content-Type, Authorization, X-API-Key, X-Session-Token, X-Request-ID, X-Scan-Token',
     'Access-Control-Expose-Headers':    'X-Request-ID, X-RateLimit-Remaining, X-RateLimit-Reset, Deprecation, Sunset, Link, API-Version',
     'Access-Control-Max-Age':           '86400',
