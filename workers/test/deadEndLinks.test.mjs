@@ -23,6 +23,7 @@ const MSSP_ONBOARDING_PAGE = read('../../frontend/mssp-onboarding.html');
 const CISO_HUB           = read('../../frontend/ciso-hub.html');
 const DECISION_DASHBOARD = read('../../frontend/decision-dashboard.html');
 const SITEMAP_PAGE       = read('../../frontend/sitemap.html');
+const USER_DASHBOARD     = read('../../frontend/user-dashboard.html');
 
 describe('dead-end links removed from onboarding/checkout responses', () => {
   it('MSSP onboarding no longer promises a /mssp-dashboard.html that does not exist', () => {
@@ -90,5 +91,15 @@ describe('dead-end links removed from onboarding/checkout responses', () => {
   it('sitemap\'s Affiliate Program link points at the real #affiliate-hub section, not the dead /affiliate-hub page (same bug class already fixed in affiliateSystem.js above, missed here)', () => {
     expect(SITEMAP_PAGE).not.toContain('href="/affiliate-hub"');
     expect(SITEMAP_PAGE).toContain('href="/#affiliate-hub"');
+  });
+
+  it('user-dashboard\'s empty API-keys state has a working "create your first key" CTA, matching the pattern its sibling empty states (scans, etc.) already use', () => {
+    const idx = USER_DASHBOARD.indexOf('No API keys yet.');
+    expect(idx).toBeGreaterThan(-1);
+    const snippet = USER_DASHBOARD.slice(idx, idx + 120);
+    expect(snippet).toContain('onclick="openCreateKeyModal();return false;"');
+    // openCreateKeyModal must be a real, already-wired function (the page's
+    // header "+" button uses it too), not a new dead reference.
+    expect(USER_DASHBOARD).toContain('function openCreateKeyModal()');
   });
 });
