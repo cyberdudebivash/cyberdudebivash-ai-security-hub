@@ -39,6 +39,25 @@ function json(data, status = 200) {
   return Response.json(data, { status });
 }
 
+// SSO Consolidation (Phase 5): named-IdP-type convenience ported from
+// enterpriseSsoHandler.js's buildDiscoveryURL() — lets an admin supply
+// idp_type + tenant_id/okta_domain instead of hand-constructing the raw
+// issuer URL. Returns an issuer base URL (discoverOIDC() appends
+// /.well-known/openid-configuration itself), not a full discovery URL.
+// Falls back to the raw `issuer` field when idp_type is absent — every
+// config saved before this change keeps working unchanged.
+function resolveIssuer(body) {
+  if (body.idp_type === 'azure_ad') {
+    const tenant = body.tenant_id || 'organizations';
+    return `https://login.microsoftonline.com/${tenant}/v2.0`;
+  }
+  if (body.idp_type === 'okta') {
+    if (!body.okta_domain) return null;
+    return `https://${body.okta_domain}`;
+  }
+  return body.issuer || null;
+}
+
 // ─── GET /api/auth/sso/login?org=<slug> ────────────────────────────────────
 export async function handleSSOLogin(request, env) {
   const url = new URL(request.url);
@@ -184,6 +203,27 @@ export async function handleSSOCallback(request, env) {
   const refreshData = await createRefreshToken();
   await storeRefreshToken(env.DB, userId, refreshData, getClientIP(request), 'enterprise-sso').catch(() => {});
 
+  // Audit log — SSO Consolidation (Phase 5): this system is now canonical
+  // (see enterpriseSsoHandler.js's own header comment); it previously wrote
+  // no audit trail at all, unlike the system it replaces. Same shape as the
+  // one it's modeled on, wrapped in its own try/catch so a write failure
+  // never blocks a successful login, but a real failure is still observable
+  // via console.error rather than fully silent (ssoAuditLogWrite.test.mjs
+  // documents why a fully-silent catch previously hid a real column bug).
+  try {
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO audit_log (user_id, action, resource, resource_id, status, metadata, ip, created_at)
+       VALUES (?, 'sso.login', 'sso', ?, 'ok', ?, ?, datetime('now'))`
+    ).bind(
+      userId,
+      org.id,
+      JSON.stringify({ idp: config.provider_name, org_id: org.id, email }),
+      getClientIP(request)
+    ).run();
+  } catch (err) {
+    console.error('sso_audit_log_write_failed', { userId, orgId: org.id, error: err?.message });
+  }
+
   const successUrl = `${FRONTEND_URL}/auth/callback#access_token=${encodeURIComponent(accessToken)}&refresh_token=${encodeURIComponent(refreshData.token)}&tier=${tier}&sso=oidc`;
   return Response.redirect(successUrl, 302);
 }
@@ -196,9 +236,14 @@ export async function handleSSOConfigUpsert(request, env, authCtx) {
   let body;
   try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
 
-  const { org: orgSlug, issuer, client_id, client_secret, allowed_domains, provider_name } = body;
+  const { org: orgSlug, client_id, client_secret, allowed_domains, provider_name } = body;
+  const issuer = resolveIssuer(body);
   if (!orgSlug || !issuer || !client_id || !client_secret) {
-    return json({ error: 'org, issuer, client_id, client_secret are required' }, 400);
+    return json({
+      error: !issuer && body.idp_type
+        ? `${body.idp_type === 'okta' ? 'okta_domain' : 'tenant_id'} is required for idp_type "${body.idp_type}"`
+        : 'org, client_id, client_secret, and either issuer or idp_type (+ tenant_id/okta_domain) are required',
+    }, 400);
   }
 
   const org = await env.DB.prepare(`SELECT id FROM organizations WHERE slug = ?`).bind(orgSlug).first();
@@ -217,12 +262,12 @@ export async function handleSSOConfigUpsert(request, env, authCtx) {
     await env.DB.prepare(`
       UPDATE sso_configs SET issuer=?, client_id=?, client_secret=?, allowed_domains=?, provider_name=?, enabled=1, updated_at=datetime('now')
       WHERE org_id=?
-    `).bind(issuer, client_id, client_secret, JSON.stringify(allowed_domains || []), provider_name || 'custom', org.id).run();
+    `).bind(issuer, client_id, client_secret, JSON.stringify(allowed_domains || []), provider_name || body.idp_type || 'custom', org.id).run();
   } else {
     await env.DB.prepare(`
       INSERT INTO sso_configs (id, org_id, provider_name, issuer, client_id, client_secret, allowed_domains, enabled)
       VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-    `).bind(crypto.randomUUID(), org.id, provider_name || 'custom', issuer, client_id, client_secret, JSON.stringify(allowed_domains || [])).run();
+    `).bind(crypto.randomUUID(), org.id, provider_name || body.idp_type || 'custom', issuer, client_id, client_secret, JSON.stringify(allowed_domains || [])).run();
   }
 
   return json({ success: true, org: orgSlug, login_url: `/api/auth/sso/login?org=${encodeURIComponent(orgSlug)}` });

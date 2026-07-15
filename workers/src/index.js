@@ -2007,23 +2007,51 @@ export async function routeRequest(request, env, ctx, requestId) {
       return withSecurityHeaders(withCors(await handleAgentDispatch(request, env, authCtx, agentId), request));
     }
 
-    // ── Enterprise OIDC SSO — Azure AD / Okta / any OIDC IdP (v48.0) ────────
+    // ── Enterprise OIDC SSO — Azure AD / Okta / any OIDC IdP ────────────────
+    // SSO Consolidation (Phase 5, Customer Lifecycle Completion Program):
+    // ssoAuth.js (/api/auth/sso/*) is now canonical — it does a real,
+    // cryptographically-verified OIDC round-trip (PKCE + nonce + RS256
+    // id_token signature check via lib/oidc.js) and real org_members
+    // provisioning; this system trusted the IdP's userinfo response with no
+    // verification at all and never provisioned org membership. This
+    // repo's own internal ops docs (SUPPORT_PLAYBOOK.md, IMPLEMENTATION_
+    // PLAYBOOK.md) already treated /api/auth/sso/* as the real production
+    // surface before this change. Zero real customers have ever completed
+    // SSO on either system (KPI_DASHBOARD.md) — see
+    // docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md's gap-matrix entry for the
+    // full account. enterpriseSsoHandler.js is not deleted (its config-info
+    // endpoint is repurposed below); only the unverified-identity
+    // login/callback pair and the superseded configure endpoint retire.
     if (path === '/api/auth/enterprise/config' && method === 'GET') {
       const { handleEnterpriseSSoInfo } = await import('./handlers/enterpriseSsoHandler.js');
       return withSecurityHeaders(withCors(handleEnterpriseSSoInfo(), request));
     }
     if (path === '/api/auth/enterprise/sso' && method === 'GET') {
-      const { handleEnterpriseSSoInitiate } = await import('./handlers/enterpriseSsoHandler.js');
-      return handleEnterpriseSSoInitiate(request, env);
+      const url = new URL(request.url);
+      const org = url.searchParams.get('org') || url.searchParams.get('organization') || '';
+      return Response.redirect(`${url.origin}/api/auth/sso/login${org ? `?org=${encodeURIComponent(org)}` : ''}`, 302);
     }
     if (path === '/api/auth/enterprise/callback' && method === 'GET') {
-      const { handleEnterpriseSSoCallback } = await import('./handlers/enterpriseSsoHandler.js');
-      return handleEnterpriseSSoCallback(request, env);
+      // Cannot be salvaged in-place: the state/PKCE cache this route wrote at
+      // initiation used a different KV namespace than ssoAuth.js's, so a
+      // caller landing here can only be an in-flight session that started
+      // before this deploy (an in-practice-empty set — see comment above).
+      // Send them back to a clean restart rather than attempting to process
+      // a code/state pair the canonical system never issued.
+      const frontendBase = (env?.WEBSITE || 'https://cyberdudebivash.in').replace(/\/$/, '');
+      return Response.redirect(`${frontendBase}/?sso_error=endpoint_moved_please_retry`, 302);
     }
     if (path === '/api/auth/enterprise/configure' && method === 'POST') {
-      const authCtx = await resolveAuthV5(request, env).catch(() => ({ authenticated: false, tier: 'FREE', identity: 'ip:anon' }));
-      const { handleEnterpriseSSoConfigure } = await import('./handlers/enterpriseSsoHandler.js');
-      return withSecurityHeaders(withCors(await handleEnterpriseSSoConfigure(request, env, authCtx), request));
+      // Retired rather than forwarded: the canonical POST /api/admin/sso/config
+      // has a similar but not identical field contract (org slug field name,
+      // org_name vs org), so silently forwarding the old POST body risks a
+      // subtly-wrong config being saved. Fail loud with the correct endpoint
+      // instead.
+      return Response.json({
+        error: 'This endpoint has moved.',
+        use_instead: 'POST /api/admin/sso/config',
+        docs: '/api/auth/enterprise/config',
+      }, { status: 410 });
     }
 
     // ── Auth routes (no rate limit — have their own brute-force protection) ─

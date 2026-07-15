@@ -108,11 +108,16 @@ written. Confirmed **already existing** before Phase 0 starts:
   `handleInviteMember`, `handleUpdateMemberRole`, `handleRemoveMember`,
   `handleOrgScans`, `handleUpdateOrg`, `handleDeleteOrg`) with its own
   `ROLE_PERMISSIONS`.
-- **Enterprise SSO**: `workers/src/handlers/enterpriseSsoHandler.js`
-  (`handleEnterpriseSSoInfo`, `Initiate`, `Callback`, `Configure`) plus a
-  real OAuth landing page at `frontend/auth/callback.html`. **Unverified**:
-  which real identity providers (Okta/Azure AD/Google Workspace/generic
-  SAML) are actually wired end-to-end vs. scaffolded.
+- **Enterprise SSO**: **UPDATED 2026-07-15** — `workers/src/handlers/ssoAuth.js`
+  is now the canonical implementation (`handleSSOLogin`/`Callback`/
+  `ConfigUpsert`/`Get`/`Delete`), real PKCE + signature-verified OIDC via
+  `lib/oidc.js`, plus a real OAuth landing page at `frontend/auth/callback.html`.
+  `enterpriseSsoHandler.js`'s login/callback routes are retired (see Domain 1
+  gap-matrix row below for the full reconciliation record); its `Info`/
+  `Configure` handlers remain as the config-guide content endpoint. **Still
+  unverified**: a live-IdP round-trip against a real Okta/Azure AD/Google
+  Workspace tenant (only realistic-but-simulated RSA-signed IdP responses have
+  been tested) — no real customer has completed SSO yet.
 - **MSSP multi-tenancy**: `workers/src/handlers/msspTenantPlatform.js`
   (18 handlers, tenant-scoped, audited this session), `msspOnboardingHandler.js`,
   `msspRevenue.js` (partner revenue share).
@@ -201,8 +206,8 @@ own tiny PR:
 | 1 | Identity | Login/signup/MFA/password-reset backend | **Exists** | `handlers/auth.js`, `handlers/mfa.js` | — |
 | 1 | Identity | Login/signup frontend entry point on main site | **Broken** | `frontend/index.html:13152-13157` dead-end modal; real form buried in `user-dashboard.html:747`, only linked via small footer link | No discoverable nav entry point |
 | 1 | Identity | Google OAuth (consumer) | **Exists, unlinked** | `handlers/googleAuth.js`, real callback at `frontend/auth/callback.html` | Zero frontend pages link to it — fully built, invisible |
-| 1 | Identity | Enterprise SSO (Azure AD / Okta / generic OIDC) | **Exists — but duplicated** | `handlers/enterpriseSsoHandler.js` (KV-config) AND `handlers/ssoAuth.js` (D1 `sso_configs`) — two parallel implementations of the same capability | Reconcile into one, don't build a third |
-| 1 | Identity | SAML | **Missing** | Both SSO paths are OIDC-only | Real gap if a customer specifically requires SAML |
+| 1 | Identity | Enterprise SSO (Azure AD / Okta / generic OIDC) | **RECONCILED 2026-07-15** (Customer Lifecycle Completion Program, Phase 5) | `handlers/ssoAuth.js` is now the sole customer-facing implementation (`/api/auth/sso/login`, `/api/auth/sso/callback`, `POST /api/admin/sso/config`) — chosen because it already did a real, cryptographically-verified OIDC round-trip (PKCE + nonce + RS256 `id_token` signature check via `lib/oidc.js`, tested with real RSA keypairs in `ssoOidcVerify.test.mjs`/`oidcSSO.test.mjs`) and real `org_members` JIT provisioning, while `enterpriseSsoHandler.js` trusted the IdP's `userinfo` response with zero verification and never provisioned org membership. `ssoAuth.js` gained the two things it was missing: a real `audit_log` write (mirroring `enterpriseSsoHandler.js`'s own, per `ssoAuditLogWrite.test.mjs`'s lesson about silent-catch audit failures) and the friendly named-`idp_type` (`azure_ad`/`okta`) discovery-URL convenience `enterpriseSsoHandler.js` had. `enterpriseSsoHandler.js`'s login/callback routes now redirect/410 to the canonical ones (`workers/src/index.js`'s `/api/auth/enterprise/*` block); its `config` info endpoint stays alive at the same URL (linked from `frontend/enterprise-portal.html`) but now documents the canonical contract. Verified safe to do now, not just easy: `KPI_DASHBOARD.md` and both `SUPPORT_PLAYBOOK.md`/`IMPLEMENTATION_PLAYBOOK.md` confirm zero real customers have ever completed SSO on either system, and the internal ops docs already treated `/api/auth/sso/*` as the real production surface before this change — only `enterprise-portal.html`'s marketing copy pointed at the other one, and that's been corrected. | SAML remains genuinely missing (both systems are OIDC-only) — unaffected by this reconciliation, tracked separately below. |
+| 1 | Identity | SAML | **Missing** | The canonical SSO path (`ssoAuth.js`, see reconciled row above) is OIDC-only by design (`lib/oidc.js`'s own header comment: a hand-rolled SAML signature verifier is a security liability, not a feature) | Real gap if a customer specifically requires SAML |
 | 1 | Identity | Session list / per-session revoke | **Missing** | Only blanket "revoke all sessions" exists (`auth.js:508-512,605-610`) | No enumerable session list in UI or API |
 | 2 | Organization | Backend CRUD (create/list/get/dashboard/invite/roles/remove/scans/update/delete) | **Exists** | `handlers/orgManagement.js` (10 handlers), routed `index.js:3543-3597` | — |
 | 2 | Organization | Any frontend UI | **Missing** | Zero matches for `/api/orgs` anywhere in `frontend/` | 100% API-only; no create/select/invite/switch UI exists at all |
