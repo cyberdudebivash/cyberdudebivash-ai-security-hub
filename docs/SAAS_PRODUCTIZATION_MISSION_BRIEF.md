@@ -136,7 +136,15 @@ written. Confirmed **already existing** before Phase 0 starts:
   suspicious-login event coverage. **Confirmed missing**: unified
   multi-channel notification center (SMS, real WhatsApp Business API send
   — today only `wa.me` links inside emails, Slack, Microsoft Teams, in-app,
-  push, webhook), notification preferences, digests.
+  push, webhook), notification preferences, digests. **FIXED 2026-07-15**
+  (Customer Lifecycle Completion Program, Phase 6): the `enterprise` legacy
+  drip sequence (auto-enrolled on every scan-detected enterprise domain,
+  `growth.js:86`) declared a 5-touch cadence (`DRIP_SEQUENCES.enterprise.steps:
+  [0,1,3,5,7]`, `DELAY_MAP.enterprise` already 5 entries long) but the shared
+  legacy dispatch switch only ever implemented 4 templates — step index 4
+  silently fell through to the no-op default and marked the sequence
+  `completed` without sending. Added `templateEnterpriseLeadDay7` and wired
+  it to that step; see `workers/test/enterpriseLeadDripStep4.test.mjs`.
 - **Frontend reality** (the actual customer-facing gap): `frontend/index.html`
   has **no working sign-in/sign-up entry point in its main navigation** — the
   only "Sign In" string on the page is a dead-end modal with an "OK" button

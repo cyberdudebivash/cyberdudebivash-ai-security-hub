@@ -401,6 +401,59 @@ function templateDay3(lead, scanData = {}) {
   return { subject, html, text };
 }
 
+/**
+ * Day 7 — Enterprise-tier close for scan-detected enterprise leads.
+ * DRIP_SEQUENCES.enterprise declares 5 touches (steps: [0,1,3,5,7]) but only
+ * templateDay0-3 existed, so this final touch never sent — the sequence
+ * silently completed after 4 emails instead of 5. This is the missing 5th.
+ * Distinct from templateEnterpriseDay7 (used by the separate enterprise_nurture
+ * sequence for explicit "Contact Sales" inquiries) — that copy assumes an
+ * inquiry was submitted, which isn't true for this population.
+ */
+function templateEnterpriseLeadDay7(lead, scanData = {}) {
+  const { domain = 'your domain', critical = 0, high = 0 } = scanData;
+  const firstName = (lead.name || 'Security Pro').split(' ')[0];
+
+  const subject = `🏢 ${domain} qualifies for Enterprise-tier protection — let's talk`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0a0e1a;font-family:'Segoe UI',Arial,sans-serif;color:#e2e8f0">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#111827;border-radius:12px;border:1px solid #1f2937">
+  <tr><td style="background:linear-gradient(135deg,#0f172a,#1e3a5f);padding:28px 40px;text-align:center;border-bottom:2px solid #1e40af">
+    <div style="font-size:24px;font-weight:800;color:#fff">🏢 A Week In — Still Exposed?</div>
+  </td></tr>
+  <tr><td style="padding:40px">
+    <h1 style="margin:0 0 8px;font-size:21px;color:#f1f5f9">Hi ${firstName},</h1>
+    <p style="color:#94a3b8;font-size:15px;line-height:1.7">It's been a week since we scanned <strong style="color:#e2e8f0">${domain}</strong>${critical + high > 0 ? ` and found <strong style="color:#ef4444">${critical} critical</strong> and <strong style="color:#f97316">${high} high</strong> unresolved findings` : ''}. Given ${domain}'s size, our ENTERPRISE tier is built for exactly this profile.</p>
+    <div style="background:#1f2937;border-radius:8px;padding:20px;margin:20px 0">
+      <div style="font-size:13px;color:#10b981;font-weight:600;margin-bottom:12px">ENTERPRISE INCLUDES</div>
+      <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ Unlimited scans across your full domain portfolio</p>
+      <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ Autonomous defense + full SOC pipeline</p>
+      <p style="margin:4px 0;color:#e2e8f0;font-size:14px">✓ Telegram alerting + dedicated support</p>
+    </div>
+    <div style="text-align:center;margin:28px 0">
+      <a href="https://wa.me/918179881447?text=Hi%20Bivash%2C%20I%27d%20like%20to%20talk%20about%20Enterprise-tier%20protection%20for%20${encodeURIComponent(domain)}"
+         style="display:inline-block;background:linear-gradient(135deg,#1e40af,#7c3aed);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:600">
+        Talk to Us on WhatsApp →
+      </a>
+      <p style="margin:12px 0 0;color:#6b7280;font-size:13px">15-minute call. No pressure.</p>
+    </div>
+    <p style="color:#6b7280;font-size:13px">— Bivash, Founder · contact@cyberdudebivash.in</p>
+    <p style="color:#6b7280;font-size:13px;margin-top:16px"><a href="${UNSUBSCRIBE_URL}?email={{EMAIL}}" style="color:#4b5563">Unsubscribe</a></p>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+
+  const text = `Hi ${firstName},\n\nIt's been a week since we scanned ${domain}. Given its size, our ENTERPRISE tier fits your profile — unlimited scans, autonomous defense, dedicated support.\n\nTalk to us: https://wa.me/918179881447`;
+
+  return { subject, html, text };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PHASE 4 POST-PURCHASE TEMPLATES
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1297,6 +1350,9 @@ export async function runDripAutomation(env) {
           case 1:  template = templateDay1(lead, scanData); break;
           case 2:  template = templateDay2(lead); break;
           case 3:  template = templateDay3(lead, scanData); break;
+          case 4:
+            if (seqId === 'enterprise') { template = templateEnterpriseLeadDay7(lead, scanData); break; }
+            await advanceSequence(env, row.id, step + 1, 0); continue;
           default: await advanceSequence(env, row.id, step + 1, 0); continue;
         }
       } else {
