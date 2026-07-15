@@ -10,7 +10,7 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-14T22:16:09.168Z
+Generated: 2026-07-15T06:06:54.994Z
 Capabilities catalogued: 101
 
 ## Overall Completion
@@ -18,8 +18,8 @@ Capabilities catalogued: 101
 | Dimension | % |
 |---|---|
 | Backend | 91.1% |
-| Frontend | 74.8% |
-| Parity (backend **and** frontend both exist) | 70.3% |
+| Frontend | 75.2% |
+| Parity (backend **and** frontend both exist) | 71.3% |
 | Customer Journeys complete (dynamic_browser-verified) | 4% |
 
 ## Gaps by Priority
@@ -27,14 +27,14 @@ Capabilities catalogued: 101
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
 | Critical | P1 | 3 | Broken customer journey |
-| High | P2 | 16 | Backend exists, frontend missing |
+| High | P2 | 15 | Backend exists, frontend missing |
 | Medium | P3 | 9 | Backend+frontend exist, navigation missing |
 | Medium | P4 | 6 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
-| Low | P6 | 53 | No test coverage |
+| Low | P6 | 54 | No test coverage |
 | Low | P7 | 14 | Documentation missing |
 
-**Rollup:** Critical 3 · High 16 · Medium 15 · Low 67
+**Rollup:** Critical 3 · High 15 · Medium 15 · Low 68
 
 ## Structural Findings
 
@@ -152,7 +152,7 @@ complete", "bug free", or "guaranteed".
 |---|---|---|---|---|---|---|
 | CAP-MSSP-001 | MSSP Partner Onboarding (Checkout / Free Trial → Portal Access) | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P1 |
 | CAP-MSSP-002 | Partner Revenue, Client Roster & White-Label Branding | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
-| CAP-MSSP-003 | Multi-Tenant Sub-Account Drill-Down (Per-Client Dashboard, Billing, Usage, API Keys) | ✓ | ◐ | ✓ | PILOT ONLY | P2 |
+| CAP-MSSP-003 | Multi-Tenant Sub-Account Drill-Down (Per-Client Dashboard, Billing, Usage, API Keys) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-MSSP-004 | Delegated Admin Permissions (MSSP Staff Sub-Accounts) | ✗ | ✗ | ✗ | NOT READY | P2 |
 | CAP-MSSP-005 | MSSP Client Portfolio + White-Label Panel (embedded in Executive Hub) | ✓ | ◐ | ✓ | PILOT ONLY | P6 |
 

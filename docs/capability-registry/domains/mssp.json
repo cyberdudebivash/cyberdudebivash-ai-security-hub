@@ -2,42 +2,72 @@
   {
     "id": "CAP-MSSP-001",
     "domain": "mssp",
-    "name": "MSSP Partner Onboarding (Checkout / Free Trial → Portal Access)",
+    "name": "MSSP Partner Onboarding (Checkout / Free Trial \u2192 Portal Access)",
     "description": "Public signup flow for a new MSSP reseller partner (paid checkout or free trial), issuing partner credentials and routing the new partner to their self-service portal.",
     "backend": {
-      "handlers": ["workers/src/handlers/msspOnboardingHandler.js", "workers/src/handlers/partnerAuth.js"],
+      "handlers": [
+        "workers/src/handlers/msspOnboardingHandler.js",
+        "workers/src/handlers/partnerAuth.js"
+      ],
       "entry_points": [
-        "handleMsspTiers", "handleMsspCheckout", "handleMsspVerify", "handleMsspTrial",
-        "handleMsspOnboardingStatus", "handleMsspOnboardingObservability",
-        "handlePartnerLoginRequest", "handlePartnerLoginVerify", "handlePartnerLogout", "handlePartnerMe"
+        "handleMsspTiers",
+        "handleMsspCheckout",
+        "handleMsspVerify",
+        "handleMsspTrial",
+        "handleMsspOnboardingStatus",
+        "handleMsspOnboardingObservability",
+        "handlePartnerLoginRequest",
+        "handlePartnerLoginVerify",
+        "handlePartnerLogout",
+        "handlePartnerMe"
       ],
       "routes_sampled": [
-        { "path": "/api/partners/login", "method": "POST", "evidence": "workers/src/index.js:8033" },
-        { "path": "/api/partners/verify", "method": "POST", "evidence": "workers/src/index.js:8037" }
+        {
+          "path": "/api/partners/login",
+          "method": "POST",
+          "evidence": "workers/src/index.js:8033"
+        },
+        {
+          "path": "/api/partners/verify",
+          "method": "POST",
+          "evidence": "workers/src/index.js:8037"
+        }
       ],
       "routes_fully_enumerated": false,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "dedicated_page",
-      "pages": ["frontend/mssp-onboarding.html", "frontend/partner-portal.html"],
+      "pages": [
+        "frontend/mssp-onboarding.html",
+        "frontend/partner-portal.html"
+      ],
       "status": "exists",
-      "evidence": "frontend/mssp-onboarding.html is a real, unguarded public signup page (meta description explicitly invites external partners; grepped for CDB_STAFF_AUTH — 0 matches) offering a paid checkout (initiatePayment(), around line 292) and a free trial (startTrial(), around line 351). frontend/partner-portal.html:135,179 calls POST /api/partners/verify and /api/partners/login for magic-link authentication. Verified 2026-07-08."
+      "evidence": "frontend/mssp-onboarding.html is a real, unguarded public signup page (meta description explicitly invites external partners; grepped for CDB_STAFF_AUTH \u2014 0 matches) offering a paid checkout (initiatePayment(), around line 292) and a free trial (startTrial(), around line 351). frontend/partner-portal.html:135,179 calls POST /api/partners/verify and /api/partners/login for magic-link authentication. Verified 2026-07-08."
     },
     "navigation": {
       "discoverable": true,
       "evidence": "frontend/mssp-onboarding.html is the intended entry point for prospective partners; frontend/partner-portal.html is linked from it post-fix (see notes) and from workers/src/services/emailEngine.js:747,761's welcome email."
     },
     "auth_enforced": false,
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "workers/test/msspOnboardingHandler.test.mjs imports from workers/src/handlers/msspOnboardingHandler.js; workers/test/msspPartnerIdentityLink.test.mjs and workers/test/msspPartnerSessionScoping.test.mjs cover workers/src/handlers/partnerAuth.js session behavior; workers/test/deadEndLinks.test.mjs now includes a regression test (added 2026-07-08) asserting frontend/mssp-onboarding.html never again links to the staff-only command center page — confirmed by direct import/content grep."
+      "evidence": "workers/test/msspOnboardingHandler.test.mjs imports from workers/src/handlers/msspOnboardingHandler.js; workers/test/msspPartnerIdentityLink.test.mjs and workers/test/msspPartnerSessionScoping.test.mjs cover workers/src/handlers/partnerAuth.js session behavior; workers/test/deadEndLinks.test.mjs now includes a regression test (added 2026-07-08) asserting frontend/mssp-onboarding.html never again links to the staff-only command center page \u2014 confirmed by direct import/content grep."
     },
     "docs": [
-      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+      {
+        "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
@@ -45,17 +75,17 @@
     "verification": {
       "method": "dynamic_browser",
       "last_verified": "2026-07-11",
-      "evidence": "frontend/mssp-onboarding.html read directly in full; workers/src/handlers/msspOnboardingHandler.js and workers/src/handlers/partnerAuth.js exports enumerated; workers/test/deadEndLinks.test.mjs run directly post-fix (9/9 passing) plus full suite (1831/1831 passing, up from 1830 — one new test added). RE-VERIFIED 2026-07-11 (Critical sweep) with a real headless-Chromium session directly against LIVE PRODUCTION (https://cyberdudebivash.in), zero mocking: confirmed both the post-checkout and post-free-trial success cards on the live, deployed frontend/mssp-onboarding.html link to frontend/partner-portal.html labeled 'Go to MSSP Dashboard', with no link anywhere to mssp-command-center or any staff-only page; confirmed frontend/partner-portal.html renders a real #login-email/#login-btn form for a session-less visitor; submitted a guaranteed-non-existent test email through that real form and confirmed POST /api/partners/login returned real HTTP 200 with the correct generic, non-account-enumerating message. Zero uncaught JS errors. Deliberately did NOT exercise the free-trial or paid-checkout flow, or consume a real magic-link login token, in this pass — see notes for why customer_journey_complete remains false despite the method upgrade to dynamic_browser."
+      "evidence": "frontend/mssp-onboarding.html read directly in full; workers/src/handlers/msspOnboardingHandler.js and workers/src/handlers/partnerAuth.js exports enumerated; workers/test/deadEndLinks.test.mjs run directly post-fix (9/9 passing) plus full suite (1831/1831 passing, up from 1830 \u2014 one new test added). RE-VERIFIED 2026-07-11 (Critical sweep) with a real headless-Chromium session directly against LIVE PRODUCTION (https://cyberdudebivash.in), zero mocking: confirmed both the post-checkout and post-free-trial success cards on the live, deployed frontend/mssp-onboarding.html link to frontend/partner-portal.html labeled 'Go to MSSP Dashboard', with no link anywhere to mssp-command-center or any staff-only page; confirmed frontend/partner-portal.html renders a real #login-email/#login-btn form for a session-less visitor; submitted a guaranteed-non-existent test email through that real form and confirmed POST /api/partners/login returned real HTTP 200 with the correct generic, non-account-enumerating message. Zero uncaught JS errors. Deliberately did NOT exercise the free-trial or paid-checkout flow, or consume a real magic-link login token, in this pass \u2014 see notes for why customer_journey_complete remains false despite the method upgrade to dynamic_browser."
     },
     "contradicts_doc": [
       {
         "file": "frontend/mssp-onboarding.html",
         "line": 312,
         "claim": "Both the post-payment success card and the post-free-trial success card linked 'Go to MSSP Dashboard' to the staff-only command center page.",
-        "correction": "frontend/mssp-command-center.html is gated by CDB_STAFF_AUTH.guard() (magic-link staff session that only accepts the platform owner or an internal user_roles row — see workers/src/handlers/staffAuth.js) — a brand-new external MSSP partner could never pass it. This is the same defect commit 67f6b924 fixed in the onboarding welcome EMAIL (templateMsspDay0); this page's own buttons pointed at the identical dead end and were not covered by that fix. FIXED in this pass (2026-07-08): both links now point to frontend/partner-portal.html, the real magic-link partner self-service portal, matching the email's destination. A dead-end regression test was added to workers/test/deadEndLinks.test.mjs."
+        "correction": "frontend/mssp-command-center.html is gated by CDB_STAFF_AUTH.guard() (magic-link staff session that only accepts the platform owner or an internal user_roles row \u2014 see workers/src/handlers/staffAuth.js) \u2014 a brand-new external MSSP partner could never pass it. This is the same defect commit 67f6b924 fixed in the onboarding welcome EMAIL (templateMsspDay0); this page's own buttons pointed at the identical dead end and were not covered by that fix. FIXED in this pass (2026-07-08): both links now point to frontend/partner-portal.html, the real magic-link partner self-service portal, matching the email's destination. A dead-end regression test was added to workers/test/deadEndLinks.test.mjs."
       }
     ],
-    "notes": "Priority kept at P1 despite being fixed in this same pass — the registry records what was found and corrected, not just the end state, so the severity of the original defect (a brand-new paying customer hitting a dead end on their very first post-checkout click) remains visible in the historical record. operational_status reflects the NOW-current, fixed state. 2026-07-11: ran the dynamic_browser pass this note asked for, against live production — confirmed the dead-end fix is genuinely deployed and confirmed the real, non-mutating /api/partners/login endpoint works correctly. customer_journey_complete is deliberately still false: completing the full chain would require either a real paid checkout or a real free-trial signup, and workers/src/handlers/msspOnboardingHandler.js / workers/src/services/msspOps.js were checked directly for any partner-deletion capability — none exists (unlike the disposable test accounts used elsewhere this session via DELETE /api/auth/delete-account), so either path would leave a permanent, untracktable mssp_partners row in production with no self-service cleanup. Not attempted without checking with the business owner first. A missing 'delete/deactivate a test or unwanted partner record' admin capability is itself worth a small follow-up, separate from this capability's own customer journey. RE-VERIFIED 2026-07-12 (Enterprise Production Certification Program): independently confirmed the fix from source — post-checkout/trial success cards link to /partner-portal.html (not the staff-only command center), partner-portal.html wires real /api/partners/verify and /login calls, and workers/test/deadEndLinks.test.mjs asserts exactly this. No broken link found; no live customer impact today. Priority deliberately left at P1 per this entry's own documented convention above, not an oversight."
+    "notes": "Priority kept at P1 despite being fixed in this same pass \u2014 the registry records what was found and corrected, not just the end state, so the severity of the original defect (a brand-new paying customer hitting a dead end on their very first post-checkout click) remains visible in the historical record. operational_status reflects the NOW-current, fixed state. 2026-07-11: ran the dynamic_browser pass this note asked for, against live production \u2014 confirmed the dead-end fix is genuinely deployed and confirmed the real, non-mutating /api/partners/login endpoint works correctly. customer_journey_complete is deliberately still false: completing the full chain would require either a real paid checkout or a real free-trial signup, and workers/src/handlers/msspOnboardingHandler.js / workers/src/services/msspOps.js were checked directly for any partner-deletion capability \u2014 none exists (unlike the disposable test accounts used elsewhere this session via DELETE /api/auth/delete-account), so either path would leave a permanent, untracktable mssp_partners row in production with no self-service cleanup. Not attempted without checking with the business owner first. A missing 'delete/deactivate a test or unwanted partner record' admin capability is itself worth a small follow-up, separate from this capability's own customer journey. RE-VERIFIED 2026-07-12 (Enterprise Production Certification Program): independently confirmed the fix from source \u2014 post-checkout/trial success cards link to /partner-portal.html (not the staff-only command center), partner-portal.html wires real /api/partners/verify and /login calls, and workers/test/deadEndLinks.test.mjs asserts exactly this. No broken link found; no live customer impact today. Priority deliberately left at P1 per this entry's own documented convention above, not an oversight."
   },
   {
     "id": "CAP-MSSP-002",
@@ -63,38 +93,78 @@
     "name": "Partner Revenue, Client Roster & White-Label Branding",
     "description": "Self-service views for an onboarded MSSP partner: revenue/commission tracking, coarse client list and creation, white-label theme configuration, and custom-domain request/verification.",
     "backend": {
-      "handlers": ["workers/src/handlers/msspRevenue.js", "workers/src/handlers/whiteLabelMSSP.js", "workers/src/handlers/partnerDomains.js"],
-      "entry_points": ["handleGetTheme", "handleUpdateTheme", "handleDeleteTheme", "handleGetThemeByOrg"],
+      "handlers": [
+        "workers/src/handlers/msspRevenue.js",
+        "workers/src/handlers/whiteLabelMSSP.js",
+        "workers/src/handlers/partnerDomains.js"
+      ],
+      "entry_points": [
+        "handleGetTheme",
+        "handleUpdateTheme",
+        "handleDeleteTheme",
+        "handleGetThemeByOrg"
+      ],
       "routes_sampled": [
-        { "path": "/api/mssp/revenue", "method": "GET", "evidence": "workers/src/index.js:8012" },
-        { "path": "/api/mssp/customers", "method": "GET", "evidence": "workers/src/index.js:2729" },
-        { "path": "/api/mssp/customers", "method": "POST", "evidence": "workers/src/index.js:2733" },
-        { "path": "/api/white-label/theme", "method": "GET", "evidence": "workers/src/index.js:3134" },
-        { "path": "/api/partners/domain/status", "method": "GET", "evidence": "workers/src/index.js:8062" }
+        {
+          "path": "/api/mssp/revenue",
+          "method": "GET",
+          "evidence": "workers/src/index.js:8012"
+        },
+        {
+          "path": "/api/mssp/customers",
+          "method": "GET",
+          "evidence": "workers/src/index.js:2729"
+        },
+        {
+          "path": "/api/mssp/customers",
+          "method": "POST",
+          "evidence": "workers/src/index.js:2733"
+        },
+        {
+          "path": "/api/white-label/theme",
+          "method": "GET",
+          "evidence": "workers/src/index.js:3134"
+        },
+        {
+          "path": "/api/partners/domain/status",
+          "method": "GET",
+          "evidence": "workers/src/index.js:8062"
+        }
       ],
       "routes_fully_enumerated": false,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "dedicated_page",
-      "pages": ["frontend/partner-portal.html"],
+      "pages": [
+        "frontend/partner-portal.html"
+      ],
       "status": "exists",
-      "evidence": "frontend/partner-portal.html:264-433 (authFetch calls) confirmed to call /api/partners/me, /api/mssp/revenue, /api/mssp/customers (GET+POST), /api/white-label/theme (GET+PUT), /api/partners/domain/status, /api/partners/domain/request, /api/partners/domain/verify, and /api/partners/logout — a real, fairly complete self-service surface. Verified 2026-07-08."
+      "evidence": "frontend/partner-portal.html:264-433 (authFetch calls) confirmed to call /api/partners/me, /api/mssp/revenue, /api/mssp/customers (GET+POST), /api/white-label/theme (GET+PUT), /api/partners/domain/status, /api/partners/domain/request, /api/partners/domain/verify, and /api/partners/logout \u2014 a real, fairly complete self-service surface. Verified 2026-07-08."
     },
     "navigation": {
       "discoverable": true,
-      "evidence": "Same entry point as CAP-MSSP-001 — frontend/partner-portal.html, now correctly linked from onboarding."
+      "evidence": "Same entry point as CAP-MSSP-001 \u2014 frontend/partner-portal.html, now correctly linked from onboarding."
     },
     "auth_enforced": true,
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "workers/test/msspRevenueShare.test.mjs and workers/test/whiteLabelPartnerScoping.test.mjs import from workers/src/handlers/msspRevenue.js and workers/src/handlers/whiteLabelMSSP.js respectively — confirmed by import-statement grep, 2026-07-08."
+      "evidence": "workers/test/msspRevenueShare.test.mjs and workers/test/whiteLabelPartnerScoping.test.mjs import from workers/src/handlers/msspRevenue.js and workers/src/handlers/whiteLabelMSSP.js respectively \u2014 confirmed by import-statement grep, 2026-07-08."
     },
     "docs": [
-      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+      {
+        "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
@@ -104,21 +174,36 @@
       "last_verified": "2026-07-08",
       "evidence": "frontend/partner-portal.html read directly in full (440 lines); workers/src/index.js grepped for each API path that page calls, confirming all resolve to a real registered route."
     },
-    "notes": "No actionable gap found in this pass; P7 by elimination. This is the coarse client list/create only — see CAP-MSSP-003 for the deeper per-client drill-down, which is a separate, larger gap."
+    "notes": "No actionable gap found in this pass; P7 by elimination. This is the coarse client list/create only \u2014 see CAP-MSSP-003 for the deeper per-client drill-down, which is a separate, larger gap."
   },
   {
     "id": "CAP-MSSP-003",
     "domain": "mssp",
     "name": "Multi-Tenant Sub-Account Drill-Down (Per-Client Dashboard, Billing, Usage, API Keys)",
-    "description": "Let an MSSP partner drill into an individual client's dashboard, sub-tenant hierarchy, ticket routing rules, per-client API keys, and per-client billing/usage — not just see a coarse client list.",
+    "description": "Let an MSSP partner drill into an individual client's dashboard, sub-tenant hierarchy, ticket routing rules, per-client API keys, and per-client billing/usage \u2014 not just see a coarse client list.",
     "backend": {
-      "handlers": ["workers/src/handlers/msspTenantPlatform.js"],
+      "handlers": [
+        "workers/src/handlers/msspTenantPlatform.js"
+      ],
       "entry_points": [
-        "handleListCustomerLabels", "handleAddCustomerLabel", "handleRemoveCustomerLabel",
-        "handleCustomerDashboard", "handleListSubTenants", "handleCreateSubTenant", "handleGetHierarchy",
-        "handleGetNotifPrefs", "handleSetNotifPrefs", "handleListTicketRules", "handleCreateTicketRule",
-        "handleDeleteTicketRule", "handleListCustomerAPIKeys", "handleGenerateCustomerAPIKey",
-        "handleRevokeCustomerAPIKey", "handleGetTenantBilling", "handleGetTenantUsage", "handleMsspTenantRoute"
+        "handleListCustomerLabels",
+        "handleAddCustomerLabel",
+        "handleRemoveCustomerLabel",
+        "handleCustomerDashboard",
+        "handleListSubTenants",
+        "handleCreateSubTenant",
+        "handleGetHierarchy",
+        "handleGetNotifPrefs",
+        "handleSetNotifPrefs",
+        "handleListTicketRules",
+        "handleCreateTicketRule",
+        "handleDeleteTicketRule",
+        "handleListCustomerAPIKeys",
+        "handleGenerateCustomerAPIKey",
+        "handleRevokeCustomerAPIKey",
+        "handleGetTenantBilling",
+        "handleGetTenantUsage",
+        "handleMsspTenantRoute"
       ],
       "routes_sampled": [],
       "routes_fully_enumerated": false,
@@ -126,35 +211,48 @@
     },
     "frontend": {
       "surface_type": "dedicated_page",
-      "pages": ["frontend/partner-portal.html"],
-      "status": "partial",
-      "evidence": "MOSTLY FIXED 2026-07-09. Root cause was two-layered, not just a missing UI: (1) frontend/partner-portal.html discarded c.id/c.org_slug when rendering the client list, so there was no stable key to drill into even if a UI existed; (2) more critically, workers/src/handlers/msspTenantPlatform.js's requireMSSPAdmin()/partnerScope() never recognized a real MSSP partner session (workers/src/handlers/partnerAuth.js magic-link login resolves to authCtx.role==='partner'/authCtx.partnerId with userId/user_id both null) — only authCtx.isAdmin or a JWT/API-key user whose own tier is literally 'MSSP'. Every one of the 18 handlers in this file would have 403'd for every real partner, even a UI built exactly to the documented contract — confirmed by direct code read before writing any frontend, not assumed. Fixed the backend gate first (mirroring the identical, already-proven-safe pattern in the sibling workers/src/handlers/msspWorkspace.js, which is why the 2 already-wired handlers worked while these 16 did not), then built the UI: client rows are now clickable, opening a drill-down with Overview/Sub-Tenants/API Keys/Billing & Usage tabs, wiring 8 of the remaining 16 handlers (handleCustomerDashboard, handleListSubTenants, handleCreateSubTenant, handleListCustomerAPIKeys, handleGenerateCustomerAPIKey, handleRevokeCustomerAPIKey, handleGetTenantBilling, handleGetTenantUsage). Deliberately NOT wired: Notification Preferences (handleGetNotifPrefs/handleSetNotifPrefs — a 5-channel x 12-event settings matrix) and Ticket Routing Rules (handleListTicketRules/handleCreateTicketRule/handleDeleteTicketRule) — the latter is partner-wide, not customer-scoped, and nesting it under one specific client's drill-down would mislead a partner into thinking a rule only applies to that client; both disclosed as known remaining gaps rather than rushed in or mislabeled. Also NOT wired: handleListCustomerLabels/handleAddCustomerLabel/handleRemoveCustomerLabel (the Overview tab displays labels read-only from the dashboard payload, but adding/removing one has no UI yet) and handleGetHierarchy (the parent/child tree view — handleListSubTenants alone covers the flat child list shown)."
+      "pages": [
+        "frontend/partner-portal.html"
+      ],
+      "status": "exists",
+      "evidence": "MOSTLY FIXED 2026-07-09. Root cause was two-layered, not just a missing UI: (1) frontend/partner-portal.html discarded c.id/c.org_slug when rendering the client list, so there was no stable key to drill into even if a UI existed; (2) more critically, workers/src/handlers/msspTenantPlatform.js's requireMSSPAdmin()/partnerScope() never recognized a real MSSP partner session (workers/src/handlers/partnerAuth.js magic-link login resolves to authCtx.role==='partner'/authCtx.partnerId with userId/user_id both null) \u2014 only authCtx.isAdmin or a JWT/API-key user whose own tier is literally 'MSSP'. Every one of the 18 handlers in this file would have 403'd for every real partner, even a UI built exactly to the documented contract \u2014 confirmed by direct code read before writing any frontend, not assumed. Fixed the backend gate first (mirroring the identical, already-proven-safe pattern in the sibling workers/src/handlers/msspWorkspace.js, which is why the 2 already-wired handlers worked while these 16 did not), then built the UI: client rows are now clickable, opening a drill-down with Overview/Sub-Tenants/API Keys/Billing & Usage tabs, wiring 8 of the remaining 16 handlers (handleCustomerDashboard, handleListSubTenants, handleCreateSubTenant, handleListCustomerAPIKeys, handleGenerateCustomerAPIKey, handleRevokeCustomerAPIKey, handleGetTenantBilling, handleGetTenantUsage). Deliberately NOT wired: Notification Preferences (handleGetNotifPrefs/handleSetNotifPrefs \u2014 a 5-channel x 12-event settings matrix) and Ticket Routing Rules (handleListTicketRules/handleCreateTicketRule/handleDeleteTicketRule) \u2014 the latter is partner-wide, not customer-scoped, and nesting it under one specific client's drill-down would mislead a partner into thinking a rule only applies to that client; both disclosed as known remaining gaps rather than rushed in or mislabeled. Also NOT wired: handleListCustomerLabels/handleAddCustomerLabel/handleRemoveCustomerLabel (the Overview tab displays labels read-only from the dashboard payload, but adding/removing one has no UI yet) and handleGetHierarchy (the parent/child tree view \u2014 handleListSubTenants alone covers the flat child list shown). | FULLY FIXED 2026-07-14 (ECCP Wave 1): the 4 previously-disclosed remaining gaps are now closed. Label add/remove extends the existing read-only Overview display (dedicated GET/POST/DELETE /labels, server-sanitized label values, shared renderLabelsList() helper). Hierarchy tab added (parent link + children table via /hierarchy). Notifications tab added: the real 5-channel x 12-event matrix, built from the backend's own valid_channels/valid_events response fields (not a hardcoded frontend list) with a single bulk PUT. Ticket Routing Rules added as its own top-level dashboard card (NOT nested under a client, per this entry's own prior note that mssp_ticket_rules has no customer_id column) with list/create/delete, delete behind a confirm modal. No backend changes -- all 4 handlers were already complete."
     },
     "navigation": {
       "discoverable": true,
-      "evidence": "Every row in the existing, already-discoverable 'Your Clients' table on frontend/partner-portal.html is now a real entry point — no new nav needed since the coarse list itself (CAP-MSSP-002, already GA) was already the correct landing surface."
+      "evidence": "Every row in the existing, already-discoverable 'Your Clients' table on frontend/partner-portal.html is now a real entry point \u2014 no new nav needed since the coarse list itself (CAP-MSSP-002, already GA) was already the correct landing surface."
     },
     "auth_enforced": true,
-    "rbac": { "enforced": true, "permissions": ["requireMSSPAdmin: isAdmin, tier==='MSSP', or role==='partner' (fixed this pass)"] },
+    "rbac": {
+      "enforced": true,
+      "permissions": [
+        "requireMSSPAdmin: isAdmin, tier==='MSSP', or role==='partner' (fixed this pass)"
+      ]
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "CORRECTED 2026-07-09: the prior version of this field claimed workers/test/msspTenantIsolation.test.mjs and workers/test/msspIsolation.test.mjs import directly from workers/src/handlers/msspTenantPlatform.js — independently re-verified false; both import exclusively from the sibling workers/src/handlers/msspWorkspace.js (confirmed by direct import-statement read). The real, pre-existing coverage of workers/src/handlers/msspTenantPlatform.js is workers/test/deadAdminChecksRestored.test.mjs (4 of 18 handlers, the legacy tier:'MSSP' JWT-user identity only). New this pass: workers/test/msspPartnerSessionTenantPlatform.test.mjs (12 tests) — proves the real partner-session identity (shaped exactly like resolvePartnerSession()'s actual output, not a simplified stand-in) can now reach its own data across dashboard/sub-tenants/api-keys/labels, that cross-partner isolation still holds for this identity (a spoofed userId cannot override the server-derived partnerId), and that the legacy tier:'MSSP' path is unaffected by the fix — using the same real in-memory SQLite pattern as the existing isolation tests. Plus workers/test/partnerPortalClientDrilldown.test.mjs (11 tests, frontend, new) — cross-checks frontend/partner-portal.html against workers/src/index.js and workers/src/handlers/msspTenantPlatform.js directly. Independently re-verified live via a real headless-Chromium Playwright session: full click-through (client list → drill-down → all 4 tabs → sub-tenant creation → API key generation with one-time plaintext reveal → key revocation → back to dashboard), 17/17 checks, zero uncaught JS exceptions. axe-core scan: zero new violations introduced (the one flagged violation is on the pre-existing, unmodified dashboard shell, present before navigating to any new view)."
+      "evidence": "CORRECTED 2026-07-09: the prior version of this field claimed workers/test/msspTenantIsolation.test.mjs and workers/test/msspIsolation.test.mjs import directly from workers/src/handlers/msspTenantPlatform.js \u2014 independently re-verified false; both import exclusively from the sibling workers/src/handlers/msspWorkspace.js (confirmed by direct import-statement read). The real, pre-existing coverage of workers/src/handlers/msspTenantPlatform.js is workers/test/deadAdminChecksRestored.test.mjs (4 of 18 handlers, the legacy tier:'MSSP' JWT-user identity only). New this pass: workers/test/msspPartnerSessionTenantPlatform.test.mjs (12 tests) \u2014 proves the real partner-session identity (shaped exactly like resolvePartnerSession()'s actual output, not a simplified stand-in) can now reach its own data across dashboard/sub-tenants/api-keys/labels, that cross-partner isolation still holds for this identity (a spoofed userId cannot override the server-derived partnerId), and that the legacy tier:'MSSP' path is unaffected by the fix \u2014 using the same real in-memory SQLite pattern as the existing isolation tests. Plus workers/test/partnerPortalClientDrilldown.test.mjs (11 tests, frontend, new) \u2014 cross-checks frontend/partner-portal.html against workers/src/index.js and workers/src/handlers/msspTenantPlatform.js directly. Independently re-verified live via a real headless-Chromium Playwright session: full click-through (client list \u2192 drill-down \u2192 all 4 tabs \u2192 sub-tenant creation \u2192 API key generation with one-time plaintext reveal \u2192 key revocation \u2192 back to dashboard), 17/17 checks, zero uncaught JS exceptions. axe-core scan: zero new violations introduced (the one flagged violation is on the pre-existing, unmodified dashboard shell, present before navigating to any new view). | EXTENDED 2026-07-14: workers/test/partnerPortalClientDrilldown.test.mjs grew from 11 to 27 tests, covering all 4 newly-wired features plus 2 backend-contract checks (ticket-rules route registration, labels/hierarchy/notifications dispatch cases) the prior pass's tests didn't assert. Full suite: 294 files / 3098 tests passing."
     },
     "docs": [
-      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+      {
+        "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "PILOT ONLY",
-    "priority": "P2",
+    "priority": "P6",
     "verification": {
       "method": "static",
       "last_verified": "2026-07-09",
-      "evidence": "FIXED 2026-07-09 (own commit, own regression tests, backend gate fix + frontend build together since the frontend has no customer value without the fix). workers/src/handlers/msspTenantPlatform.js and its sibling workers/src/handlers/msspWorkspace.js both read directly and diffed to confirm the exact, already-proven-safe pattern to mirror before touching any auth-gating code. frontend/partner-portal.html read in full (previously 440 lines) before editing. Dynamic: real headless-Chromium Playwright session against the changed file served locally, mocking the full backend contract — 17/17 checks. Full backend suite green: 185 files / 1967 tests (184/1956 baseline + 11 new frontend-contract tests; the backend gate fix itself added 12 more, landing at 184 from the 183/1944 baseline before this wave). scripts/seo-structure-lock.mjs: all 22 pages green (unaffected — frontend/partner-portal.html is noindex/nofollow, not part of the public SEO surface)."
+      "evidence": "FIXED 2026-07-09 (own commit, own regression tests, backend gate fix + frontend build together since the frontend has no customer value without the fix). workers/src/handlers/msspTenantPlatform.js and its sibling workers/src/handlers/msspWorkspace.js both read directly and diffed to confirm the exact, already-proven-safe pattern to mirror before touching any auth-gating code. frontend/partner-portal.html read in full (previously 440 lines) before editing. Dynamic: real headless-Chromium Playwright session against the changed file served locally, mocking the full backend contract \u2014 17/17 checks. Full backend suite green: 185 files / 1967 tests (184/1956 baseline + 11 new frontend-contract tests; the backend gate fix itself added 12 more, landing at 184 from the 183/1944 baseline before this wave). scripts/seo-structure-lock.mjs: all 22 pages green (unaffected \u2014 frontend/partner-portal.html is noindex/nofollow, not part of the public SEO surface)."
     },
     "contradicts_doc": [],
-    "notes": "Was the single largest backend-vs-frontend gap in the MSSP domain, but the deeper issue was a broken auth gate hiding behind what looked like a pure frontend gap — verified before assuming: read the actual authCtx shape a real partner session produces, confirmed it would 403 against the documented contract, and fixed that first rather than building a UI that would have silently failed for every real customer in production. Fixed as two tightly-coupled, minimally-disruptive changes: the backend fix mirrors an already-shipped, already-safe pattern from a sibling file (zero new security design, just closing a gap where one file didn't get the same fix its sibling did); the frontend reuses frontend/partner-portal.html's exact existing CSS/JS conventions, introducing only a tab-bar and a lightweight modal system where none existed before (needed for the one-time API-key-reveal UX, which has no safe way to be re-shown after generation). Known, deliberately disclosed remaining gaps: Notification Preferences and Ticket Routing Rules UIs (the latter needs a product decision on where it belongs — partner-wide settings, not per-client — before it should be built at all), label add/remove UI, and the parent/child hierarchy tree view (handleGetHierarchy) beyond the flat sub-tenant list already shown."
+    "notes": "Was the single largest backend-vs-frontend gap in the MSSP domain, but the deeper issue was a broken auth gate hiding behind what looked like a pure frontend gap \u2014 verified before assuming: read the actual authCtx shape a real partner session produces, confirmed it would 403 against the documented contract, and fixed that first rather than building a UI that would have silently failed for every real customer in production. Fixed as two tightly-coupled, minimally-disruptive changes: the backend fix mirrors an already-shipped, already-safe pattern from a sibling file (zero new security design, just closing a gap where one file didn't get the same fix its sibling did); the frontend reuses frontend/partner-portal.html's exact existing CSS/JS conventions, introducing only a tab-bar and a lightweight modal system where none existed before (needed for the one-time API-key-reveal UX, which has no safe way to be re-shown after generation). Known, deliberately disclosed remaining gaps: Notification Preferences and Ticket Routing Rules UIs (the latter needs a product decision on where it belongs \u2014 partner-wide settings, not per-client \u2014 before it should be built at all), label add/remove UI, and the parent/child hierarchy tree view (handleGetHierarchy) beyond the flat sub-tenant list already shown. UPDATE 2026-07-14: all 4 previously-disclosed remaining gaps (Notification Preferences, Ticket Routing Rules, label add/remove, hierarchy tree view) are now built. This capability is frontend-complete."
   },
   {
     "id": "CAP-MSSP-004",
@@ -174,14 +272,29 @@
       "status": "missing",
       "evidence": "No route, handler, or UI reference for partner-staff sub-accounts was found anywhere in workers/src/handlers/ or frontend/*.html. Matches docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:233 Gap Matrix row (Domain 10) exactly, independently re-confirmed 2026-07-08 (no new handler or route matching this description has been added since)."
     },
-    "navigation": { "discoverable": false, "evidence": "N/A — no capability exists to navigate to." },
+    "navigation": {
+      "discoverable": false,
+      "evidence": "N/A \u2014 no capability exists to navigate to."
+    },
     "auth_enforced": false,
-    "rbac": { "enforced": false, "permissions": [] },
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
     "subscription_gated": false,
-    "feature_flag": { "present": false, "mechanism": "none" },
-    "test_coverage": { "has_tests": false, "evidence": "No test references delegated partner-staff permissions, because no implementation exists." },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
+    "test_coverage": {
+      "has_tests": false,
+      "evidence": "No test references delegated partner-staff permissions, because no implementation exists."
+    },
     "docs": [
-      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+      {
+        "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "NOT READY",
@@ -191,52 +304,107 @@
       "last_verified": "2026-07-08",
       "evidence": "Repo-wide grep for partner-staff/sub-account/delegated-admin patterns across workers/src/handlers/ and frontend/*.html returned nothing beyond the existing (single-credential) partner and MSSP-owner roles already captured in CAP-MSSP-001/002."
     },
-    "notes": "No implementation found at all — this is a genuine backend gap, not a wiring gap (unlike CAP-MSSP-003)."
+    "notes": "No implementation found at all \u2014 this is a genuine backend gap, not a wiring gap (unlike CAP-MSSP-003)."
   },
   {
     "id": "CAP-MSSP-005",
     "domain": "mssp",
     "name": "MSSP Client Portfolio + White-Label Panel (embedded in Executive Hub)",
-    "description": "A SEPARATE, independently-implemented MSSP client-management surface from CAP-MSSP-002 (which covers frontend/partner-portal.html, /api/mssp/revenue, /api/mssp/customers, /api/white-label/theme, /api/partners/domain/*): this one is embedded inside frontend/index.html's #executive-hub section, backed by workers/src/handlers/msspPanel.js's own KV-keyed client roster, aggregate cross-client posture summary, cross-client critical-alert feed, and its own white-label config store — different backend module, different KV key namespace (mssp:clients_index / mssp:client: / mssp:whitelabel / mssp:alerts_feed), different routes (/api/mssp/clients vs /api/mssp/customers, /api/mssp/whitelabel vs /api/white-label/theme). Two parallel, uncoordinated MSSP-facing systems exist in this codebase; this entry catalogs the one that had none at all.",
+    "description": "A SEPARATE, independently-implemented MSSP client-management surface from CAP-MSSP-002 (which covers frontend/partner-portal.html, /api/mssp/revenue, /api/mssp/customers, /api/white-label/theme, /api/partners/domain/*): this one is embedded inside frontend/index.html's #executive-hub section, backed by workers/src/handlers/msspPanel.js's own KV-keyed client roster, aggregate cross-client posture summary, cross-client critical-alert feed, and its own white-label config store \u2014 different backend module, different KV key namespace (mssp:clients_index / mssp:client: / mssp:whitelabel / mssp:alerts_feed), different routes (/api/mssp/clients vs /api/mssp/customers, /api/mssp/whitelabel vs /api/white-label/theme). Two parallel, uncoordinated MSSP-facing systems exist in this codebase; this entry catalogs the one that had none at all.",
     "backend": {
-      "handlers": ["workers/src/handlers/msspPanel.js"],
+      "handlers": [
+        "workers/src/handlers/msspPanel.js"
+      ],
       "entry_points": [
-        "handleListClients", "handleOnboardClient", "handleGetClient", "handleUpdateClient",
-        "handleOffboardClient", "handleGetSummary", "handleGetAlerts", "handleSetWhitelabel", "handleGetWhitelabel"
+        "handleListClients",
+        "handleOnboardClient",
+        "handleGetClient",
+        "handleUpdateClient",
+        "handleOffboardClient",
+        "handleGetSummary",
+        "handleGetAlerts",
+        "handleSetWhitelabel",
+        "handleGetWhitelabel"
       ],
       "routes_sampled": [
-        { "path": "/api/mssp/clients", "method": "GET", "evidence": "workers/src/index.js:6096" },
-        { "path": "/api/mssp/clients", "method": "POST", "evidence": "workers/src/index.js:6100" },
-        { "path": "/api/mssp/clients/{id}", "method": "GET", "evidence": "workers/src/index.js:6104" },
-        { "path": "/api/mssp/clients/{id}", "method": "PUT", "evidence": "workers/src/index.js:6108" },
-        { "path": "/api/mssp/clients/{id}", "method": "DELETE", "evidence": "workers/src/index.js:6112" },
-        { "path": "/api/mssp/summary", "method": "GET", "evidence": "workers/src/index.js:6116" },
-        { "path": "/api/mssp/whitelabel", "method": "POST", "evidence": "workers/src/index.js:6124" },
-        { "path": "/api/mssp/whitelabel", "method": "GET", "evidence": "workers/src/index.js:6128" }
+        {
+          "path": "/api/mssp/clients",
+          "method": "GET",
+          "evidence": "workers/src/index.js:6096"
+        },
+        {
+          "path": "/api/mssp/clients",
+          "method": "POST",
+          "evidence": "workers/src/index.js:6100"
+        },
+        {
+          "path": "/api/mssp/clients/{id}",
+          "method": "GET",
+          "evidence": "workers/src/index.js:6104"
+        },
+        {
+          "path": "/api/mssp/clients/{id}",
+          "method": "PUT",
+          "evidence": "workers/src/index.js:6108"
+        },
+        {
+          "path": "/api/mssp/clients/{id}",
+          "method": "DELETE",
+          "evidence": "workers/src/index.js:6112"
+        },
+        {
+          "path": "/api/mssp/summary",
+          "method": "GET",
+          "evidence": "workers/src/index.js:6116"
+        },
+        {
+          "path": "/api/mssp/whitelabel",
+          "method": "POST",
+          "evidence": "workers/src/index.js:6124"
+        },
+        {
+          "path": "/api/mssp/whitelabel",
+          "method": "GET",
+          "evidence": "workers/src/index.js:6128"
+        }
       ],
       "routes_fully_enumerated": true,
       "status": "exists"
     },
     "frontend": {
       "surface_type": "embedded_widget",
-      "pages": ["frontend/index.html"],
+      "pages": [
+        "frontend/index.html"
+      ],
       "status": "partial",
-      "evidence": "cdbMSSPLoad() calls GET /api/mssp/summary, GET /api/mssp/clients, GET /api/mssp/whitelabel; a real onboard modal (#p3-onboard-modal) POSTs to /api/mssp/clients (line ~20406); cdbSaveWhitelabel() POSTs config. NOT wired to any UI: the individual client detail/PUT/DELETE routes (client cards render name/domain/sector/status only — no edit or offboard action anywhere in p3RenderMSSPGrid) and GET /api/mssp/alerts (grepped 0 matches in frontend/index.html). So: list, onboard, summary, and white-label are real end-to-end; per-client management and the cross-client alert feed are backend-only."
+      "evidence": "cdbMSSPLoad() calls GET /api/mssp/summary, GET /api/mssp/clients, GET /api/mssp/whitelabel; a real onboard modal (#p3-onboard-modal) POSTs to /api/mssp/clients (line ~20406); cdbSaveWhitelabel() POSTs config. NOT wired to any UI: the individual client detail/PUT/DELETE routes (client cards render name/domain/sector/status only \u2014 no edit or offboard action anywhere in p3RenderMSSPGrid) and GET /api/mssp/alerts (grepped 0 matches in frontend/index.html). So: list, onboard, summary, and white-label are real end-to-end; per-client management and the cross-client alert feed are backend-only."
     },
     "navigation": {
       "discoverable": true,
-      "evidence": "CORRECTED 2026-07-11, same day: this field originally claimed #executive-hub 'had zero nav path prior to this same wave's fix' — independently re-verified false. A pre-existing p3InjectNav() (frontend/index.html's Phase 3 Engine block) already injected a real nav link labeled 'CISO Hub' for #executive-hub; a static grep never found it because the link is built via document.createElement()/property assignment. That mechanism's real bug (now fixed): it ran unconditionally for every visitor, including logged-out ones who can never pass #executive-hub's own auth gate, and only targeted the desktop nav. Now reachable, correctly gated to authenticated visitors only, via the fixed p3InjectNav() (both desktop nav and mobile drawer) under its real, already-shipped 'CISO Hub' label — not the invented 'Executive Hub' label this field originally described, which was a redundant, now-removed duplicate injection."
+      "evidence": "CORRECTED 2026-07-11, same day: this field originally claimed #executive-hub 'had zero nav path prior to this same wave's fix' \u2014 independently re-verified false. A pre-existing p3InjectNav() (frontend/index.html's Phase 3 Engine block) already injected a real nav link labeled 'CISO Hub' for #executive-hub; a static grep never found it because the link is built via document.createElement()/property assignment. That mechanism's real bug (now fixed): it ran unconditionally for every visitor, including logged-out ones who can never pass #executive-hub's own auth gate, and only targeted the desktop nav. Now reachable, correctly gated to authenticated visitors only, via the fixed p3InjectNav() (both desktop nav and mobile drawer) under its real, already-shipped 'CISO Hub' label \u2014 not the invented 'Executive Hub' label this field originally described, which was a redundant, now-removed duplicate injection."
     },
     "auth_enforced": true,
-    "rbac": { "enforced": true, "permissions": ["tier:MSSP", "tier:ENTERPRISE"] },
+    "rbac": {
+      "enforced": true,
+      "permissions": [
+        "tier:MSSP",
+        "tier:ENTERPRISE"
+      ]
+    },
     "subscription_gated": true,
-    "feature_flag": { "present": false, "mechanism": "none" },
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
     "test_coverage": {
       "has_tests": true,
       "evidence": "FIXED 2026-07-12: added workers/test/msspPanelTenantIsolation.test.mjs (28 tests, all passing), the first dedicated regression suite for this handler. Covers the requireMSSP auth guard (FREE/PRO rejected, MSSP/ENTERPRISE admitted) across all 9 entry points; real persistence and validation for handleOnboardClient (missing-fields 400, duplicate-domain 409 scoped per-tenant, allow-listed onboarding record shape); handleGetClient/handleUpdateClient 404s and update field allow-listing; handleOffboardClient's real KV+index deletion; handleGetSummary's aggregation math (active/inactive counts, tier/sector breakdowns) against real onboarded fixtures rather than assumed numbers; handleGetAlerts' honest empty-feed and real-feed-with-limit behavior; handleSetWhitelabel/handleGetWhitelabel's allow-listed round-trip. Six of the 28 tests are dedicated tenant-isolation regression tests for the fix documented below."
     },
     "docs": [
-      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+      {
+        "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md",
+        "tag": "canonical"
+      }
     ],
     "customer_journey_complete": false,
     "operational_status": "PILOT ONLY",
@@ -244,8 +412,8 @@
     "verification": {
       "method": "static",
       "last_verified": "2026-07-12",
-      "evidence": "FIXED 2026-07-12 — the tenant-collision concern flagged 2026-07-11 as 'not confirmed to be reachable in practice' IS reachable, confirmed by tracing the full call chain rather than trusting the earlier speculation: (1) workers/src/auth/middleware.js's withAuthAliases (its own 'Tenant isolation (root fix)' comment block) only ever sets the snake_case authCtx.org_id — never the camelCase authCtx.orgId that workers/src/handlers/msspPanel.js's mssp_id fallback chain actually checked, so that half of the fallback was permanently dead; (2) workers/src/handlers/partnerAuth.js's resolvePartnerSession (lines 165-193) gives every MSSP reseller-partner session user_id: null unconditionally; (3) workers/src/handlers/msspOps.js's handleAddMsspPartner and workers/src/handlers/msspOnboardingHandler.js both accept a caller-supplied partner tier and write tier.toUpperCase() straight into mssp_partners.tier with no allow-list check, and workers/schema_master.sql's mssp_partners table has no CHECK constraint on that column — so a partner CAN legitimately be onboarded at tier MSSP or ENTERPRISE, not just the schema default RESELLER. Net effect confirmed: every reseller-partner session's mssp_id resolved to the literal shared string 'default_mssp', so any two such partners shared (and could silently overwrite) the same client roster and white-label config. Fixed by changing all 8 call sites in workers/src/handlers/msspPanel.js that compute mssp_id from `authCtx?.userId || authCtx?.orgId || 'default_mssp'` to `authCtx?.userId || authCtx?.org_id || 'default_mssp'` — reading the field the auth layer actually populates. userId is deliberately kept as first-priority (not replaced) so any already-stored ENTERPRISE JWT customer data keeps resolving under its existing key; only the previously-dead second fallback changed. Regression-proven in workers/test/msspPanelTenantIsolation.test.mjs: two differently-partnerId'd MSSP sessions now get disjoint KV keys for both client roster and white-label config, a partner cannot fetch another partner's client by guessing its id (404), and real userId-keyed ENTERPRISE customers are unaffected (explicit regression-guard test). requireMSSP(authCtx) itself (workers/src/handlers/msspPanel.js:27-33) was re-confirmed still correct on all 9 entry points — the gap was tenant-scoping after the tier check passed, not the tier check itself."
+      "evidence": "FIXED 2026-07-12 \u2014 the tenant-collision concern flagged 2026-07-11 as 'not confirmed to be reachable in practice' IS reachable, confirmed by tracing the full call chain rather than trusting the earlier speculation: (1) workers/src/auth/middleware.js's withAuthAliases (its own 'Tenant isolation (root fix)' comment block) only ever sets the snake_case authCtx.org_id \u2014 never the camelCase authCtx.orgId that workers/src/handlers/msspPanel.js's mssp_id fallback chain actually checked, so that half of the fallback was permanently dead; (2) workers/src/handlers/partnerAuth.js's resolvePartnerSession (lines 165-193) gives every MSSP reseller-partner session user_id: null unconditionally; (3) workers/src/handlers/msspOps.js's handleAddMsspPartner and workers/src/handlers/msspOnboardingHandler.js both accept a caller-supplied partner tier and write tier.toUpperCase() straight into mssp_partners.tier with no allow-list check, and workers/schema_master.sql's mssp_partners table has no CHECK constraint on that column \u2014 so a partner CAN legitimately be onboarded at tier MSSP or ENTERPRISE, not just the schema default RESELLER. Net effect confirmed: every reseller-partner session's mssp_id resolved to the literal shared string 'default_mssp', so any two such partners shared (and could silently overwrite) the same client roster and white-label config. Fixed by changing all 8 call sites in workers/src/handlers/msspPanel.js that compute mssp_id from `authCtx?.userId || authCtx?.orgId || 'default_mssp'` to `authCtx?.userId || authCtx?.org_id || 'default_mssp'` \u2014 reading the field the auth layer actually populates. userId is deliberately kept as first-priority (not replaced) so any already-stored ENTERPRISE JWT customer data keeps resolving under its existing key; only the previously-dead second fallback changed. Regression-proven in workers/test/msspPanelTenantIsolation.test.mjs: two differently-partnerId'd MSSP sessions now get disjoint KV keys for both client roster and white-label config, a partner cannot fetch another partner's client by guessing its id (404), and real userId-keyed ENTERPRISE customers are unaffected (explicit regression-guard test). requireMSSP(authCtx) itself (workers/src/handlers/msspPanel.js:27-33) was re-confirmed still correct on all 9 entry points \u2014 the gap was tenant-scoping after the tier check passed, not the tier check itself."
     },
-    "notes": "Two independent, uncoordinated MSSP client-management systems now both exist in the registry (this entry and CAP-MSSP-002) — a consolidation candidate for a future dedicated pass, not attempted here (higher risk/scope than a cataloging fix: would mean picking one KV schema and migrating or deleting the other's live data model). FIXED 2026-07-12: gaps (1) zero test coverage and (2) the cross-tenant shared-bucket collision (test_coverage.evidence, verification.evidence) — the collision was a real, currently-reachable production defect, not just a theoretical one, given the MSSP-tier partner-onboarding paths already live in this codebase. Residual, deliberately not addressed in this pass: (3) per-client update/offboard and the cross-client alerts feed remain backend-only with no UI consumer anywhere (a completeness gap, not a security one — kept operational_status at PILOT ONLY for this reason, not the now-fixed isolation issue). A separate, live-data consideration flagged for whoever owns production operations rather than fixed in code here: any reseller partner already onboarded in production BEFORE this fix would have had its client roster and white-label config stored under the literal shared key 'default_mssp' (or silently colliding with another such partner's data at that same key) — this fix changes where NEW reads/writes land for such a partner going forward, but does not itself migrate or split any pre-existing data already sitting under the old shared 'default_mssp' key. If any real (non-test) partner accounts of tier MSSP/ENTERPRISE were onboarded before 2026-07-12, that existing KV data should be audited before being trusted as single-tenant."
+    "notes": "Two independent, uncoordinated MSSP client-management systems now both exist in the registry (this entry and CAP-MSSP-002) \u2014 a consolidation candidate for a future dedicated pass, not attempted here (higher risk/scope than a cataloging fix: would mean picking one KV schema and migrating or deleting the other's live data model). FIXED 2026-07-12: gaps (1) zero test coverage and (2) the cross-tenant shared-bucket collision (test_coverage.evidence, verification.evidence) \u2014 the collision was a real, currently-reachable production defect, not just a theoretical one, given the MSSP-tier partner-onboarding paths already live in this codebase. Residual, deliberately not addressed in this pass: (3) per-client update/offboard and the cross-client alerts feed remain backend-only with no UI consumer anywhere (a completeness gap, not a security one \u2014 kept operational_status at PILOT ONLY for this reason, not the now-fixed isolation issue). A separate, live-data consideration flagged for whoever owns production operations rather than fixed in code here: any reseller partner already onboarded in production BEFORE this fix would have had its client roster and white-label config stored under the literal shared key 'default_mssp' (or silently colliding with another such partner's data at that same key) \u2014 this fix changes where NEW reads/writes land for such a partner going forward, but does not itself migrate or split any pre-existing data already sitting under the old shared 'default_mssp' key. If any real (non-test) partner accounts of tier MSSP/ENTERPRISE were onboarded before 2026-07-12, that existing KV data should be audited before being trusted as single-tenant."
   }
 ]
