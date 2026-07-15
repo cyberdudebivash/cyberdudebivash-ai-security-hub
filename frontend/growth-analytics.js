@@ -11,7 +11,10 @@
   const LOG = '[CDB-GROWTH]';
 
   function inject() {
-    const nav  = document.querySelector('.cdb-cc-nav');
+    // .cdb-cc-tablist (not .cdb-cc-nav) — the real role="tablist" is scoped
+    // to just the gated tabs (a tablist may only contain tab children); the
+    // outer .cdb-cc-nav also holds the 3 always-visible public jump buttons.
+    const nav  = document.querySelector('.cdb-cc-tablist');
     const body = document.querySelector('.cdb-cc-body');
     if (!nav || !body) { setTimeout(inject, 800); return; }
     if (document.getElementById('cdb-panel-growth')) return;
@@ -26,6 +29,7 @@
     const panel = document.createElement('div');
     panel.id = 'cdb-panel-growth';
     panel.className = 'cdb-cc-panel';
+    panel.setAttribute('role', 'tabpanel');
     panel.innerHTML = PANEL_HTML;
     body.appendChild(panel);
 

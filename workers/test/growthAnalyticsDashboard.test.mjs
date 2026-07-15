@@ -98,7 +98,31 @@ describe('CAP-DASH-003 — frontend wiring (real file content, not a mock)', () 
   });
 
   it('growth-analytics.js still targets the shared command-center shell other panels use', () => {
-    expect(js).toContain(".cdb-cc-nav");
+    expect(js).toContain(".cdb-cc-tablist");
     expect(js).toContain(".cdb-cc-body");
+  });
+});
+
+describe('CAP-DASH-003 follow-up — axe "aria-required-parent" fix (CI: Accessibility (axe), PR #251)', () => {
+  const html = readFileSync(new URL('../../frontend/index.html', import.meta.url), 'utf8');
+  const js = readFileSync(new URL('../../frontend/growth-analytics.js', import.meta.url), 'utf8');
+
+  it('the real .cdb-cc-nav container is a plain role="group", not role="tablist"', () => {
+    expect(html).toMatch(/<div class="cdb-cc-nav" role="group"/);
+  });
+
+  it('the real role="tablist" lives on a nested .cdb-cc-tablist, not on .cdb-cc-nav itself', () => {
+    expect(html).toMatch(/<div class="cdb-cc-tablist" role="tablist"/);
+  });
+
+  it('growth-analytics.js appends its role="tab" button into .cdb-cc-tablist, never into .cdb-cc-nav directly (the exact aria-required-parent defect)', () => {
+    const injectFn = js.slice(js.indexOf('function inject()'), js.indexOf('function inject()') + 900);
+    expect(injectFn).toMatch(/querySelector\('\.cdb-cc-tablist'\)/);
+    expect(injectFn).not.toMatch(/querySelector\('\.cdb-cc-nav'\)/);
+  });
+
+  it('the injected Growth panel declares role="tabpanel", matching its role="tab" trigger', () => {
+    const injectFn = js.slice(js.indexOf('function inject()'), js.indexOf('function inject()') + 900);
+    expect(injectFn).toContain("panel.setAttribute('role', 'tabpanel')");
   });
 });
