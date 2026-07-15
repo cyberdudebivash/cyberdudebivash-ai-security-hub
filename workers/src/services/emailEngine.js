@@ -982,6 +982,37 @@ function templateWinbackDay30(lead, meta) {
   return { subject, html, text: `Hi ${firstName}, complimentary 30-min security posture review — no pitch, no obligation. Book here: https://calendly.com/bivash-cyberdudebivash` };
 }
 
+// ── trial_expiry templates ───────────────────────────────────────────────────
+
+function templateTrialExpiryDay0(lead, meta) {
+  const firstName = (lead?.name || 'there').split(' ')[0];
+  const plan = (meta?.plan || 'PRO').toUpperCase();
+  const daysLeft = meta?.days_remaining ?? 3;
+  const subject = `⏳ Your ${plan} trial ends in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`;
+  const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1e293b">
+<h2 style="color:#d97706">Your trial is ending soon, ${firstName}</h2>
+<p>Your <strong>${plan}</strong> trial ends in <strong>${daysLeft} day${daysLeft === 1 ? '' : 's'}</strong>. After that, your account reverts to the free tier — no data is lost, but continuous monitoring, higher scan limits, and PDF reporting stop.</p>
+<p>Add a payment method now and keep everything running without interruption.</p>
+<a href="${UPGRADE_URL}?plan=${plan.toLowerCase()}&utm_source=email&utm_medium=trial_expiry&utm_campaign=day0" style="display:inline-block;background:#d97706;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;margin-top:12px">Keep ${plan} — Add Payment Method →</a>
+<p style="margin-top:24px;font-size:13px;color:#64748b">Questions about billing or your trial? Just reply to this email.</p>
+</body></html>`;
+  return { subject, html, text: `Hi ${firstName}, your ${plan} trial ends in ${daysLeft} day(s). Add a payment method to keep it active: ${UPGRADE_URL}` };
+}
+
+function templateTrialExpiryDay1(lead, meta) {
+  const firstName = (lead?.name || 'there').split(' ')[0];
+  const plan = (meta?.plan || 'PRO').toUpperCase();
+  const subject = `🔔 Last reminder — your ${plan} trial is ending`;
+  const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1e293b">
+<h2 style="color:#dc2626">One more reminder, ${firstName}</h2>
+<p>Your <strong>${plan}</strong> trial is about to end. Once it does, you'll automatically move to the free tier — you won't be charged, and nothing you've already scanned is deleted.</p>
+<p>If ${plan} has been useful, add a payment method now to keep continuous monitoring, higher scan limits, and PDF reporting active without a gap.</p>
+<a href="${UPGRADE_URL}?plan=${plan.toLowerCase()}&utm_source=email&utm_medium=trial_expiry&utm_campaign=day1" style="display:inline-block;background:#dc2626;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600">Keep ${plan} — Add Payment Method →</a>
+<p style="margin-top:24px;font-size:13px;color:#64748b">Not ready to commit? No action needed — you'll simply move to the free tier automatically.</p>
+</body></html>`;
+  return { subject, html, text: `Hi ${firstName}, last reminder: your ${plan} trial is ending. Add a payment method to keep it active: ${UPGRADE_URL}. No action needed if you're fine moving to the free tier.` };
+}
+
 // ─── Template dispatcher for all sequences ────────────────────────────────────
 function getSequenceTemplate(sequenceId, step, lead, meta) {
   switch (sequenceId) {
@@ -1014,6 +1045,11 @@ function getSequenceTemplate(sequenceId, step, lead, meta) {
     case 'upgrade_nudge':
       if (step === 0) return templateUpgradeNudgeDay0(lead, meta);
       if (step === 1) return templateUpgradeNudgeDay3(lead, meta);
+      return null;
+
+    case 'trial_expiry':
+      if (step === 0) return templateTrialExpiryDay0(lead, meta);
+      if (step === 1) return templateTrialExpiryDay1(lead, meta);
       return null;
 
     case 'enterprise_winback':
@@ -1060,6 +1096,40 @@ export async function enrollInSequence(env, email, sequenceId = 'welcome', meta 
     return { success: true, sequence: sequenceId };
   } catch (err) {
     console.error('[emailEngine] enrollInSequence error:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Phase 6 (Customer Lifecycle Completion Program): find trialing subscriptions
+ * ending within 3 days and enroll them in the trial_expiry sequence.
+ * enrollInSequence's own atomic conditional insert prevents double-enrollment
+ * across cron ticks, so this is safe to call unconditionally.
+ */
+export async function enrollTrialExpiryNudges(env) {
+  try {
+    const rows = await env.DB.prepare(`
+      SELECT email, plan, trial_ends_at
+      FROM subscriptions
+      WHERE status = 'trialing'
+        AND trial_ends_at IS NOT NULL
+        AND trial_ends_at BETWEEN datetime('now') AND datetime('now', '+3 days')
+    `).all().catch(() => ({ results: [] }));
+
+    let enrolled = 0;
+    for (const row of (rows?.results ?? [])) {
+      if (!row.email) continue;
+      const daysRemaining = Math.max(0, Math.ceil(
+        (new Date(row.trial_ends_at).getTime() - Date.now()) / 86400000
+      ));
+      const result = await enrollInSequence(env, row.email, 'trial_expiry', {
+        plan: row.plan, days_remaining: daysRemaining,
+      });
+      if (result.success && !result.already_enrolled) enrolled++;
+    }
+
+    return { success: true, evaluated: rows?.results?.length ?? 0, enrolled };
+  } catch (err) {
     return { success: false, error: err.message };
   }
 }
@@ -1343,7 +1413,7 @@ export async function runDripAutomation(env) {
     let template;
     try {
       const seqId = row.sequence_id || 'welcome';
-      if (seqId === 'welcome' || seqId === 'enterprise' || seqId === 'trial_expiry') {
+      if (seqId === 'welcome' || seqId === 'enterprise') {
         // Legacy welcome/enterprise drip (original 4-day sequence)
         switch (step) {
           case 0:  template = templateDay0(lead, scanData); break;

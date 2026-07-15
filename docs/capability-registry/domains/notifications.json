@@ -360,5 +360,58 @@
       "evidence": "workers/src/services/automationEngine.js read directly in full. Found and fixed a real defect: runChurnPrevention's query filtered on `l.status = 'active'`, a column that has never existed on the `leads` table (workers/schema_master.sql:1730-1760 defines `funnel_stage` and `stage`, not `status`; confirmed via full-text read of the CREATE TABLE statement, no ALTER TABLE ever added it). The resulting D1 'no such column' error was silently swallowed by `.all().catch(() => ({ results: [] }))`, so `at_risk` has always been 0 in production \u2014 zero win-back emails have ever been queued for any inactive paying customer since this code existed, on any plan (Starter/Pro/Enterprise/MSSP). Fixed to use `l.funnel_stage = 'customer'`, the established 'currently paying, converted' signal used identically elsewhere (workers/src/services/lifecycleEngine.js:136 sets it on conversion; workers/src/handlers/revenueKPI.js:53 reads it as the MRR 'converted' count; workers/src/handlers/leads.js:211 and workers/src/index.js:9247 both exclude 'customer' and 'churned' together to mean 'still a pre-conversion lead', confirming the two values are mutually exclusive on this column and no additional churned-exclusion filter is needed."
     },
     "notes": "Same bug shape as CAP-NOTIF-005's renewal-queue defect (wrong/nonexistent column name, silently swallowed by a permissive .catch(), zero test coverage to catch it) \u2014 found by applying that same pattern-match during this session's broader Phase 6 customer-success audit, not by re-litigating CAP-NOTIF-005 itself. A related, still-open gap surfaced by the same audit and deliberately NOT fixed here (different production problem): `evaluateUpsellTriggers()` (workers/src/services/upsellEngine.js:149-223) correctly computes in-app usage-limit warnings (90% scan quota, 80% API quota) and is exposed at a real route (POST /api/growth/upsell/evaluate), but has zero callers anywhere \u2014 no cron, no frontend. Wiring it up requires a product decision on where in the request lifecycle it should fire (on scan completion? on dashboard load?), which is UI/UX scope requiring human sign-off, not a backend-only fix."
+  },
+  {
+    "id": "CAP-NOTIF-007",
+    "domain": "notifications",
+    "name": "Trial Expiry Nudge",
+    "description": "ADDED 2026-07-15 (Customer Lifecycle Completion Program, Phase 6): cron-driven pipeline that finds trialing subscriptions ending within 3 days and enrolls them in the trial_expiry sequence (day-0 + day-1 emails). Previously existed as a fully-defined, fully-tested-at-the-dispatch-level sequence with zero enrollment call sites anywhere \u2014 every trial lapsed silently, with no expiry nudge. A second, distinct defect was found and fixed in the same pass: the sequence's only reachable templates (templateDay0/templateDay1, shared with 'welcome'/'enterprise') were generic vulnerability-scan-report copy, not trial-expiry content \u2014 wiring enrollment alone would have sent factually wrong emails. Both halves fixed together, deliberately not split into two PRs, because shipping enrollment without correct content would have been worse than the pre-existing gap (wrong information sent, vs. no information sent).",
+    "backend": {
+      "handlers": [
+        "workers/src/services/emailEngine.js"
+      ],
+      "entry_points": [
+        "enrollTrialExpiryNudges", "templateTrialExpiryDay0", "templateTrialExpiryDay1"
+      ],
+      "routes_sampled": [],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "exists",
+      "evidence": "This capability's customer surface is the inbox, not a page. Real trigger confirmed by direct read: workers/src/index.js's daily cron block calls enrollTrialExpiryNudges(env) (workers/src/services/emailEngine.js), which queries subscriptions WHERE status='trialing' AND trial_ends_at BETWEEN now() AND now()+3d, then calls the existing enrollInSequence(). Dispatch confirmed moved out of the legacy welcome/enterprise switch (workers/src/services/emailEngine.js runDripAutomation) into the Phase-4-style getSequenceTemplate() dispatch, the same pattern already used for upgrade_nudge/enterprise_winback."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "N/A (delivered via email, not a navigable page); triggered automatically by real subscription lifecycle state (subscriptions.trial_ends_at)."
+    },
+    "auth_enforced": false,
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
+    "subscription_gated": false,
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/trialExpirySequence.test.mjs (new, 6 tests, real node:sqlite-backed D1): enrollTrialExpiryNudges enrolls a trial ending within 3 days, does not enroll a trial ending later, does not enroll a non-trialing subscription, and does not double-enroll across repeated cron ticks. runDripAutomation dispatch tests confirm step 0 and step 1 now send the new trial-specific copy (asserting the subject contains 'trial' and the body does not contain the old templateDay0 scan-report subject shape or scanData fallback text), not the old shared templates."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P7",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-15",
+      "evidence": "workers/src/services/emailEngine.js and workers/src/index.js read directly in full. Confirmed DRIP_SEQUENCES.trial_expiry (steps:[0,1]) and DELAY_MAP.trial_expiry ([0,1]) were already correctly sized before this change \u2014 only enrollment and content were missing/wrong. New templateTrialExpiryDay0/Day1 write real trial-specific copy (days remaining, plan name, what happens on expiry, an upgrade CTA to the real ${UPGRADE_URL}), following the established templateUpgradeNudgeDay0/Day3 style (inline styles, UTM-tagged CTA button, plain-text fallback). Not yet verified against the live deployed backend/D1 subscriptions table with a real trialing account \u2014 customer_journey_complete stays false pending a post-merge production smoke test, consistent with this registry's Production Truth Law."
+    },
+    "notes": "This entry's fix was more than a technical wiring bug: writing the new email copy was treated as a content/commercial decision per this repo's engineering governance policy (CLAUDE.md \u00a71, 'customer-facing commercial changes' require explicit approval before implementation) and was confirmed with the platform owner before implementation, following the same pattern already used for CAP-NOTIF-004's enterprise-lead Day-7 email."
   }
 ]
