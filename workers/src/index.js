@@ -9236,6 +9236,15 @@ ctx.waitUntil(
         } catch (e) { console.error('[CRON] Phase11 QuotaNudge error:', e?.message); }
       })());
 
+      // Phase 6 (Customer Lifecycle Completion Program): trial-expiry nudge
+      ctx.waitUntil((async () => {
+        try {
+          const { enrollTrialExpiryNudges } = await import('./services/emailEngine.js');
+          const result = await enrollTrialExpiryNudges(env);
+          console.log('[CRON] Phase6 TrialExpiry:', JSON.stringify(result));
+        } catch (e) { console.error('[CRON] Phase6 TrialExpiry error:', e?.message); }
+      })());
+
       // Phase 12: Daily batch lead score recomputation — upgrades scores as usage accumulates
       // and triggers smart routing (SQL → enterprise_nurture) for newly qualified leads
       ctx.waitUntil((async () => {
