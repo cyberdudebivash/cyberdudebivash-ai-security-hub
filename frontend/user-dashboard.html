@@ -3253,7 +3253,7 @@
   function renderKeys(keys) {
     const tbody = document.getElementById('keys-table');
     if (!keys.length) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">No API keys yet.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">No API keys yet. <a href="#" onclick="openCreateKeyModal();return false;">Create your first key →</a></td></tr>`;
       return;
     }
     tbody.innerHTML = keys.map(k => `
