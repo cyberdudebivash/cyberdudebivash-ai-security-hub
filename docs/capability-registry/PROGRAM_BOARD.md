@@ -262,6 +262,57 @@ already shipped under it:
 
 ## Session log (most recent first)
 
+### 2026-07-15 — CAP-DASH-003 follow-up: CI accessibility gate fix on PR #251
+
+- **Context.** PR #251 (`claude/eccp-cap-dash-003-growth-analytics` →
+  `main`, the CAP-DASH-003 Growth Analytics wiring from the ECCP Wave 1
+  entry below) had one required check failing: `Test & Quality Gate /
+  Accessibility (axe)`, exit 1, `aria-required-parent` violation on
+  `button[data-target="cdb-panel-growth"]`. This is a defect in that same
+  fix, not a new capability — tracked here rather than as a separate PR.
+- **Root cause.** `frontend/growth-analytics.js`'s `inject()` appended its
+  `role="tab"` button into `.cdb-cc-nav` — a plain `role="group"`
+  container that also holds the 3 always-visible public jump buttons. The
+  real `role="tablist"` lives on a nested `.cdb-cc-tablist` div
+  (`display:contents`, zero layout effect — a tablist may only contain
+  tab children, which is why the jump buttons and the real tablist are
+  siblings inside the outer group; see the comment directly above
+  `.cdb-cc-nav` in `frontend/index.html`). `soc-case-detail.js` already
+  targets `.cdb-cc-tablist` correctly for its own injected tab;
+  `growth-analytics.js` was the one script still targeting the outer
+  `.cdb-cc-nav` — never caught before because the Growth tab had never
+  actually been loaded on any page until this same PR wired it in.
+- **Fix.** Changed the querySelector target to `.cdb-cc-tablist` and added
+  `role="tabpanel"` to the injected panel to complete the tab/tabpanel
+  pair (`frontend/growth-analytics.js`). No click-handler or visual
+  change.
+- **Verification.** Reproduced the exact CI failure locally before
+  fixing: installed `axe-core@4.11.3` (same version CI pins), served
+  `frontend/` via `python3 -m http.server 3000` (same as the workflow),
+  and ran it headless via the sandbox's pre-installed Playwright
+  Chromium. Pre-fix: 1 violation, `aria-required-parent`, same target
+  node as the CI log. Post-fix: 0 violations, confirmed the button's
+  parent is now `.cdb-cc-tablist`/`role="tablist"`. Re-stashed/re-applied
+  the change to prove the test method itself catches the regression, not
+  just that the final state looks right. 4 new regression tests added to
+  `workers/test/growthAnalyticsDashboard.test.mjs` asserting the real
+  parent-selector relationship and the `tabpanel` role directly against
+  file content (existing test suite convention). Full suite: 295 files /
+  3092 tests passing, no regressions. Pushed as `f8db16c4` directly to
+  the PR #251 branch (same problem, same PR, not a new one).
+- **Separate finding, deliberately not fixed here (scope discipline):**
+  `growth-analytics.js`'s own click handler resets `.active` on *all*
+  `.cdb-cc-tab`/`.cdb-cc-panel` elements, not just the gated ones —
+  unlike `dashboard-live.js`'s `initCommandCenterTabs()`, which correctly
+  scopes to `.cdb-cc-tab[data-target]` and
+  `.cdb-cc-panel:not(.cdb-cc-panel-public)` so opening a gated tab never
+  hides the always-visible public sections. Clicking the Growth tab today
+  would visually deactivate the 3 public jump buttons and hide the public
+  panels (Executive/SOC Operations/Sentinel APEX Intel). Pre-existing,
+  not what CI flagged, and not introduced by this fix — recorded here as
+  a real, separate, low-risk UI defect for future triage rather than
+  bundled into this CI-driven change.
+
 ### 2026-07-14 — Enterprise Capability Completion Program (ECCP) launched: full triage of the 25 P2 backlog
 
 - **Context.** Following the certification synthesis below, the owner
