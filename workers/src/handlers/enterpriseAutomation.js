@@ -115,6 +115,23 @@ async function signPayload(secret, payload) {
   return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+async function hashPayload(payload) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// webhook_delivery_log existed in schema since this feature's introduction
+// but nothing ever wrote to it — the frontend's "Logs" button called a route
+// that didn't exist at all. Both real delivery attempts (test, and dispatch
+// once it has a caller) now record themselves here.
+async function logWebhookDelivery(D, { webhookId, orgId: oid, eventType, payload, status, responseCode = null, errorMsg = null }) {
+  try {
+    await D.prepare(
+      `INSERT INTO webhook_delivery_log (id, webhook_id, org_id, event_type, payload_hash, status, response_code, error_msg) VALUES (?,?,?,?,?,?,?,?)`
+    ).bind(genId('dl'), webhookId, oid, eventType, await hashPayload(payload), status, responseCode, errorMsg).run();
+  } catch {}
+}
+
 // ─── P7.0-001: API Key Self-Service ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 // Self-service key allowance by tier — mirrors TIER_LIMITS[...].api_keys
@@ -304,6 +321,19 @@ async function handleWebhookDelete(req, env, authCtx, whId) {
   return Response.json({ success: true, deleted: whId });
 }
 
+// Frontend's Pause/Resume button (PATCH {active}) had no matching route at
+// all — every toggle attempt 404'd. Scoped to the one field the UI sends.
+async function handleWebhookUpdate(req, env, authCtx, whId) {
+  const deny = requireAuth(authCtx); if (deny) return deny;
+  const D = db(env); if (!D) return Response.json({ error: 'DB unavailable' }, { status: 503 });
+  let body = {};
+  try { body = await req.json(); } catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
+  if (typeof body.active !== 'boolean') return Response.json({ error: 'active (boolean) required' }, { status: 400 });
+  const r = await D.prepare(`UPDATE org_webhooks SET active=? WHERE id=? AND org_id=?`).bind(body.active ? 1 : 0, whId, orgId(authCtx)).run();
+  if (!r?.meta?.changes) return Response.json({ error: 'Webhook not found' }, { status: 404 });
+  return Response.json({ success: true, id: whId, active: body.active });
+}
+
 async function handleWebhookTest(req, env, authCtx, whId) {
   const deny = requireAuth(authCtx); if (deny) return deny;
   const D = db(env); if (!D) return Response.json({ error: 'DB unavailable' }, { status: 503 });
@@ -322,10 +352,26 @@ async function handleWebhookTest(req, env, authCtx, whId) {
       body: testPayload,
       signal: AbortSignal.timeout(10000),
     });
+    await logWebhookDelivery(D, { webhookId: whId, orgId: orgId(authCtx), eventType: 'webhook.test', payload: testPayload, status: resp.ok ? 'delivered' : 'failed', responseCode: resp.status });
     return Response.json({ success: resp.ok, status_code: resp.status, webhook_id: whId });
   } catch (e) {
+    await logWebhookDelivery(D, { webhookId: whId, orgId: orgId(authCtx), eventType: 'webhook.test', payload: testPayload, status: 'error', errorMsg: e.message?.slice(0, 200) });
     return Response.json({ success: false, error: e.message?.slice(0, 100) });
   }
+}
+
+// Ownership-scoped so a caller can't read another org's delivery history by
+// guessing a webhook GUID — same pattern as handleWebhookTest/Delete above.
+async function handleWebhookLogs(req, env, authCtx, whId) {
+  const deny = requireAuth(authCtx); if (deny) return deny;
+  const D = db(env); if (!D) return Response.json({ logs: [] });
+  await ensureAutoTables(D);
+  const owned = await D.prepare(`SELECT id FROM org_webhooks WHERE id=? AND org_id=?`).bind(whId, orgId(authCtx)).first();
+  if (!owned) return Response.json({ error: 'Webhook not found' }, { status: 404 });
+  const { results } = await D.prepare(
+    `SELECT id, event_type, status, response_code, error_msg, created_at FROM webhook_delivery_log WHERE webhook_id=? ORDER BY created_at DESC LIMIT 50`
+  ).bind(whId).all().catch(() => ({ results: [] }));
+  return Response.json({ webhook_id: whId, logs: results || [] });
 }
 
 export async function dispatchWebhookEvent(env, orgIds, eventType, data) {
@@ -340,14 +386,17 @@ export async function dispatchWebhookEvent(env, orgIds, eventType, data) {
     for (const wh of (results || [])) {
       const sig = wh.secret ? await signPayload(wh.secret, payload) : null;
       try {
-        await fetch(wh.url, {
+        const resp = await fetch(wh.url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(sig ? { 'X-Sentinel-Signature': `sha256=${sig}` } : {}) },
           body: payload,
           signal: AbortSignal.timeout(8000),
         });
         await D.prepare(`UPDATE org_webhooks SET last_triggered=? WHERE id=?`).bind(new Date().toISOString(), wh.id).run().catch(() => {});
-      } catch {}
+        await logWebhookDelivery(D, { webhookId: wh.id, orgId: wh.org_id, eventType, payload, status: resp.ok ? 'delivered' : 'failed', responseCode: resp.status });
+      } catch (e) {
+        await logWebhookDelivery(D, { webhookId: wh.id, orgId: wh.org_id, eventType, payload, status: 'error', errorMsg: e?.message?.slice(0, 200) });
+      }
     }
   } catch {}
 }
@@ -962,12 +1011,19 @@ export async function handleAutoRoute(req, env, authCtx, path, method) {
   // ─── P7.0-002: /api/auto/webhooks ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
   if (path === '/api/auto/webhooks' && method === 'GET')    return handleWebhookList(req, env, authCtx);
   if (path === '/api/auto/webhooks' && method === 'POST')   return handleWebhookCreate(req, env, authCtx);
-  if (path.startsWith('/api/auto/webhooks/') && method === 'DELETE') {
-    return handleWebhookDelete(req, env, authCtx, path.split('/').pop());
-  }
   if (path.startsWith('/api/auto/webhooks/') && path.endsWith('/test') && method === 'POST') {
     const whId = path.split('/')[4];
     return handleWebhookTest(req, env, authCtx, whId);
+  }
+  if (path.startsWith('/api/auto/webhooks/') && path.endsWith('/logs') && method === 'GET') {
+    const whId = path.split('/')[4];
+    return handleWebhookLogs(req, env, authCtx, whId);
+  }
+  if (path.startsWith('/api/auto/webhooks/') && method === 'PATCH') {
+    return handleWebhookUpdate(req, env, authCtx, path.split('/').pop());
+  }
+  if (path.startsWith('/api/auto/webhooks/') && method === 'DELETE') {
+    return handleWebhookDelete(req, env, authCtx, path.split('/').pop());
   }
 
   // ─── P7.0-003: /api/auto/reports ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────

@@ -538,12 +538,24 @@ async function rotateKey(id){
 }
 
 // ── Webhooks ──────────────────────────────────────────────────────────────────────────────────────
-const EVENTS=['cve.critical','kev.added','ransomware.campaign','actor.update','org.risk_change'];
-document.getElementById('event-checkboxes').innerHTML=EVENTS.map(e=>
-  `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px">
-    <input type="checkbox" value="${e}" style="accent-color:var(--accent)"> ${e}
-   </label>`
-).join('');
+// The event checklist used to be a hardcoded, aspirational list
+// (cve.critical, kev.added, ...) that shared zero names with the backend's
+// real WEBHOOK_EVENTS — every single webhook creation attempt failed with
+// "No valid events" regardless of which boxes a customer checked. Loaded
+// from the real, public GET /api/webhooks/catalog (handleWebhookCatalog)
+// instead, so this can never drift from what POST /api/auto/webhooks
+// actually accepts. Fallback list only covers a fetch failure, not the
+// normal path, and matches the backend's real vocabulary.
+const FALLBACK_EVENTS=['threat.new_cve','threat.critical','threat.kev_added','scan.completed','scan.high_risk','report.generated','report.failed','team.member_added','team.member_removed','api.quota_80pct','api.quota_exceeded','api.key_revoked'];
+function renderEventCheckboxes(events){
+  document.getElementById('event-checkboxes').innerHTML=events.map(e=>
+    `<label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px">
+      <input type="checkbox" value="${escHtml(e)}" style="accent-color:var(--accent)"> ${escHtml(e)}
+     </label>`
+  ).join('');
+}
+renderEventCheckboxes(FALLBACK_EVENTS);
+apiFetch('/api/webhooks/catalog').then(d=>{ if(d.events?.length) renderEventCheckboxes(d.events); }).catch(()=>{});
 
 async function loadWebhooks(){
   try{
@@ -564,6 +576,7 @@ async function loadWebhooks(){
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span class="${w.active?'chip chip-green':'chip chip-red'}">${w.active?'Active':'Paused'}</span>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 8px" onclick="testWebhookRow('${escHtml(w.id)}')">Test</button>
           <button class="btn btn-ghost" style="font-size:11px;padding:4px 8px" onclick="viewWebhookLogs('${escHtml(w.id)}')">Logs</button>
           <button class="btn btn-ghost" style="font-size:11px;padding:4px 8px" onclick="toggleWebhook('${escHtml(w.id)}',${w.active?0:1})">${w.active?'Pause':'Resume'}</button>
           <button class="btn btn-danger" style="font-size:11px;padding:4px 8px" onclick="deleteWebhook('${escHtml(w.id)}')">Delete</button>
@@ -597,6 +610,13 @@ async function deleteWebhook(id){
 async function toggleWebhook(id,active){
   try{ await apiPatch(`/api/auto/webhooks/${id}`,{active:!!active}); await loadWebhooks(); toast(active?'Resumed':'Paused'); }
   catch(e){toast(e.message,false);}
+}
+
+async function testWebhookRow(id){
+  try{
+    const d=await apiPost(`/api/auto/webhooks/${id}/test`,{});
+    toast(d.success?`Test delivered (HTTP ${d.status_code})`:`Test failed${d.error?': '+d.error:''}`, d.success);
+  }catch(e){toast(e.message,false);}
 }
 
 async function viewWebhookLogs(id){
