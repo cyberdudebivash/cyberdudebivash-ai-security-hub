@@ -82,18 +82,24 @@ async function saveOrgConfig(env, orgSlug, config) {
 }
 
 // ── GET /api/auth/enterprise/config ──────────────────────────────────────────
+// SSO Consolidation (Phase 5): this content endpoint stays alive at its
+// existing URL (frontend/enterprise-portal.html links to it directly as a
+// "Setup Guide" CTA) but now documents the canonical ssoAuth.js contract
+// (/api/auth/sso/*, /api/admin/sso/config) instead of this file's own
+// retired login/callback/configure routes. See index.js's /api/auth/
+// enterprise/* block for the redirect/410 handling of those retired routes.
 export function handleEnterpriseSSoInfo() {
   return Response.json({
     success: true,
     service: 'CYBERDUDEBIVASH Enterprise SSO',
-    version: '1.0',
+    version: '2.0',
     description: 'OIDC-based enterprise single sign-on. Employees use their corporate identity (Azure AD, Okta, any OIDC IdP) to access the platform — no separate password required.',
     supported_idps: {
       azure_ad: {
         name: 'Microsoft Azure AD / Entra ID',
         description: 'Used by Oracle, Cisco, Dell, Intel, Microsoft. Supports conditional access policies.',
         discovery_url_template: 'https://login.microsoftonline.com/{tenant_id}/v2.0/.well-known/openid-configuration',
-        required_config: ['tenant_id', 'client_id', 'client_secret', 'org_slug'],
+        required_config: ['org', 'idp_type=azure_ad', 'tenant_id', 'client_id', 'client_secret'],
         scopes: 'openid email profile',
         notes: 'Register the callback URL as a Redirect URI in your Azure App Registration.',
       },
@@ -101,23 +107,23 @@ export function handleEnterpriseSSoInfo() {
         name: 'Okta',
         description: 'Widely used by enterprises with Okta Identity Cloud.',
         discovery_url_template: 'https://{okta_domain}/.well-known/openid-configuration',
-        required_config: ['okta_domain', 'client_id', 'client_secret', 'org_slug'],
+        required_config: ['org', 'idp_type=okta', 'okta_domain', 'client_id', 'client_secret'],
         scopes: 'openid email profile groups',
       },
       generic_oidc: {
         name: 'Generic OIDC (Ping, Keycloak, Auth0, etc.)',
         description: 'Any OIDC-compliant identity provider.',
-        required_config: ['discovery_url', 'client_id', 'client_secret', 'org_slug'],
+        required_config: ['org', 'issuer', 'client_id', 'client_secret'],
         scopes: 'openid email profile',
       },
     },
-    callback_url: 'https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/auth/enterprise/callback',
-    initiation_url: 'https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/auth/enterprise/sso?org=<org_slug>',
+    callback_url: 'https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/auth/sso/callback',
+    initiation_url: 'https://cyberdudebivash-security-hub.iambivash-bn.workers.dev/api/auth/sso/login?org=<org_slug>',
     setup_steps: [
       '1. Register CYBERDUDEBIVASH as an OAuth2/OIDC app in your IdP (Azure AD, Okta, etc.)',
       '2. Set the Redirect URI to the callback_url above',
       '3. Note your client_id, client_secret, and tenant/domain',
-      '4. POST /api/auth/enterprise/configure (owner token) with your IdP config + org_slug',
+      '4. POST /api/admin/sso/config (owner token) with { org, idp_type OR issuer, tenant_id/okta_domain, client_id, client_secret, allowed_domains }',
       '5. Share the initiation_url with your employees — they click it, authenticate with their corporate identity, and land on the dashboard with their org tier auto-applied',
     ],
     support: 'enterprise@cyberdudebivash.in',

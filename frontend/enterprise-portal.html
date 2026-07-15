@@ -132,11 +132,11 @@ footer{text-align:center;padding:40px;color:var(--muted);font-size:13px;border-t
       <div class="step-num">1</div>
       <div class="step-body">
         <h4>Enterprise SSO — Azure AD / Okta</h4>
-        <p>Register CYBERDUDEBIVASH as an OIDC app in your Azure AD or Okta. Set the Redirect URI, then call <code>POST /api/auth/enterprise/configure</code> with your tenant ID and client credentials. Your entire team can then authenticate at <code>/api/auth/enterprise/sso?org=your-org</code> using their corporate identity.</p>
+        <p>Register CYBERDUDEBIVASH as an OIDC app in your Azure AD or Okta. Set the Redirect URI, then call <code>POST /api/admin/sso/config</code> with your tenant ID and client credentials. Your entire team can then authenticate at <code>/api/auth/sso/login?org=your-org</code> using their corporate identity.</p>
         <div class="tag-row">
           <span class="tag tag-api">GET /api/auth/enterprise/config</span>
-          <span class="tag tag-api">POST /api/auth/enterprise/configure</span>
-          <span class="tag tag-api">GET /api/auth/enterprise/sso?org=&lt;slug&gt;</span>
+          <span class="tag tag-api">POST /api/admin/sso/config</span>
+          <span class="tag tag-api">GET /api/auth/sso/login?org=&lt;slug&gt;</span>
         </div>
       </div>
     </div>
@@ -257,7 +257,7 @@ const PROD_FEATURES = [
   { name:'SOC Case Management', icon:'📋', apis:['D1 SQLite (persistent)'], endpoints:['/api/soc/cases','/api/soc/cases/:id','/api/soc/cases/:id/comments'], note:'Full lifecycle + audit' },
   { name:'STIX/TAXII 2.1 Server', icon:'🔗', apis:['D1 + NVD/KEV feeds'], endpoints:['/api/taxii/discovery','/api/taxii/collections','/api/taxii/collections/:id/objects'], note:'OASIS standard — TIP compatible' },
   { name:'Workflow Automation (SOAR)', icon:'⚙️', apis:['D1 + webhook delivery'], endpoints:['/api/workflows','/api/workflows/:id/execute'], note:'Trigger → Action automation' },
-  { name:'Enterprise OIDC SSO', icon:'🔐', apis:['Azure AD','Okta','Any OIDC IdP'], endpoints:['/api/auth/enterprise/sso','/api/auth/enterprise/configure'], note:'Tenant-aware, D1 user upsert' },
+  { name:'Enterprise OIDC SSO', icon:'🔐', apis:['Azure AD','Okta','Any OIDC IdP'], endpoints:['/api/auth/sso/login','/api/admin/sso/config'], note:'PKCE + signature-verified, D1 org provisioning' },
   { name:'MSSP White-Label Platform', icon:'🏢', apis:['D1 multi-tenant'], endpoints:['/api/mssp/overview','/api/mssp/revenue','/api/mssp/tenants'], note:'Partner isolation + revenue share' },
   { name:'Audit Log', icon:'📜', apis:['D1 SQLite (immutable)'], endpoints:['/api/audit-log','/api/audit-log/export'], note:'Every API call logged' },
   { name:'APEX Multi-Agent SOC (MASOC)', icon:'🤖', apis:['NVD NIST','CISA KEV','IOC Enrichment','Groq','DeepSeek','CF Workers AI'], endpoints:['/api/agents/run','/api/agents/stream','/api/agents/status','/api/agents/dispatch/:agent_id'], note:'9 parallel AI agents — CVE Intel · IOC Hunter · SIEM Defender · Threat Hunt · IR Playbook · Compliance · Red Team · Zero Trust · Risk Synthesizer' },
