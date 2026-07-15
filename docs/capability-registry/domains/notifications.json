@@ -253,5 +253,59 @@
       "evidence": "workers/src/handlers/payments.js:1104 read directly to confirm a real trigger exists (not just a defined-but-uncalled function, the exact class of mistake this registry exists to prevent); workers/test/emailDlqAndTemplates.test.mjs and workers/test/emailWiringTask3Phase1.test.mjs import statements confirmed."
     },
     "notes": "No actionable gap found in this pass. Genuinely missing multi-channel expansions (SMS, real WhatsApp Business API send, push) are tracked as their own gaps in the platform's product backlog rather than as defects in this working capability \u2014 this entry covers only what emailEngine.js itself does, which it does correctly."
+  },
+  {
+    "id": "CAP-NOTIF-005",
+    "domain": "notifications",
+    "name": "Subscription Renewal Reminder Automation",
+    "description": "ADDED 2026-07-15 (Customer Lifecycle Completion Program, Phase 6): daily cron-driven pipeline that seeds a renewal_queue from active subscriptions renewing within 35 days, then sends T-30/T-14/T-7/T-1-day reminder emails plus an expired-subscription reactivation email via Resend. Previously existed in the repo (v35.1 Phase 5 P0) but had zero registry entry and, per this pass's verification, a real defect that silently defeated its own T-30/T-14 claim \u2014 now fixed as part of this entry's creation.",
+    "backend": {
+      "handlers": [
+        "workers/src/handlers/renewalEngine.js",
+        "workers/src/services/v24/billingEngine.js"
+      ],
+      "entry_points": [
+        "seedRenewalQueue35d", "runRenewalAutomation", "buildRenewalQueue"
+      ],
+      "routes_sampled": [],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "exists",
+      "evidence": "This capability's customer surface is the inbox, not a page. Real trigger: workers/src/index.js:9193-9209 calls buildRenewalQueue() (7-day window) then seedRenewalQueue35d() + runRenewalAutomation() unconditionally inside the daily cron block (event.cron === '0 23 * * *'), confirmed by direct read \u2014 not just defined-but-uncalled functions."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "N/A (delivered via email, not a navigable page); triggered automatically by real subscription lifecycle state (subscriptions.current_period_end)."
+    },
+    "auth_enforced": false,
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
+    "subscription_gated": false,
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/renewalQueueSeeding.test.mjs (new, 4 tests, real node:sqlite-backed D1) covers seedRenewalQueue35d directly. runRenewalAutomation's interval-matching and expired-recovery logic remain untested \u2014 flagged as the next actionable gap for this capability, not covered by this pass."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P7",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-15",
+      "evidence": "workers/src/handlers/renewalEngine.js read directly in full. Found and fixed a real defect: seedRenewalQueue35d's query filtered on `s.expires_at`, a column that has never existed on the `subscriptions` table (workers/schema_master.sql:3131-3160 defines `current_period_end`, not `expires_at`; confirmed via full-text grep across every workers/*.sql file, no ALTER TABLE ever added it). The resulting D1 'no such column' error was silently swallowed by `.all().catch(() => ({ results: [] }))`, so this function has always returned `{ queued: 0 }` in production \u2014 meaning only the T-7/T-1 reminders (populated by workers/src/services/v24/billingEngine.js's separate 7-day-window buildRenewalQueue) could ever actually fire; T-30 and T-14 were dead code despite the module's own header comment claiming all four intervals work. Fixed to use `s.current_period_end`, added the missing `s.cancel_at_period_end = 0` filter (matching buildRenewalQueue's existing guard, so an already-cancelled customer is never sent a false 'your subscription will auto-renew' email), and corrected `user_id` to be selected/bound from `s.user_id` instead of silently falling back to the customer's email address in that column."
+    },
+    "notes": "Documentation Drift: the module's own header comment (workers/src/handlers/renewalEngine.js:3, 'Phase 5 P0: Renewal reminders at T-30, T-14, T-7, T-1 days') asserted all four intervals worked; this pass found the T-30/T-14 half was never reachable in production due to the defect above, with zero test coverage to catch it \u2014 the exact pattern docs/audit-history/ warns about, caught here before a full CLCP-audit doc repeated the same unverified claim. runRenewalAutomation's own logic (interval matching, expired-recovery, Resend send) was read and traced manually but has no direct test coverage yet; recommended as the next increment for this capability rather than folded into this fix (single production problem per PR)."
   }
 ]

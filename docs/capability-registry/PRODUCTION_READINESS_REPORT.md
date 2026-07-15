@@ -10,16 +10,16 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-15T16:30:44.808Z
-Capabilities catalogued: 102
+Generated: 2026-07-15T16:56:34.209Z
+Capabilities catalogued: 103
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
 | Backend | 92.2% |
-| Frontend | 77% |
-| Parity (backend **and** frontend both exist) | 71.6% |
+| Frontend | 77.2% |
+| Parity (backend **and** frontend both exist) | 71.8% |
 | Customer Journeys complete (dynamic_browser-verified) | 3.9% |
 
 ## Gaps by Priority
@@ -32,9 +32,9 @@ Capabilities catalogued: 102
 | Medium | P4 | 8 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
 | Low | P6 | 55 | No test coverage |
-| Low | P7 | 14 | Documentation missing |
+| Low | P7 | 15 | Documentation missing |
 
-**Rollup:** Critical 3 · High 13 · Medium 17 · Low 69
+**Rollup:** Critical 3 · High 13 · Medium 17 · Low 70
 
 ## Structural Findings
 
@@ -174,7 +174,7 @@ complete", "bug free", or "guaranteed".
 |---|---|---|---|---|---|---|
 | CAP-NAV-001 | Server-Driven Navigation Engine (role/plan/feature-flag-based) | ✗ | ✗ | ✗ | NOT READY | P2 |
 
-### notifications (4 capabilities)
+### notifications (5 capabilities)
 
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
@@ -182,6 +182,7 @@ complete", "bug free", or "guaranteed".
 | CAP-NOTIF-002 | In-App Notification Bell | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 | CAP-NOTIF-003 | Outbound Webhooks (Developer + Organization) | ✓ | ✗ | ✗ | NOT READY | P2 |
 | CAP-NOTIF-004 | Transactional & Lifecycle Email Engine | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
+| CAP-NOTIF-005 | Subscription Renewal Reminder Automation | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 
 ### organizations (2 capabilities)
 

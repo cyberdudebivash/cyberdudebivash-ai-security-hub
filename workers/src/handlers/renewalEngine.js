@@ -229,10 +229,11 @@ export async function seedRenewalQueue35d(env) {
 
   try {
     const renewing = await db.prepare(`
-      SELECT s.id, s.email, s.plan, s.price_inr, s.expires_at
+      SELECT s.id, s.user_id, s.email, s.plan, s.price_inr, s.current_period_end
       FROM subscriptions s
       WHERE s.status = 'active'
-        AND s.expires_at BETWEEN datetime('now') AND datetime('now','+35 days')
+        AND s.cancel_at_period_end = 0
+        AND s.current_period_end BETWEEN datetime('now') AND datetime('now','+35 days')
         AND CAST(s.id AS TEXT) NOT IN (SELECT subscription_id FROM renewal_queue WHERE status IN ('upcoming','processing'))
     `).all().catch(() => ({ results: [] }));
 
@@ -243,9 +244,9 @@ export async function seedRenewalQueue35d(env) {
           (subscription_id, user_id, email, plan, amount_inr, renewal_date, status)
         VALUES (?, ?, ?, ?, ?, ?, 'upcoming')
       `).bind(
-        String(sub.id), sub.email || '', sub.email || '',
+        String(sub.id), sub.user_id || '', sub.email || '',
         sub.plan, sub.price_inr || 0,
-        sub.expires_at,
+        sub.current_period_end,
       ).run().catch(() => {});
       queued++;
     }
