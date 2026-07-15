@@ -191,18 +191,13 @@ const API_CATALOG = [
   },
   {
     group: 'Developer Platform', prefix: '/api/developer',
-    description: 'API explorer, SDK code generation, webhook tooling, rate-limit visibility, changelog and OpenAPI spec',
+    description: 'API explorer, SDK code generation, rate-limit visibility, changelog and OpenAPI spec. Webhooks are managed under Automation (/api/auto/webhooks) — see GET /api/webhooks/catalog for the event vocabulary.',
     tier: 'FREE', endpoints: [
       { method:'GET', path:'/endpoints', summary:'List API catalog', query_params:{ group:'string', tier:'string' }, response_schema:{ groups:'array', totalEndpoints:'integer' } },
       { method:'POST', path:'/endpoints/search', summary:'Search API catalog', request_schema:{ query:'string' }, response_schema:{ results:'array' } },
       { method:'GET', path:'/endpoints/{slug}', summary:'Get endpoint detail + SDK examples', response_schema:{ summary:'string', sdk_examples:'object' } },
       { method:'POST', path:'/sdk/generate', summary:'Generate SDK code snippet', request_schema:{ language:'enum[python,javascript,typescript,go,curl]', endpoint_path:'string', endpoint_method:'string' }, response_schema:{ language:'string', code:'string' } },
       { method:'GET', path:'/sdk/languages', summary:'List supported SDK languages', response_schema:{ languages:'array' } },
-      { method:'GET', path:'/webhooks/events', summary:'List developer webhook event catalog', query_params:{ category:'string' }, response_schema:{ events:'array', categories:'array' } },
-      { method:'POST', path:'/webhooks/register', summary:'Register a developer webhook', request_schema:{ url:'string(required)', events:'array[string](required)' }, response_schema:{ success:'boolean', id:'uuid', secret:'string' } },
-      { method:'GET', path:'/webhooks', summary:'List developer webhooks', response_schema:{ webhooks:'array' } },
-      { method:'DELETE', path:'/webhooks/{id}', summary:'Delete developer webhook', response_schema:{ success:'boolean' } },
-      { method:'POST', path:'/webhooks/{id}/test', summary:'Send test webhook delivery', response_schema:{ deliveryResult:'object' } },
       { method:'GET', path:'/rate-limits', summary:'Get rate limit tiers', query_params:{ tier:'string' }, response_schema:{ tier:'string', limits:'object', allTiers:'object' } },
       { method:'GET', path:'/rate-limits/usage', summary:'Get current usage against rate limits', response_schema:{ currentPeriod:'object' } },
       { method:'GET', path:'/changelog', summary:'Platform changelog', query_params:{ limit:'integer', type:'string' }, response_schema:{ changelog:'array', latestVersion:'string' } },
@@ -667,28 +662,6 @@ async function downloadFullSDK(request, env) {
   });
 }
 
-// ─── Webhook Event Catalog ────────────────────────────────────────────────────
-const WEBHOOK_EVENTS = [
-  { id:'model.risk.critical', name:'Model Risk Critical', description:'Fired when an AI model risk score exceeds 75 (CRITICAL)', category:'ai_governance',
-    payload_example:{ event:'model.risk.critical', modelId:'uuid', modelName:'string', riskScore:85, riskLevel:'CRITICAL', euAiActCategory:'HIGH', timestamp:'datetime' } },
-  { id:'model.registered', name:'Model Registered', description:'Fired when a new AI model is registered', category:'ai_governance',
-    payload_example:{ event:'model.registered', modelId:'uuid', modelName:'string', riskLevel:'MEDIUM', timestamp:'datetime' } },
-  { id:'shadow_ai.detected', name:'Shadow AI Detected', description:'Fired when shadow AI tools are detected in network traffic', category:'ai_governance',
-    payload_example:{ event:'shadow_ai.detected', orgId:'string', toolsDetected:3, highRiskTools:1, timestamp:'datetime' } },
-  { id:'redteam.campaign.completed', name:'Red Team Campaign Completed', description:'Fired when a red team campaign finishes execution', category:'ai_redteam',
-    payload_example:{ event:'redteam.campaign.completed', campaignId:'uuid', overallRisk:'HIGH', criticalFindings:2, timestamp:'datetime' } },
-  { id:'redteam.critical.finding', name:'Red Team Critical Finding', description:'Fired immediately when a critical vulnerability is discovered during red team exercise', category:'ai_redteam',
-    payload_example:{ event:'redteam.critical.finding', techniqueId:'AML.T0051', techniqueName:'Prompt Injection', severity:'CRITICAL', timestamp:'datetime' } },
-  { id:'soc.case.critical', name:'SOC Critical Case', description:'Fired when a CRITICAL severity SOC case is created', category:'soc',
-    payload_example:{ event:'soc.case.critical', caseId:'uuid', title:'string', severity:'CRITICAL', timestamp:'datetime' } },
-  { id:'threat.intelligence.new_ioc', name:'New IOC', description:'Fired when new indicators of compromise are ingested', category:'threat_intel',
-    payload_example:{ event:'threat.intelligence.new_ioc', iocType:'string', count:25, severity:'HIGH', timestamp:'datetime' } },
-  { id:'vuln.critical_found', name:'Critical Vulnerability Found', description:'Fired when a CRITICAL severity vulnerability is discovered', category:'vuln_mgmt',
-    payload_example:{ event:'vuln.critical_found', vulnId:'uuid', cve:'string', cvss:9.8, affected:'string', timestamp:'datetime' } },
-  { id:'subscription.upgraded', name:'Subscription Upgraded', description:'Fired when an organisation upgrades their subscription tier', category:'billing',
-    payload_example:{ event:'subscription.upgraded', orgId:'string', fromTier:'STARTER', toTier:'PRO', timestamp:'datetime' } }
-];
-
 // ─── Changelog ────────────────────────────────────────────────────────────────
 const CHANGELOG = [
   { version:'v20.0', date:'2026-06-01', type:'MAJOR', highlights:['AI Governance Pro — EU AI Act, NIST AI RMF, ISO 42001 compliance engine','AI Red Team Pro — MITRE ATLAS v2.1 adversarial testing','Developer Portal — full API economy, SDK generators, webhook catalog','Executive Command Center Pro — FAIR risk quantification, board reports','482 total API routes','Edge-native deployment across Cloudflare 300+ PoPs'] },
@@ -715,31 +688,19 @@ export async function handleDeveloperPortal(request, env, authCtx) {
   if (path === '/api/developer/sdk/languages' && method === 'GET') return listSDKLanguages(request, env);
   if (path.match(/^\/api\/developer\/sdk\/download\/[\w-]+$/) && method === 'GET') return downloadFullSDK(request, env);
 
-  // Webhook Catalog — /events is a static, non-tenant-specific reference
-  // catalog (deliberately public, like the API Explorer routes above). The
-  // other 4 routes manage a real org's webhook config (an arbitrary URL the
-  // server later POSTs real event payloads to) and previously had NO auth
-  // check at all — any anonymous caller could register a webhook pointing at
-  // an internal address and use /test as an SSRF oracle, tamper with any
-  // org's webhooks via a client-supplied org_id, or delete any webhook by
-  // GUID with zero ownership check.
-  if (path === '/api/developer/webhooks/events' && method === 'GET') return listWebhookEvents(request, env);
-  if (path === '/api/developer/webhooks/register' && method === 'POST') {
-    if (!isRealUser(authCtx)) return authRequired();
-    return registerWebhook(request, env, authCtx);
-  }
-  if (path === '/api/developer/webhooks' && method === 'GET') {
-    if (!isRealUser(authCtx)) return authRequired();
-    return listWebhooks(request, env, authCtx);
-  }
-  if (path.match(/^\/api\/developer\/webhooks\/[\w-]+$/) && method === 'DELETE') {
-    if (!isRealUser(authCtx)) return authRequired();
-    return deleteWebhook(request, env, authCtx);
-  }
-  if (path.match(/^\/api\/developer\/webhooks\/[\w-]+\/test$/) && method === 'POST') {
-    if (!isRealUser(authCtx)) return authRequired();
-    return testWebhook(request, env, authCtx);
-  }
+  // Webhooks retired from the Developer Platform (CAP-NOTIF-003): this
+  // implementation had zero frontend callers, no real event dispatch (only
+  // a manual test-ping), no delivery-log table, and its own catalog
+  // promised HMAC signing that the code never actually sent. The sibling
+  // implementation at /api/auto/webhooks (enterpriseAutomation.js) is the
+  // one with live customer usage, real signing, and (as of the fix
+  // alongside this retirement) working update/logs routes and populated
+  // delivery logs. See docs/capability-registry/PROGRAM_BOARD.md for the
+  // full comparison and decision record. Canonical routes:
+  //   GET  /api/webhooks/catalog        (event vocabulary + delivery info)
+  //   GET/POST/PATCH/DELETE /api/auto/webhooks[/:id]
+  //   POST /api/auto/webhooks/:id/test
+  //   GET  /api/auto/webhooks/:id/logs
 
   // Rate Limit Dashboard
   if (path === '/api/developer/rate-limits' && method === 'GET') return getRateLimits(request, env);
@@ -882,105 +843,6 @@ async function listSDKLanguages(request, env) {
     ],
     note: 'POST /api/developer/sdk/generate with {language, endpoint_path, endpoint_method, base_url, api_key} for a single-endpoint snippet. GET /api/developer/sdk/download/{language} (python, javascript, typescript, go) returns a complete multi-endpoint client library generated from the full API catalog — add ?raw=1 to download the source file directly.'
   });
-}
-
-async function listWebhookEvents(request, env) {
-  const category = new URL(request.url).searchParams.get('category');
-  let events = WEBHOOK_EVENTS;
-  if (category) events = events.filter(e => e.category === category);
-  const categories = [...new Set(WEBHOOK_EVENTS.map(e => e.category))];
-  return jsonResp({ events, total: events.length, categories,
-    delivery: { method:'POST', format:'JSON', retries:3, timeout_seconds:30, signatureHeader:'X-Webhook-Signature', signatureAlgo:'HMAC-SHA256' }
-  });
-}
-
-// SSRF guard: reject private/loopback/link-local hostnames and non-public
-// FQDNs. Mirrors the established, already-shipped pattern in
-// handlers/enterpriseAutomation.js's handleIntegrationTest — same regex,
-// same "must be a public FQDN" bar, kept consistent across the codebase.
-function validateWebhookUrl(targetUrl) {
-  if (!targetUrl || !/^https:\/\//.test(targetUrl)) return 'HTTPS url required';
-  try {
-    const parsed = new URL(targetUrl);
-    const hostname = parsed.hostname.toLowerCase();
-    const BLOCKED = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1|0\.0\.0\.0|fc00:|fd)/;
-    if (BLOCKED.test(hostname) || hostname === '[::1]') return 'Private/loopback URLs are not permitted';
-    if (!hostname.includes('.') || hostname.endsWith('.local') || hostname.endsWith('.internal')) return 'URL must point to a public FQDN';
-  } catch {
-    return 'Invalid URL';
-  }
-  return null;
-}
-
-async function registerWebhook(request, env, authCtx) {
-  try {
-    const body = await request.json();
-    if (!body.url || !body.events?.length) return jsonResp({ error: 'url and events[] are required' }, 400);
-    const urlError = validateWebhookUrl(body.url);
-    if (urlError) return jsonResp({ error: urlError }, 400);
-    const orgId = authCtx.org_id || `u:${authCtx.user_id ?? authCtx.userId}`;
-    const id = crypto.randomUUID();
-    const secret = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
-    const now = new Date().toISOString();
-    await env.DB.prepare(`INSERT INTO developer_webhooks (id,org_id,url,events,secret,status,created_at,updated_at)
-      VALUES (?,?,?,?,?,?,?,?)`)
-      .bind(id, orgId, body.url, JSON.stringify(body.events), secret, 'ACTIVE', now, now).run();
-    return jsonResp({ success:true, id, url:body.url, events:body.events, status:'ACTIVE', secret,
-      instructions:'Store the secret securely — it will not be shown again. Use it to verify webhook signatures: HMAC-SHA256(secret, request_body)',
-      testEndpoint:`POST /api/developer/webhooks/${id}/test`
-    }, 201);
-  } catch (e) { return jsonResp({ error: e.message }, 500); }
-}
-
-async function listWebhooks(request, env, authCtx) {
-  try {
-    const orgId = authCtx.org_id || `u:${authCtx.user_id ?? authCtx.userId}`;
-    const { results } = await env.DB.prepare('SELECT id,org_id,url,events,status,created_at FROM developer_webhooks WHERE org_id=? ORDER BY created_at DESC').bind(orgId).all();
-    return jsonResp({ webhooks:results.map(w=>({...w,events:JSON.parse(w.events||'[]')})), total:results.length });
-  } catch (e) { return jsonResp({ error: e.message }, 500); }
-}
-
-async function deleteWebhook(request, env, authCtx) {
-  const id = new URL(request.url).pathname.split('/').pop();
-  try {
-    const orgId = authCtx.org_id || `u:${authCtx.user_id ?? authCtx.userId}`;
-    const existing = await env.DB.prepare('SELECT id FROM developer_webhooks WHERE id=? AND org_id=?').bind(id, orgId).first();
-    if (!existing) return jsonResp({ error: 'Webhook not found' }, 404);
-    await env.DB.prepare('UPDATE developer_webhooks SET status=? WHERE id=? AND org_id=?').bind('DELETED', id, orgId).run();
-    return jsonResp({ success:true, message:`Webhook ${id} deleted` });
-  } catch (e) { return jsonResp({ error: e.message }, 500); }
-}
-
-async function testWebhook(request, env, authCtx) {
-  const id = new URL(request.url).pathname.split('/').slice(-2,-1)[0];
-  try {
-    const orgId = authCtx.org_id || `u:${authCtx.user_id ?? authCtx.userId}`;
-    const webhook = await env.DB.prepare('SELECT * FROM developer_webhooks WHERE id=? AND org_id=?').bind(id, orgId).first();
-    if (!webhook) return jsonResp({ error: 'Webhook not found' }, 404);
-    // Re-validate at test/use time too (defense in depth — not just at
-    // registration), since this is the actual server-side fetch() call.
-    const urlError = validateWebhookUrl(webhook.url);
-    if (urlError) return jsonResp({ error: `Webhook URL no longer passes validation: ${urlError}` }, 400);
-    const testPayload = {
-      event: 'webhook.test', webhookId: id,
-      message: 'This is a test delivery from CYBERDUDEBIVASH AI Security Hub',
-      timestamp: new Date().toISOString()
-    };
-    const payloadStr = JSON.stringify(testPayload);
-    let deliveryResult = { delivered:false, status:0, latencyMs:0, error:null };
-    try {
-      const start = Date.now();
-      const resp = await fetch(webhook.url, {
-        method:'POST', headers:{ 'Content-Type':'application/json', 'X-Webhook-ID':id, 'User-Agent':'CyberDudeBivash-Webhook/1.0' },
-        body: payloadStr, signal: AbortSignal.timeout(10000)
-      });
-      deliveryResult = { delivered:resp.ok, status:resp.status, latencyMs:Date.now()-start, error:null };
-    } catch (err) {
-      deliveryResult.error = err.message;
-    }
-    await env.DB.prepare('UPDATE developer_webhooks SET last_tested_at=? WHERE id=?').bind(new Date().toISOString(), id).run();
-    return jsonResp({ webhookId:id, testPayload, deliveryResult, message:deliveryResult.delivered?'Test delivery successful':'Test delivery failed — check URL and ensure endpoint accepts POST requests' });
-  } catch (e) { return jsonResp({ error: e.message }, 500); }
 }
 
 async function getRateLimits(request, env) {
@@ -1134,7 +996,7 @@ async function getQuickStart(request, env) {
       { step: 2, title: 'Make your first request', description: 'Fetch the latest threat signals from the radar.', endpoint: 'GET /api/radar/latest', curl: 'curl -H "Authorization: Bearer <YOUR_API_KEY>" https://cyberdudebivash.in/api/radar/latest' },
       { step: 3, title: 'Explore the API catalog', description: 'Browse all available endpoints by group and tier.', endpoint: 'GET /api/developer/endpoints' },
       { step: 4, title: 'Download an SDK', description: 'Get a complete client library for your language.', endpoint: 'GET /api/developer/sdk/download/{language}', supported: ['python', 'javascript', 'typescript', 'go'] },
-      { step: 5, title: 'Register a webhook', description: 'Receive real-time event notifications.', endpoint: 'POST /api/developer/webhooks/register', example: { url: 'https://your-server.com/webhook', events: ['threat.intelligence.new_ioc', 'vuln.critical_found'] } },
+      { step: 5, title: 'Register a webhook', description: 'Receive real-time event notifications.', endpoint: 'POST /api/auto/webhooks', example: { url: 'https://your-server.com/webhook', events: ['threat.new_cve', 'threat.critical'] }, note: 'See GET /api/webhooks/catalog for the full event vocabulary.' },
     ],
     authentication: { methods: ['Bearer token (Authorization: Bearer <key>)', 'API key header (X-API-Key: <key>)'], example_header: 'Authorization: Bearer cdb_your_api_key_here', docs: '/api/developer/auth-guide' },
     sdks: { download: '/api/developer/sdk/download/{language}', generate: 'POST /api/developer/sdk/generate', languages: ['python', 'javascript', 'typescript', 'go', 'curl'] },
@@ -1246,19 +1108,19 @@ async function getEnterpriseExamples(request, env) {
       {
         id: 'splunk-threat-export', title: 'Export threat intelligence to Splunk', category: 'siem_integration',
         description: 'Continuously export CVE signals and IOC data into Splunk for SIEM correlation.',
-        steps: ['Configure Splunk connector: POST /api/integrations/configure (platform: splunk)', 'Test connection: POST /api/integrations/test', 'Export signals: GET /api/export/siem?format=cef&hours=24', 'Schedule via webhook: POST /api/developer/webhooks/register (event: threat.intelligence.new_ioc)'],
+        steps: ['Configure Splunk connector: POST /api/integrations/configure (platform: splunk)', 'Test connection: POST /api/integrations/test', 'Export signals: GET /api/export/siem?format=cef&hours=24', 'Schedule via webhook: POST /api/auto/webhooks (event: threat.new_cve)'],
         code_curl: 'curl -X POST https://cyberdudebivash.in/api/integrations/configure -H "Authorization: Bearer $API_KEY" -H "Content-Type: application/json" -d \'{"platform":"splunk","config":{"host":"splunk.company.com","token":"HEC_TOKEN","index":"security"}}\'',
       },
       {
         id: 'ai-governance-workflow', title: 'Automate AI model risk governance', category: 'ai_governance',
         description: 'Register new AI models and automatically gate deployment based on EU AI Act risk score.',
-        steps: ['Register model: POST /api/ai-governance/models', 'Get risk score: POST /api/ai-governance/risk-score', 'Check EU AI Act compliance: POST /api/ai-governance/compliance/eu-ai-act', 'Register critical risk webhook: POST /api/developer/webhooks/register (event: model.risk.critical)'],
+        steps: ['Register model: POST /api/ai-governance/models', 'Get risk score: POST /api/ai-governance/risk-score', 'Check EU AI Act compliance: POST /api/ai-governance/compliance/eu-ai-act'],
         code_python: 'import requests\nAPI_KEY = "cdb_your_key"\nBASE = "https://cyberdudebivash.in"\nheaders = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}\nmodel = requests.post(f"{BASE}/api/ai-governance/models", headers=headers, json={"name": "ProdEngine-v3", "version": "3.2.1", "model_type": "recommendation", "data_classification": "pii", "deployment_context": "production_customer_facing", "autonomy_level": "fully_autonomous", "impact_domain": "financial"}).json()\nprint(f"Risk Level: {model[\'riskAssessment\'][\'riskLevel\']}")'
       },
       {
         id: 'soc-case-automation', title: 'Automated SOC case creation on critical CVEs', category: 'soc_operations',
         description: 'Automatically create SOC investigation cases when CRITICAL CVEs are detected via webhook.',
-        steps: ['Register webhook: POST /api/developer/webhooks/register (event: vuln.critical_found)', 'Handle event payload in your service', 'Create SOC case: POST /api/soc/cases with cve reference in description'],
+        steps: ['Register webhook: POST /api/auto/webhooks (event: threat.critical)', 'Handle event payload in your service', 'Create SOC case: POST /api/soc/cases with cve reference in description'],
         webhook_payload_example: { event: 'vuln.critical_found', vulnId: 'uuid', cve: 'CVE-2026-XXXXX', cvss: 9.8, affected: 'vendor/product', timestamp: '2026-06-25T00:00:00Z' },
       },
       {

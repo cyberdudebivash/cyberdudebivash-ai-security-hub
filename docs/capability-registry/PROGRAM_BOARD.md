@@ -313,6 +313,80 @@ Per the owner's explicit Phase 4 instruction ("do not implement medium items yet
 
 ## Session log (most recent first)
 
+### 2026-07-15 — CAP-NOTIF-003: webhook UI repair + developerPortal.js webhook retirement (decision record)
+
+- **Context.** The owner asked for CAP-NOTIF-003's two parallel webhook
+  implementations to be consolidated into one authoritative system, per the
+  earlier finding (2026-07-14 triage, below) that the live frontend was
+  wired to `enterpriseAutomation.js` while a "stronger" implementation sat
+  unused in `developerPortal.js`.
+- **Re-verified from current code before acting** (not carried forward
+  from the earlier finding, which predated this session's own SSRF fix to
+  `enterpriseAutomation.js` and didn't check for dispatch callers or
+  delivery-log writes): `developerPortal.js`'s webhook system has proper
+  auth/SSRF/tenant-isolation (13 existing tests proved this), **but no
+  real event-dispatch function of any kind** (only a manual test-ping),
+  **no delivery-log table**, and its own catalog document promises HMAC
+  signing (`X-Webhook-Signature`) that `testWebhook()`'s actual fetch call
+  never sends. `enterpriseAutomation.js` has real HMAC signing, a real
+  `webhook_delivery_log` table, and an exported `dispatchWebhookEvent`
+  function — but repo-wide grep found **zero callers** of it, so today it
+  delivers no more automatically than the manual test path. **Neither
+  system currently auto-delivers a real platform event** — that's a
+  materially different, more accurate picture than "target is stronger,
+  migrate to it."
+- **Separately found and fixed first, independent of the consolidation
+  decision**: `frontend/automation-dashboard.html`'s Webhooks tab (wired to
+  `enterpriseAutomation.js`) had 3 of its 4 actions completely broken —
+  Create (event-vocabulary mismatch, 0% overlap between the frontend's
+  hardcoded 5-event checklist and the backend's real 12-event
+  `WEBHOOK_EVENTS`, 100% creation failure), Pause/Resume (`PATCH
+  /api/auto/webhooks/:id` had no route anywhere), and Logs (`GET
+  /api/auto/webhooks/:id/logs` had no route, and `webhook_delivery_log`
+  was never written to despite existing in schema since this feature
+  shipped). Fixed on `claude/cap-notif-003-webhook-ui-fix` (PR #253):
+  frontend now loads its event list from the real, existing `GET
+  /api/webhooks/catalog`; added `handleWebhookUpdate`/`handleWebhookLogs`;
+  made `handleWebhookTest`/`dispatchWebhookEvent` actually write delivery
+  log rows; added a "Test" button. 17 new tests, 297 files/3131 tests
+  suite-wide.
+- **Owner's decision, given the corrected picture**: retire
+  `developerPortal.js`'s webhook subsystem rather than migrate
+  `enterpriseAutomation.js`'s traffic to it — the opposite direction from
+  the original framing, chosen because the "live, now-functional, real
+  customer usage" system was `enterpriseAutomation.js`'s all along, and
+  the unused system's own gaps (no dispatch, no delivery log, unsent
+  signature) made it a materially larger, riskier build-out than a simple
+  migration target.
+- **Retirement implemented** on
+  `claude/cap-notif-003-retire-devportal-webhooks`: removed all 5 routes
+  (`GET .../events`, `POST .../register`, `GET .../`, `DELETE .../:id`,
+  `POST .../:id/test`), their 6 backing functions, and the
+  `WEBHOOK_EVENTS` constant from `developerPortal.js`; updated the
+  Developer Platform's own API catalog entry and 3 in-app guide/example
+  references that pointed at the removed endpoints to the real
+  `/api/auto/webhooks` + `/api/webhooks/catalog` instead (2 examples that
+  referenced event names with no honest real-vocabulary equivalent —
+  `model.risk.critical`, `vuln.critical_found` — were corrected to a real
+  event or had the unmappable step removed rather than inventing a fake
+  mapping). Did **not** drop the now-unused `developer_webhooks` table
+  from the schema files — it's inert, `CREATE TABLE IF NOT EXISTS`, zero
+  rows ever written (zero customers), and dropping a live schema object is
+  a separate class of change from retiring dead application code.
+  `workers/test/developerPortalWebhookSecurity.test.mjs` (13 tests, all
+  for now-removed routes) replaced with a 7-test file proving the
+  retirement itself (all 5 old routes 404, no dangling references remain)
+  rather than deleted outright, so the historical security work stays
+  documented. 296 files/3109 tests on this branch (based on plain `main`,
+  independent of PR #253 — zero file overlap between the two, will merge
+  cleanly in either order).
+- **Final objective from the original request — "one frontend, one
+  backend, one event vocabulary, one security model, one implementation,
+  one test suite" — is met** once both PR #253 and this retirement land:
+  `/api/auto/webhooks*` + `automation-dashboard.html` is the sole webhook
+  system; `/api/webhooks/catalog` is the sole event-vocabulary source of
+  truth.
+
 ### 2026-07-15 — CAP-MSSP-003 client drill-down completion merged to main
 
 - **Context.** ECCP Wave 1 Phase 3b (`claude/eccp-cap-mssp-003-drilldown-completion`)
