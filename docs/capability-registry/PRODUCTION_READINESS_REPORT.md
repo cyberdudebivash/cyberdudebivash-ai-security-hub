@@ -10,39 +10,39 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-14T22:16:09.168Z
-Capabilities catalogued: 101
+Generated: 2026-07-15T14:25:47.901Z
+Capabilities catalogued: 102
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 91.1% |
-| Frontend | 74.8% |
-| Parity (backend **and** frontend both exist) | 70.3% |
-| Customer Journeys complete (dynamic_browser-verified) | 4% |
+| Backend | 92.2% |
+| Frontend | 76% |
+| Parity (backend **and** frontend both exist) | 70.6% |
+| Customer Journeys complete (dynamic_browser-verified) | 3.9% |
 
 ## Gaps by Priority
 
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
 | Critical | P1 | 3 | Broken customer journey |
-| High | P2 | 16 | Backend exists, frontend missing |
+| High | P2 | 14 | Backend exists, frontend missing |
 | Medium | P3 | 9 | Backend+frontend exist, navigation missing |
-| Medium | P4 | 6 | RBAC not enforced |
+| Medium | P4 | 7 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
-| Low | P6 | 53 | No test coverage |
+| Low | P6 | 55 | No test coverage |
 | Low | P7 | 14 | Documentation missing |
 
-**Rollup:** Critical 3 · High 16 · Medium 15 · Low 67
+**Rollup:** Critical 3 · High 14 · Medium 16 · Low 69
 
 ## Structural Findings
 
 | Metric | Count | Definition |
 |---|---|---|
-| Hidden features | 17 | Backend exists, but not discoverable via navigation |
-| Backend-only features | 13 | Backend exists, zero frontend surface |
-| Duplicate systems | 4 | Backend marked `duplicate` (two implementations of one capability) |
+| Hidden features | 18 | Backend exists, but not discoverable via navigation |
+| Backend-only features | 14 | Backend exists, zero frontend surface |
+| Duplicate systems | 3 | Backend marked `duplicate` (two implementations of one capability) |
 | Broken journeys | 3 | Priority P1 |
 
 ## Production Readiness Verdict: **NOT READY**
@@ -86,7 +86,7 @@ complete", "bug free", or "guaranteed".
 | CAP-BILL-002 | Coupon Administration | ✓ | ✗ | ✗ | NOT READY | P2 |
 | CAP-BILL-003 | Subscription Plans & Billing Portal | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 
-### compliance-store (5 capabilities)
+### compliance-store (6 capabilities)
 
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
@@ -95,6 +95,7 @@ complete", "bug free", or "guaranteed".
 | CAP-COMP-003 | Tools Marketplace Compliance Toolkits | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-COMP-004 | DPDP Act 2023 Compliance Management Engine | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-COMP-005 | Trust Center Compliance Framework Alignment | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
+| CAP-COMP-006 | AI Security Maturity Assessment — backend orchestration (ESSP Wave 1, PR 1) | ✓ | ✗ | ✗ | NOT READY | P6 |
 
 ### customer-portal (4 capabilities)
 
@@ -111,7 +112,7 @@ complete", "bug free", or "guaranteed".
 |---|---|---|---|---|---|---|
 | CAP-DASH-001 | CISO Hub Metrics (Risk Posture, Compliance, Incidents) | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 | CAP-DASH-002 | Executive Hub / Command Center | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
-| CAP-DASH-003 | Product & Growth Analytics (Funnel, Feature Adoption) | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-DASH-003 | Product & Growth Analytics (Funnel, Feature Adoption) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 
 ### developer-portal-apikeys (4 capabilities)
 
@@ -179,7 +180,7 @@ complete", "bug free", or "guaranteed".
 |---|---|---|---|---|---|---|
 | CAP-NOTIF-001 | Multi-Channel Notification Preferences & Delivery Log | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 | CAP-NOTIF-002 | In-App Notification Bell | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
-| CAP-NOTIF-003 | Outbound Webhooks (Developer + Organization) | ✗ | ✗ | ✗ | NOT READY | P2 |
+| CAP-NOTIF-003 | Outbound Webhooks (Developer + Organization) | ✓ | ✗ | ✗ | NOT READY | P2 |
 | CAP-NOTIF-004 | Transactional & Lifecycle Email Engine | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 
 ### organizations (2 capabilities)
@@ -242,7 +243,7 @@ complete", "bug free", or "guaranteed".
 | CAP-MKT-003 | Sentinel-Specific Purchase Flow | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 | CAP-MKT-004 | Security Tools Marketplace | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P6 |
 | CAP-MKT-005 | Sentinel APEX Marketplace Mega-Dispatcher (Subscriptions, Entitlements, ROI Calculator) | ✓ | ◐ | ✓ | PILOT ONLY | P2 |
-| CAP-MKT-006 | Threat Intel Programmatic API (IOC/CVE/Actor/TTP/Risk) | ✗ | ✗ | ✗ | NOT READY | P2 |
+| CAP-MKT-006 | Threat Intel Programmatic API (IOC/CVE/Actor/TTP/Risk) | ✗ | ✓ | ✓ | PILOT ONLY | P4 |
 
 ### threat-hunting-intel (17 capabilities)
 

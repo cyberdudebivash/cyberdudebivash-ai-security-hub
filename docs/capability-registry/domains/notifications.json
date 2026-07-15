@@ -147,16 +147,15 @@
     "id": "CAP-NOTIF-003",
     "domain": "notifications",
     "name": "Outbound Webhooks (Developer + Organization)",
-    "description": "Let a customer register a webhook URL to receive real-time event notifications \u2014 two separate, competing implementations exist.",
+    "description": "Let a customer register a webhook URL to receive real-time event notifications. Previously two separate, competing implementations; the developerPortal implementation was retired 2026-07-15 (PR #254) as unused/incomplete dead code, leaving the enterpriseAutomation one as the sole system.",
     "backend": {
       "handlers": [
-        "workers/src/handlers/developerPortal.js",
         "workers/src/handlers/enterpriseAutomation.js"
       ],
       "entry_points": [],
       "routes_sampled": [],
       "routes_fully_enumerated": false,
-      "status": "duplicate"
+      "status": "exists"
     },
     "frontend": {
       "surface_type": "none",
@@ -193,10 +192,10 @@
     "priority": "P2",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-08",
-      "evidence": "workers/src/handlers/developerPortal.js:856-904 and workers/src/handlers/enterpriseAutomation.js:22-243 read directly, confirming two distinct table schemas and confirming which one actually auto-fires on events."
+      "last_verified": "2026-07-15",
+      "evidence": "PR #254 (commit 0ebf7a7, merged 2026-07-15) retired workers/src/handlers/developerPortal.js's webhook subsystem in full (zero frontend callers, no dispatch function, unsent signing) after re-verification, leaving workers/src/handlers/enterpriseAutomation.js's /api/auto/webhooks* as the sole system. Confirmed via git log/git show 0ebf7a7 and a fresh read of the current developerPortal source (webhook routes/handlers no longer present)."
     },
-    "notes": "backend.status is \"duplicate\" \u2014 this is real, unreconciled architectural duplication (not a wiring gap): two schemas, two code paths, one manual-only, one automatic-only, with no frontend for either. Reconciling into one system is a prerequisite for building any UI, not a follow-on task."
+    "notes": "Documentation-drift correction (2026-07-15): this entry previously described the pre-PR#254 two-system duplication as an open architectural problem; that duplication is resolved. Real residual gap, not drift: the enterpriseAutomation dispatchWebhookEvent function has zero production callers repo-wide (only workers/test/webhookVocabularyAndDeliveryLogs.test.mjs calls it) \u2014 the surviving system still only fires on a manual \"Test\" click, not on real platform events. That, plus the still-missing frontend, is why operational_status stays NOT READY."
   },
   {
     "id": "CAP-NOTIF-004",
