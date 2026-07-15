@@ -3,14 +3,50 @@
  * FAQ, platform status, and ticket routing for customer support.
  *
  * Routes:
- *   GET  /api/support/faq            - Frequently Asked Questions
- *   GET  /api/support/status         - Platform operational status
- *   POST /api/support/ticket         - Submit a support ticket
- *   GET  /api/support/sla            - SLA documentation by tier
- *   GET  /api/support/docs           - Documentation index
+ *   GET   /api/support/faq                 - Frequently Asked Questions
+ *   GET   /api/support/status              - Platform operational status
+ *   POST  /api/support/ticket              - Submit a support ticket (login required)
+ *   GET   /api/support/tickets/mine        - List the caller's own tickets (org-scoped if org_id given)
+ *   GET   /api/support/ticket/:id          - Ticket detail + comment thread
+ *   POST  /api/support/ticket/:id/comment  - Add a comment to a ticket
+ *   POST  /api/support/ticket/:id/status   - Update ticket status
+ *     (POST, not PATCH: workers/src/middleware/cors.js's Access-Control-Allow-Methods
+ *      omits PATCH platform-wide — a pre-existing, cross-cutting gap affecting several
+ *      other routes already, out of scope to fix here. Using POST keeps this new route
+ *      actually reachable from a real browser instead of inheriting that bug.)
+ *   GET   /api/support/tickets             - List tickets (admin only)
+ *   GET   /api/support/sla                 - SLA documentation by tier
+ *   GET   /api/support/docs                - Documentation index
  */
 
 import { logSystemError } from '../lib/errorLog.js';
+import { isRealUser } from '../auth/middleware.js';
+import { ok, notFound, forbidden, unauthorized, badRequest, paginated } from '../lib/response.js';
+import { deliverNotification } from './notificationPlatform.js';
+
+// CAP-PORTAL-004: org scoping reuses the same org_members-based membership
+// check as workers/src/handlers/aiMaturityHandler.js (PR #257) — this
+// codebase's convention is to inline this per-handler rather than share a
+// helper module (confirmed: no shared requireOrgRole() exists anywhere).
+async function getOrgMembership(env, orgId, userId) {
+  if (!orgId || !userId) return null;
+  return env.DB.prepare(
+    `SELECT role FROM org_members WHERE org_id = ? AND user_id = ? AND status = 'active'`
+  ).bind(orgId, userId).first();
+}
+
+// A caller may view/comment/manage a ticket if they created it, they're an
+// active member of the org it belongs to, or they're platform-staff admin.
+async function canAccessTicket(env, ticket, authCtx) {
+  if (authCtx?.isAdmin === true) return true;
+  const uid = authCtx?.userId || authCtx?.user_id;
+  if (uid && ticket.user_id === uid) return true;
+  if (ticket.organization_id && uid) {
+    const membership = await getOrgMembership(env, ticket.organization_id, uid);
+    if (membership) return true;
+  }
+  return false;
+}
 
 const FAQ_DATA = [
   {
@@ -178,14 +214,34 @@ async function handleStatus(request, env) {
 
 // ─── POST /api/support/ticket ─────────────────────────────────────────────────
 async function handleTicket(request, env, authCtx) {
+  // CAP-PORTAL-004: ticket creation now requires a logged-in caller — closes an
+  // unauthenticated-spam vector and lets every ticket be reliably tied to a
+  // real customer for the "My Tickets" view, comments, and notifications.
+  // Logged-out visitors continue to use the existing mailto: support links.
+  // Deliberately checks for a real user id rather than authCtx.authenticated:
+  // resolveAuthV5's anonymous IP-fallback also sets authenticated:true (see
+  // auth/middleware.js), so presence of a real user id is the actual signal —
+  // this also keeps the AI-copilot create_support_ticket tool (which forwards
+  // its own session authCtx) working unchanged.
+  const userId = authCtx?.userId || authCtx?.user_id;
+  if (!userId) {
+    return Response.json({ error: 'Login required to submit a support ticket', contact: 'support@cyberdudebivash.com' }, { status: 401 });
+  }
+
   let body = {};
   try { body = await request.json(); } catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
 
-  const { subject, description, category, priority } = body;
+  const { subject, description, category, priority, org_id } = body;
   if (!subject || !description)
     return Response.json({ error: 'subject and description are required' }, { status: 400 });
 
-  const userId = authCtx?.userId || 'anonymous';
+  let orgId = null;
+  if (org_id) {
+    const membership = await getOrgMembership(env, org_id, userId);
+    if (!membership) return Response.json({ error: 'Not a member of this organization' }, { status: 403 });
+    orgId = org_id;
+  }
+
   const tier   = (authCtx?.tier || 'FREE').toUpperCase();
   const ticketId = `TKT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 
@@ -196,13 +252,22 @@ async function handleTicket(request, env, authCtx) {
 
   try {
     await env.DB.prepare(
-      `INSERT INTO support_tickets (id, user_id, tier, subject, description, category, priority, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'open', datetime('now'))`
-    ).bind(ticketId, userId, tier, subject, description, category || 'general', priority || 'normal').run();
+      `INSERT INTO support_tickets (id, user_id, tier, subject, description, category, priority, status, organization_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, datetime('now'))`
+    ).bind(ticketId, userId, tier, subject, description, category || 'general', priority || 'normal', orgId).run();
   } catch (e) {
     await logSystemError(env, { area: 'support.ticket_insert', message: e.message, context: { user_id: userId, tier } });
     return Response.json({ error: 'Ticket could not be recorded — please email support directly', contact: supportEmail }, { status: 500 });
   }
+
+  // Fire-and-forget bell confirmation — never let a notification failure fail ticket creation.
+  deliverNotification({
+    userId, orgId,
+    eventType: '*',
+    subject: `Support ticket ${ticketId} received`,
+    body: `We've received your ticket "${subject}". Expected response within ${sla.support_response}.`,
+    channels: ['INAPP'],
+  }, env).catch(() => {});
 
   return Response.json({
     success: true,
@@ -210,6 +275,7 @@ async function handleTicket(request, env, authCtx) {
     status: 'open',
     subject,
     tier,
+    organization_id: orgId,
     sla: {
       response_time: sla.support_response,
       support_channel: sla.support_channel,
@@ -218,6 +284,136 @@ async function handleTicket(request, env, authCtx) {
     support_email: supportEmail,
     created_at: new Date().toISOString(),
   });
+}
+
+// ─── GET /api/support/tickets/mine ────────────────────────────────────────────
+async function handleMyTickets(request, env, authCtx) {
+  if (!isRealUser(authCtx)) return unauthorized(request);
+  const uid = authCtx.userId || authCtx.user_id;
+
+  const url    = new URL(request.url);
+  const orgId  = url.searchParams.get('org_id');
+  const page   = Math.max(1, parseInt(url.searchParams.get('page'), 10) || 1);
+  const limit  = Math.min(100, Math.max(1, parseInt(url.searchParams.get('limit'), 10) || 20));
+  const offset = (page - 1) * limit;
+
+  if (orgId) {
+    const membership = await getOrgMembership(env, orgId, uid);
+    if (!membership) return forbidden(request, 'Not a member of this organization');
+
+    const [{ results }, countRow] = await Promise.all([
+      env.DB.prepare(
+        `SELECT id, user_id, tier, subject, category, priority, status, organization_id, created_at, updated_at
+           FROM support_tickets WHERE organization_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`
+      ).bind(orgId, limit, offset).all(),
+      env.DB.prepare(`SELECT COUNT(*) as n FROM support_tickets WHERE organization_id = ?`).bind(orgId).first(),
+    ]);
+    return paginated(request, results, countRow?.n || 0, page, limit);
+  }
+
+  const [{ results }, countRow] = await Promise.all([
+    env.DB.prepare(
+      `SELECT id, user_id, tier, subject, category, priority, status, organization_id, created_at, updated_at
+         FROM support_tickets WHERE user_id = ? AND organization_id IS NULL ORDER BY created_at DESC LIMIT ? OFFSET ?`
+    ).bind(uid, limit, offset).all(),
+    env.DB.prepare(`SELECT COUNT(*) as n FROM support_tickets WHERE user_id = ? AND organization_id IS NULL`).bind(uid).first(),
+  ]);
+  return paginated(request, results, countRow?.n || 0, page, limit);
+}
+
+// ─── GET /api/support/ticket/:id ──────────────────────────────────────────────
+async function handleTicketDetail(request, env, authCtx, id) {
+  if (!isRealUser(authCtx)) return unauthorized(request);
+
+  const ticket = await env.DB.prepare(`SELECT * FROM support_tickets WHERE id = ?`).bind(id).first();
+  if (!ticket) return notFound(request, 'Ticket');
+  if (!(await canAccessTicket(env, ticket, authCtx))) return notFound(request, 'Ticket'); // don't leak cross-org/cross-user existence
+
+  const { results: comments } = await env.DB.prepare(
+    `SELECT id, ticket_id, author_user_id, is_staff, body, created_at
+       FROM support_ticket_comments WHERE ticket_id = ? ORDER BY created_at ASC`
+  ).bind(id).all();
+
+  return ok(request, { ticket, comments: comments || [] });
+}
+
+// ─── POST /api/support/ticket/:id/comment ─────────────────────────────────────
+async function handleAddComment(request, env, authCtx, id) {
+  if (!isRealUser(authCtx)) return unauthorized(request);
+
+  const ticket = await env.DB.prepare(`SELECT * FROM support_tickets WHERE id = ?`).bind(id).first();
+  if (!ticket) return notFound(request, 'Ticket');
+  if (!(await canAccessTicket(env, ticket, authCtx))) return notFound(request, 'Ticket');
+
+  let body;
+  try { body = await request.json(); } catch { return badRequest(request, 'Invalid JSON body'); }
+  const text = (body?.body || '').trim();
+  if (!text) return badRequest(request, 'body is required');
+
+  const uid = authCtx.userId || authCtx.user_id;
+  const isStaff = authCtx.isAdmin === true;
+  const commentId = crypto.randomUUID();
+
+  await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO support_ticket_comments (id, ticket_id, author_user_id, is_staff, body) VALUES (?, ?, ?, ?, ?)`
+    ).bind(commentId, id, uid, isStaff ? 1 : 0, text),
+    env.DB.prepare(`UPDATE support_tickets SET updated_at = datetime('now') WHERE id = ?`).bind(id),
+  ]);
+
+  // Only staff replies have a well-defined single recipient (the ticket owner).
+  // A customer comment has no fixed "support staff" user id to notify in-app —
+  // that side of the loop stays on the existing email-based staff channel.
+  if (isStaff && ticket.user_id) {
+    deliverNotification({
+      userId: ticket.user_id, orgId: ticket.organization_id,
+      eventType: '*',
+      subject: `New reply on ticket ${id}`,
+      body: text.slice(0, 200),
+      channels: ['INAPP'],
+    }, env).catch(() => {});
+  }
+
+  return ok(request, { id: commentId, ticket_id: id, author_user_id: uid, is_staff: isStaff, body: text }, 201);
+}
+
+// ─── PATCH /api/support/ticket/:id/status ─────────────────────────────────────
+const CUSTOMER_ALLOWED_STATUSES = ['open', 'resolved'];
+const ALL_STATUSES = ['open', 'resolved', 'closed'];
+
+async function handleUpdateStatus(request, env, authCtx, id) {
+  if (!isRealUser(authCtx)) return unauthorized(request);
+
+  const ticket = await env.DB.prepare(`SELECT * FROM support_tickets WHERE id = ?`).bind(id).first();
+  if (!ticket) return notFound(request, 'Ticket');
+
+  const isStaff = authCtx.isAdmin === true;
+  if (!isStaff && !(await canAccessTicket(env, ticket, authCtx))) return notFound(request, 'Ticket');
+
+  let body;
+  try { body = await request.json(); } catch { return badRequest(request, 'Invalid JSON body'); }
+  const status = body?.status;
+
+  const allowed = isStaff ? ALL_STATUSES : CUSTOMER_ALLOWED_STATUSES;
+  if (!allowed.includes(status)) {
+    return forbidden(request, isStaff
+      ? `status must be one of: ${ALL_STATUSES.join(', ')}`
+      : `Customers may only set status to: ${CUSTOMER_ALLOWED_STATUSES.join(', ')}`);
+  }
+
+  await env.DB.prepare(`UPDATE support_tickets SET status = ?, updated_at = datetime('now') WHERE id = ?`).bind(status, id).run();
+
+  if (isStaff && ticket.user_id) {
+    deliverNotification({
+      userId: ticket.user_id, orgId: ticket.organization_id,
+      eventType: '*',
+      subject: `Ticket ${id} status changed to ${status}`,
+      body: `Your support ticket "${ticket.subject}" is now ${status}.`,
+      channels: ['INAPP'],
+    }, env).catch(() => {});
+  }
+
+  return ok(request, { id, status });
 }
 
 // ─── GET /api/support/sla ─────────────────────────────────────────────────────
@@ -258,19 +454,25 @@ async function handleListTickets(request, env, authCtx) {
 
   const url    = new URL(request.url);
   const status = url.searchParams.get('status') || 'open';
+  const orgId  = url.searchParams.get('org_id');
   const limit  = Math.min(parseInt(url.searchParams.get('limit') || '50'), 100);
   const offset = parseInt(url.searchParams.get('offset') || '0');
 
   let tickets = [];
   try {
-    const rows = await env.DB?.prepare(
-      `SELECT id, user_id, tier, subject, category, priority, status, created_at
-         FROM support_tickets WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`
-    ).bind(status, limit, offset).all().catch(() => ({ results: [] }));
+    const rows = orgId
+      ? await env.DB?.prepare(
+          `SELECT id, user_id, tier, subject, category, priority, status, organization_id, created_at
+             FROM support_tickets WHERE status = ? AND organization_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`
+        ).bind(status, orgId, limit, offset).all().catch(() => ({ results: [] }))
+      : await env.DB?.prepare(
+          `SELECT id, user_id, tier, subject, category, priority, status, organization_id, created_at
+             FROM support_tickets WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`
+        ).bind(status, limit, offset).all().catch(() => ({ results: [] }));
     tickets = rows?.results || [];
   } catch { /* table may not exist */ }
 
-  return Response.json({ total: tickets.length, status_filter: status, tickets });
+  return Response.json({ total: tickets.length, status_filter: status, org_filter: orgId || null, tickets });
 }
 
 // ─── GET /api/support/errors (admin only) — system_errors log (EBOC-1 / H-3) ─
@@ -296,24 +498,38 @@ async function handleListErrors(request, env, authCtx) {
 // ─── Main Dispatcher ─────────────────────────────────────────────────────────
 export async function handleSupport(request, env, authCtx, path, method) {
   try {
-    if (path === '/api/support/faq' && method === 'GET')      return handleFAQ(request, env);
-    if (path === '/api/support/status' && method === 'GET')   return handleStatus(request, env);
-    if (path === '/api/support/ticket' && method === 'POST')  return handleTicket(request, env, authCtx);
-    if (path === '/api/support/tickets' && method === 'GET')  return handleListTickets(request, env, authCtx);
-    if (path === '/api/support/errors' && method === 'GET')   return handleListErrors(request, env, authCtx);
-    if (path === '/api/support/sla' && method === 'GET')      return handleSLA(request, env, authCtx);
-    if (path === '/api/support/docs' && method === 'GET')     return handleDocs(request, env);
+    if (path === '/api/support/faq' && method === 'GET')          return handleFAQ(request, env);
+    if (path === '/api/support/status' && method === 'GET')       return handleStatus(request, env);
+    if (path === '/api/support/ticket' && method === 'POST')      return handleTicket(request, env, authCtx);
+    if (path === '/api/support/tickets/mine' && method === 'GET') return handleMyTickets(request, env, authCtx);
+    if (path === '/api/support/tickets' && method === 'GET')      return handleListTickets(request, env, authCtx);
+    if (path === '/api/support/errors' && method === 'GET')       return handleListErrors(request, env, authCtx);
+    if (path === '/api/support/sla' && method === 'GET')          return handleSLA(request, env, authCtx);
+    if (path === '/api/support/docs' && method === 'GET')         return handleDocs(request, env);
+
+    const commentMatch = path.match(/^\/api\/support\/ticket\/([^/]+)\/comment$/);
+    if (commentMatch && method === 'POST') return handleAddComment(request, env, authCtx, commentMatch[1]);
+
+    const statusMatch = path.match(/^\/api\/support\/ticket\/([^/]+)\/status$/);
+    if (statusMatch && method === 'POST') return handleUpdateStatus(request, env, authCtx, statusMatch[1]);
+
+    const detailMatch = path.match(/^\/api\/support\/ticket\/([^/]+)$/);
+    if (detailMatch && method === 'GET') return handleTicketDetail(request, env, authCtx, detailMatch[1]);
 
     return Response.json({
       error: 'Support route not found',
       available: [
-        'GET  /api/support/faq',
-        'GET  /api/support/status',
-        'POST /api/support/ticket',
-        'GET  /api/support/tickets (admin)',
-        'GET  /api/support/errors (admin)',
-        'GET  /api/support/sla',
-        'GET  /api/support/docs',
+        'GET   /api/support/faq',
+        'GET   /api/support/status',
+        'POST  /api/support/ticket',
+        'GET   /api/support/tickets/mine',
+        'GET   /api/support/ticket/:id',
+        'POST  /api/support/ticket/:id/comment',
+        'POST  /api/support/ticket/:id/status',
+        'GET   /api/support/tickets (admin)',
+        'GET   /api/support/errors (admin)',
+        'GET   /api/support/sla',
+        'GET   /api/support/docs',
       ],
     }, { status: 404 });
   } catch (err) {

@@ -10,31 +10,31 @@
 > `KPI_DASHBOARD.md` (the outcome scoreboard) — this report measures
 > structural completeness and parity, not customer outcomes.
 
-Generated: 2026-07-14T22:16:09.168Z
-Capabilities catalogued: 101
+Generated: 2026-07-15T15:09:15.148Z
+Capabilities catalogued: 102
 
 ## Overall Completion
 
 | Dimension | % |
 |---|---|
-| Backend | 91.1% |
-| Frontend | 74.8% |
-| Parity (backend **and** frontend both exist) | 70.3% |
-| Customer Journeys complete (dynamic_browser-verified) | 4% |
+| Backend | 91.2% |
+| Frontend | 75% |
+| Parity (backend **and** frontend both exist) | 70.6% |
+| Customer Journeys complete (dynamic_browser-verified) | 3.9% |
 
 ## Gaps by Priority
 
 | Severity | Priority | Count | Meaning |
 |---|---|---|---|
 | Critical | P1 | 3 | Broken customer journey |
-| High | P2 | 16 | Backend exists, frontend missing |
+| High | P2 | 15 | Backend exists, frontend missing |
 | Medium | P3 | 9 | Backend+frontend exist, navigation missing |
-| Medium | P4 | 6 | RBAC not enforced |
+| Medium | P4 | 7 | RBAC not enforced |
 | Low | P5 | 0 | Subscription gating missing |
-| Low | P6 | 53 | No test coverage |
+| Low | P6 | 54 | No test coverage |
 | Low | P7 | 14 | Documentation missing |
 
-**Rollup:** Critical 3 · High 16 · Medium 15 · Low 67
+**Rollup:** Critical 3 · High 15 · Medium 16 · Low 68
 
 ## Structural Findings
 
@@ -86,7 +86,7 @@ complete", "bug free", or "guaranteed".
 | CAP-BILL-002 | Coupon Administration | ✓ | ✗ | ✗ | NOT READY | P2 |
 | CAP-BILL-003 | Subscription Plans & Billing Portal | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 
-### compliance-store (5 capabilities)
+### compliance-store (6 capabilities)
 
 | ID | Capability | Backend | Frontend | Nav | Status | Priority |
 |---|---|---|---|---|---|---|
@@ -95,6 +95,7 @@ complete", "bug free", or "guaranteed".
 | CAP-COMP-003 | Tools Marketplace Compliance Toolkits | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-COMP-004 | DPDP Act 2023 Compliance Management Engine | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
 | CAP-COMP-005 | Trust Center Compliance Framework Alignment | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
+| CAP-COMP-006 | AI Security Maturity Assessment — backend orchestration (ESSP Wave 1, PR 1) | ✓ | ✗ | ✗ | NOT READY | P6 |
 
 ### customer-portal (4 capabilities)
 
@@ -103,7 +104,7 @@ complete", "bug free", or "guaranteed".
 | CAP-PORTAL-001 | Profile & Security Settings | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 | CAP-PORTAL-002 | Scan History & Reports | ✓ | ✓ | ✓ | GA APPROVED WITH DOCUMENTED LIMITATIONS | P7 |
 | CAP-PORTAL-003 | Session Management (Active Sessions / Per-Session Revoke) | ✓ | ✓ | ✓ | PILOT ONLY | P6 |
-| CAP-PORTAL-004 | Support Ticket System | ✓ | ✗ | ✗ | NOT READY | P2 |
+| CAP-PORTAL-004 | Support Ticket System | ✓ | ✓ | ✓ | PILOT ONLY | P4 |
 
 ### dashboard-personalization (3 capabilities)
 
