@@ -314,6 +314,33 @@ export async function handlePurchaseCompliancePack(request, env, authCtx) {
       if (r.ok) razorpayOrderId = (await r.json()).id;
     }
 
+    if (!razorpayOrderId) {
+      return json({ success: false, error: 'Unable to create payment order — try again shortly' }, 502);
+    }
+
+    // ── Authoritative order record — closes a pack_id/amount-tampering gap.
+    // The Razorpay signature checked in handleVerifyCompliancePack only
+    // proves razorpay_order_id + razorpay_payment_id are a genuine, linked
+    // pair; it says nothing about WHICH pack that order was actually priced
+    // for. Without this row, verify had no server-side record to check the
+    // client-resent pack_id against, so a customer could pay for the
+    // cheapest pack and then call verify with a pricier pack_id, reusing
+    // the same signed order/payment pair, and receive the expensive pack's
+    // entitlement — same vulnerability class as handlers/payments.js's
+    // handleVerifyPayment, closed there via its own "authoritative order
+    // lookup" (2026-07-14 commercial-integrity audit, H8). Written before
+    // the order is returned to the client so verify always has it to check
+    // against; if the write fails, refuse to hand out an order that could
+    // never be legitimately verified rather than fail open.
+    const inserted = await env.DB.prepare(
+      `INSERT INTO payments (id, module, target, amount, currency, razorpay_order_id, email, created_at)
+       VALUES (?, 'compliance_pack', ?, ?, ?, ?, ?, datetime('now'))`
+    ).bind(crypto.randomUUID(), pack_id, amount, currency, razorpayOrderId, email)
+     .run().catch(e => { console.error('[CompliancePack] D1 order insert failed:', e.message); return null; });
+    if (!inserted) {
+      return json({ success: false, error: 'Unable to record order — try again shortly' }, 502);
+    }
+
     return json({
       success: true,
       order: {
@@ -379,14 +406,22 @@ function json(data, status = 200) {
 export async function handleVerifyCompliancePack(request, env) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, pack_id, email } = body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, email } = body;
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !pack_id) {
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return json({ success: false, error: 'Missing verification fields' }, 400);
     }
-
-    const pack = COMPLIANCE_PACKS[pack_id];
-    if (!pack) return json({ success: false, error: 'Pack not found' }, 404);
+    // Format validation — matches handlers/payments.js's handleVerifyPayment;
+    // prevents oversized/malformed values from reaching D1.
+    if (!/^order_[A-Za-z0-9]{6,32}$/.test(razorpay_order_id)) {
+      return json({ success: false, error: 'Invalid razorpay_order_id format' }, 400);
+    }
+    if (!/^pay_[A-Za-z0-9]{6,32}$/.test(razorpay_payment_id)) {
+      return json({ success: false, error: 'Invalid razorpay_payment_id format' }, 400);
+    }
+    if (!/^[a-fA-F0-9]{64}$/.test(razorpay_signature)) {
+      return json({ success: false, error: 'Invalid razorpay_signature format' }, 400);
+    }
 
     // HMAC-SHA256 verify
     const secret  = env.RAZORPAY_KEY_SECRET || '';
@@ -398,27 +433,48 @@ export async function handleVerifyCompliancePack(request, env) {
       return json({ success: false, error: 'Payment signature verification failed' }, 400);
     }
 
-    // Idempotency check
-    if (env.DB) {
-      const existing = await env.DB.prepare(
-        `SELECT id FROM payments WHERE razorpay_order_id = ? AND status = 'paid' LIMIT 1`
-      ).bind(razorpay_order_id).first().catch(() => null);
-      if (existing) {
-        return json({ success: true, access_granted: true, pack_name: pack.name,
-          delivery_note: 'Your compliance pack will be delivered to your email within 24 hours.', duplicate: true });
-      }
+    if (!env.DB) {
+      return json({ success: false, error: 'Service temporarily unavailable' }, 503);
     }
 
-    // Record purchase in D1
-    const purchaseId = `cp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;
-    if (env.DB) {
-      await env.DB.prepare(
-        `INSERT OR IGNORE INTO payments (id, user_id, module, target, amount, currency, razorpay_order_id, razorpay_payment_id, status, email, created_at)
-         VALUES (?,?,?,?,?,?,?,?,'paid',?,datetime('now'))`
-      ).bind(purchaseId, email || null, 'compliance_pack', pack_id,
-             pack.price_inr * 100, 'INR', razorpay_order_id, razorpay_payment_id, email || null)
-       .run().catch(e => console.warn('[CompliancePack] D1 insert error:', e.message));
+    // ── Authoritative order lookup — closes a pack_id-tampering gap. See
+    // handlePurchaseCompliancePack for the full write-side explanation. The
+    // signature above only proves razorpay_order_id + razorpay_payment_id
+    // are a genuine, linked pair; it says nothing about which pack that
+    // order was actually priced for. This uses the pack_id recorded
+    // server-side at order-creation time, never a client-resupplied one.
+    // Fails closed (not a client-input fallback) if no matching row exists:
+    // unlike payments.js's handleVerifyPayment, this handler's entitlement
+    // grant (the KV write below) doesn't itself depend on D1, so a
+    // fail-open fallback here would still be exploitable.
+    const orderRow = await env.DB.prepare(
+      `SELECT target FROM payments WHERE razorpay_order_id = ? AND module = 'compliance_pack' LIMIT 1`
+    ).bind(razorpay_order_id).first().catch(() => null);
+    if (!orderRow) {
+      return json({ success: false, error: 'Order not found — please restart checkout' }, 400);
     }
+    const pack_id = orderRow.target;
+    const pack = COMPLIANCE_PACKS[pack_id];
+    if (!pack) return json({ success: false, error: 'Pack not found' }, 404);
+
+    // Idempotency check
+    const existing = await env.DB.prepare(
+      `SELECT id FROM payments WHERE razorpay_order_id = ? AND status = 'paid' LIMIT 1`
+    ).bind(razorpay_order_id).first().catch(() => null);
+    if (existing) {
+      return json({ success: true, access_granted: true, pack_name: pack.name,
+        delivery_note: 'Your compliance pack will be delivered to your email within 24 hours.', duplicate: true });
+    }
+
+    // Mark the authoritative order row paid — it was inserted 'pending' at
+    // purchase time by handlePurchaseCompliancePack; update in place rather
+    // than inserting a second row, since razorpay_order_id is UNIQUE on
+    // this table.
+    await env.DB.prepare(
+      `UPDATE payments SET status='paid', razorpay_payment_id=?, razorpay_signature=?, paid_at=datetime('now'), email=COALESCE(?, email)
+       WHERE razorpay_order_id=?`
+    ).bind(razorpay_payment_id, razorpay_signature, email || null, razorpay_order_id)
+     .run().catch(e => console.warn('[CompliancePack] D1 update error:', e.message));
 
     // 365-day access grant in KV
     const accessKey = `access:compliance:${pack_id}:${email || razorpay_payment_id}`;
@@ -436,7 +492,7 @@ export async function handleVerifyCompliancePack(request, env) {
           const { createInvoice } = await import('./v24/billingEngine.js');
           if (env.DB && pack.price_inr) {
             await createInvoice(env.DB, {
-              userId:      email || purchaseId,
+              userId:      email || razorpay_payment_id,
               email:       email || 'noreply@buyer',
               lineItems:   [{ description: pack.name, amount_inr: pack.price_inr, quantity: 1 }],
               paymentId:   razorpay_payment_id,
