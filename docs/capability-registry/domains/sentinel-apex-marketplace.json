@@ -244,12 +244,12 @@
       "status": "duplicate"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "missing",
-      "evidence": "Zero matches anywhere in frontend/*.html for the exact paths /api/intel/ioc, /api/intel/cve, /api/intel/actor, /api/intel/threat-actors, or /api/intel/ttp. Frontend calls that look superficially related — frontend/intel-hub.html:550 (/api/intel/actors, plural) and frontend/threat-intel-workbench.html (/api/intel/risk-queue, /api/intel/risk-score/{id}, /api/intel/cve-brief/{id}, /api/intel/actors, /api/intel/actor/{id}) — are different paths registered to a different handler, workers/src/handlers/threatIntelPro.js, via a separate dispatch block (workers/src/index.js:5164-5186). Verified 2026-07-08 by reading both registration blocks directly."
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/user-dashboard.html"],
+      "status": "exists",
+      "evidence": "FIXED 2026-07-14 (PR #222, commit 71b1f93): frontend/user-dashboard.html:2384-4167 has real intelLookupIOC()/intelLookupCVE()/intelLookupActor()/intelLookupTTP() functions calling intelApiGet() against exactly /api/intel/ioc, /api/intel/cve, /api/intel/actor, /api/intel/ttp — the exact routes this capability's backend registers (workers/src/index.js:5142 etc.). Confirmed by direct grep 2026-07-15, not registry-trusted."
     },
-    "navigation": { "discoverable": false, "evidence": "No nav entry calls this handler's actual routes because no page does." },
+    "navigation": { "discoverable": true, "evidence": "FIXED 2026-07-14: frontend/user-dashboard.html is linked from every page's primary Sign In link, making this reachable for any logged-in user." },
     "auth_enforced": "unknown",
     "rbac": { "enforced": "unknown", "permissions": [] },
     "subscription_gated": false,
@@ -260,13 +260,13 @@
     },
     "docs": [],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
-    "priority": "P2",
+    "operational_status": "PILOT ONLY",
+    "priority": "P4",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-08",
-      "evidence": "workers/src/handlers/intelAPIHandlers.js exports enumerated; workers/src/index.js:5142-5186 read directly to confirm this handler's 5 routes and the separate workers/src/handlers/threatIntelPro.js dispatch block are genuinely distinct registrations, not aliases of each other."
+      "last_verified": "2026-07-15",
+      "evidence": "workers/src/handlers/intelAPIHandlers.js exports enumerated; workers/src/index.js:5142-5186 read directly to confirm this handler's 5 routes and the separate workers/src/handlers/threatIntelPro.js dispatch block are genuinely distinct registrations, not aliases of each other. frontend/user-dashboard.html's callers re-confirmed independently 2026-07-15."
     },
-    "notes": "backend.status is \"duplicate\": a real, live, frontend-consumed threat-intel API surface already exists under near-identical naming in workers/src/handlers/threatIntelPro.js (covered in docs/capability-registry/domains/threat-hunting-intel.json) — this file appears to be an earlier or parallel implementation of the same concept that no frontend page was ever wired to. Worth a reconciliation decision rather than building new UI against this one."
+    "notes": "Documentation-drift correction (2026-07-15): frontend was 'missing' as of last_verified 2026-07-08; PR #222 (2026-07-14, the day before that verification's timestamp but not reflected in it) wired real frontend callers to this exact route set — priority corrected P2→P4 (frontend no longer missing; auth_enforced/rbac.enforced still \"unknown\" is the remaining real gap, not UI). backend.status is still \"duplicate\" and that question is NOT resolved by this correction: a similarly-named, separately-covered threat-intel API surface also exists in workers/src/handlers/threatIntelPro.js (docs/capability-registry/domains/threat-hunting-intel.json). What's now confirmed is that THIS specific handler (workers/src/handlers/intelAPIHandlers.js) — not threatIntelPro.js — is the one frontend/user-dashboard.html actually calls, which is useful evidence for whoever picks up that reconciliation decision, but does not by itself constitute the reconciliation."
   }
 ]

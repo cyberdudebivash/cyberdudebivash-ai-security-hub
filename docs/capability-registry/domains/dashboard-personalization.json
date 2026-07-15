@@ -107,12 +107,12 @@
       "status": "exists"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "missing",
-      "evidence": "Repo-wide search for /api/analytics/p3/ returns zero matches anywhere in frontend/. This handler's routes correctly use the tier-inclusive admin:analytics:read permission (workers/src/index.js:3168, satisfiable by a platform admin, unlike CAP-DASH-001/002's admin:business:read), but no page calls any of them. Verified 2026-07-08."
+      "surface_type": "embedded_widget",
+      "pages": ["frontend/index.html"],
+      "status": "exists",
+      "evidence": "FIXED 2026-07-15 (PR #251, commit 3f749cf): frontend/growth-analytics.js added, with real fetch() calls to /api/analytics/p3/growth, /api/analytics/p3/funnel, /api/analytics/p3/adoption (confirmed by direct read). Loaded via a <script defer> tag at frontend/index.html:24085. Renders into the existing #growth-analytics section, frontend/index.html:5240, reachable via the 'Growth' owner nav tab, frontend/index.html:1301,20621 — owner-only by design (data-auth-gate=\"owner\"), matching this capability's own admin:analytics:read RBAC gate, not a customer-facing surface."
     },
-    "navigation": { "discoverable": false, "evidence": "No nav entry calls this handler's routes because no page does." },
+    "navigation": { "discoverable": true, "evidence": "FIXED 2026-07-15: real 'Growth' nav tab, frontend/index.html:20621, reveals the section via JS for confirmed owners; hidden (display:none) for everyone else by design, matching the RBAC gate below." },
     "auth_enforced": true,
     "rbac": { "enforced": true, "permissions": ["admin:analytics:read"] },
     "subscription_gated": false,
@@ -123,13 +123,13 @@
     },
     "docs": [],
     "customer_journey_complete": false,
-    "operational_status": "NOT READY",
-    "priority": "P2",
+    "operational_status": "PILOT ONLY",
+    "priority": "P6",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-08",
-      "evidence": "workers/src/handlers/productAnalytics.js exports enumerated; workers/src/index.js:3165-3195 route registrations and gate read directly; frontend/ searched exhaustively for any caller."
+      "last_verified": "2026-07-15",
+      "evidence": "workers/src/handlers/productAnalytics.js exports enumerated; workers/src/index.js:3165-3195 route registrations and gate read directly; frontend/growth-analytics.js and its inclusion in frontend/index.html read directly and re-confirmed independently (not just registry-trusted)."
     },
-    "notes": "Unlike CAP-DASH-001/002, this is a straightforward backend-only orphan (correct, sensible RBAC gate, simply no UI) rather than a broken-despite-correct-wiring case. The dashboard/role-personalization gap tracked by docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md's Domain 6 ('same finding as Domain 3 — no real personalization, only upsell overlays') is registered once, under docs/capability-registry/domains/rbac.json's CAP-RBAC-002, and not duplicated here."
+    "notes": "Documentation-drift correction (2026-07-15): this entry previously described a backend-only orphan (last_verified 2026-07-08); PR #251 (same day as that verification, but landed after it) wired a real owner-facing frontend. priority corrected P2→P6 (frontend no longer missing) and operational_status NOT READY→PILOT ONLY (no test coverage yet is the remaining gap, not missing UI). The dashboard/role-personalization gap tracked by docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md's Domain 6 is registered once, under docs/capability-registry/domains/rbac.json's CAP-RBAC-002, and not duplicated here."
   }
 ]
