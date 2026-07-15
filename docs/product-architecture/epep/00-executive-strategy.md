@@ -3,8 +3,10 @@
 ## Master Strategy Document
 
 **Phase:** Product Architecture & Business Design (pre-implementation) — no new product code has shipped under this program.
-**Date:** 2026-07-15 · **Evidence basis:** direct repository audit at commit `d7841aa` (branch `claude/epep-product-architecture-d177jl`), cross-referenced against `docs/capability-registry/` (living, CI-validated) and spot-checked against `docs/audit-history/*.md` (historical, treated as reference only per CLAUDE.md).
-**Companion documents:** [`01-ai-agent-red-team-as-a-service.md`](01-ai-agent-red-team-as-a-service.md) · [`02-threat-intel-automation-pack.md`](02-threat-intel-automation-pack.md) · [`03-darkweb-brand-monitoring.md`](03-darkweb-brand-monitoring.md) · [`04-ai-security-maturity-assessment.md`](04-ai-security-maturity-assessment.md)
+**Date:** 2026-07-15 (updated same-day following the Enterprise Shared Services Platform review) · **Evidence basis:** direct repository audit at commit `d7841aa` (branch `claude/epep-product-architecture-d177jl`), cross-referenced against `docs/capability-registry/` (living, CI-validated) and spot-checked against `docs/audit-history/*.md` (historical, treated as reference only per CLAUDE.md).
+**Companion documents:** [`01-ai-agent-red-team-as-a-service.md`](01-ai-agent-red-team-as-a-service.md) · [`02-threat-intel-automation-pack.md`](02-threat-intel-automation-pack.md) · [`03-darkweb-brand-monitoring.md`](03-darkweb-brand-monitoring.md) · [`04-ai-security-maturity-assessment.md`](04-ai-security-maturity-assessment.md) · **[`05-enterprise-shared-services-platform.md`](05-enterprise-shared-services-platform.md) — now the recommended next engineering milestone, ahead of any single product**
+
+> **Program update (2026-07-15):** after this document's initial version was written, a follow-up review proposed the Enterprise Shared Services Platform (ESSP) — a shared layer for scheduling, reports, campaigns, dashboards, alerts, billing, and artifacts that all four products would otherwise each reimplement independently. A fresh repository audit for that review found this failure mode **already realized nine separate times** in the existing codebase (14+ duplicate executive-dashboard backends, 5 duplicate API-key systems, 4 duplicate audit-logging mechanisms including one silently broken, and more — full inventory in the ESSP document §4). This materially strengthens the case for building ESSP first. §1 and §5 below are updated accordingly; the original per-product analysis in §2–§4 and in documents `01`–`04` is unchanged and still current.
 
 ---
 
@@ -20,16 +22,17 @@ Five parallel repository audits (one per product, one cross-cutting) produced a 
 4. **Product 1 (ARaaS) carries a qualitatively different kind of risk than the other three** — not just engineering effort, but genuine legal/abuse exposure from a live-attack-delivery feature that does not exist yet. This document recommends splitting it into a low-risk Stage A (productize what's real) and a separately-gated Stage B (build live attack execution only after a dedicated security/legal review).
 5. **Zero real paying customers exist on the platform today** (`KPI_DASHBOARD.md`: CSAT/renewal/expansion all explicitly `UNKNOWN`). Every revenue figure in the four companion documents is labeled **Assumed**, not forecast from real conversion data, per CLAUDE.md's prohibition on fabricating market/financial claims.
 
-**Recommended sequencing (confirmed, with evidence added):**
+**Recommended sequencing (updated 2026-07-15 — ESSP now precedes all four products):**
 
-| Order | Product | Why |
+| Order | Program/Product | Why |
 |---|---|---|
+| **0** | **Enterprise Shared Services Platform (ESSP)** | **New, recommended first.** A repository audit for this specific question (see `05-enterprise-shared-services-platform.md`) found the "four products, four duplicate implementations" failure mode already realized nine times over in the existing platform — most urgently, 14+ independent executive-dashboard backends producing inconsistent MRR/risk numbers, and a silently-broken audit-logging writer. Building the shared layer first, and fixing what's already broken, is now assessed as lower total risk than proceeding directly to any product's backend phase |
 | 1 | AI Security Maturity Assessment | Highest reuse (5 independent maturity-scoring engines already exist, never unified), lowest new-engineering estimate (~4-6 weeks), a real dormant paid-booking backend ready to reactivate |
 | 2 | Threat Intel Automation Pack | Real, already-monetizing manual product to automate (proven demand); a real scheduled rule-generation pipeline already exists one layer down from the obvious files |
 | 3 | AI Agent Red Team as a Service | Real guided-tier assets exist and can ship fast (Stage A); the flagship "live attack" capability (Stage B) is genuinely unbuilt and carries abuse/legal risk that must be reviewed separately, not rushed |
 | 4 | Dark Web & Brand Monitoring | Engineering complexity is **lower than originally assumed** (a real scheduled monitoring engine just needs extending) — but its core commercial model (recurring monitoring subscription) is the **most exposed of the four** to the platform-wide recurring-billing gap in §5.1, which keeps it last despite the lower build cost |
 
-**GO / Conditional GO / NO-GO by product:** Product 4 — Conditional GO. Product 2 — Conditional GO. Product 1 — Conditional GO for Stage A only; **NO-GO on Stage B pending dedicated legal/security review**. Product 3 — Conditional GO, contingent on resolving the "dark web" naming/positioning question (§2.4 of its companion doc) and adopting the interim pre-paid billing model in §5.1 below.
+**GO / Conditional GO / NO-GO:** ESSP — Conditional GO, starting with Wave 0/1 (its own document's §9) which includes a same-day-shippable fix for the silently-broken SSO audit-log writer. Product 4 — Conditional GO. Product 2 — Conditional GO. Product 1 — Conditional GO for Stage A only; **NO-GO on Stage B pending dedicated legal/security review**. Product 3 — Conditional GO, contingent on resolving the "dark web" naming/positioning question (§2.4 of its companion doc) and adopting the interim pre-paid billing model in §5.1 below. **All four products' own Phase 2 (Backend) should not start until ESSP's Wave 5 (Billing Adapter) and relevant per-product prerequisite waves — see each product's dependency on Scheduling/Notification/Campaign waves — are in place**, per the ESSP document's wave plan.
 
 ---
 
@@ -92,6 +95,8 @@ Per-product capability classification (Production Ready / Partial / Internal / D
 | "Dark web" naming overstates real capability (no Tor/paste-site/forum access exists) | Product 3 only | Commercial / Legal (marketing accuracy) | Rename or clearly scope the claim before external marketing |
 | Registry gaps recur for new capabilities the way they did for existing ones | All 4 | Operational | Each product's Phase 7 (Documentation) explicitly registers new CAP-IDs — a governance habit this program is establishing, not assuming |
 | Fragmented/duplicate implementations (2 STIX builders, 4 IOC-enrichment paths, 5 API-key systems, 2 subscription-tier systems) create a rockier foundation to build on than a clean codebase would | Products 1, 2 mostly | Technical | Each affected companion document's Phase 1 includes consolidation before new build, not after |
+| **(Added 2026-07-15)** 14+ independent executive-dashboard backends compute inconsistent MRR/risk numbers (up to 6 different hardcoded MRR values found for the same tier) | Platform-wide, not product-specific | Governance / Commercial trust | ESSP document §3/§9 Wave 3 — consolidate onto one canonical metrics service before any product adds a 15th |
+| **(Added 2026-07-15)** SSO login audit-log writes have been silently failing (wrong column name, swallowed by a `try/catch`) | Platform-wide | Security / Compliance | ESSP document §9 Wave 1 — small, isolated, same-day-shippable fix; not folded into this program's scope automatically, flagged for explicit go-ahead |
 
 ---
 
@@ -111,12 +116,28 @@ Two real, already-live commercial signals materially reduce risk for two of the 
 
 Products 3 and 4 have no equivalent existing proof point — their commercial cases rest more on the platform's general credibility and the reuse case in §2/§3, not on an existing SKU already converting.
 
+### 5.3 Commercial packaging (added 2026-07-15): the CyberDudeBivash Enterprise Security Suite
+
+Rather than selling the four products independently from day one, package them as tiers of one suite — this both matches how enterprise security buyers actually evaluate platforms (as a consolidated capability set, not four separate vendor relationships) and gives a coherent expansion path within the existing low-ticket pricing architecture (§5.1) before any customer is asked to pay premium-tier prices for a single point product.
+
+| Tier | Target customer | Included products/capabilities | Commercial dependency |
+|---|---|---|---|
+| **Professional** | Security teams | AI Maturity Assessment (automated tier) + selected Threat Intel Automation Pack content (single-pack purchases) | None beyond existing one-time-order model |
+| **Enterprise** | Large organizations | Professional + ARaaS Stage A (guided) + Dark Web & Brand Monitoring | Needs ESSP's Notification Engine (Wave 8) and Scheduling Engine (Wave 12) for the monitoring component to be real, not a rebrand of a one-shot scan |
+| **MSSP** | Managed service providers | Enterprise + multi-tenant management + Threat Intel Automation Pack (full automation) | Needs ESSP's Integration Gateway (Wave 7, per-org SIEM config — today's global-only config cannot support multiple MSSP clients safely) and the pre-existing `CAP-MSSP-004` delegated-admin-permissions gap (confirmed genuinely missing platform-wide, not an EPEP/ESSP scope item) |
+| **Strategic Services** | High-touch engagements | All platform capabilities + consulting, workshops, executive advisory | Reuses `consultationPreAssessEngine.js` (Product 4) and the existing manual "AI Red Team Engagement" SKU (Product 1) as the services delivery mechanism — no new services infrastructure needed |
+
+**Why this depends on ESSP, concretely, not just in spirit:** a tiered suite requires one consistent view of "what does this customer's org have access to" — which is exactly the Billing Adapter + Entitlements gap the ESSP document's §5.1/§9 Wave 5 targets. Building suite-tier entitlements on top of today's two parallel, partially-inconsistent subscription-tier catalogs (one with a live 10× price bug) would encode the platform's existing billing fragmentation into the commercial packaging itself. **Recommend the Enterprise Security Suite's tier definitions be implemented as Entitlements-service records (ESSP Wave 5+) once that service exists, not as a fifth parallel tier catalog bolted on today.**
+
+Recurring billing (§3.1) remains the load-bearing dependency for the Professional/Enterprise monthly tiers specifically — Strategic Services (high-touch, invoiced) and one-time Professional-tier purchases are not blocked by it and can proceed on the existing commercial model.
+
 ---
 
 ## 6. Cross-Product Executive Scorecard
 
 | Product | Architecture completeness | New engineering estimate | Security/legal readiness | Commercial readiness | Sequencing |
 |---|---|---|---|---|---|
+| **0. Enterprise Shared Services Platform** | 🔴 Fragmented (9 duplicate-implementation patterns found) | 🟡 Substantial, bounded into 14 waves | 🟢 Net positive (fixes a real silent audit-log failure + a real tenant-isolation gap) | 🟢 High (unblocks recurring billing for all 4 products) | **0th — before any product's Phase 2** |
 | 4. AI Security Maturity Assessment | 🟡 Partial (5 engines, unintegrated) | 🟢 Low (4-6 wks) | 🟢 Strong | 🟡 Partial (entry tier fits; premium unproven) | **1st** |
 | 2. Threat Intel Automation Pack | 🟡 Partial (strong substrate, thin generator) | 🟡 Moderate (6-9 wks) | 🟢 Strong | 🟢 Strong (already selling manually) | **2nd** |
 | 1. AI Agent Red Team (Stage A) | 🟢 Strong | 🟢 Low (2-3 wks) | 🟢 Strong | 🟢 Strong (existing manual SKU) | **3rd** |
@@ -131,17 +152,20 @@ Products 3 and 4 have no equivalent existing proof point — their commercial ca
 
 Consistent with CLAUDE.md's production-fix policy (architectural changes, customer-facing commercial changes, and multi-service extraction require explicit approval before implementation, not auto-execution):
 
-- **No code was written for any of the four products.** This is architecture and business design only, as scoped.
-- **No fix was made to the cross-cutting platform gaps identified** (recurring billing, `dispatchWebhookEvent` wiring, registry gaps) — these are recorded as findings and recommendations for separate, explicitly-approved work, not folded into this design pass.
+- **No code was written for any of the four products, nor for ESSP.** This is architecture and business design only, as scoped.
+- **No fix was made to the cross-cutting platform gaps identified** (recurring billing, `dispatchWebhookEvent` wiring, registry gaps, the SSO audit-log silent failure, the 14-way executive-dashboard duplication) — these are recorded as findings and recommendations for separate, explicitly-approved work, not folded into this design pass.
 - **Product 1 Stage B (live attack execution) is explicitly not recommended for auto-implementation** — it is the one recommendation in this entire program that requires a dedicated legal/security review round before any build begins, per its companion document §17.
+- **ESSP itself is explicitly not recommended for auto-implementation as a single change** — its own document's §9 wave plan is the mechanism for approving it incrementally, not all at once.
 - **No market-sizing (TAM/SAM/SOM) or revenue forecast figures were fabricated.** Where the master prompt asked for them, each companion document states plainly that no verified data exists in this repository and declines to invent numbers, per CLAUDE.md's explicit prohibition.
 
 ---
 
 ## 8. Next Steps (pending your direction)
 
-1. Approve (or amend) the sequencing in §1/§6.
-2. Decide the cross-cutting platform fixes in §3.1/§3.3 (recurring billing, webhook dispatch) — recommend scoping these as their own CAP-numbered production initiatives, following this repo's existing one-problem-per-PR discipline, rather than bundling them into any single product's build.
-3. For Product 1 specifically: decide whether Stage B (live attack execution) should proceed to a dedicated security/legal review at all, independent of approving Stage A.
-4. For Product 3 specifically: decide the "dark web" naming/positioning question and whether to procure a real breach-data source (HIBP key) or a third-party dark-web-intelligence feed.
-5. On approval of any product, its Development Roadmap §18 (in the relevant companion document) is ready to move from Phase 1 (repository reuse confirmation) into Phase 2 (backend) under this repo's standard one-production-problem-per-PR, CI-gated workflow.
+1. Approve (or amend) the sequencing in §1/§6 — ESSP first, then the four products in the stated order.
+2. Approve (or amend) ESSP's wave plan (`05-enterprise-shared-services-platform.md` §9) — in particular, whether Wave 1 (the SSO audit-log fix) can proceed immediately given how small and self-contained it is, independent of approving the rest of ESSP.
+3. Decide the cross-cutting platform fixes in §3.1/§3.3 (recurring billing, webhook dispatch) — recommend scoping these as their own CAP-numbered production initiatives, following this repo's existing one-problem-per-PR discipline, rather than bundling them into any single product's build. ESSP's wave plan now carries these as Waves 5/8/14.
+4. For Product 1 specifically: decide whether Stage B (live attack execution) should proceed to a dedicated security/legal review at all, independent of approving Stage A.
+5. For Product 3 specifically: decide the "dark web" naming/positioning question and whether to procure a real breach-data source (HIBP key) or a third-party dark-web-intelligence feed.
+6. Decide the recurring-billing mechanism (Razorpay Subscriptions API vs. UPI Autopay/eMandate vs. other) — flagged as a business decision in ESSP §12, not made in this program.
+7. On approval, ESSP's Wave 0 (`05-enterprise-shared-services-platform.md` §9) is ready to begin under this repo's standard one-architectural-concern-per-PR, CI-gated workflow; each product's own Development Roadmap §18 remains ready to resume from Phase 1 once its ESSP prerequisites (noted per-product in §5.3 above) are in place.
