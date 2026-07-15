@@ -30,7 +30,7 @@ import { isRealUser } from '../auth/middleware.js';
 // but nothing an org OWNER/ADMIN could see for their own organization — an
 // OWNER had no way to know who invited a member, changed a role, or removed
 // someone from their own org. Best-effort: never blocks the action it logs.
-async function writeOrgAuditLog(env, request, { userId, orgId, action, metadata = {} }) {
+export async function writeOrgAuditLog(env, request, { userId, orgId, action, metadata = {} }) {
   if (!env?.DB) return;
   try {
     await env.DB.prepare(

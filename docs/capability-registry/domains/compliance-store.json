@@ -403,5 +403,91 @@
     },
     "contradicts_doc": [],
     "notes": "RECONCILED 2026-07-11 (owner decision: resolve the duplicate-list contradiction flagged earlier this session rather than leave it open). Previously: workers/src/handlers/enterprisePortalHandlers.js maintained its OWN, independent, hand-written compliance_status.frameworks list (7 frameworks, 3-state: Implemented/Aligned/Planning) that overlapped but did not match trustCenter.js's COMPLIANCE_FRAMEWORKS (9 frameworks, 2-state: aligned/partial) \u2014 disagreeing on GDPR specifically: trustCenter.js said 'partial' ('not yet formally assessed'), workers/src/handlers/enterprisePortalHandlers.js said 'Aligned' ('data minimization, consent, deletion rights implemented'). Investigated real evidence before reconciling rather than picking a side by fiat: DATA_PROCESSING_AGREEMENT_TEMPLATE.md commits to 72-hour breach notification and SCC/IDTA-covered international transfers; DELETE /api/auth/delete-account (workers/src/handlers/auth.js) is a real, working right-to-erasure mechanism that anonymizes the account and purges personal data across every table keyed by user_id; scan targets are genuinely processed in-flight, not stored. None of that amounts to a formal, audited GDPR program \u2014 'aligned' is used in this list's own defined sense (built with real regard for the framework, no certification claimed), not the stronger, unqualified claim the other list made. trustCenter.js's COMPLIANCE_FRAMEWORKS (now exported) is the single canonical source, expanded to the 12-framework union of both original lists (added ccpa, owasp_top10, nist_csf2); workers/src/handlers/enterprisePortalHandlers.js now derives compliance_status.frameworks from it via a display-layer transform (complianceFrameworksForDisplay()) instead of maintaining a second copy, making this class of drift structurally impossible to reintroduce by accident. The two dead duplicate frontend/assets/(js/)sentinel-apex-live-metrics.js files (the only prior callers of the now-canonical /api/trust/compliance route, loaded by zero <script> tags anywhere) are unaffected \u2014 still flagged, still not fixed, a smaller and separate cleanup. Also investigated and NOT found to be a live gap: frontend/privacy-policy.html \u00a73 cites multiple distinct GDPR legal bases (Consent, Contract Performance, Legal Obligation, Legitimate Interest) \u2014 a sound, standard multi-basis structure, not a blanket 'everything is consent-based' claim as an initial narrow read suggested; 'Consent' most plausibly covers \u00a74's separately-listed 'promotional emails'. One adjacent, smaller, genuinely open finding from this check: no dedicated marketing/promotional-email opt-out or preference mechanism was found anywhere in workers/src/handlers/ (checked notificationPlatform.js specifically \u2014 CAP-NOTIF-001, catalogued separately \u2014 it handles Slack/Teams webhook delivery for operational events like churn-risk alerts, an unrelated channel, not email marketing preferences). Not a new capability ID minted for this \u2014 it's a small, standalone finding, not yet built anywhere, worth a future dedicated look if the platform starts sending real promotional email campaigns; not fixed here."
+  },
+  {
+    "id": "CAP-COMP-006",
+    "domain": "compliance-store",
+    "name": "AI Security Maturity Assessment \u2014 backend orchestration (ESSP Wave 1, PR 1)",
+    "description": "Org-scoped orchestration + persistence layer over the existing AI Security Scorecard engine (aiSecurityScorecardHandler.js's generateScorecard) \u2014 run an assessment, get a 0-100 composite score banded into an interim, platform-derived maturity level, view history. Wave 1 of a larger, approved architecture (docs/product-architecture/epep/04-ai-security-maturity-assessment.md) that eventually unifies this scorecard with NIST AI RMF, ISO27001, GDPR, and DevSecOps maturity engines; those three are explicitly NOT wired in yet \u2014 framework_scores ships as {} on every assessment until each is integrated in its own follow-up PR.",
+    "backend": {
+      "handlers": [
+        "workers/src/handlers/aiMaturityHandler.js"
+      ],
+      "entry_points": [
+        "handleRunAiMaturityAssessment",
+        "handleGetAiMaturityAssessment",
+        "handleListAiMaturityAssessments"
+      ],
+      "routes_sampled": [
+        {
+          "path": "/api/ai-maturity/assess",
+          "method": "POST",
+          "evidence": "workers/src/index.js, route block immediately after the /api/ai-governance/pdf/* section"
+        },
+        {
+          "path": "/api/ai-maturity/assessments",
+          "method": "GET",
+          "evidence": "workers/src/index.js, same block"
+        },
+        {
+          "path": "/api/ai-maturity/assessments/:id",
+          "method": "GET",
+          "evidence": "workers/src/index.js, same block"
+        }
+      ],
+      "routes_fully_enumerated": true,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "missing",
+      "evidence": "No frontend built yet \u2014 explicitly out of scope for this PR (deferred to a follow-up PR per the architecture doc's phased plan). Zero references to /api/ai-maturity anywhere under frontend/."
+    },
+    "navigation": {
+      "discoverable": false,
+      "evidence": "No page exists yet to link to."
+    },
+    "auth_enforced": true,
+    "rbac": {
+      "enforced": true,
+      "permissions": [
+        "org:ANALYST",
+        "org:ADMIN",
+        "org:OWNER"
+      ]
+    },
+    "subscription_gated": false,
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/aiMaturityHandler.test.mjs (12 tests, real node:sqlite organizations/org_members schema, generateScorecard mocked since it performs real domain-security computation with its own separate coverage): unauthenticated caller 401; ANALYST+ required to run (VIEWER and non-member both 403, engine never invoked); persisted composite_score/maturity_level reflect whatever the (mocked) engine returns for two different scores, not a hardcoded template; missing target_scope is 400 not a 500; a real audit_log row is written on success; GET by id cross-org returns 404 (existence not leaked); LIST cross-org returns an empty page with total 0, not another org's rows."
+    },
+    "docs": [
+      {
+        "path": "docs/product-architecture/epep/04-ai-security-maturity-assessment.md",
+        "tag": "canonical"
+      }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "NOT READY",
+    "priority": "P6",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-15",
+      "evidence": "workers/src/handlers/aiMaturityHandler.js read in full (own code, written this session). Two prerequisite one-line export additions verified not to change existing behavior: workers/src/handlers/aiSecurityScorecardHandler.js:430's generateScorecard and workers/src/handlers/orgManagement.js's writeOrgAuditLog each gained only the `export` keyword \u2014 confirmed via `node --check` on every touched file and the full pre-existing suite staying green afterward. Full workers suite and `node scripts/registry/validate.mjs` both run clean with this entry included."
+    },
+    "contradicts_doc": [
+      {
+        "file": "docs/product-architecture/epep/04-ai-security-maturity-assessment.md",
+        "line": 171,
+        "claim": "\"Authentication: existing `requireAuth()` middleware (**Verified** pattern reused platform-wide) \u2014 no new auth mechanism.\"",
+        "correction": "No `requireAuth()` export exists anywhere in workers/src \u2014 confirmed by direct search. The real, canonical pattern (used by this capability instead) is `resolveAuthV5()` + `isRealUser()` in workers/src/auth/middleware.js. Also affects the doc's route table (lines 248\u2013254), which cites `requireAuth()` for every listed route."
+      }
+    ],
+    "notes": "ESSP Wave 1, PR 1 \u2014 deliberately the smallest honest first slice of the approved AI Security Maturity Assessment product, not the full product. Scope decision made this session: only the AI Security Scorecard engine is wired (its contract was confirmed by direct read of aiSecurityScorecardHandler.js); the NIST AI RMF (aiGovernancePro.js), ISO27001/GDPR (workers/src/services/complianceEngine.js \u2014 doc incorrectly places this under workers/src/handlers/), and DevSecOps-adapted roadmap (workers/src/services/devSecOpsEngine.js \u2014 same path correction) engines are explicitly deferred to their own follow-up PRs rather than integrated on a guessed contract: nistAiRmfAssessment(request, env) appears to expect a self-attestation questionnaire body, and runComplianceAssessment(env, inputs, orderId)'s `inputs` shape was not confirmed this pass. Separately: the architecture doc's Phase 2 recommends reactivating workers/src/handlers/assessmentBooking.js for a future consulting-upsell hook (also cited in its API table, line 254); CAP-CRM-006's own registry entry (docs/capability-registry/domains/sales-crm.json) classifies that file's backend.status as \"duplicate\" of the real live booking flow (handleBookConsultation in enterpriseLayer.js), not \"dormant\" \u2014 reactivating it would recreate a duplicate payment path, the exact anti-pattern PACP exists to close. Not acted on here (this PR touches zero payment/booking code); flagged for whoever scopes the eventual commercial PR. New tables (workers/schema_v50_ai_maturity_assessments.sql: ai_maturity_assessments, ai_maturity_score_history, ai_maturity_roadmap_items \u2014 the last one unused until a roadmap-producing engine lands) are purely additive/idempotent and gated behind this repo's manual db-migrate.yml workflow \u2014 not auto-applied to production by this PR."
   }
 ]

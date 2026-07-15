@@ -427,7 +427,7 @@ async function computeResilienceScore(domain) {
   };
 }
 
-async function generateScorecard(domain, env) {
+export async function generateScorecard(domain, env) {
   const [d1, d2, d3, d4, d5] = await Promise.all([
     computeDomainExposureScore(domain),
     computeAIThreatScore(domain),

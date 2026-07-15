@@ -137,6 +137,7 @@ import {
 
 // v20.0 GOD MODE COMPETITIVE PLATFORM IMPORTS
 import { handleAIGovernancePro } from './handlers/aiGovernancePro.js';
+import { handleRunAiMaturityAssessment, handleGetAiMaturityAssessment, handleListAiMaturityAssessments } from './handlers/aiMaturityHandler.js';
 import { handleAIRedTeamPro } from './handlers/aiRedTeamPro.js';
 import { handleDeveloperPortal, getOpenAPISpec } from './handlers/developerPortal.js';
 import { handleExecutiveCommandCenter } from './handlers/executiveCommandCenter.js';
@@ -7867,6 +7868,20 @@ h2{color:#10b981;margin-bottom:8px}p{color:#94a3b8;font-size:.9rem}a{color:#00d4
   if (path.startsWith('/api/ai-governance/pdf/') && method === 'GET') {
     const pdfToken = path.replace('/api/ai-governance/pdf/', '');
     return await handlePdfDownload(request, env, pdfToken, authCtx);
+  }
+
+  // ── ESSP Wave 1, PR 1: AI Security Maturity Assessment (backend only — no frontend yet) ──
+  // Orchestrates the existing AI Security Scorecard engine (aiSecurityScorecardHandler.js)
+  // under org-scoped RBAC + persistence. See handlers/aiMaturityHandler.js.
+  if (path === '/api/ai-maturity/assess' && method === 'POST') {
+    return withSecurityHeaders(withCors(await handleRunAiMaturityAssessment(request, env, authCtx), request));
+  }
+  if (path === '/api/ai-maturity/assessments' && method === 'GET') {
+    return withSecurityHeaders(withCors(await handleListAiMaturityAssessments(request, env, authCtx), request));
+  }
+  if (path.startsWith('/api/ai-maturity/assessments/') && method === 'GET') {
+    const maturityAssessmentId = path.replace('/api/ai-maturity/assessments/', '');
+    return withSecurityHeaders(withCors(await handleGetAiMaturityAssessment(request, env, authCtx, maturityAssessmentId), request));
   }
 
   // ── v27: CEO EXECUTIVE DASHBOARD ──────────────────────────────────────────
