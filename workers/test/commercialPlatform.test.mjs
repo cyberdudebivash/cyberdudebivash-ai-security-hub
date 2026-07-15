@@ -160,7 +160,7 @@ const FEATURE_ADOPTION_ROWS = [
 // ─── DB Mock ──────────────────────────────────────────────────────────────────
 
 function makeDB({ profileExists = false, keyExists = true, assetExists = false, scanExists = false,
-                  keyOwner = 'u1' } = {}) {
+                  keyOwner = 'u1', notifPrefsExist = false } = {}) {
   return {
     prepare(sql) {
       const stmt = {
@@ -187,10 +187,16 @@ function makeDB({ profileExists = false, keyExists = true, assetExists = false, 
         },
 
         async first() {
+          if (/FROM notification_preferences/.test(sql)) return notifPrefsExist ? { user_id: 'u1' } : null;
           if (/FROM customer_profiles/.test(sql))     return profileExists ? { id: 'u1' } : null;
           if (/FROM api_keys.*LIMIT 1/.test(sql) && /WHERE id/.test(sql)) return keyExists ? { id: stmt._args[0], user_id: keyOwner } : null;
           if (/FROM api_keys.*WHERE id/.test(sql))    return keyExists ? { user_id: keyOwner } : null;
           if (/FROM scan_jobs.*LIMIT 1/.test(sql))    return scanExists ? { id: 'scan_1' } : null;
+          // handleOnboardingWizard's assets check calls .first(), not .all() —
+          // this branch was missing, so assetExists was silently a no-op for
+          // the wizard's own completion check (only .all()'s customer_assets
+          // branch above honored it, used by a different caller).
+          if (/FROM customer_assets/.test(sql))       return assetExists ? { id: 'asset_1' } : null;
           if (/COUNT\(\*\) as cnt FROM api_keys/.test(sql))         return { cnt: 2 };
           if (/COUNT\(\*\) as cnt FROM scan_jobs/.test(sql))        return { cnt: 3 };
           if (/COUNT\(\*\) as cnt FROM ops_usage_events/.test(sql)) return { cnt: 50 };
@@ -317,6 +323,35 @@ describe('P15.1 handleOnboardingWizard', () => {
     const d   = await r.json();
     expect(d.success).toBe(true);
     expect(d.onboarding.completed_steps).toBe(0);
+  });
+
+  // Regression guard: the 'notifications' step (id: 'notifications', title:
+  // 'Alert Preferences') was previously hardcoded `completed: false` with no
+  // real check at all — meaning completion_pct could never reach 100%
+  // regardless of what a customer actually did. Fixed to check
+  // notification_preferences (the same table CAP-NOTIF-001's real Settings
+  // "Team Alert Channels" card writes to).
+  it('9. Alert Preferences step reflects a real notification_preferences row, not a hardcoded false', async () => {
+    const withoutPrefs = await handleOnboardingWizard(getReq('/api/customer/onboarding/wizard'), makeEnv(), PRO_CTX);
+    const d1 = await withoutPrefs.json();
+    expect(d1.onboarding.steps.find(s => s.id === 'notifications').completed).toBe(false);
+
+    const env2 = makeEnv({ notifPrefsExist: true });
+    const withPrefs = await handleOnboardingWizard(getReq('/api/customer/onboarding/wizard'), env2, PRO_CTX);
+    const d2 = await withPrefs.json();
+    expect(d2.onboarding.steps.find(s => s.id === 'notifications').completed).toBe(true);
+  });
+
+  it('10. completion_pct reaches 100 when all 5 real signals are true (previously impossible)', async () => {
+    const env = makeEnv({
+      profileExists: true, keyExists: true, assetExists: true, scanExists: true, notifPrefsExist: true,
+    });
+    const r = await handleOnboardingWizard(getReq('/api/customer/onboarding/wizard'), env, PRO_CTX);
+    const d = await r.json();
+    expect(d.onboarding.completed_steps).toBe(5);
+    expect(d.onboarding.completion_pct).toBe(100);
+    expect(d.onboarding.status).toBe('COMPLETE');
+    expect(d.onboarding.next_step).toBeNull();
   });
 });
 
