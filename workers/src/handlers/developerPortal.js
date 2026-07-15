@@ -1121,7 +1121,7 @@ async function getEnterpriseExamples(request, env) {
         id: 'soc-case-automation', title: 'Automated SOC case creation on critical CVEs', category: 'soc_operations',
         description: 'Automatically create SOC investigation cases when CRITICAL CVEs are detected via webhook.',
         steps: ['Register webhook: POST /api/auto/webhooks (event: threat.critical)', 'Handle event payload in your service', 'Create SOC case: POST /api/soc/cases with cve reference in description'],
-        webhook_payload_example: { event: 'vuln.critical_found', vulnId: 'uuid', cve: 'CVE-2026-XXXXX', cvss: 9.8, affected: 'vendor/product', timestamp: '2026-06-25T00:00:00Z' },
+        webhook_payload_example: { event: 'threat.critical', vulnId: 'uuid', cve: 'CVE-2026-XXXXX', cvss: 9.8, affected: 'vendor/product', timestamp: '2026-06-25T00:00:00Z' },
       },
       {
         id: 'threat-hunting-mitre', title: 'MITRE ATT&CK-aligned threat hunt campaign', category: 'threat_hunting',

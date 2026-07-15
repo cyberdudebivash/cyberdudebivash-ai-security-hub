@@ -62,4 +62,29 @@ describe('developerPortal webhook routes — retired (CAP-NOTIF-003 consolidatio
     expect(src).toContain('/api/auto/webhooks');
     expect(src).toContain('/api/webhooks/catalog');
   });
+
+  // Regression guard: GET /api/developer/examples' soc-case-automation entry
+  // previously documented its webhook_payload_example with event:
+  // 'vuln.critical_found', which has never been a member of
+  // enterpriseAutomation.js's real WEBHOOK_EVENTS catalog (the sole
+  // surviving webhook system since this file's retirement above) — a
+  // developer who built their webhook receiver against this doc's payload
+  // shape would silently never match on the real 'threat.critical' events
+  // the platform actually sends. Fixed to match; this test reads the real
+  // catalog dynamically (not a hardcoded copy) so it stays correct if the
+  // catalog ever changes.
+  it('the soc-case-automation example\'s webhook_payload_example.event is a real WEBHOOK_EVENTS member', async () => {
+    const automationSrc = readFileSync(new URL('../src/handlers/enterpriseAutomation.js', import.meta.url), 'utf8');
+    const m = automationSrc.match(/const WEBHOOK_EVENTS = \[([\s\S]*?)\];/);
+    expect(m).toBeTruthy();
+    const realEvents = [...m[1].matchAll(/'([^']+)'/g)].map(x => x[1]);
+    expect(realEvents.length).toBeGreaterThan(0);
+
+    const res = await handleDeveloperPortal(req('https://x/api/developer/examples'), {}, USER);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const example = body.examples.find(e => e.id === 'soc-case-automation');
+    expect(example?.webhook_payload_example?.event).toBeTruthy();
+    expect(realEvents).toContain(example.webhook_payload_example.event);
+  });
 });

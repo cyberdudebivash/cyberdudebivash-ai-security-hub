@@ -158,14 +158,14 @@
       "status": "exists"
     },
     "frontend": {
-      "surface_type": "none",
-      "pages": [],
-      "status": "missing",
-      "evidence": "workers/src/handlers/developerPortal.js:856-904 implements full CRUD plus a manual test-fire against a developer_webhooks table (9-event catalog per docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:223), but that catalog is not wired to any automatic dispatcher \u2014 webhooks only ever fire when a user manually clicks test. Separately, workers/src/handlers/enterpriseAutomation.js:22-243 implements a second, independent schema (org_webhooks plus a webhook_delivery_log audit table) that DOES fire automatically on matching events (:231-243), but is a completely separate table/code path from the developer_webhooks system \u2014 a customer using one system has no visibility into or relationship with the other. No frontend page was found calling either system's CRUD endpoints in this pass. Verified 2026-07-08 by reading both files' SQL directly."
+      "surface_type": "dedicated_page",
+      "pages": ["frontend/automation-dashboard.html"],
+      "status": "exists",
+      "evidence": "STALE FIELD CORRECTED 2026-07-15 (Documentation Drift, self-contradictory against this entry's own notes field below, which already cited 'the companion PR #253 fix'): frontend/automation-dashboard.html has a real Webhooks tab (create/pause/resume/delete/test/logs) \u2014 'Add Webhook' form (:188-197, createWebhook()), 'Configured Webhooks' list (:200-201), 'Webhook Delivery (24h)' log (:304), reachable via a real nav item in frontend/user-dashboard.html:962. createWebhook() pulls its event catalog from the real, public GET /api/webhooks/catalog (handleWebhookCatalog) rather than a hardcoded list \u2014 confirmed by an in-file comment (:543-545) documenting a prior mismatch bug already fixed. This field previously said 'missing' based on a 2026-07-08 snapshot predating PR #253 (2026-07-xx, 'repair the live webhook management UI'); left uncorrected since, despite the notes field below already describing the fix."
     },
     "navigation": {
-      "discoverable": false,
-      "evidence": "No nav entry calls either webhook system's routes because no page does."
+      "discoverable": true,
+      "evidence": "STALE FIELD CORRECTED 2026-07-15: frontend/user-dashboard.html:962 links to the automation dashboard page (frontend/automation-dashboard.html) with a real nav-item title describing webhooks among its features."
     },
     "auth_enforced": "unknown",
     "rbac": {
@@ -195,7 +195,7 @@
       "last_verified": "2026-07-15",
       "evidence": "PR #254 (commit 0ebf7a7, merged 2026-07-15) retired workers/src/handlers/developerPortal.js's webhook subsystem in full (zero frontend callers, no dispatch function, unsent signing) after re-verification, leaving workers/src/handlers/enterpriseAutomation.js's /api/auto/webhooks* as the sole system. Confirmed via git log/git show 0ebf7a7 and a fresh read of the current developerPortal source (webhook routes/handlers no longer present)."
     },
-    "notes": "Documentation-drift correction (2026-07-15): this entry previously described the pre-PR#254 two-system duplication as an open architectural problem; that duplication is resolved. Real residual gap, not drift: the enterpriseAutomation dispatchWebhookEvent function has zero production callers repo-wide (only workers/test/webhookVocabularyAndDeliveryLogs.test.mjs calls it) \u2014 the surviving system still only fires on a manual \"Test\" click, not on real platform events. That, plus the still-missing frontend, is why operational_status stays NOT READY."
+    "notes": "Documentation-drift correction (2026-07-15): this entry previously described the pre-PR#254 two-system duplication as an open architectural problem; that duplication is resolved. SECOND drift correction, same day: the frontend/navigation fields above also still said 'missing'/'not discoverable' despite predating this same notes field's already-correct awareness of the PR #253 UI fix \u2014 corrected to 'exists'/'discoverable' with evidence. Real residual gap, not drift, and the sole reason operational_status stays NOT READY: the enterpriseAutomation dispatchWebhookEvent function has zero production callers repo-wide (only workers/test/webhookVocabularyAndDeliveryLogs.test.mjs calls it) \u2014 the surviving system has a real, discoverable, working management UI, but still only fires on a manual \"Test\" click, never on a real platform event. Wiring it to real events is a feature-completion project (deciding which of the 12 cataloged event types map to which real triggers), not a quick fix."
   },
   {
     "id": "CAP-NOTIF-004",
