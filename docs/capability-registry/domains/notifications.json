@@ -236,7 +236,7 @@
     },
     "test_coverage": {
       "has_tests": true,
-      "evidence": "workers/test/emailDlqAndTemplates.test.mjs and workers/test/emailWiringTask3Phase1.test.mjs import from workers/src/services/emailEngine.js \u2014 confirmed by import-statement grep, 2026-07-08."
+      "evidence": "workers/test/emailDlqAndTemplates.test.mjs and workers/test/emailWiringTask3Phase1.test.mjs import from workers/src/services/emailEngine.js \u2014 confirmed by import-statement grep, 2026-07-08. UPDATED 2026-07-15: workers/test/enterpriseLeadDripStep4.test.mjs (new, 2 tests, real node:sqlite D1) covers runDripAutomation's step-to-template dispatch for the 'enterprise' sequenceId specifically \u2014 previously zero test file exercised DRIP_SEQUENCES/getSequenceTemplate/runDripAutomation's actual send behavior at all (the one prior reference, workers/test/proposalBola.test.mjs, mocks runDripAutomation away entirely)."
     },
     "docs": [
       {
@@ -249,10 +249,10 @@
     "priority": "P7",
     "verification": {
       "method": "static",
-      "last_verified": "2026-07-08",
-      "evidence": "workers/src/handlers/payments.js:1104 read directly to confirm a real trigger exists (not just a defined-but-uncalled function, the exact class of mistake this registry exists to prevent); workers/test/emailDlqAndTemplates.test.mjs and workers/test/emailWiringTask3Phase1.test.mjs import statements confirmed."
+      "last_verified": "2026-07-15",
+      "evidence": "workers/src/handlers/payments.js:1104 read directly to confirm a real trigger exists (not just a defined-but-uncalled function, the exact class of mistake this registry exists to prevent); workers/test/emailDlqAndTemplates.test.mjs and workers/test/emailWiringTask3Phase1.test.mjs import statements confirmed. UPDATED 2026-07-15 (Customer Lifecycle Completion Program, Phase 6): found and fixed a real gap by tracing DRIP_SEQUENCES against getSequenceTemplate/runDripAutomation's actual dispatch switch in workers/src/services/emailEngine.js rather than trusting the 'GA' status. The 'enterprise' sequence (real trigger: workers/src/handlers/growth.js:86, enrolled on every scan-detected enterprise-domain lead) declares steps:[0,1,3,5,7] (5 touches) and DELAY_MAP.enterprise was already sized to 5 entries, but the legacy dispatch switch shared with 'welcome'/'trial_expiry' only implemented 4 templates (templateDay0-3) \u2014 confirmed via templateDay3's own subject copy, which explicitly reads 'This is the last email in your free trial sequence'. Step index 4 fell through to the no-op default branch, silently marking the row 'completed' via advanceSequence's nextStep>=4 threshold without ever calling sendEmail(). Fixed by adding templateEnterpriseLeadDay7 (new copy, distinct from the similarly-named but differently-triggered templateEnterpriseDay7 used by the separate enterprise_nurture/inquiry sequence) and wiring it to step index 4, gated to seqId==='enterprise' only."
     },
-    "notes": "No actionable gap found in this pass. Genuinely missing multi-channel expansions (SMS, real WhatsApp Business API send, push) are tracked as their own gaps in the platform's product backlog rather than as defects in this working capability \u2014 this entry covers only what emailEngine.js itself does, which it does correctly."
+    "notes": "Multi-channel expansions (SMS, real WhatsApp Business API send, push) remain tracked as their own product-backlog gaps, not defects in this capability. UPDATED 2026-07-15: the enterprise-sequence 5th-touch gap above is now fixed \u2014 see test_coverage and verification.evidence. advanceSequence()'s completion check (workers/src/services/emailEngine.js, `isDone = nextStep >= 4`) is hardcoded rather than derived from each sequence's real step count; for sequences with fewer than 4 real steps (upgrade_nudge, subscription_activated, assessment_delivered, mssp_onboarded) this causes 1-2 harmless wasted cron passes before the row is marked completed \u2014 no wrong or duplicate email is ever sent, so this was left as a documented code-quality note rather than fixed in this pass (touching it is a shared-code change affecting every sequence, a larger blast radius than the single-sequence fix above)."
   },
   {
     "id": "CAP-NOTIF-005",
