@@ -307,5 +307,58 @@
       "evidence": "workers/src/handlers/renewalEngine.js read directly in full. Found and fixed a real defect: seedRenewalQueue35d's query filtered on `s.expires_at`, a column that has never existed on the `subscriptions` table (workers/schema_master.sql:3131-3160 defines `current_period_end`, not `expires_at`; confirmed via full-text grep across every workers/*.sql file, no ALTER TABLE ever added it). The resulting D1 'no such column' error was silently swallowed by `.all().catch(() => ({ results: [] }))`, so this function has always returned `{ queued: 0 }` in production \u2014 meaning only the T-7/T-1 reminders (populated by workers/src/services/v24/billingEngine.js's separate 7-day-window buildRenewalQueue) could ever actually fire; T-30 and T-14 were dead code despite the module's own header comment claiming all four intervals work. Fixed to use `s.current_period_end`, added the missing `s.cancel_at_period_end = 0` filter (matching buildRenewalQueue's existing guard, so an already-cancelled customer is never sent a false 'your subscription will auto-renew' email), and corrected `user_id` to be selected/bound from `s.user_id` instead of silently falling back to the customer's email address in that column."
     },
     "notes": "Documentation Drift: the module's own header comment (workers/src/handlers/renewalEngine.js:3, 'Phase 5 P0: Renewal reminders at T-30, T-14, T-7, T-1 days') asserted all four intervals worked; this pass found the T-30/T-14 half was never reachable in production due to the defect above, with zero test coverage to catch it \u2014 the exact pattern docs/audit-history/ warns about, caught here before a full CLCP-audit doc repeated the same unverified claim. runRenewalAutomation's own logic (interval matching, expired-recovery, Resend send) was read and traced manually but has no direct test coverage yet; recommended as the next increment for this capability rather than folded into this fix (single production problem per PR)."
+  },
+  {
+    "id": "CAP-NOTIF-006",
+    "domain": "notifications",
+    "name": "Paying-Customer Churn Prevention / Win-Back Engine",
+    "description": "ADDED 2026-07-15 (Customer Lifecycle Completion Program, Phase 6): cron-driven pipeline that identifies paying customers inactive 7+ days (no scan in the window) and queues a discount win-back email (20% for 2 months, or 30% for 3 months if silent 30+ days) via the same KV-queue \u2192 processUpsellEmailQueue \u2192 dispatchEmail \u2192 Resend path used by other automationEngine.js jobs. Resolves the mission brief's open question on the separate `enterprise_winback` sequence (docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md:285-286, 'verify it's wired to real churn events') by finding and fixing the actual paying-customer win-back path; `enterprise_winback` itself remains scoped to pre-purchase proposal rejections (workers/src/handlers/proposalGenerator.js), a separate and already-working capability, not touched here. Previously existed in the repo with zero registry entry and a defect that silently defeated it completely (0 at-risk customers found, ever) \u2014 now fixed as part of this entry's creation.",
+    "backend": {
+      "handlers": [
+        "workers/src/services/automationEngine.js"
+      ],
+      "entry_points": [
+        "runChurnPrevention", "processUpsellEmailQueue", "dispatchEmail"
+      ],
+      "routes_sampled": [],
+      "routes_fully_enumerated": false,
+      "status": "exists"
+    },
+    "frontend": {
+      "surface_type": "none",
+      "pages": [],
+      "status": "exists",
+      "evidence": "This capability's customer surface is the inbox, not a page. Real trigger confirmed by direct read: workers/src/index.js's 'v8.2 Revenue Automation Pipeline' cron block (inside ctx.waitUntil, unconditional \u2014 not gated on event.cron) imports and calls runAutomationCron(env, event.cron) on every cron tick; runAutomationCron (workers/src/services/automationEngine.js:39-61) calls processUpsellEmailQueue(env) and runChurnPrevention(env) directly and unconditionally, not just defined-but-uncalled functions. dispatchEmail's buildEmailFromTemplate('retention', ...) (workers/src/services/automationEngine.js:601-616) produces a real discount-offer email and is the same function already proven live for other queue types."
+    },
+    "navigation": {
+      "discoverable": true,
+      "evidence": "N/A (delivered via email, not a navigable page); triggered automatically by real customer activity state (scan_history recency joined against leads.funnel_stage)."
+    },
+    "auth_enforced": false,
+    "rbac": {
+      "enforced": false,
+      "permissions": []
+    },
+    "subscription_gated": false,
+    "feature_flag": {
+      "present": false,
+      "mechanism": "none"
+    },
+    "test_coverage": {
+      "has_tests": true,
+      "evidence": "workers/test/churnPreventionQuery.test.mjs (new, 5 tests, real node:sqlite-backed D1) covers runChurnPrevention directly: flags an inactive paying customer and queues a real retention-email KV entry with correct payload; does not flag a free-plan lead; does not flag a lead that never converted (funnel_stage still 'visitor'); does not flag a customer active within 7 days; does not re-queue a customer with an existing pending retention email. processUpsellEmailQueue's KV-drain \u2192 dispatchEmail path and runAutomationCron's orchestration were read and traced manually but have no direct test coverage yet \u2014 flagged as the next actionable gap for this capability, not covered by this pass (single production problem per PR)."
+    },
+    "docs": [
+      { "path": "docs/SAAS_PRODUCTIZATION_MISSION_BRIEF.md", "tag": "canonical" }
+    ],
+    "customer_journey_complete": false,
+    "operational_status": "GA APPROVED WITH DOCUMENTED LIMITATIONS",
+    "priority": "P7",
+    "verification": {
+      "method": "static",
+      "last_verified": "2026-07-15",
+      "evidence": "workers/src/services/automationEngine.js read directly in full. Found and fixed a real defect: runChurnPrevention's query filtered on `l.status = 'active'`, a column that has never existed on the `leads` table (workers/schema_master.sql:1730-1760 defines `funnel_stage` and `stage`, not `status`; confirmed via full-text read of the CREATE TABLE statement, no ALTER TABLE ever added it). The resulting D1 'no such column' error was silently swallowed by `.all().catch(() => ({ results: [] }))`, so `at_risk` has always been 0 in production \u2014 zero win-back emails have ever been queued for any inactive paying customer since this code existed, on any plan (Starter/Pro/Enterprise/MSSP). Fixed to use `l.funnel_stage = 'customer'`, the established 'currently paying, converted' signal used identically elsewhere (workers/src/services/lifecycleEngine.js:136 sets it on conversion; workers/src/handlers/revenueKPI.js:53 reads it as the MRR 'converted' count; workers/src/handlers/leads.js:211 and workers/src/index.js:9247 both exclude 'customer' and 'churned' together to mean 'still a pre-conversion lead', confirming the two values are mutually exclusive on this column and no additional churned-exclusion filter is needed."
+    },
+    "notes": "Same bug shape as CAP-NOTIF-005's renewal-queue defect (wrong/nonexistent column name, silently swallowed by a permissive .catch(), zero test coverage to catch it) \u2014 found by applying that same pattern-match during this session's broader Phase 6 customer-success audit, not by re-litigating CAP-NOTIF-005 itself. A related, still-open gap surfaced by the same audit and deliberately NOT fixed here (different production problem): `evaluateUpsellTriggers()` (workers/src/services/upsellEngine.js:149-223) correctly computes in-app usage-limit warnings (90% scan quota, 80% API quota) and is exposed at a real route (POST /api/growth/upsell/evaluate), but has zero callers anywhere \u2014 no cron, no frontend. Wiring it up requires a product decision on where in the request lifecycle it should fire (on scan completion? on dashboard load?), which is UI/UX scope requiring human sign-off, not a backend-only fix."
   }
 ]

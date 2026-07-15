@@ -222,7 +222,7 @@ export async function runChurnPrevention(env) {
       FROM leads l
       LEFT JOIN scan_history s ON s.user_id = l.id
       WHERE l.plan != 'free'
-        AND l.status = 'active'
+        AND l.funnel_stage = 'customer'
         AND (s.created_at IS NULL OR s.created_at < datetime('now', '-7 days'))
       GROUP BY l.id
       ORDER BY l.lead_score DESC
