@@ -111,7 +111,15 @@ No code changes were needed for this phase.
 
 ## Findings, Ordered by Business Risk
 
-### 0. Support ticket system returns HTTP 500 in live production — NOT FIXED, added 2026-07-16, pending owner decision
+### 0. Support ticket system returns HTTP 500 in live production — RESOLVED, confirmed live 2026-07-16 (see `PHASE7_PAID_CUSTOMER_LIFECYCLE_AUDIT_2026-07-16.md` §3.3)
+
+> **Status update:** live-verified fixed during the Phase 7 paid-lifecycle
+> audit — `POST /api/support/ticket` now returns 200 and creates a real,
+> retrievable ticket end-to-end (`GET /api/support/tickets/mine` correctly
+> lists it). The `schema_v51_support_ticket_org_scope.sql` migration
+> referenced below has evidently been applied to production since this
+> finding was last updated. Original finding text preserved below for the
+> audit trail.
 
 - **Severity**: P1/Critical (customer-facing, currently broken, no code fix
   needed — a production database migration decision)

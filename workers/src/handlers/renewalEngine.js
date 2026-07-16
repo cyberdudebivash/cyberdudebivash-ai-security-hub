@@ -220,6 +220,50 @@ export async function runRenewalAutomation(env) {
 }
 
 /**
+ * Downgrade subscribers whose current_period_end has passed back to FREE.
+ * Catches both explicit cancellations (handleCancelSubscription sets
+ * cancel_at_period_end=1 but leaves status='active' until the period
+ * actually ends) and silent non-renewal (no auto-recharge exists — see
+ * runPaymentRecovery's TODO above) — both leave a subscription 'active'
+ * with an elapsed current_period_end, so one query catches both.
+ */
+export async function enforceSubscriptionExpiry(env) {
+  const db = env?.DB;
+  if (!db) return { downgraded: 0 };
+
+  try {
+    const expired = await db.prepare(`
+      SELECT s.id as sub_id, s.user_id, s.email
+      FROM subscriptions s
+      WHERE s.status = 'active'
+        AND s.current_period_end IS NOT NULL
+        AND s.current_period_end <= datetime('now')
+      LIMIT 100
+    `).all().catch(() => ({ results: [] }));
+
+    const rows = expired?.results ?? [];
+    if (rows.length === 0) return { downgraded: 0 };
+
+    const now = new Date().toISOString();
+    let downgraded = 0;
+    for (const row of rows) {
+      try {
+        await db.batch([
+          db.prepare(`UPDATE subscriptions SET status = 'cancelled', updated_at = ? WHERE id = ?`).bind(now, row.sub_id),
+          ...(row.user_id ? [db.prepare(`UPDATE users SET tier = 'FREE' WHERE id = ? AND tier NOT IN ('ENTERPRISE','MSSP')`).bind(row.user_id)] : []),
+        ]);
+        downgraded++;
+      } catch (e) {
+        console.error('[CRON] Expiry batch failed for sub', row.sub_id, e?.message);
+      }
+    }
+    return { downgraded };
+  } catch (e) {
+    return { downgraded: 0, error: e.message };
+  }
+}
+
+/**
  * Seed the renewal queue for subscriptions renewing within the next 35 days.
  * Extends billingEngine.buildRenewalQueue() which only looks 7 days ahead.
  */

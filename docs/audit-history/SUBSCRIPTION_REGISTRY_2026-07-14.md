@@ -5,6 +5,17 @@
 **Purpose:** One authoritative table for every subscription plan on the platform — what it's called, what it costs, what tier value gets persisted, and what actually enforces access — so a future engineer never has to re-derive this by tracing five files.
 **Method:** Static repository analysis, confirmed by direct code trace and cross-referenced against four parallel research passes (customer-journey trace, marketplace/enterprise-provisioning trace, API-subscription trace, price-catalog/security sweep). Every cell is Verified against current code unless marked otherwise.
 
+> **2026-07-16 update — see `PHASE7_PAID_CUSTOMER_LIFECYCLE_AUDIT_2026-07-16.md`:**
+> The "no code anywhere downgrades `users.tier`" gap this doc identified
+> (§6) is now **fixed** — a cron block that looked like it addressed this
+> (added the same day this doc was written, `expires_at`-based, see Phase 7
+> §2) turned out to be independently dead code from a wrong column name
+> *and* an invalid `status` enum value. Both are corrected and covered by a
+> real-schema regression test. The 35-day renewal-queue seeding bug (also
+> §6 of this doc) was separately fixed by PR #264, confirmed still-fixed by
+> Phase 7. The "no automated renewal/recharge exists" finding (§6) remains
+> confirmed true and is unchanged — still an open architectural decision.
+
 ---
 
 ## 1. The two parallel systems (why this table has two halves)
