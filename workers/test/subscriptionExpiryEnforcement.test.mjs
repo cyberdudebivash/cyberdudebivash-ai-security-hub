@@ -39,6 +39,8 @@ function makeRealD1() {
     price_inr INTEGER NOT NULL DEFAULT 0,
     current_period_end TEXT NOT NULL DEFAULT (datetime('now')),
     cancel_at_period_end INTEGER NOT NULL DEFAULT 0,
+    cancelled_at TEXT,
+    cancel_reason TEXT,
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`);
   sqlite.exec(`CREATE TABLE users (
@@ -86,20 +88,30 @@ describe('enforceSubscriptionExpiry — downgrade lapsed subscribers to FREE (pr
 
     const user = db._sqlite.prepare(`SELECT tier FROM users WHERE id='u_1'`).get();
     expect(user.tier).toBe('FREE');
-    const sub = db._sqlite.prepare(`SELECT status FROM subscriptions WHERE id='sub_1'`).get();
+    const sub = db._sqlite.prepare(`SELECT status, cancelled_at, cancel_reason FROM subscriptions WHERE id='sub_1'`).get();
     expect(sub.status).toBe('cancelled');
+    // Must be populated: ceoExecutiveDashboard.js's churn metric filters on
+    // `status='cancelled' AND cancelled_at>=unixepoch(?)` — a cancelled row
+    // with a null cancelled_at would silently never be counted as churn.
+    expect(sub.cancelled_at).toBeTruthy();
+    expect(sub.cancel_reason).toBe('Subscription period ended without renewal');
   });
 
-  it('downgrades a subscriber who explicitly cancelled once their grace period elapses', async () => {
+  it('downgrades a subscriber who explicitly cancelled once their grace period elapses, preserving their original cancel_reason', async () => {
     const db = makeRealD1();
     db._sqlite.prepare(`INSERT INTO users (id, email, tier) VALUES ('u_2','cancelled@acme.test','STARTER')`).run();
     db._sqlite.prepare(
-      `INSERT INTO subscriptions (id, user_id, email, plan, status, price_inr, current_period_end, cancel_at_period_end)
-       VALUES ('sub_2','u_2','cancelled@acme.test','STARTER','active',99900,?,1)`
+      `INSERT INTO subscriptions (id, user_id, email, plan, status, price_inr, current_period_end, cancel_at_period_end, cancel_reason)
+       VALUES ('sub_2','u_2','cancelled@acme.test','STARTER','active',99900,?,1,'too expensive')`
     ).run(daysFromNow(-1));
 
     const result = await enforceSubscriptionExpiry({ DB: db });
     expect(result.downgraded).toBe(1);
+    const sub = db._sqlite.prepare(`SELECT cancel_reason FROM subscriptions WHERE id='sub_2'`).get();
+    // The customer's own reason (captured at cancel-request time by
+    // handleCancelSubscription) must survive — not be overwritten by the
+    // enforcement cron's generic default.
+    expect(sub.cancel_reason).toBe('too expensive');
     const user = db._sqlite.prepare(`SELECT tier FROM users WHERE id='u_2'`).get();
     expect(user.tier).toBe('FREE');
   });

@@ -249,7 +249,12 @@ export async function enforceSubscriptionExpiry(env) {
     for (const row of rows) {
       try {
         await db.batch([
-          db.prepare(`UPDATE subscriptions SET status = 'cancelled', updated_at = ? WHERE id = ?`).bind(now, row.sub_id),
+          db.prepare(`UPDATE subscriptions
+                      SET status = 'cancelled',
+                          cancelled_at = COALESCE(cancelled_at, ?),
+                          cancel_reason = COALESCE(cancel_reason, 'Subscription period ended without renewal'),
+                          updated_at = ?
+                      WHERE id = ?`).bind(now, now, row.sub_id),
           ...(row.user_id ? [db.prepare(`UPDATE users SET tier = 'FREE' WHERE id = ? AND tier NOT IN ('ENTERPRISE','MSSP')`).bind(row.user_id)] : []),
         ]);
         downgraded++;
