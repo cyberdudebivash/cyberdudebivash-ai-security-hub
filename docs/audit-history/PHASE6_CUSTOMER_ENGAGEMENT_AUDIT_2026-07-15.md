@@ -12,35 +12,76 @@ superseding wholesale.
 
 ## Executive Summary
 
-**Overall call: Conditional GO for continued commercial operation, NOT
-"100% complete."** No new customer-facing regressions were found. One
-finding — a churn-prevention pipeline that has silently sent zero win-back
-emails since it was written — was the highest-business-risk defect
-discovered this phase, and it is fixed (PR #267, pending merge). Three
-other narrow, low-risk fixes are also ready (PRs #266, #268, #269, all
-pending merge). No architectural or commercial changes were made
-unilaterally, per this repo's governance policy.
+**2026-07-16 UPDATE (live production verification pass — see Phase 6.5
+below): overall call revised to Conditional GO, with one live P1 carve-out.**
+All 7 PRs opened during this program (#266-#272) are now merged and
+production-verified deployed. A dedicated live-production audit was then
+run against `https://cyberdudebivash.in` with a real, freshly-created
+customer account (browser-based click-through was not possible from this
+execution environment — see Phase 6.5 for why — so verification used direct
+HTTPS calls against the same live API a browser would call). Several
+Phase 6 fixes were positively confirmed working end-to-end in production
+(notification-preferences detection in the onboarding wizard, organization
+creation). **One new, previously undocumented, currently-live defect was
+found**: the in-product support ticket system — both viewing and filing
+tickets — returns HTTP 500 for real customers right now. See Finding 0
+below. This is not a regression introduced by this program's PRs; it
+appears to be a pre-existing gap between a merged code change and a
+required manual production database migration, first surfaced by this
+session's live verification because no prior pass had checked the live
+database's actual schema. Remediation requires a production schema
+migration, which per this repo's governance (CLAUDE.md §1) requires
+explicit owner approval and is **not** performed as part of this document.
 
-**Highest-risk findings, in order:**
+**Original 2026-07-15 summary (below), now superseded on the "Conditional
+GO" reasoning but preserved for the record per CLAUDE.md §2:** No new
+customer-facing regressions were found. One finding — a churn-prevention
+pipeline that has silently sent zero win-back emails since it was written —
+was the highest-business-risk defect discovered this phase, and it is
+fixed (PR #267, pending merge at the time this was written; since merged).
+Three other narrow, low-risk fixes are also ready (PRs #266, #268, #269,
+all pending merge at the time; since merged). No architectural or
+commercial changes were made unilaterally, per this repo's governance
+policy.
 
-1. **(Fixed, pending merge)** Every paying customer inactive 7+ days has
-   received zero retention/win-back offers since the churn-prevention code
-   was written — a wrong column name, silently swallowed. PR #267.
-2. **(Not fixed — High, ready to implement)** Every trialing customer gets
-   no trial-expiry reminder — the sequence exists and is tested, but
-   nothing ever enrolls anyone in it. Clear one-PR fix, described below.
-3. **(Fixed, pending merge)** 8 real admin/staff/SOC/MSSP-partner routes
-   (case updates, incident/maintenance updates, API key updates, user
+**Highest-risk findings, in order (updated 2026-07-16 — Finding 0 added
+above the original list; Findings 1-3 below are now fixed and deployed):**
+
+0. **(Found 2026-07-16, live production, NOT YET fixed — P1/Critical, pending
+   owner decision)** The in-product support ticket system returns HTTP 500
+   for real customers on both `GET /api/support/tickets/mine` and
+   `POST /api/support/ticket`, live in production, right now. High-confidence
+   root cause: `workers/schema_v51_support_ticket_org_scope.sql` (adds the
+   `organization_id` column both failing queries depend on) requires manual
+   `wrangler d1 execute --remote` application and appears to have never been
+   run against production, even though the application code that depends on
+   it shipped automatically via the normal CI/CD pipeline. See Phase 6.5 and
+   `CAP-PORTAL-004` for full evidence. Customers still have the documented
+   email fallback (`support@cyberdudebivash.in`), so this is not a total
+   support blackout, but the in-product channel this program built is
+   non-functional for every customer today.
+1. **(Fixed, merged, deployed — PR #267)** Every paying customer inactive 7+
+   days had received zero retention/win-back offers since the churn-prevention
+   code was written — a wrong column name, silently swallowed.
+2. **(Fixed, merged, deployed — PR #271)** Every trialing customer got no
+   trial-expiry reminder — the sequence existed and was tested, but nothing
+   ever enrolled anyone in it.
+3. **(Fixed, merged, deployed — PR #266)** 8 real admin/staff/SOC/MSSP-partner
+   routes (case updates, incident/maintenance updates, API key updates, user
    status, partner status, webhook management) silently failed in the
    browser due to a CORS allowlist gap — worked via curl, broken via UI.
-   PR #266.
-4. **(Not fixed — High, needs a product decision)** A fourth, fully-wired,
-   completely-empty in-app notification system was found: real backend,
-   real UI, zero events ever sent to it. Not previously documented
-   anywhere in this registry or the mission brief.
-5. **(Not fixed — Medium, needs a product decision)** The one purpose-built
-   onboarding/activation checklist in the codebase is not linked from any
-   navigation a real customer would encounter.
+4. **(Fixed, merged, deployed — PR #272)** The one purpose-built
+   onboarding/activation checklist in the codebase was not linked from any
+   navigation a real customer would encounter — ported into the real
+   post-login dashboard as a new "Getting Started" page; live-confirmed
+   2026-07-16 (Phase 6.5) that its notification-preferences signal now
+   correctly reads real data for a real account.
+5. **(Not fixed — Medium, needs a product decision, unchanged from
+   2026-07-15)** A fourth, fully-wired, completely-empty in-app notification
+   system was found: real backend, real UI, zero events ever sent to it. Not
+   previously documented anywhere in this registry or the mission brief.
+   Deliberately not ported into the new dashboard nav (see CAP-PORTAL-005
+   notes) pending a product decision on its fate.
 
 **What is genuinely further along than the original task brief assumed**:
 customer support ticketing (full UI, RBAC, org scoping — already shipped),
@@ -70,6 +111,41 @@ No code changes were needed for this phase.
 
 ## Findings, Ordered by Business Risk
 
+### 0. Support ticket system returns HTTP 500 in live production — NOT FIXED, added 2026-07-16, pending owner decision
+
+- **Severity**: P1/Critical (customer-facing, currently broken, no code fix
+  needed — a production database migration decision)
+- **Confidence**: Verified (the HTTP 500s, via live curl against production
+  with a real account) / high-confidence-but-not-certain (the root cause,
+  since direct D1 schema introspection is not available from this session)
+- **Root cause**: `workers/schema_v51_support_ticket_org_scope.sql` adds
+  `support_tickets.organization_id`, which both `handleMyTickets` and
+  `handleTicket` (`workers/src/handlers/support.js`) depend on. That
+  migration requires manual `wrangler d1 execute --remote` application
+  (per its own header comment) and is not run by CI/CD — `db-migrate.yml`
+  is `workflow_dispatch`-only, "manual-only by design." The dependent
+  application code shipped automatically when PR #260 merged; the separate
+  manual migration step appears to have never been run against production.
+- **Repository evidence**: `workers/src/handlers/support.js` (query/insert
+  sites), `workers/schema_v51_support_ticket_org_scope.sql` (migration
+  header), `.github/workflows/db-migrate.yml` (manual-gate confirmation).
+  Full narrative and live HTTP evidence: Phase 6.5 below.
+- **Customer impact**: every real customer who tries to view or file an
+  in-product support ticket today gets a generic failure. The documented
+  email fallback (`support@cyberdudebivash.in`) still works.
+- **Business impact**: the customer support channel this program shipped
+  and certified as tested (25 passing tests) is unusable in production —
+  a test-fixture-vs-production-reality gap, not a code defect.
+- **Files involved**: no files require changes; the fix is an operational
+  migration run, not a code change.
+- **Recommended remediation**: run `db-migrate.yml` against
+  `schema_v51_support_ticket_org_scope.sql` on production, then re-verify
+  both endpoints live.
+- **Why not auto-fixed**: this is a production database schema change —
+  hard to reverse, affects the shared production D1 instance — which
+  CLAUDE.md §1 and this session's own operating instructions both require
+  explicit owner approval for. Not performed as part of this audit.
+
 ### 1. Churn-prevention query always found zero at-risk customers — FIXED (PR #267)
 
 - **Severity**: High (revenue/retention-relevant, silent failure, long-lived)
@@ -85,9 +161,9 @@ No code changes were needed for this phase.
   "currently paying" signal used identically in 3 other files. 5 new
   regression tests against a real `node:sqlite` D1. New registry entry
   CAP-NOTIF-006 (this capability had none before).
-- **Status**: PR #267 open, tests green, awaiting merge approval.
+- **Status**: **Merged, deployed, production-verified** (PR #267).
 
-### 2. `trial_expiry` sequence defined but never enrolled — NOT FIXED, ready to implement
+### 2. `trial_expiry` sequence defined but never enrolled — FIXED (PR #271)
 
 - **Severity**: High (revenue-relevant — a silently-lapsing trial is a lost
   conversion opportunity with no nudge)
@@ -99,14 +175,17 @@ No code changes were needed for this phase.
   trialing customer.
 - **Customer impact**: every trial that lapses does so silently, with no
   "your trial is ending" email.
-- **Recommended fix** (not implemented this pass — new invocation, not a
-  broken-reference fix, so held for a dedicated PR rather than bundled):
-  mirror the existing `upgrade_nudge` cron block already in
-  `workers/src/index.js` — select `subscriptions WHERE status='trialing'
-  AND trial_ends_at BETWEEN now() AND now()+3d`, call
-  `enrollInSequence(...,'trial_expiry',...)`. All downstream machinery
-  (template, dispatch, delivery) already exists and is tested.
-- **Status**: Not started. Recommended as the next Phase 6 PR.
+- **Fix (PR #271)**: added `enrollTrialExpiryNudges()`, a new cron block in
+  `workers/src/index.js` mirroring the existing `upgrade_nudge` pattern —
+  selects `subscriptions WHERE status='trialing' AND trial_ends_at BETWEEN
+  now() AND now()+3d`, calls `enrollInSequence(...,'trial_expiry',...)`.
+  Also wrote new trial-specific email copy (`templateTrialExpiryDay0/Day1`
+  in `emailEngine.js`) rather than reusing the legacy welcome/enterprise
+  templates the sequence had been silently sharing — writing new customer-
+  facing copy was treated as a content/commercial decision per CLAUDE.md §1
+  and confirmed with the platform owner before implementation. 6 new
+  regression tests. New registry entry CAP-NOTIF-007.
+- **Status**: **Merged, deployed, production-verified** (PR #271).
 
 ### 3. CORS `Access-Control-Allow-Methods` omitted `PATCH` — FIXED (PR #266)
 
@@ -123,7 +202,7 @@ No code changes were needed for this phase.
   test suite were unaffected, which is why it shipped unnoticed. This is
   staff/admin/partner-facing, not end-customer-facing.
 - **Fix**: one-line allowlist addition, 1 new regression test.
-- **Status**: PR #266 open, tests green, awaiting merge approval.
+- **Status**: **Merged, deployed, production-verified** (PR #266).
 
 ### 4. Undocumented, fully-wired, permanently-empty 4th notification system — NOT FIXED, needs a product decision
 
@@ -144,10 +223,15 @@ No code changes were needed for this phase.
 - **Why not auto-fixed**: deciding which of the 7 `NOTIFICATION_TYPES` map
   to which real platform events (and whether this should coexist with the
   separate `notification_log`-backed system) is an architecture decision,
-  not a bug fix. **Recommend**: resolve together with Finding 5, since both
-  point at the same orphaned page.
+  not a bug fix.
+- **2026-07-16 update**: Finding 5 (same orphaned page) has since been
+  resolved independently (PR #272) by porting only its onboarding checklist
+  into `user-dashboard.html` — a deliberate scope decision to leave this
+  notification center out of that port rather than ship an empty widget in
+  the real dashboard (see `CAP-PORTAL-005`'s notes). This finding remains
+  open and still needs its own product decision.
 
-### 5. The one onboarding/activation checklist in the codebase is unreachable — NOT FIXED, needs a product decision
+### 5. The one onboarding/activation checklist in the codebase is unreachable — FIXED (PR #272)
 
 - **Severity**: Medium-High (the backend logic is correct; the entire
   feature is invisible to real customers)
@@ -164,13 +248,24 @@ No code changes were needed for this phase.
 - **Customer impact**: a real customer who signs up and lands on
   `user-dashboard.html` (confirmed the real landing page) will never see
   this checklist.
-- **Why not auto-fixed**: three overlapping dashboard-like pages exist
-  (`user-dashboard.html`, `customer-dashboard.html`,
-  `customer-success-dashboard.html`) — deciding where onboarding content
-  and the notification center (Finding 4) belong is an information-
-  architecture call, not a one-line patch. **This is the single highest-
-  value open decision from this audit**: resolving it closes both Finding
-  4 and Finding 5 at once.
+- **Decision made**: rather than link the orphaned page, port the
+  checklist's content directly into `user-dashboard.html` as a new
+  "Getting Started" nav item (real session auth, not the old page's
+  weaker gate) — user's explicit choice among the options presented
+  (link/merge/retire/defer). The notification center on the same orphaned
+  page (Finding 4) was deliberately **not** ported in the same pass — kept
+  as a separate, still-open product decision (see Finding 4;
+  `CAP-PORTAL-005`'s notes record this scope boundary explicitly).
+- **Fix (PR #272)**: new `#page-onboarding` page, `loadOnboarding()`
+  calling the existing `GET /api/customer/onboarding/wizard`, plus a
+  server-side bug found and fixed in the same handler — the "notifications"
+  step was hardcoded `completed: false` regardless of real state; now
+  checks `notification_preferences` for a real row. 2 new regression tests.
+  New registry entry `CAP-PORTAL-005`.
+- **Status**: **Merged, deployed, production-verified** (PR #272) —
+  including a 2026-07-16 live-production check (Phase 6.5) confirming the
+  notification-preferences fix returns real per-account data, not a
+  hardcoded value.
 
 ### 6. Free-tier signups receive no nurture sequence — NOT FIXED, needs a product decision
 
@@ -309,28 +404,122 @@ alerts not surfaced; win-back was dark until this pass's fix).
 
 ---
 
+## Phase 6.5 — Live Production Verification (2026-07-16)
+
+**Trigger**: explicit user request to audit the live dashboard at
+`https://cyberdudebivash.in/` and cross-check whether Phase 6's fixes and
+features are actually present and working, not just merged and deployed.
+
+**Method note**: this execution environment's headless Chromium cannot
+reach the public internet under any proxy configuration tested (confirmed
+by an identical `net::ERR_CONNECTION_RESET` against both the live site and
+an unrelated external CDN, including when the page itself was served from
+localhost) — a sandbox constraint, not something fixable from inside the
+session. Verification was therefore performed via direct HTTPS calls
+(curl) against the live API with a genuine, freshly-created production
+account (real signup → real `access_token` → real authenticated requests),
+which exercises the identical backend code path a browser session would,
+and is strictly stronger evidence for backend-correctness questions than a
+screenshot would have been. The test account was deleted via
+`DELETE /api/auth/delete-account` at the end of the audit and the deletion
+was confirmed (subsequent login with the same credentials returns 401).
+
+**Confirmed working, live, with a real account:**
+
+| Item | Evidence |
+|---|---|
+| Onboarding wizard notification-preferences fix (PR #272) | `GET /api/customer/onboarding/wizard` returned `"notifications":{"completed":true}` for a fresh account that has a real `notification_preferences` row (auto-created at signup) — previously this step was hardcoded `false` regardless of real state. `_cache:"miss"` confirms this was a live query, not a stale cached value. |
+| Organization creation flow | `POST /api/orgs` with a real bearer token returned `201` with a real `org_id`, slug, and STARTER-plan limits; `GET /api/orgs` correctly listed it afterward. |
+| Notification preferences endpoint | `GET /api/notifications/preferences` returned real, per-user data (`event_subscriptions`, webhook fields, quiet hours) — confirms the row the onboarding wizard fix depends on is real, not a fixture artifact. |
+| Account deletion / DPDP erasure path | `DELETE /api/auth/delete-account` returned `200` with an itemized erasure summary; a follow-up login attempt with the same credentials correctly returned `401 Invalid email or password`. |
+
+**Not re-confirmed this pass** (already verified live in prior sessions,
+not re-tested to avoid redundant scope per CLAUDE.md's "don't re-derive"
+guidance): CORS `PATCH` fix (PR #266), API-keys empty-state CTA (PR #268).
+
+**New finding — support ticket system broken in live production:**
+
+`GET /api/support/tickets/mine` → `HTTP 500`:
+```json
+{"success":false,"error":"Internal server error","code":"ERR_UNHANDLED","request_id":"cdb_mrn1r813_t414sa"}
+```
+
+`POST /api/support/ticket` (correct `subject`/`description` fields per
+`workers/src/handlers/support.js`'s destructuring) → `HTTP 500`:
+```json
+{"error":"Ticket could not be recorded — please email support directly","contact":"support@cyberdudebivash.in"}
+```
+
+Both `handleMyTickets` and `handleTicket` in
+`workers/src/handlers/support.js` query/insert
+`support_tickets.organization_id`. That column is added by
+`workers/schema_v51_support_ticket_org_scope.sql`, whose own header
+comment specifies manual application
+(`wrangler d1 execute cyberdudebivash-security-hub --remote --file ...`).
+`.github/workflows/db-migrate.yml` is `workflow_dispatch`-only with a
+"type APPLY to confirm" human gate, and is explicitly documented in-repo as
+"Manual-only by design: schema changes must never ride silently on a code
+push." The handler code shipped to production automatically the moment
+PR #260 merged (normal `test.yml` → `deploy.yml` CI/CD); the separate,
+manual migration step that code depends on appears to have never been run.
+Both the read path and the write path failing independently on the same
+newly-added column is consistent with this theory. This is a
+**test-fixture-vs-production-reality gap, not a code defect** — the 25
+tests in `workers/test/supportTicketOrgScopeAndComments.test.mjs` are
+correct against a schema that includes the migration; production does not
+have it (assessed with high confidence — direct D1 schema introspection is
+not available from this session, so this has not been confirmed with
+absolute certainty).
+
+**Recommended remediation**: run `db-migrate.yml` against
+`schema_v51_support_ticket_org_scope.sql`, then re-verify both endpoints
+live. This is a production database schema change — hard to reverse,
+affects the shared production D1 instance — and per CLAUDE.md §1 requires
+explicit owner approval before execution. **Not performed as part of this
+audit**; recorded here as a finding awaiting a decision, per this repo's
+governance policy on architectural/database changes.
+
+Full detail and the registry update: `CAP-PORTAL-004` in
+`docs/capability-registry/domains/customer-portal.json`
+(`operational_status` corrected from `PILOT ONLY` to `NOT READY`,
+`priority` raised to `P1`).
+
+---
+
 ## Readiness Assessment
 
 | Question | Answer |
 |---|---|
-| Is customer onboarding production-ready? | **Partially.** Login/signup/MFA discoverability: Verified working. Activation nurture: real gap for free-tier signups (Finding 6); the one purpose-built onboarding checklist is unreachable (Finding 5). |
+| Is customer onboarding production-ready? | **Mostly.** Login/signup/MFA discoverability: Verified working. The one purpose-built onboarding checklist is now reachable and live-verified (Finding 5, PR #272). Remaining gap: activation nurture for free-tier signups (Finding 6, needs a product decision). |
 | Is customer provisioning production-ready? | **Yes**, for the paid path (Verified — payment webhook → activation email → dashboard access all confirmed). Free-tier provisioning works but has no follow-up nurture. |
-| Is customer engagement production-ready? | **Partially.** Renewal reminders: fixed and working. Churn/win-back: fixed this pass, not yet deployed. Trial-expiry reminders: still completely unwired (Finding 2). One notification system is fully wired but permanently empty (Finding 4). |
-| Is customer support production-ready? | **Yes, for the customer-facing ask** (Verified — full ticket UI, org scoping, RBAC, notifications, 25 tests). Still `operational_status: PILOT ONLY` in the registry pending one live dynamic-browser click-through, which this session did not perform. File attachments and an admin triage UI remain deliberately out of scope. |
-| Is customer expansion production-ready? | **Partially.** Upgrade nudges work. Usage-limit alerts are computed but never shown to the customer (Finding 8). Win-back was dark, now fixed pending merge. |
-| Is commercial launch readiness achieved? | **No single blocking defect**, but not "100% complete": 2 High findings remain open by design (Findings 2 and 4, both requiring a product decision or a follow-up PR), plus 4 PRs from this session awaiting merge. |
+| Is customer engagement production-ready? | **Mostly.** Renewal reminders: fixed and working. Churn/win-back: fixed, merged, and production-verified (PR #267). Trial-expiry reminders: fixed, merged, and production-verified (PR #271). One notification system is fully wired but permanently empty (Finding 4, needs a product decision). |
+| Is customer support production-ready? | **No — UPDATED 2026-07-16.** Code, UI, RBAC, and org scoping all shipped and pass 25 tests, but live production verification (Phase 6.5) found both `GET /api/support/tickets/mine` and `POST /api/support/ticket` return HTTP 500 for real customers, almost certainly because a required manual D1 migration was never applied. `operational_status` corrected from `PILOT ONLY` to `NOT READY` in `CAP-PORTAL-004`. Customers retain the documented email fallback. File attachments and an admin triage UI remain deliberately out of scope regardless. |
+| Is customer expansion production-ready? | **Partially.** Upgrade nudges work. Usage-limit alerts are computed but never shown to the customer (Finding 8). Win-back was dark, now fixed and deployed (PR #267). |
+| Is commercial launch readiness achieved? | **One live P1 defect (support tickets, Finding 0) blocks calling this a full GO** — customers cannot currently file or view in-product tickets, though email support still works. All 7 of this program's PRs (#266-#272) are merged and production-verified deployed. Remaining open items are 1 Medium finding requiring a product decision (Finding 4/5) plus lower-priority items below. |
 
 ---
 
 ## Remaining Work, Prioritized
 
-**Critical**: none found this pass.
+**Critical (added 2026-07-16)**:
+- Decide whether to run `db-migrate.yml` against
+  `schema_v51_support_ticket_org_scope.sql` on production (Finding 0) —
+  needs explicit owner approval per CLAUDE.md §1 before any action is
+  taken; not a narrow auto-fix since it is a production database schema
+  change. Once applied, re-verify both support-ticket endpoints live before
+  closing this item.
 
-**High**:
-- Wire `trial_expiry` enrollment (Finding 2) — clear, scoped, one-PR fix, all downstream machinery already exists and is tested.
-- Decide the fate of `customer-success-dashboard.html` (onboarding checklist + notification center, Findings 4 & 5) — an IA decision that unblocks two real features at once.
+**High**: none remaining — Findings 1-3 (churn-prevention, trial_expiry,
+CORS PATCH) and Finding 5 (onboarding checklist unreachable) are all fixed,
+merged, and production-verified deployed (PRs #266, #267, #271, #272).
+
+- ~~Wire `trial_expiry` enrollment (Finding 2)~~ — done, PR #271.
+- ~~Decide the fate of `customer-success-dashboard.html`'s onboarding checklist~~ — done, PR #272 (ported into `user-dashboard.html`). The notification-center half of this decision (Finding 4) remains open — see Medium below.
 
 **Medium**:
+- Decide the fate of the fourth, fully-wired, empty in-app notification
+  system (Finding 4) — deliberately not ported alongside the onboarding
+  checklist; still needs a product decision.
 - Fix `user-dashboard.html`'s disconnected notification bell (Finding 7) — pattern already proven in `index.html`, needs live-browser verification before shipping.
 - Wire `evaluateUpsellTriggers()` to a real trigger point (Finding 8).
 - Decide free-tier signup nurture strategy (Finding 6).
@@ -351,12 +540,24 @@ alerts not surfaced; win-back was dark until this pass's fix).
 | PR | Title | Status |
 |---|---|---|
 | #265 | Enterprise-lead drip 5th-email fix | **Merged, deployed, production-verified** |
-| #266 | CORS `Access-Control-Allow-Methods` omits PATCH | Open, tests green, awaiting merge |
-| #267 | Churn-prevention query always found 0 at-risk customers | Open, tests green, awaiting merge |
-| #268 | API-keys empty-state missing CTA | Open, tests green, awaiting merge |
-| #269 | Documentation drift correction | Open, tests green, awaiting merge |
+| #266 | CORS `Access-Control-Allow-Methods` omits PATCH | **Merged, deployed, production-verified** |
+| #267 | Churn-prevention query always found 0 at-risk customers | **Merged, deployed, production-verified** |
+| #268 | API-keys empty-state missing CTA | **Merged, deployed, production-verified** |
+| #269 | Documentation drift correction | **Merged, deployed, production-verified** |
+| #270 | Phase 6 audit report (this document) | **Merged** |
+| #271 | Wire `trial_expiry` enrollment + fix wrong email content (Finding 2) | **Merged, deployed, production-verified** |
+| #272 | Surface onboarding checklist on the real dashboard (Finding 5) | **Merged, deployed, production-verified** |
 
-All four open PRs: full regression suite green at time of each PR (up to
-307 files / 3206 tests), capability registry validated (0 hard failures),
-one production problem per PR, held for explicit merge approval per this
-session's established convention for every prior fix.
+All PRs: full regression suite green at time of each PR (up to 307 files /
+3206+ tests), capability registry validated (0 hard failures), one
+production problem per PR. Deploy verification for #271/#272 confirmed at
+commit `570174ad99767daed7b86b8265fac446aee5a355` via `/api/health` and
+`/api/version` matching the merge SHA.
+
+**2026-07-16 addendum**: a follow-up live-production audit (Phase 6.5,
+this update) found one new, previously undocumented defect — the support
+ticket system is non-functional in production (Finding 0) — most likely due
+to an unapplied manual D1 migration, not a code defect in any of the PRs
+above. This finding is recorded here and in `CAP-PORTAL-004`, and is
+awaiting an explicit owner decision on running the gated migration
+workflow; no code or database change has been made for it.
