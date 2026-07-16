@@ -241,10 +241,6 @@ describe('handleVerifyPayment — invalid user_id fallback (subscriptions.user_i
     expect(res.status).toBe(200);
 
     const subs = env.DB._sqlite.prepare(`SELECT * FROM subscriptions`).all();
-    for (const row of subs) {
-      expect(row.user_id).not.toBe('anon');
-      expect(row.user_id).not.toBe('');
-    }
     expect(subs.length).toBe(0); // no unresolvable-user_id row written at all
   });
 

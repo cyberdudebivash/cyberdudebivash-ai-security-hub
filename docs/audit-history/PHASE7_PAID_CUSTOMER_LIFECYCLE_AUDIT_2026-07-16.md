@@ -395,3 +395,119 @@ confirmation rather than a natural continuation of "the fix is ready."
       lines post-deploy — each one is a real customer who paid but needs
       manual subscription-linkage reconciliation; this was previously
       invisible (silently wrote a corrupt row instead)
+
+---
+
+## 7. Second continuation (2026-07-16) — finishing the interrupted 10-agent review
+
+The prior continuation session (§6) launched 10 parallel independent review
+agents against its own diff before deciding on merge, and reported back
+partial results (5 of 10 angles: reuse, efficiency, altitude, cross-file
+tracer, simplification) before hitting its usage limit mid-review, with the
+5 core correctness angles (A–E) and a gap-sweep never completing. Per this
+repo's standing policy, that session's own report was treated as reference,
+not evidence — every specific lead it left behind was independently
+re-verified against current code before any further action.
+
+**Confirmed and fixed** (commit follows this doc):
+
+1. **`billingEngine.js:430` sibling date-format bug** (convergent finding
+   from both the altitude and cross-file-tracer angles). `buildRenewalQueue()`
+   — the original 7-day renewal-queue seeder that `seedRenewalQueue35d`
+   (already fixed in §6) extends — used the identical vulnerable pattern:
+   `s.current_period_end BETWEEN datetime('now') AND datetime('now','+7
+   days')`, a raw string compare against ISO-format values. Same root cause,
+   same fix: normalize all three operands through `unixepoch()`. Practical
+   impact is narrower than the tier-downgrade bugs in §6 — this only affects
+   whether a renewal-reminder email gets queued on time for subscriptions
+   whose renewal lands on the boundary's calendar day, and self-heals the
+   next day. New regression test added:
+   `workers/test/billingRenewalQueueDateFormat.test.mjs` (this function had
+   **zero** prior test coverage of any kind).
+2. **Dead code in this session's own new test** (simplification angle).
+   `subscriptionPlanAllowList.test.mjs`'s new "does not write a subscriptions
+   row" test had a `for (const row of subs) { expect(...) }` loop
+   immediately followed by `expect(subs.length).toBe(0)` — since the array
+   is asserted empty right after, the loop body can never execute. Removed;
+   the length assertion alone already fully covers the invariant.
+
+**Investigated, correctly left unchanged, with reasoning recorded:**
+
+3. **"Redundant clause" in the stale-row race guard** (simplification
+   angle). The `AND s2.id != ?` exclusion in `enforceSubscriptionExpiry`'s
+   `NOT EXISTS` subquery is, strictly speaking, currently redundant: within
+   a single D1 `.batch()` transaction, the row's own `status` is already
+   flipped to `'cancelled'` by the *preceding* statement in the same batch
+   before this `NOT EXISTS` subquery runs, so the row could never
+   self-match `s2.status = 'active'` even without the exclusion. Kept
+   anyway, deliberately: removing it would make correctness depend on an
+   implicit, easy-to-break invariant (statement order within the batch
+   array + D1's same-transaction read-your-writes semantics) that isn't
+   visible from reading this query in isolation. The clause costs nothing
+   and protects against a future edit silently reordering the batch.
+4. **Non-discriminating test, not a production bug** (simplification
+   angle's "false confidence" finding, independently re-derived and
+   confirmed here by tracing the actual byte comparison). In
+   `subscriptionExpiryEnforcement.test.mjs`, "does not downgrade a same-day
+   ISO expiry that has not actually passed yet" passes under *both* the
+   fixed and the pre-fix comparison logic: because `'T'` (0x54) always
+   sorts after `' '` (0x20), the original bug's string-compare bias only
+   ever produces false negatives (a real, already-expired subscription
+   wrongly treated as not-yet-expired) — it can never produce a false
+   positive (an active subscription wrongly downgraded). So this particular
+   "should not downgrade" test can't actually distinguish the fix from a
+   reverted one; the adjacent positive test ("downgrades a same-calendar-day
+   expiry...") is what actually exercises the fix. Left as-is — it is still
+   correct as a regression guard against a *different, hypothetical* future
+   bug (one that *does* produce false positives), just not the one this
+   session fixed. Documented here rather than silently left uncommented, so
+   a future reader doesn't mistake it for proof the ISO fix works.
+
+**Not fixed here — different problem area, new finding, documented per
+CLAUDE.md's "one production problem per PR" scope discipline:**
+
+5. **`provisioning_log` column mismatch — audit trail for cancel/upgrade/
+   overage silently never written.** `enterpriseTransformHandler.js` has
+   three `INSERT INTO provisioning_log (user_id, event, metadata,
+   created_at) VALUES (...)` call sites (line ~317, cancellation request;
+   line ~381, upgrade initiation; line ~522, API-overage charge). Neither
+   `event` nor `metadata` exists as a column on `provisioning_log` in any of
+   its three schema definitions (`schema_v39_marketplace.sql:119-131`,
+   `schema_bootstrap.sql:347-362`, `schema_migration_prod_missing_tables_
+   2026_07.sql:2719-2734` — all three agree with each other). The real
+   schema requires `trigger_type` (`NOT NULL`, `CHECK`-constrained to
+   `'purchase'|'subscription'|'trial'|'manual'|'upgrade'|'downgrade'|
+   'cancel'|'renewal'`) and `actions_taken` (`NOT NULL DEFAULT '[]'`)
+   instead — neither of which these three call sites supply. Every one of
+   these three `INSERT`s has therefore been failing on every single call
+   (constraint violation, not just "extra columns") and is silently
+   swallowed by `.catch(() => {})`. The correct pattern already exists
+   elsewhere in the same codebase: `provisioningEngine.js`'s writer uses the
+   real column set correctly, and its own `/api/provision/.../audit`
+   endpoint reads from this same table. **Business impact: bounded to
+   observability, not correctness** — the actual customer-facing actions
+   these three call sites perform (setting `cancel_at_period_end=1`,
+   returning the upgrade checkout URL, creating the overage invoice) all
+   still work correctly; only the audit-trail logging line silently no-ops
+   each time. But it means there is currently **no** queryable record of
+   any customer's cancellation requests, upgrade initiations, or overage
+   charges in `provisioning_log`, despite the column design existing
+   specifically for this. **Not fixed in this session**: it's a distinct
+   defect in a different subsystem than this branch's scope (subscription-
+   expiry date-format/user_id/race fixes), and mixing it in would violate
+   this repo's "one production problem per PR" policy. Recommended as a
+   same-pattern follow-up fix (correct the three `INSERT`s to use
+   `trigger_type`/`trigger_ref`/`actions_taken`, matching
+   `provisioningEngine.js`'s existing writer), on its own branch/PR.
+
+**Verification:** full suite now **310 test files / 3240 tests, all green**
+(was 309/3237 after §6). Lint (`npm run lint`) and the exact esbuild
+bundle-validation gate `deploy.yml` runs pre-deploy (`npx wrangler build`)
+both pass clean.
+
+**Still not done, and still deliberately not done:** opening a PR, merging
+to `main`, or triggering a deploy. All 10 review angles from §6 have now
+either reported in or been independently superseded by direct verification
+in this section — nothing from that review is still outstanding. The merge
+decision remains the owner's, given `main` auto-deploys on merge and this
+exact branch has already once been merged mid-review (§6).
