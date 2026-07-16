@@ -24,6 +24,7 @@ const CISO_HUB           = read('../../frontend/ciso-hub.html');
 const DECISION_DASHBOARD = read('../../frontend/decision-dashboard.html');
 const SITEMAP_PAGE       = read('../../frontend/sitemap.html');
 const USER_DASHBOARD     = read('../../frontend/user-dashboard.html');
+const INDEX_HTML         = read('../../frontend/index.html');
 
 describe('dead-end links removed from onboarding/checkout responses', () => {
   it('MSSP onboarding no longer promises a /mssp-dashboard.html that does not exist', () => {
@@ -101,5 +102,32 @@ describe('dead-end links removed from onboarding/checkout responses', () => {
     // openCreateKeyModal must be a real, already-wired function (the page's
     // header "+" button uses it too), not a new dead reference.
     expect(USER_DASHBOARD).toContain('function openCreateKeyModal()');
+  });
+
+  it('homepage hero "Defense Marketplace" button points at the real #defense-solutions section, not the nonexistent #defense-marketplace anchor (2026-07-16 homepage audit)', () => {
+    expect(INDEX_HTML).not.toContain('href="#defense-marketplace"');
+    expect(INDEX_HTML).toContain('id="defense-solutions"');
+    const idx = INDEX_HTML.indexOf('🛡️ Defense Marketplace');
+    expect(idx).toBeGreaterThan(-1);
+    expect(INDEX_HTML.slice(idx - 250, idx)).toContain('href="#defense-solutions"');
+  });
+
+  it('homepage notification bell\'s "View SOC Dashboard" link navigates to the real #autonomous-soc section, not the nonexistent #soc-command id (2026-07-16 homepage audit)', () => {
+    expect(INDEX_HTML).not.toContain("cdbNavigate('soc-command')");
+    expect(INDEX_HTML).toContain('id="autonomous-soc"');
+    expect(INDEX_HTML).toContain("cdbNavigate('autonomous-soc');CDB_NOTIF.close();return false");
+  });
+
+  it('homepage FAQ structured data states the real Enterprise plan price (₹4,999/mo), not the MSSP tier\'s ₹9,999/mo (2026-07-16 homepage audit)', () => {
+    const idx = INDEX_HTML.indexOf('How much does a security scan cost?');
+    expect(idx).toBeGreaterThan(-1);
+    const snippet = INDEX_HTML.slice(idx, idx + 400);
+    expect(snippet).toContain('₹4,999/month for enterprise plans');
+    expect(snippet).not.toContain('₹9,999/month for enterprise plans');
+  });
+
+  it('homepage UPI QR image fallbacks point at a real file (/public/upi-qr.png), not the nonexistent /public/assets/payment/upi-qr.png (2026-07-16 homepage audit)', () => {
+    expect(INDEX_HTML).not.toContain('/public/assets/payment/upi-qr.png');
+    expect((INDEX_HTML.match(/\/public\/upi-qr\.png/g) || []).length).toBeGreaterThanOrEqual(3);
   });
 });
