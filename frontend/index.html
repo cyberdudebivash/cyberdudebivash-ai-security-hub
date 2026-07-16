@@ -15894,7 +15894,7 @@ if(document.readyState==='loading'){
 </div>
 <div style="text-align:center;flex-shrink:0;min-width:140px">
 <div class="cdb-pay-section-title" style="text-align:center">Scan QR Code</div>
-<img alt="UPI QR Code" class="cdb-qr-img" height="200" loading="lazy" onclick="this.classList.toggle('zoomed')" onerror="this.src='/public/upi-qr.png';this.onerror=function(){this.style.display='none';this.nextElementSibling.style.display='block';}" src="/assets/payment/upi-qr.png" width="200"/>
+<img alt="UPI QR Code" class="cdb-qr-img" height="200" loading="lazy" onclick="this.classList.toggle('zoomed')" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" src="/assets/payment/upi-qr.png" width="200"/>
 <div style="display:none;font-size:11px;color:rgba(255,255,255,.72);padding:12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px dashed rgba(255,255,255,.08)">
               UPI: <span id="cdb-upi1-fallback">Loading…</span>
             </div>
@@ -21870,7 +21870,7 @@ p4SetupObserver();
 </a>
 <!-- QR Code -->
 <div class="mpm-qr-wrap">
-<img alt="UPI QR — CYBERDUDEBIVASH PRIVATE LIMITED" class="mpm-qr-img" height="200" id="mpm-qr-img" loading="lazy" onerror="this.src='/public/upi-qr.png';this.onerror=null;" src="/assets/payment/upi-qr.png" width="200"/>
+<img alt="UPI QR — CYBERDUDEBIVASH PRIVATE LIMITED" class="mpm-qr-img" height="200" id="mpm-qr-img" loading="lazy" onerror="this.style.display='none';" src="/assets/payment/upi-qr.png" width="200"/>
 <div class="mpm-qr-hint">Scan with any UPI app (PhonePe · GPay · Paytm · BHIM)</div>
 </div>
 </div>
@@ -22058,7 +22058,7 @@ window.openManualPayment = function(productId, priceInr, productLabel, priceUsd)
   var qrEl = document.getElementById('mpm-qr-img');
   if (qrEl) {
     qrEl.src = '/assets/payment/upi-qr.png';
-    qrEl.onerror = function() { this.src = '/public/upi-qr.png'; this.onerror = null; };
+    qrEl.onerror = function() { this.style.display = 'none'; };
   }
 
   // Bank amount

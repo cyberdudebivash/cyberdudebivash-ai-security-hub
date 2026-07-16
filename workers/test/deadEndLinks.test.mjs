@@ -126,8 +126,22 @@ describe('dead-end links removed from onboarding/checkout responses', () => {
     expect(snippet).not.toContain('₹9,999/month for enterprise plans');
   });
 
-  it('homepage UPI QR image fallbacks point at a real file (/public/upi-qr.png), not the nonexistent /public/assets/payment/upi-qr.png (2026-07-16 homepage audit)', () => {
+  it('homepage UPI QR image fallbacks degrade safely (hide the image / fall through to the backend-config-driven text UPI display) instead of silently substituting a second, different QR image (2026-07-16 homepage audit)', () => {
+    // frontend/assets/payment/upi-qr.png (pa=iambivash.bn-5@okicici) and
+    // frontend/public/upi-qr.png (pa=iambivash.bn-5@okaxis) were decoded and
+    // found to encode DIFFERENT UPI payment IDs -- neither exactly matches
+    // the live /api/payment-config primary UPI ID (iambivash.bn@okaxis)
+    // either. Silently falling back from one unverified QR image to another
+    // risks showing a customer a real-but-wrong payment destination, which
+    // is worse than an obviously broken image. Every onerror handler must
+    // therefore degrade to hiding the image (falling through to the
+    // adjacent, always-visible, backend-config-driven text UPI display
+    // where one exists) rather than ever loading a second static image.
     expect(INDEX_HTML).not.toContain('/public/assets/payment/upi-qr.png');
-    expect((INDEX_HTML.match(/\/public\/upi-qr\.png/g) || []).length).toBeGreaterThanOrEqual(3);
+    expect(INDEX_HTML).not.toContain("this.src='/public/upi-qr.png'");
+    expect(INDEX_HTML).not.toContain("this.src = '/public/upi-qr.png'");
+    const idx = INDEX_HTML.indexOf('class="cdb-qr-img"');
+    expect(idx).toBeGreaterThan(-1);
+    expect(INDEX_HTML.slice(idx - 400, idx + 200)).toContain("onerror=\"this.style.display='none';this.nextElementSibling.style.display='block';\"");
   });
 });

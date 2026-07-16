@@ -14,30 +14,59 @@ superseding wholesale.
 
 ## Executive Summary
 
-**Overall call: Conditional GO.** The homepage's underlying mechanics are
-sound — payments, the live metrics widget, the free-scan flow, auth
+**Overall call: Conditional GO, with one urgent action item.** The
+homepage's core commercial mechanics are sound — the automated Razorpay
+subscription checkout, the live metrics widget, the free-scan flow, auth
 routing, and security headers all independently verified working against
-live production. No architectural defect, no payment-integrity bug, no
-security vulnerability was found. **Four small, unambiguous, live defects
-were found and fixed in this same pass** (two dead in-page navigation
-links, one wrong price in SEO-visible structured data, one broken image
-fallback path) — all narrow, backward-compatible, verified by a full
-307→308-file regression run before and after.
+live production. **Three small, unambiguous, live defects were found and
+fixed in this same pass** (two dead in-page navigation links, one wrong
+price in SEO-visible structured data) — narrow, backward-compatible,
+verified by a full regression run before and after.
 
-**What is not yet resolved, and recommended before calling this page fully
-"global-launch ready,"** is a set of **content and product-tradeoff
-decisions**, not code bugs, that this session's governance (CLAUDE.md §1)
-correctly keeps out of an unsupervised auto-fix:
+**A fourth issue initially looked like a similarly small fix and was not —
+catching that is itself part of this audit's evidence trail.** A UPI QR
+image `onerror` fallback pointed at a nonexistent file; the obvious-looking
+fix was to point it at another QR image file that does exist. Before
+applying that, the two images were decoded (this session installed a QR
+reader specifically to check): **they encode two different UPI payment
+IDs**, and neither exactly matches the UPI ID the platform's own live
+`/api/payment-config` backend considers authoritative. Pointing the
+fallback at the second image would have made a broken (but harmless)
+image link silently succeed with a real, working, **wrong** payment
+destination instead. This was corrected before merging — see Finding 0.
 
-1. **(Highest business risk)** Three detailed "customer case studies" with
-   quantified outcomes and green status badges sit under only a tiny (11px)
-   disclaimer that they may be illustrative rather than real client
-   engagements. For a security company whose entire value proposition is
-   trustworthiness, content that reads as real customer proof but may not
-   be is the single highest reputational/legal exposure on this page —
-   directly the kind of gap this repo's own governance section exists to
-   catch (see CLAUDE.md's own opening reference to a prior false
-   "COMPLETE" claim).
+**Highest-priority open item, needs the owner's immediate attention (not a
+code decision):**
+
+0. **(New, urgent, requires manual verification — not a code fix)** The
+   *static QR code image customers currently see* on the manual/alternate
+   payment flow encodes `iambivash.bn-5@okicici`; the platform's own live
+   backend config (`/api/payment-config`) says the correct UPI ID is
+   `iambivash.bn@okaxis` (Axis Bank) — a different handle **and** a
+   different bank. This is a pre-existing discrepancy, not something this
+   audit's own fixes introduced, but it means anyone using the QR-scan
+   payment method today may be sending money to a different account than
+   the one the business's own systems and bank-detail fields point to.
+   This audit made the *fallback* behavior safe (never silently substitute
+   a second, unverified QR image — see Finding 0 below for full detail),
+   but **someone with access to the actual bank accounts needs to confirm
+   which UPI ID is currently correct and regenerate/replace the static
+   image if it's stale.** This cannot be resolved from repository evidence
+   alone.
+
+**Other open items, recommended before calling this page fully
+"global-launch ready,"** are content and product-tradeoff decisions, not
+code bugs, that this session's governance (CLAUDE.md §1) correctly keeps
+out of an unsupervised auto-fix:
+
+1. **(Second-highest business risk)** Three detailed "customer case
+   studies" with quantified outcomes and green status badges sit under
+   only a tiny (11px) disclaimer that they may be illustrative rather than
+   real client engagements. For a security company whose entire value
+   proposition is trustworthiness, content that reads as real customer
+   proof but may not be is a serious reputational/legal exposure — directly
+   the kind of gap this repo's own governance section exists to catch (see
+   CLAUDE.md's own opening reference to a prior false "COMPLETE" claim).
 2. The primary anonymous free-domain-scan flow's anti-abuse token is bound
    tightly to the caller's IP address with no fallback; reproduced a false
    rejection between two requests seconds apart, which is a plausible (not
@@ -107,6 +136,78 @@ explicitly as unconfirmed) per CLAUDE.md §3's confidence-tagging rule.
 ---
 
 ## Findings, Ordered by Business Risk
+
+### 0. Manual-payment QR code may route to the wrong UPI account — PARTIALLY ADDRESSED (fallback made safe; the underlying image needs manual owner verification)
+
+- **Severity**: Critical (real-money risk, currently live) for the
+  underlying image mismatch; the fallback-safety half of this finding is
+  **Fixed**
+- **Confidence**: Verified — decoded directly, not inferred
+- **How this was found**: while fixing what looked like a routine broken
+  `<img onerror>` fallback path (see the superseded original Finding 11,
+  below), the two candidate QR image files were decoded with a QR reader
+  (`pyzbar`, installed specifically for this check — not available by
+  default in this environment) rather than assumed to be interchangeable
+  copies of the same code. They are not.
+- **Repository/live evidence**:
+  - `frontend/assets/payment/upi-qr.png` (the **currently-live, primary**
+    QR image shown on both the `cdb-pay` and manual-payment-modal (`mpm`)
+    payment surfaces) decodes to:
+    `upi://pay?pa=iambivash.bn-5@okicici&pn=Bivash%20Kumar%20Nayak&...`
+  - `frontend/public/upi-qr.png` (the file the broken fallback path was
+    about to be pointed at, before this was caught) decodes to:
+    `upi://pay?pa=iambivash.bn-5@okaxis&pn=BivashKumarNayak&cu=INR`
+  - The live backend's own authoritative config, `GET /api/payment-config`,
+    returns: `"upi":{"primary":"iambivash.bn@okaxis",...},"bank":
+    {"account_name":"bivasha kumar nayak",...,"bank_name":"AXIS BANK"}` —
+    internally consistent (UPI handle and bank name agree on Axis Bank),
+    and is the same config that populates the always-visible text UPI
+    fields next to the QR code (`mpm-upi-primary`, `cdb-upi1-fallback`).
+  - **All three values differ**: the live primary QR image's UPI ID
+    (`iambivash.bn-5@okicici`) matches neither the backend config
+    (`iambivash.bn@okaxis`) nor the second static file
+    (`iambivash.bn-5@okaxis`) exactly.
+- **Customer impact**: a customer who scans the QR code (rather than
+  reading the adjacent text UPI ID or using the automated Razorpay
+  checkout) on the manual/alternate payment flow may be paying a different
+  account than the one the business's own bank-detail records point to.
+  The **automated Razorpay subscription checkout is unaffected** — this is
+  specific to the manual/QR-scan payment path, and a source code comment
+  at `frontend/index.html:22057` ("ALWAYS use static official QR, NEVER
+  generate dynamically") suggests the image is deliberately static, which
+  is exactly what allows it to silently drift out of sync with the backend
+  config over time — the most likely explanation is a bank/UPI-handle
+  change that updated the config but never regenerated this image, though
+  that root cause is **assumed, not confirmed**.
+- **Business impact**: potential lost or misdirected customer payments on
+  a live revenue path, plus manual payment-reconciliation confusion,
+  entirely independent of any fix in this audit.
+- **What was fixed this pass**: the original bug being fixed was a broken
+  fallback path (`/public/assets/payment/upi-qr.png`, nonexistent). The
+  obvious-looking fix — point it at the other QR file, which does exist —
+  was **not applied** once the decode above showed that file encodes a
+  third, different UPI ID. Instead, all 3 `onerror` handlers
+  (`frontend/index.html`, `cdb-qr-img` and `mpm-qr-img` occurrences, and
+  the JS-set handler in `openManualPayment()`) now degrade safely: hide
+  the image (falling through to the adjacent, always-visible,
+  backend-config-driven text UPI display where one exists) rather than
+  ever loading a second, unverified static image. This makes the
+  *fallback behavior* safe regardless of which UPI ID turns out to be
+  correct — it removes this audit's own risk of making the mismatch worse,
+  but does **not** fix the primary image itself.
+- **Why not auto-fixed further**: which UPI ID is actually correct and
+  currently active is a real-world banking fact this repository cannot
+  determine on its own — CLAUDE.md §1 requires explicit owner
+  confirmation before touching anything payment/banking-related, and
+  getting this wrong in either direction has real financial consequences.
+- **Recommended remediation** (Proposed, not implemented): the platform
+  owner should confirm which UPI ID (`iambivash.bn@okaxis`, matching the
+  live config and bank details, is the most likely candidate) is currently
+  correct, then regenerate `frontend/assets/payment/upi-qr.png` to match —
+  and consider removing the "never generate dynamically" constraint in
+  favor of rendering the QR client-side from the same live
+  `/api/payment-config` response that already drives the adjacent text
+  fields, so the image and the text can never drift apart again.
 
 ### 1. Three detailed "customer case studies" read as real, may not be — NOT FIXED, needs a content/commercial decision
 
@@ -358,19 +459,20 @@ explicitly as unconfirmed) per CLAUDE.md §3's confidence-tagging rule.
   finding for the owner to pick rather than unilaterally rewriting
   customer-facing payment-flow copy mid-audit.
 
-### 11. Homepage image-fallback path pointed at a nonexistent file — FIXED
+### 11. Homepage image-fallback path pointed at a nonexistent file — SUPERSEDED, see Finding 0
 
-- **Severity**: Low (contingent — the primary image already loads fine;
-  this path is dead code, never actually reached in production today)
-- **Confidence**: Verified
-- **Root cause**: three UPI QR `<img onerror="...">` fallbacks (`frontend/
-  index.html:15897`, `21873`, `22061`) pointed at `/public/assets/payment/
-  upi-qr.png`, which does not exist. The primary `src` (`/assets/payment/
-  upi-qr.png`) already resolves live, so this fallback would only ever
-  matter if that primary file were removed.
-- **Fix**: corrected all 3 references to `/public/upi-qr.png`, a real,
-  live-verified (`200`) file distinct from the primary image.
-- **Status**: **Fixed**, this pass. 1 new regression test.
+- **Original finding**: three UPI QR `<img onerror="...">` fallbacks
+  (`frontend/index.html:15897`, `21873`, `22061`) pointed at
+  `/public/assets/payment/upi-qr.png`, which does not exist.
+- **Superseded**: the obvious fix (point at the other QR file that does
+  exist, `/public/upi-qr.png`) was drafted, then withdrawn before merging
+  once decoding both images showed they encode different UPI payment IDs,
+  neither matching the live backend config either. Promoted to **Finding
+  0** (Critical) as a materially bigger issue than originally scoped here.
+  Preserved as its own entry per CLAUDE.md §2 rather than deleted, since
+  this is exactly the kind of initially-looks-small finding that changed
+  classification on closer verification — worth keeping the record of how
+  it was actually caught.
 
 ### 12. One representative unsourced threat-statistic — NOT FIXED, out of scope this pass
 
@@ -409,15 +511,22 @@ explicitly as unconfirmed) per CLAUDE.md §3's confidence-tagging rule.
 | Question | Answer |
 |---|---|
 | Does the homepage correctly represent what the platform actually does technically? | **Yes, for its dynamic/functional claims** (Verified — live metrics, pricing, scan flow, auth routing all check out). **Not fully, for narrative/trust claims** (Finding 1, 5) — those need an owner content decision. |
-| Is the homepage's monetization path correct and consistent? | **Yes, for the two dedicated pricing grids and the actual checkout wiring** (Verified). **Not fully, across the page as a whole** (Finding 6) — real naming/price overlaps exist in secondary promotional sections, needing owner reconciliation, not a code fix. |
-| Is the homepage technically broken anywhere? | **No longer** — the 4 defects found (2 dead links, 1 SEO price error, 1 dead fallback path) are fixed and regression-tested this pass. No other broken link, form, or handler was found across the full 24,142-line file. |
+| Is the homepage's monetization path correct and consistent? | **Yes, for the two dedicated pricing grids, the actual Razorpay checkout wiring, and the backend payment config** (Verified). **Not fully** — the manual-payment QR image itself may route to a stale account (Finding 0, urgent, needs manual owner verification — not a code fix), and secondary promotional sections have real naming/price overlaps (Finding 6, needing owner reconciliation). |
+| Is the homepage technically broken anywhere? | **No longer**, for pure code defects — the 3 confirmed-wrong-and-fixable defects found (2 dead links, 1 SEO price error) are fixed and regression-tested this pass. No other broken link, form, or handler was found across the full 24,142-line file. Finding 0 is not a code defect in the same sense — the code paths involved now degrade safely either way, but the underlying question ("which UPI ID is correct") is a real-world fact, not something in the repository to fix. |
 | Is the homepage production-performant? | **Not yet fully** (Finding 7) — functions correctly, but page weight is a real, unaddressed Core Web Vitals risk for a global, mobile-heavy launch. |
 | Is the homepage's security posture solid? | **Yes** (Verified) — strong CSP/headers, with evidence of active, in-progress hardening beyond what's already enforced. |
-| Is commercial global-launch readiness achieved for this page? | **Conditional** — no blocking technical defect remains, but Findings 1, 2, 5, 6, 7, and 8 are real, evidence-backed items an owner should explicitly decide on (accept as-is, fix, or defer) before calling the homepage itself fully launch-ready, given the disproportionate reputational weight of Finding 1 in particular for a security vendor. |
+| Is commercial global-launch readiness achieved for this page? | **Conditional, with one urgent action item.** Finding 0 (the QR/UPI-ID mismatch) should be resolved by the owner before any global push on the manual-payment flow specifically — it is the one item in this audit with direct financial consequences. Findings 1, 2, 5, 6, 7, and 8 are additional evidence-backed items an owner should explicitly decide on (accept as-is, fix, or defer) before calling the homepage itself fully launch-ready. |
 
 ---
 
 ## Remaining Work, Prioritized
+
+**Critical** (real-world fact needed from the owner, not a code decision):
+- Confirm which UPI ID (`iambivash.bn@okaxis`, matching the live backend
+  config and bank details, appears most likely) is actually correct and
+  active, then regenerate `frontend/assets/payment/upi-qr.png` to match
+  (Finding 0). The fallback paths are already safe regardless; the
+  primary image is the remaining exposure.
 
 **High** (business/content decisions, no code ambiguity blocking a decision):
 - Decide the fate of the 3 detailed case-study cards (Finding 1) — relabel as illustrative, obtain real consent, or remove.
@@ -429,6 +538,7 @@ explicitly as unconfirmed) per CLAUDE.md §3's confidence-tagging rule.
 - Scope a homepage performance pass: minify/externalize the 848KB of inline JS, revisit the CSP's `unsafe-inline` in the same motion (Finding 7). Recommended as its own dedicated project given the file's size and the number of live JS flows it would touch.
 - Resolve the `robots.txt` AI-crawler self-contradiction (Finding 8) — requires an explicit owner decision and likely a Cloudflare dashboard-level change, not only a repo edit.
 - Decide whether to build real screenshot-upload for manual payments or soften the "speeds up verification" claim (Finding 10).
+- Consider rendering the manual-payment QR client-side from `/api/payment-config` instead of a static image, so it can never drift out of sync again (Finding 0's structural recommendation).
 
 **Low**:
 - Broader pass for unsourced threat-statistics in marketing copy, beyond the one representative instance flagged (Finding 12).
@@ -442,10 +552,14 @@ explicitly as unconfirmed) per CLAUDE.md §3's confidence-tagging rule.
 | FAQ structured-data Enterprise price corrected (₹9,999 → ₹4,999/mo) | **Fixed, tested** |
 | Hero "Defense Marketplace" dead link corrected (`#defense-marketplace` → `#defense-solutions`) | **Fixed, tested** |
 | Notification-bell "View SOC Dashboard" dead link corrected (`soc-command` → `autonomous-soc`) | **Fixed, tested** |
-| UPI QR image fallback path corrected (3 sites; nonexistent path → real, live-verified file) | **Fixed, tested** |
+| UPI QR fallback safety (3 sites) — no longer silently substitutes a second, unverified QR image; degrades to the safe backend-config-driven text display instead | **Fixed, tested** — underlying primary-image/backend mismatch (Finding 0) still needs owner action |
 
 4 new regression tests added to `workers/test/deadEndLinks.test.mjs`
 (now 17 tests, up from 13). Full regression suite green: 308 files / 3221
 tests (up from the pre-change 307/3206+). No architectural, commercial, or
 database change made — consistent with CLAUDE.md §1's scope discipline for
-an audit pass.
+an audit pass. The QR-fallback fix went through two iterations before
+landing: the first (point the fallback at the other existing QR file) was
+drafted, decode-verified, found to be wrong, and replaced with the safe
+version above before anything was committed — see Finding 0 for the full
+account.
