@@ -55,9 +55,26 @@ jobs:
     timeout-minutes: 20
 
     steps:
+      - name: Normalize inputs
+        id: inputs
+        run: |
+          # workflow_dispatch text inputs are used verbatim. Manually-typed or
+          # pasted-into values routinely carry accidental leading/trailing
+          # whitespace (seen in practice: 2026-07-16 runs #6 and #7, a leading
+          # space and a trailing space respectively) which has nothing to do
+          # with the actual migration but fails the confirmation gate or the
+          # *.sql case-match. Trim once here so every later step sees a clean
+          # value; still requires the literal word APPLY, just not exact
+          # padding around it.
+          trim() { printf '%s' "$1" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'; }
+          {
+            echo "confirm=$(trim "${{ github.event.inputs.confirm }}")"
+            echo "schema_file=$(trim "${{ github.event.inputs.schema_file }}")"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Confirmation gate
         run: |
-          if [ "${{ github.event.inputs.confirm }}" != "APPLY" ]; then
+          if [ "${{ steps.inputs.outputs.confirm }}" != "APPLY" ]; then
             echo "❌ Confirmation gate: you must type APPLY in the confirm input."
             echo "   This workflow modifies the PRODUCTION database schema."
             exit 1
@@ -69,7 +86,7 @@ jobs:
 
       - name: Validate schema file
         run: |
-          FILE="${{ github.event.inputs.schema_file }}"
+          FILE="${{ steps.inputs.outputs.schema_file }}"
           case "$FILE" in
             *.sql) ;;
             *) echo "❌ Schema file must be a .sql file: ${FILE}"; exit 1 ;;
@@ -124,11 +141,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          FILE="../${{ github.event.inputs.schema_file }}"
+          FILE="../${{ steps.inputs.outputs.schema_file }}"
           # workflow input is repo-relative; adjust when already under workers/
-          case "${{ github.event.inputs.schema_file }}" in
-            workers/*) FILE="../${{ github.event.inputs.schema_file }}" ;;
-            *)         FILE="${GITHUB_WORKSPACE}/${{ github.event.inputs.schema_file }}" ;;
+          case "${{ steps.inputs.outputs.schema_file }}" in
+            workers/*) FILE="../${{ steps.inputs.outputs.schema_file }}" ;;
+            *)         FILE="${GITHUB_WORKSPACE}/${{ steps.inputs.outputs.schema_file }}" ;;
           esac
           echo "━━━ Applying ${FILE} to ${{ env.D1_DATABASE_NAME }} (remote) ━━━"
           npx wrangler d1 execute "${{ env.D1_DATABASE_NAME }}" \
@@ -157,7 +174,7 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "| Item | Value |" >> "$GITHUB_STEP_SUMMARY"
           echo "|------|-------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Schema file | \`${{ github.event.inputs.schema_file }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Schema file | \`${{ steps.inputs.outputs.schema_file }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Database | \`${{ env.D1_DATABASE_NAME }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Applied by | ${{ github.actor }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Pre-migration backup | artifact \`pre-migration-${MIGRATION_STAMP:-n/a}\` (90-day retention) |" >> "$GITHUB_STEP_SUMMARY"
