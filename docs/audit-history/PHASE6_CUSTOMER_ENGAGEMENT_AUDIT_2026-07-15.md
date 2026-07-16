@@ -113,6 +113,17 @@ No code changes were needed for this phase.
 
 ### 0. Support ticket system returns HTTP 500 in live production — NOT FIXED, added 2026-07-16, pending owner decision
 
+> **2026-07-16 update — see `PHASE7_PAID_CUSTOMER_LIFECYCLE_AUDIT_2026-07-16.md`
+> §3.3: RESOLVED, confirmed live.** `POST /api/support/ticket` now returns
+> 200 and creates a real, retrievable ticket end-to-end (`GET
+> /api/support/tickets/mine` correctly lists it), tested against production
+> with a disposable account. The `schema_v51_support_ticket_org_scope.sql`
+> migration referenced below has evidently been applied to production since
+> this finding was originally written. Original finding text below is
+> preserved unchanged for the audit trail — do not re-read its "NOT
+> FIXED"/"pending owner decision" heading as current status; this
+> annotation is the current status.
+
 - **Severity**: P1/Critical (customer-facing, currently broken, no code fix
   needed — a production database migration decision)
 - **Confidence**: Verified (the HTTP 500s, via live curl against production

@@ -97,7 +97,7 @@ import {
 
 // ── v35.1 PHASE 5 P0 REVENUE INTELLIGENCE IMPORTS ──────────────────────────
 import { handleRevenueKPI, handleFunnelAnalytics } from './handlers/revenueKPI.js';
-import { runRenewalAutomation, seedRenewalQueue35d } from './handlers/renewalEngine.js';
+import { runRenewalAutomation, seedRenewalQueue35d, enforceSubscriptionExpiry } from './handlers/renewalEngine.js';
 
 // ── v34.0 PHASE 4 GOD MODE IMPORTS ───────────────────────────────────────────
 import { handleGetMetrics, handleRefreshMetrics, handleMetricsHistory, handlePlatformStatus } from './handlers/platformMetricsAuthority.js';
@@ -9297,29 +9297,22 @@ ctx.waitUntil(
       })());
 
       // ── Subscription expiry enforcement — downgrade expired subscribers to FREE ──
+      // Previously queried a nonexistent `expires_at` column (real column is
+      // `current_period_end`, schema_master.sql:3144) and set status='expired',
+      // which isn't in the subscriptions.status CHECK constraint
+      // (schema_master.sql:3137-3138) — both errors were silently swallowed by
+      // .catch(), so this block never downgraded anyone since it was added
+      // (see docs/audit-history/SUBSCRIPTION_REGISTRY_2026-07-14.md and the
+      // 2026-07-16 customer-lifecycle audit). Logic now lives in
+      // enforceSubscriptionExpiry() (renewalEngine.js) so it's unit-testable
+      // against a real schema, matching seedRenewalQueue35d's fix (PR #264).
       ctx.waitUntil((async () => {
         try {
-          if (!env.DB) return;
-          // Find active subscriptions that have passed their expiry
-          const expired = await env.DB.prepare(
-            `SELECT s.id as sub_id, s.email, u.id as user_id
-             FROM subscriptions s
-             LEFT JOIN users u ON u.email = s.email
-             WHERE s.status = 'active'
-               AND s.expires_at IS NOT NULL
-               AND s.expires_at <= datetime('now')
-             LIMIT 100`
-          ).all().catch(() => ({ results: [] }));
-          const rows = expired?.results ?? [];
-          if (rows.length === 0) return;
-          const now = new Date().toISOString();
-          for (const row of rows) {
-            await env.DB.batch([
-              env.DB.prepare(`UPDATE subscriptions SET status = 'expired', updated_at = ? WHERE id = ?`).bind(now, row.sub_id),
-              ...(row.user_id ? [env.DB.prepare(`UPDATE users SET tier = 'FREE' WHERE id = ? AND tier NOT IN ('ENTERPRISE','MSSP')`).bind(row.user_id)] : []),
-            ]).catch((e) => console.error('[CRON] Expiry batch failed for sub', row.sub_id, e?.message));
+          const result = await enforceSubscriptionExpiry(env);
+          if (result.downgraded > 0) {
+            console.log(`[CRON] Subscription expiry: ${result.downgraded} subscriptions expired and downgraded to FREE`);
           }
-          console.log(`[CRON] Subscription expiry: ${rows.length} subscriptions expired and downgraded to FREE`);
+          if (result.error) console.error('[CRON] Subscription expiry error:', result.error);
         } catch (e) { console.error('[CRON] Subscription expiry error:', e?.message); }
       })());
     }

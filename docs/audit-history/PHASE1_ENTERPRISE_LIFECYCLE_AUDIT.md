@@ -8,6 +8,22 @@
 
 > Several findings below were independently re-verified by direct code reads (cited with ✓VERIFIED). The rest are auditor findings with `file:line` evidence pending fix-time re-confirmation.
 
+> **2026-07-16 update — see `PHASE7_PAID_CUSTOMER_LIFECYCLE_AUDIT_2026-07-16.md` §3.1:**
+> Re-verified against current code (post-#278). §2's three headline gaps are
+> now **Fixed**: Razorpay activation persists `users.tier`/`subscriptions`
+> correctly (traced end-to-end including what a subsequent scan request
+> resolves), the STARTER quota arg-order mismatch is gone, and the
+> marketplace purchase→webhook→entitlement chain is implemented and tested.
+> The `stripeWebhook.js:260` citation in §2 points to a file with no match
+> anywhere in this repo's git history — likely a stale/incorrect citation
+> rather than a removed feature; Stripe is explicitly not used as a
+> processor (`subscriptionPaywallEngine.js`). The §2 residual-gap note ("no
+> upgrade/downgrade/cancel") needed correction: a working cancel route
+> exists and was live-tested at `POST /api/customer/billing/cancel`
+> (different namespace than `/api/subscription/*`, which is why the original
+> search missed it) — see Phase 7 §3.2 for what it does and does not
+> enforce.
+
 ---
 
 ## Executive Summary
