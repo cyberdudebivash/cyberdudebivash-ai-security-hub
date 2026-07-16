@@ -4,6 +4,7 @@
  * production (cyberdudebivash.in) before fixing. Pure static parse. */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
@@ -143,5 +144,19 @@ describe('dead-end links removed from onboarding/checkout responses', () => {
     const idx = INDEX_HTML.indexOf('class="cdb-qr-img"');
     expect(idx).toBeGreaterThan(-1);
     expect(INDEX_HTML.slice(idx - 400, idx + 200)).toContain("onerror=\"this.style.display='none';this.nextElementSibling.style.display='block';\"");
+  });
+
+  it('the live payment QR image (frontend/assets/payment/upi-qr.png) matches the platform-owner-confirmed-correct QR, not the stale wrong-bank one it replaced (2026-07-16 homepage audit)', () => {
+    // The image previously here encoded pa=iambivash.bn-5@okicici (wrong
+    // bank) per a QR decode during this audit. The platform owner directly
+    // confirmed the correct UPI ID is iambivash.bn-5@okaxis, matching
+    // frontend/public/upi-qr.png (already verified by decode) -- the live
+    // image was replaced with that file's exact bytes. This test can't
+    // decode QR content in this JS test runner (no zbar dependency here),
+    // so it guards the fix by hash equality against the known-correct
+    // source file instead -- catches an accidental revert of either file
+    // independently.
+    const hash = (p) => createHash('sha256').update(readFileSync(resolve(__dirname, p))).digest('hex');
+    expect(hash('../../frontend/assets/payment/upi-qr.png')).toBe(hash('../../frontend/public/upi-qr.png'));
   });
 });
