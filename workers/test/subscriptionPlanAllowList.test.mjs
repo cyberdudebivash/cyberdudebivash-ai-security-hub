@@ -218,3 +218,46 @@ describe('handleVerifyPayment — subscription plan allow-list defense in depth'
     expect(user.tier).toBe('ENTERPRISE');
   });
 });
+
+describe('handleVerifyPayment — invalid user_id fallback (subscriptions.user_id NOT NULL, previously fell back to email/\'anon\')', () => {
+  it('does not write a subscriptions row at all when no email is resolvable — payment still verifies, no bogus user_id row', async () => {
+    // Root cause of the original bug: when confirmedEmail is null the tier
+    // grant step never runs, so issuedUserId stays null. The old code then
+    // fell back to `issuedUserId || confirmedEmail || 'anon'` for
+    // subscriptions.user_id — writing a value that can never match a real
+    // users.id, so enforceSubscriptionExpiry's later downgrade silently
+    // matched zero rows against it forever. The fix: skip the subscriptions
+    // INSERT entirely (loud gap, not a silently-corrupt row) whenever
+    // issuedUserId couldn't be resolved.
+    const env = makeEnv();
+    const orderId = 'order_noemail001', paymentId = 'pay_noemail001';
+    const signature = await hmac(RAZORPAY_KEY_SECRET, `${orderId}|${paymentId}`);
+
+    const res = await handleVerifyPayment(verifyReq({
+      razorpay_order_id: orderId, razorpay_payment_id: paymentId, razorpay_signature: signature,
+      module: 'subscription', plan: 'PRO', target: 'anon-checkout',
+      // deliberately no `email`, and authCtx below has none either
+    }), env, {});
+    expect(res.status).toBe(200);
+
+    const subs = env.DB._sqlite.prepare(`SELECT * FROM subscriptions`).all();
+    expect(subs.length).toBe(0); // no unresolvable-user_id row written at all
+  });
+
+  it('a resolvable user still gets a real user_id on the subscriptions row (no regression)', async () => {
+    const env = makeEnv();
+    const orderId = 'order_realid001', paymentId = 'pay_realid001';
+    const signature = await hmac(RAZORPAY_KEY_SECRET, `${orderId}|${paymentId}`);
+
+    const res = await handleVerifyPayment(verifyReq({
+      razorpay_order_id: orderId, razorpay_payment_id: paymentId, razorpay_signature: signature,
+      module: 'subscription', plan: 'PRO', target: 'realuser@corp.com', email: 'realuser@corp.com',
+    }), env, {});
+    expect(res.status).toBe(200);
+
+    const user = env.DB._sqlite.prepare(`SELECT id, tier FROM users WHERE email = 'realuser@corp.com'`).get();
+    expect(user.tier).toBe('PRO');
+    const sub = env.DB._sqlite.prepare(`SELECT user_id FROM subscriptions WHERE email = 'realuser@corp.com'`).get();
+    expect(sub.user_id).toBe(user.id);
+  });
+});

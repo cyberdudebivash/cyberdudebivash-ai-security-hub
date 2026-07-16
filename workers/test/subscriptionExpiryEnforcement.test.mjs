@@ -73,6 +73,14 @@ function daysFromNow(n) {
   return new Date(Date.now() + n * 86400000).toISOString().replace('T', ' ').slice(0, 19);
 }
 
+// Matches exactly what payments.js actually writes to current_period_end
+// (`new Date(expiresAt).toISOString()`) — "T" separator, milliseconds, "Z".
+// The helper above normalizes that away, which is why the original test
+// suite never caught the date-format mismatch bug below.
+function hoursFromNowISO(n) {
+  return new Date(Date.now() + n * 3600000).toISOString();
+}
+
 describe('enforceSubscriptionExpiry — downgrade lapsed subscribers to FREE (previously always downgraded 0)', () => {
   it('downgrades a subscriber whose current_period_end has passed, and marks the subscription cancelled', async () => {
     const db = makeRealD1();
@@ -156,5 +164,71 @@ describe('enforceSubscriptionExpiry — downgrade lapsed subscribers to FREE (pr
     expect(() => db._sqlite.prepare(
       `UPDATE subscriptions SET status = 'expired' WHERE id = 'sub_check'`
     ).run()).toThrow();
+  });
+
+  it('downgrades a same-calendar-day expiry written in real ISO-8601 format (payments.js\'s actual write format) — the date-format mismatch bug', async () => {
+    // Regression for: current_period_end written as "...T...Z" (ISO) but
+    // compared via plain `<= datetime('now')` (SQLite space-separated
+    // format). Because 'T' (0x54) > ' ' (0x20) in ASCII, a same-day expiry
+    // sorted as "not yet expired" until the calendar date itself rolled
+    // over. unixepoch() on both sides fixes this regardless of which of the
+    // two formats a given row happens to be stored in.
+    const db = makeRealD1();
+    db._sqlite.prepare(`INSERT INTO users (id, email, tier) VALUES ('u_iso','iso@acme.test','PRO')`).run();
+    db._sqlite.prepare(
+      `INSERT INTO subscriptions (id, user_id, email, plan, status, price_inr, current_period_end, cancel_at_period_end)
+       VALUES ('sub_iso','u_iso','iso@acme.test','PRO','active',149900,?,0)`
+    ).run(hoursFromNowISO(-2)); // expired 2 hours ago, same calendar day
+
+    const result = await enforceSubscriptionExpiry({ DB: db });
+    expect(result.error).toBeUndefined();
+    expect(result.downgraded).toBe(1);
+
+    const user = db._sqlite.prepare(`SELECT tier FROM users WHERE id='u_iso'`).get();
+    expect(user.tier).toBe('FREE');
+    const sub = db._sqlite.prepare(`SELECT status FROM subscriptions WHERE id='sub_iso'`).get();
+    expect(sub.status).toBe('cancelled');
+  });
+
+  it('does not downgrade a same-day ISO expiry that has not actually passed yet', async () => {
+    const db = makeRealD1();
+    db._sqlite.prepare(`INSERT INTO users (id, email, tier) VALUES ('u_iso2','iso2@acme.test','PRO')`).run();
+    db._sqlite.prepare(
+      `INSERT INTO subscriptions (id, user_id, email, plan, status, price_inr, current_period_end, cancel_at_period_end)
+       VALUES ('sub_iso2','u_iso2','iso2@acme.test','PRO','active',149900,?,0)`
+    ).run(hoursFromNowISO(2)); // expires 2 hours from now, same calendar day
+
+    const result = await enforceSubscriptionExpiry({ DB: db });
+    expect(result.downgraded).toBe(0);
+    const user = db._sqlite.prepare(`SELECT tier FROM users WHERE id='u_iso2'`).get();
+    expect(user.tier).toBe('PRO');
+  });
+
+  it('stale-row race guard: does not clobber a tier a fresh renewal already re-activated', async () => {
+    // A renewal INSERTs a new subscriptions row (fresh id) rather than
+    // updating the old one in place. If the cron picks up the old, now-stale
+    // row after the renewal already landed, it must not blindly downgrade —
+    // the user has a second, genuinely active (non-expired) row.
+    const db = makeRealD1();
+    db._sqlite.prepare(`INSERT INTO users (id, email, tier) VALUES ('u_race','race@acme.test','PRO')`).run();
+    db._sqlite.prepare(
+      `INSERT INTO subscriptions (id, user_id, email, plan, status, price_inr, current_period_end, cancel_at_period_end)
+       VALUES ('sub_stale','u_race','race@acme.test','PRO','active',149900,?,0)`
+    ).run(daysFromNow(-1)); // stale row: expired yesterday, not yet processed
+    db._sqlite.prepare(
+      `INSERT INTO subscriptions (id, user_id, email, plan, status, price_inr, current_period_end, cancel_at_period_end)
+       VALUES ('sub_fresh','u_race','race@acme.test','PRO','active',149900,?,0)`
+    ).run(daysFromNow(30)); // fresh renewal: genuinely active
+
+    const result = await enforceSubscriptionExpiry({ DB: db });
+    expect(result.downgraded).toBe(1); // the stale row is still correctly processed...
+
+    const user = db._sqlite.prepare(`SELECT tier FROM users WHERE id='u_race'`).get();
+    expect(user.tier).toBe('PRO'); // ...but the tier is NOT clobbered back to FREE
+
+    const staleSub = db._sqlite.prepare(`SELECT status FROM subscriptions WHERE id='sub_stale'`).get();
+    expect(staleSub.status).toBe('cancelled'); // stale row itself is still marked cancelled, honestly
+    const freshSub = db._sqlite.prepare(`SELECT status FROM subscriptions WHERE id='sub_fresh'`).get();
+    expect(freshSub.status).toBe('active');
   });
 });

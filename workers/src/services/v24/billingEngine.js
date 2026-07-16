@@ -421,13 +421,18 @@ async function sendRecoveryEmail(env, rec) {
 export async function buildRenewalQueue(db) {
   if (!db) return { queued: 0 };
   try {
-    // Find subscriptions renewing in next 7 days
+    // Find subscriptions renewing in next 7 days. unixepoch() on all three
+    // operands avoids the same ISO-vs-SQLite-datetime string-compare mismatch
+    // fixed in enforceSubscriptionExpiry/seedRenewalQueue35d (renewalEngine.js)
+    // — current_period_end is written as ISO ("...T...Z") by payments.js but
+    // as plain datetime('now') by other writers, and a raw BETWEEN string
+    // compare silently mishandles same-day boundaries between the two.
     const renewing = await db.prepare(`
       SELECT s.*, u.email
       FROM subscriptions s
       LEFT JOIN users u ON u.id = s.user_id
       WHERE s.status = 'active'
-        AND s.current_period_end BETWEEN datetime('now') AND datetime('now','+7 days')
+        AND unixepoch(s.current_period_end) BETWEEN unixepoch('now') AND unixepoch('now','+7 days')
         AND s.cancel_at_period_end = 0
         AND s.id NOT IN (SELECT subscription_id FROM renewal_queue WHERE status IN ('upcoming','processing'))
     `).all().catch(() => ({ results: [] }));

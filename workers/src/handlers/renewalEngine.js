@@ -232,12 +232,20 @@ export async function enforceSubscriptionExpiry(env) {
   if (!db) return { downgraded: 0 };
 
   try {
+    // current_period_end is written in two different formats depending on
+    // path — payments.js writes new Date(...).toISOString() ("...T...Z"),
+    // while the column's own DEFAULT and some other writers use SQLite's
+    // datetime('now') ("...YYYY-MM-DD HH:MM:SS"). A plain <= string compare
+    // breaks specifically for same-day expirations because 'T' (0x54) sorts
+    // after ' ' (0x20). unixepoch() parses either format and normalizes both
+    // sides to an integer, same pattern already used in
+    // ceoExecutiveDashboard.js's churn query.
     const expired = await db.prepare(`
       SELECT s.id as sub_id, s.user_id, s.email
       FROM subscriptions s
       WHERE s.status = 'active'
         AND s.current_period_end IS NOT NULL
-        AND s.current_period_end <= datetime('now')
+        AND unixepoch(s.current_period_end) <= unixepoch('now')
       LIMIT 100
     `).all().catch(() => ({ results: [] }));
 
@@ -255,7 +263,19 @@ export async function enforceSubscriptionExpiry(env) {
                           cancel_reason = COALESCE(cancel_reason, 'Subscription period ended without renewal'),
                           updated_at = ?
                       WHERE id = ?`).bind(now, now, row.sub_id),
-          ...(row.user_id ? [db.prepare(`UPDATE users SET tier = 'FREE' WHERE id = ? AND tier NOT IN ('ENTERPRISE','MSSP')`).bind(row.user_id)] : []),
+          // Guard against clobbering a tier that a fresh renewal (a new
+          // subscriptions row, since renewals INSERT rather than UPDATE the
+          // prior row) already correctly re-activated between this row
+          // becoming stale and this cron run picking it up.
+          ...(row.user_id ? [db.prepare(`UPDATE users SET tier = 'FREE'
+                      WHERE id = ? AND tier NOT IN ('ENTERPRISE','MSSP')
+                        AND NOT EXISTS (
+                          SELECT 1 FROM subscriptions s2
+                          WHERE s2.user_id = ?
+                            AND s2.id != ?
+                            AND s2.status = 'active'
+                            AND (s2.current_period_end IS NULL OR unixepoch(s2.current_period_end) > unixepoch('now'))
+                        )`).bind(row.user_id, row.user_id, row.sub_id)] : []),
         ]);
         downgraded++;
       } catch (e) {
@@ -282,7 +302,7 @@ export async function seedRenewalQueue35d(env) {
       FROM subscriptions s
       WHERE s.status = 'active'
         AND s.cancel_at_period_end = 0
-        AND s.current_period_end BETWEEN datetime('now') AND datetime('now','+35 days')
+        AND unixepoch(s.current_period_end) BETWEEN unixepoch('now') AND unixepoch('now','+35 days')
         AND CAST(s.id AS TEXT) NOT IN (SELECT subscription_id FROM renewal_queue WHERE status IN ('upcoming','processing'))
     `).all().catch(() => ({ results: [] }));
 

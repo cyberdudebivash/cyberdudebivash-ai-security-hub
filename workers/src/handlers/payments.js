@@ -557,7 +557,12 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
         env.DB.prepare(
           `UPDATE payments SET status='paid', razorpay_payment_id=?, razorpay_signature=?, report_token=?, paid_at=datetime('now') WHERE razorpay_order_id=?`
         ).bind(razorpay_payment_id, razorpay_signature, sessionToken, razorpay_order_id),
-        env.DB.prepare(
+        // Only write a subscriptions row when we have a real users.id. The old
+        // fallback (issuedUserId || confirmedEmail || 'anon') wrote a value
+        // that can never match users.id — enforceSubscriptionExpiry's later
+        // downgrade then silently matched zero rows: the subscription showed
+        // cancelled while the customer's paid tier never actually dropped.
+        ...(issuedUserId ? [env.DB.prepare(
           `INSERT OR IGNORE INTO subscriptions
              (id, user_id, email, plan, status, price_inr, billing_cycle,
               current_period_start, current_period_end, razorpay_sub_id,
@@ -567,7 +572,7 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
                    'razorpay', ?, ?, datetime('now'), datetime('now'))`
         ).bind(
           'sub_' + Date.now().toString(36),
-          issuedUserId || confirmedEmail || 'anon',
+          issuedUserId,
           confirmedEmail || '',
           plan,
           priceInr,
@@ -575,8 +580,14 @@ export async function handleVerifyPayment(request, env, authCtx = {}) {
           razorpay_payment_id,
           utm_source || null,
           utm_campaign || null,
-        ),
+        )] : []),
       ]).catch((e) => console.error('[Payments] D1 batch (payments+subscriptions) failed', razorpay_payment_id, e?.message));
+      if (!issuedUserId) {
+        // Payment is still recorded 'paid' above — this is now a loud,
+        // alertable gap (no subscriptions row at all) instead of a silent one
+        // (a row that looks fine but can never be resolved back to a user).
+        console.error('[Payments] CRITICAL: no subscriptions row created — tier grant did not resolve a real user_id for a paid subscription. Manual reconciliation required.', razorpay_payment_id, confirmedEmail, plan);
+      }
       finalizeCouponRedemption(env, razorpay_order_id).catch(() => {});
 
       const paidRow = await env.DB.prepare(

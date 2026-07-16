@@ -1,3 +1,17 @@
+> **UPDATE (2026-07-16, same-day continuation session):** This document's PR
+> (#279) was merged to `main` and auto-deployed to production **while the
+> second-pass code review referenced informally below was still in progress
+> and actively finding new issues** — the review was not yet complete when
+> the merge happened. Three of those issues were confirmed still live in
+> production and have since been fixed in a follow-up commit
+> (`e38490cb`, pushed to `claude/platform-testing-validation-2tu8k1`, **not
+> merged to `main` as of this update** — this repo auto-deploys on merge, so
+> that decision was deliberately left to the owner). See **§6** for full
+> detail. The original document below is preserved verbatim; §2's "Fixed
+> this audit" framing was accurate for the specific column/status bug it
+> describes, but incomplete as a claim about the cron's overall correctness
+> — treat §6 as the current status, not this section alone.
+
 # PHASE 7 — Paid Customer Lifecycle Audit (Live-Verified)
 
 **Platform:** CYBERDUDEBIVASH AI Security Hub (https://cyberdudebivash.in)
@@ -277,3 +291,223 @@ API contract changes.
 - [ ] Confirm no ENTERPRISE/MSSP account was downgraded
 - [ ] Owner: run the one-off COUNT query from §2 before/after deploy for
       revenue-impact awareness
+
+---
+
+## 6. Follow-up (2026-07-16, same-day continuation session)
+
+**What happened between this doc's original version and now:** PR #279
+(containing this document, `enforceSubscriptionExpiry()`, and the
+`cancelled_at`/`cancel_reason` follow-up fix) was merged to `main` at commit
+`19909932` and auto-deployed to production (`Deploy to Cloudflare` run
+`29487223820`, succeeded `2026-07-16T09:29:06Z`) **before** the second-pass
+independent code-review pass (10 parallel review angles) that the merging
+session had explicitly deferred merging for ("these are real enough that
+I'm not going to rush toward merge") had finished. That review had already
+surfaced several concrete issues before the session hit a usage limit
+mid-review. This continuation session did not take that prior review's
+claims on faith — each was independently re-traced against current
+production code before any fix was written, per this repo's standing policy
+of treating prior sessions' output as reference material, not evidence.
+
+**Confirmed still live in production and fixed in this session** (commit
+`e38490cb`, branch `claude/platform-testing-validation-2tu8k1`):
+
+1. **Date-format mismatch** — `current_period_end` is written as ISO
+   (`payments.js` — `new Date(expiresAt).toISOString()`, e.g.
+   `"2026-07-16T09:00:00.000Z"`) but `enforceSubscriptionExpiry` compared it
+   with plain `<=` against `datetime('now')` (SQLite's space-separated
+   format). Traced the exact mechanism: because `'T'` (0x54) sorts after
+   `' '` (0x20), this specifically broke same-calendar-day expirations — a
+   subscription expiring earlier the same day the cron runs would be
+   skipped until the calendar date itself rolled over. Bounded (self-heals
+   the next day), not the indefinite/permanent failure a looser
+   description might suggest, but real and live. Fixed by normalizing both
+   sides through `unixepoch()`. The sibling `seedRenewalQueue35d` (35-day
+   renewal-queue seeding, PR #264) had the identical defect — found and
+   fixed in the same pass; its practical impact is narrower still (the
+   `BETWEEN` boundary self-heals within a day, and only affects rows whose
+   renewal date lands exactly on the window's edge).
+2. **Invalid `user_id` fallback** — `payments.js:570` wrote
+   `issuedUserId || confirmedEmail || 'anon'` into `subscriptions.user_id`
+   (`NOT NULL`, no valid "unresolved" sentinel) whenever the tier-grant step
+   failed or was skipped (most commonly: no email resolvable at verify
+   time). That value can never match a real `users.id`, so
+   `enforceSubscriptionExpiry`'s downgrade would silently match zero rows —
+   the subscription would show `cancelled`, but the customer's tier would
+   never actually drop. Fixed by skipping the `subscriptions` INSERT
+   entirely when `issuedUserId` isn't resolved (the payment still records
+   `'paid'`; the gap is now a loud `console.error` for manual
+   reconciliation, consistent with the response message this handler
+   already sends the customer for this same failure mode: *"payment
+   confirmed, but the tier could not be attached to an account
+   automatically. Contact contact@cyberdudebivash.in..."*).
+3. **Stale-row race on renewal** — `subscriptions.user_id` has no `UNIQUE`
+   constraint, and a renewal `INSERT`s a new row (fresh, timestamp-based
+   `id`) rather than updating the customer's existing row in place. A stale,
+   pre-renewal row processed by the cron after a fresh renewal had already
+   landed would unconditionally clobber the just-renewed tier back to
+   `FREE`. Fixed with a `NOT EXISTS` guard on the tier-downgrade `UPDATE`:
+   skip the downgrade if the user has another `subscriptions` row that's
+   genuinely still active (non-expired). The stale row itself is still
+   correctly marked `cancelled` either way.
+
+**Investigated and ruled out as NOT a bug** (correcting a claim from the
+prior session's in-progress review): that review had flagged a second
+`handleCancelSubscription` (`sentinelApexMarketplace.js:305`, serving
+`/api/marketplace/subscriptions/:id/cancel`) as never touching
+`users.tier`, implying marketplace customers who cancel there keep paid
+access forever. Checked the corresponding grant/purchase path in the same
+file before treating this as confirmed: **nothing in
+`sentinelApexMarketplace.js` ever sets `users.tier`, on grant or on
+cancel.** Marketplace entitlements are gated entirely through
+`customer_entitlements`/`marketplace_entitlements` (there is a dedicated
+`workers/src/middleware/entitlementCheck.js` for exactly this), both of
+which `handleCancelSubscription` already correctly revokes. Adding a
+`users.tier` downgrade there would have been a new, self-inflicted bug: it
+could clobber an unrelated, legitimately-active core-plan tier for a
+customer who happens to also cancel an unrelated marketplace add-on. No
+code change made for this item.
+
+**Verification:** all fixes proven against a real `node:sqlite` D1 with the
+live `CHECK` constraints in place, using a new ISO-format test helper that
+matches `payments.js`'s actual write format exactly — the original PR's
+test helpers normalized `'T'` to `' '`, which is why finding #1 above
+shipped with the original fix's own test suite passing. Full suite:
+**309 test files / 3237 tests, all green** (was 309/3231 after PR #279).
+
+**Deliberately not done in this session:** opening a PR, merging to `main`,
+or triggering a deploy. This repo's `deploy.yml` runs automatically on
+every merge to `main` (via `workflow_run` off `Test & Quality Gate`) — given
+that PR #279 itself reached production mid-review, this session treated
+"merge and deploy" as a decision requiring explicit, contemporaneous owner
+confirmation rather than a natural continuation of "the fix is ready."
+
+**Updated production verification checklist** (in addition to the original
+§2 items, once this follow-up is merged/deployed):
+- [ ] Confirm the cron's downgrade count doesn't unexpectedly jump on first
+      run post-deploy (same-day-expired rows that were previously skipped
+      by the date-format bug will now be caught immediately)
+- [ ] Spot-check: no active subscription with a genuinely-future
+      `current_period_end` gets downgraded (regression check for the
+      `unixepoch()` change itself)
+- [ ] Grep recent `[Payments] CRITICAL: no subscriptions row created` log
+      lines post-deploy — each one is a real customer who paid but needs
+      manual subscription-linkage reconciliation; this was previously
+      invisible (silently wrote a corrupt row instead)
+
+---
+
+## 7. Second continuation (2026-07-16) — finishing the interrupted 10-agent review
+
+The prior continuation session (§6) launched 10 parallel independent review
+agents against its own diff before deciding on merge, and reported back
+partial results (5 of 10 angles: reuse, efficiency, altitude, cross-file
+tracer, simplification) before hitting its usage limit mid-review, with the
+5 core correctness angles (A–E) and a gap-sweep never completing. Per this
+repo's standing policy, that session's own report was treated as reference,
+not evidence — every specific lead it left behind was independently
+re-verified against current code before any further action.
+
+**Confirmed and fixed** (commit follows this doc):
+
+1. **`billingEngine.js:430` sibling date-format bug** (convergent finding
+   from both the altitude and cross-file-tracer angles). `buildRenewalQueue()`
+   — the original 7-day renewal-queue seeder that `seedRenewalQueue35d`
+   (already fixed in §6) extends — used the identical vulnerable pattern:
+   `s.current_period_end BETWEEN datetime('now') AND datetime('now','+7
+   days')`, a raw string compare against ISO-format values. Same root cause,
+   same fix: normalize all three operands through `unixepoch()`. Practical
+   impact is narrower than the tier-downgrade bugs in §6 — this only affects
+   whether a renewal-reminder email gets queued on time for subscriptions
+   whose renewal lands on the boundary's calendar day, and self-heals the
+   next day. New regression test added:
+   `workers/test/billingRenewalQueueDateFormat.test.mjs` (this function had
+   **zero** prior test coverage of any kind).
+2. **Dead code in this session's own new test** (simplification angle).
+   `subscriptionPlanAllowList.test.mjs`'s new "does not write a subscriptions
+   row" test had a `for (const row of subs) { expect(...) }` loop
+   immediately followed by `expect(subs.length).toBe(0)` — since the array
+   is asserted empty right after, the loop body can never execute. Removed;
+   the length assertion alone already fully covers the invariant.
+
+**Investigated, correctly left unchanged, with reasoning recorded:**
+
+3. **"Redundant clause" in the stale-row race guard** (simplification
+   angle). The `AND s2.id != ?` exclusion in `enforceSubscriptionExpiry`'s
+   `NOT EXISTS` subquery is, strictly speaking, currently redundant: within
+   a single D1 `.batch()` transaction, the row's own `status` is already
+   flipped to `'cancelled'` by the *preceding* statement in the same batch
+   before this `NOT EXISTS` subquery runs, so the row could never
+   self-match `s2.status = 'active'` even without the exclusion. Kept
+   anyway, deliberately: removing it would make correctness depend on an
+   implicit, easy-to-break invariant (statement order within the batch
+   array + D1's same-transaction read-your-writes semantics) that isn't
+   visible from reading this query in isolation. The clause costs nothing
+   and protects against a future edit silently reordering the batch.
+4. **Non-discriminating test, not a production bug** (simplification
+   angle's "false confidence" finding, independently re-derived and
+   confirmed here by tracing the actual byte comparison). In
+   `subscriptionExpiryEnforcement.test.mjs`, "does not downgrade a same-day
+   ISO expiry that has not actually passed yet" passes under *both* the
+   fixed and the pre-fix comparison logic: because `'T'` (0x54) always
+   sorts after `' '` (0x20), the original bug's string-compare bias only
+   ever produces false negatives (a real, already-expired subscription
+   wrongly treated as not-yet-expired) — it can never produce a false
+   positive (an active subscription wrongly downgraded). So this particular
+   "should not downgrade" test can't actually distinguish the fix from a
+   reverted one; the adjacent positive test ("downgrades a same-calendar-day
+   expiry...") is what actually exercises the fix. Left as-is — it is still
+   correct as a regression guard against a *different, hypothetical* future
+   bug (one that *does* produce false positives), just not the one this
+   session fixed. Documented here rather than silently left uncommented, so
+   a future reader doesn't mistake it for proof the ISO fix works.
+
+**Not fixed here — different problem area, new finding, documented per
+CLAUDE.md's "one production problem per PR" scope discipline:**
+
+5. **`provisioning_log` column mismatch — audit trail for cancel/upgrade/
+   overage silently never written.** `enterpriseTransformHandler.js` has
+   three `INSERT INTO provisioning_log (user_id, event, metadata,
+   created_at) VALUES (...)` call sites (line ~317, cancellation request;
+   line ~381, upgrade initiation; line ~522, API-overage charge). Neither
+   `event` nor `metadata` exists as a column on `provisioning_log` in any of
+   its three schema definitions (`schema_v39_marketplace.sql:119-131`,
+   `schema_bootstrap.sql:347-362`, `schema_migration_prod_missing_tables_
+   2026_07.sql:2719-2734` — all three agree with each other). The real
+   schema requires `trigger_type` (`NOT NULL`, `CHECK`-constrained to
+   `'purchase'|'subscription'|'trial'|'manual'|'upgrade'|'downgrade'|
+   'cancel'|'renewal'`) and `actions_taken` (`NOT NULL DEFAULT '[]'`)
+   instead — neither of which these three call sites supply. Every one of
+   these three `INSERT`s has therefore been failing on every single call
+   (constraint violation, not just "extra columns") and is silently
+   swallowed by `.catch(() => {})`. The correct pattern already exists
+   elsewhere in the same codebase: `provisioningEngine.js`'s writer uses the
+   real column set correctly, and its own `/api/provision/.../audit`
+   endpoint reads from this same table. **Business impact: bounded to
+   observability, not correctness** — the actual customer-facing actions
+   these three call sites perform (setting `cancel_at_period_end=1`,
+   returning the upgrade checkout URL, creating the overage invoice) all
+   still work correctly; only the audit-trail logging line silently no-ops
+   each time. But it means there is currently **no** queryable record of
+   any customer's cancellation requests, upgrade initiations, or overage
+   charges in `provisioning_log`, despite the column design existing
+   specifically for this. **Not fixed in this session**: it's a distinct
+   defect in a different subsystem than this branch's scope (subscription-
+   expiry date-format/user_id/race fixes), and mixing it in would violate
+   this repo's "one production problem per PR" policy. Recommended as a
+   same-pattern follow-up fix (correct the three `INSERT`s to use
+   `trigger_type`/`trigger_ref`/`actions_taken`, matching
+   `provisioningEngine.js`'s existing writer), on its own branch/PR.
+
+**Verification:** full suite now **310 test files / 3240 tests, all green**
+(was 309/3237 after §6). Lint (`npm run lint`) and the exact esbuild
+bundle-validation gate `deploy.yml` runs pre-deploy (`npx wrangler build`)
+both pass clean.
+
+**Still not done, and still deliberately not done:** opening a PR, merging
+to `main`, or triggering a deploy. All 10 review angles from §6 have now
+either reported in or been independently superseded by direct verification
+in this section — nothing from that review is still outstanding. The merge
+decision remains the owner's, given `main` auto-deploys on merge and this
+exact branch has already once been merged mid-review (§6).

@@ -51,6 +51,12 @@ function daysFromNow(n) {
   return new Date(Date.now() + n * 86400000).toISOString().replace('T', ' ').slice(0, 19);
 }
 
+// Matches what payments.js actually writes to current_period_end
+// ("...T...Z"), unlike the helper above which normalizes that away.
+function daysFromNowISO(n) {
+  return new Date(Date.now() + n * 86400000).toISOString();
+}
+
 describe('seedRenewalQueue35d — 35-day renewal-queue seeding (previously always queued 0)', () => {
   it('queues an active subscription renewing within 35 days, with correct user_id/email/renewal_date', async () => {
     const db = makeRealD1();
@@ -110,5 +116,23 @@ describe('seedRenewalQueue35d — 35-day renewal-queue seeding (previously alway
     const result = await seedRenewalQueue35d({ DB: db });
     expect(result.queued).toBe(0);
     expect(db._sqlite.prepare(`SELECT COUNT(*) as c FROM renewal_queue WHERE subscription_id='sub_4'`).get().c).toBe(1);
+  });
+
+  it('queues a subscription whose current_period_end is real ISO-8601 (payments.js\'s actual write format), not just the space-separated form', async () => {
+    // Same date-format mismatch class as enforceSubscriptionExpiry: a plain
+    // BETWEEN datetime('now') AND datetime('now','+35 days') string-compares
+    // an ISO "...T...Z" value against SQLite's space-separated format.
+    // unixepoch() on all three operands fixes it regardless of which format
+    // a given row was written in.
+    const db = makeRealD1();
+    db._sqlite.prepare(
+      `INSERT INTO subscriptions (id, user_id, email, plan, status, price_inr, current_period_end, cancel_at_period_end)
+       VALUES ('sub_iso','u_iso','iso@acme.test','PRO','active',4999,?,0)`
+    ).run(daysFromNowISO(20));
+
+    const result = await seedRenewalQueue35d({ DB: db });
+    expect(result.queued).toBe(1);
+    const row = db._sqlite.prepare(`SELECT * FROM renewal_queue WHERE subscription_id = 'sub_iso'`).get();
+    expect(row).toBeTruthy();
   });
 });
