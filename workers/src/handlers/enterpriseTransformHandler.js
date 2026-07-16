@@ -312,10 +312,13 @@ export async function handleCancelSubscription(request, env, authCtx) {
     `UPDATE subscriptions SET cancel_at_period_end=1, cancel_reason=?, updated_at=datetime('now') WHERE id=?`
   ).bind(reason, sub.id).run().catch(() => {});
 
-  // Log to provisioning events
+  // Log to provisioning events. Column set matches the live schema
+  // (schema_v39_marketplace.sql / schema_bootstrap.sql): trigger_type/
+  // trigger_ref/actions_taken, not event/metadata — those don't exist on
+  // this table and previously made every one of these inserts fail silently.
   await env.DB?.prepare(
-    `INSERT INTO provisioning_log (user_id, event, metadata, created_at) VALUES (?, 'CANCEL_REQUESTED', ?, datetime('now'))`
-  ).bind(userId, JSON.stringify({ subscription_id: sub.id, plan: sub.plan, reason })).run().catch(() => {});
+    `INSERT INTO provisioning_log (user_id, trigger_type, trigger_ref, actions_taken) VALUES (?, 'cancel', ?, ?)`
+  ).bind(userId, sub.id, JSON.stringify([{ action: 'cancel_at_period_end_set', plan: sub.plan, reason }])).run().catch(() => {});
 
   // Invalidate KPI cache so next pull reflects change
   await env.SECURITY_HUB_KV?.delete('platform:kpi:v1').catch(() => {});
@@ -375,11 +378,17 @@ export async function handleUpgradeInitiate(request, env, authCtx) {
     if (r.ok) razorpayOrderId = (await r.json()).id;
   }
 
-  // Record upgrade intent (with real order ID when available)
+  // Record upgrade intent (with real order ID when available). Column set
+  // matches the live schema (trigger_type/trigger_ref/actions_taken) — see
+  // the matching fix in handleCancelSubscription above.
   const orderId = razorpayOrderId || `upg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   await env.DB?.prepare(
-    `INSERT INTO provisioning_log (user_id, event, metadata, created_at) VALUES (?, 'UPGRADE_INITIATED', ?, datetime('now'))`
-  ).bind(userId, JSON.stringify({ from: currentTier, to: newPlan, order_id: orderId, amount_paise: amountPaise })).run().catch(() => {});
+    `INSERT INTO provisioning_log (user_id, trigger_type, trigger_ref, actions_taken, status) VALUES (?, 'upgrade', ?, ?, ?)`
+  ).bind(
+    userId, orderId,
+    JSON.stringify([{ action: 'upgrade_order_created', from: currentTier, to: newPlan, amount_paise: amountPaise }]),
+    razorpayOrderId ? 'success' : 'partial',
+  ).run().catch(() => {});
 
   return Response.json({
     success: true,
@@ -518,10 +527,14 @@ export async function handleOverageCharge(request, env, authCtx) {
      VALUES (?, ?, ?, 'USD', 'pending', 'API Overage Charge', datetime('now'))`
   ).bind(chargeId, userId, amount.toFixed(2)).run().catch(() => {});
 
+  // Column set matches the live schema (trigger_type/trigger_ref/
+  // actions_taken) — see the matching fix in handleCancelSubscription above.
+  // 'manual' is the closest CHECK-constrained trigger_type: this endpoint is
+  // admin-gated (adminGuard), not a customer self-service action.
   await env.DB?.prepare(
-    `INSERT INTO provisioning_log (user_id, event, metadata, created_at)
-     VALUES (?, 'OVERAGE_CHARGED', ?, datetime('now'))`
-  ).bind(userId, JSON.stringify({ charge_id: chargeId, amount_usd: amount, admin: authCtx.identity })).run().catch(() => {});
+    `INSERT INTO provisioning_log (user_id, trigger_type, trigger_ref, actions_taken)
+     VALUES (?, 'manual', ?, ?)`
+  ).bind(userId, chargeId, JSON.stringify([{ action: 'overage_invoice_created', amount_usd: amount, admin: authCtx.identity }])).run().catch(() => {});
 
   return Response.json({
     success: true,

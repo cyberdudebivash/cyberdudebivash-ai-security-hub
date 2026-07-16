@@ -511,3 +511,13 @@ either reported in or been independently superseded by direct verification
 in this section — nothing from that review is still outstanding. The merge
 decision remains the owner's, given `main` auto-deploys on merge and this
 exact branch has already once been merged mid-review (§6).
+
+**UPDATE (2026-07-16):** §7's findings #1–#4 above were merged as PR #280
+(commit `b65afdec`) and confirmed live in production via `/api/version`.
+Finding #5 (`provisioning_log` column mismatch) was fixed as a separate,
+self-contained change on its own branch — `enterpriseTransformHandler.js`'s
+three `event`/`metadata` inserts now use the real `trigger_type`/
+`trigger_ref`/`actions_taken` columns, proven against a real `node:sqlite`
+schema with the live `CHECK` constraint in `workers/test/
+provisioningLogColumnFix.test.mjs`. 311 test files / 3244 tests green.
+Not yet merged — same policy as above, pending an explicit merge decision.
