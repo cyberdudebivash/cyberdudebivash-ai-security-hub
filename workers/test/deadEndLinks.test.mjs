@@ -26,6 +26,8 @@ const DECISION_DASHBOARD = read('../../frontend/decision-dashboard.html');
 const SITEMAP_PAGE       = read('../../frontend/sitemap.html');
 const USER_DASHBOARD     = read('../../frontend/user-dashboard.html');
 const INDEX_HTML         = read('../../frontend/index.html');
+const TRUST_CENTER       = read('../../frontend/trust-center.html');
+const PROPOSAL_GENERATOR_PAGE = read('../../frontend/proposal-generator.html');
 
 describe('dead-end links removed from onboarding/checkout responses', () => {
   it('MSSP onboarding no longer promises a /mssp-dashboard.html that does not exist', () => {
@@ -158,5 +160,41 @@ describe('dead-end links removed from onboarding/checkout responses', () => {
     // independently.
     const hash = (p) => createHash('sha256').update(readFileSync(resolve(__dirname, p))).digest('hex');
     expect(hash('../../frontend/assets/payment/upi-qr.png')).toBe(hash('../../frontend/public/upi-qr.png'));
+  });
+
+  it('the enterprise proposal document footer states the real GSTIN (21ARKPN8270G1ZP), not a wrong one with an incorrect state code (2026-07-16 compliance-details update)', () => {
+    // 19ARKPN8270G1Z9 used state code 19 (West Bengal); the business is
+    // registered in Odisha (state code 21), confirmed by the same PAN
+    // (ARKPN8270G) appearing correctly elsewhere in this exact file and by
+    // the platform owner directly. This document is generated and sent to
+    // real prospective clients -- a wrong GSTIN on a formal proposal is a
+    // real compliance/credibility defect, independent of anything else in
+    // this repo.
+    expect(PROPOSAL_GENERATOR_PAGE).not.toContain('19ARKPN8270G1Z9');
+    expect(PROPOSAL_GENERATOR_PAGE).toContain('GSTIN: 21ARKPN8270G1ZP');
+  });
+
+  it('the enterprise proposal document footer discloses MSME Udyam and Startup India (DPIIT) registration alongside GSTIN/PAN (2026-07-16 compliance-details update)', () => {
+    expect(PROPOSAL_GENERATOR_PAGE).toContain('UDYAM-OD-19-0133456');
+    expect(PROPOSAL_GENERATOR_PAGE).toContain('IN-0426-9439SC');
+  });
+
+  it('trust-center.html discloses MSME Udyam, Startup India (DPIIT), and PAN alongside the existing CIN/GST legal-entity card (2026-07-16 compliance-details update)', () => {
+    expect(TRUST_CENTER).toContain('UDYAM-OD-19-0133456');
+    expect(TRUST_CENTER).toContain('IN-0426-9439SC');
+    expect(TRUST_CENTER).toContain('PAN: ARKPN8270G');
+    expect(TRUST_CENTER).toContain('eMudhra');
+  });
+
+  it('trust-center.html\'s Organization JSON-LD carries the same registration numbers as machine-readable structured data (2026-07-16 compliance-details update)', () => {
+    const scripts = [...TRUST_CENTER.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/gs)].map(m => m[1]);
+    const org = scripts.map(s => JSON.parse(s)).find(o => Array.isArray(o['@type']) && o['@type'].includes('Organization'));
+    expect(org).toBeTruthy();
+    expect(org.taxID).toBe('21ARKPN8270G1ZP');
+    const ids = org.identifier.map(i => i.value);
+    expect(ids).toContain('U74999OR2024PTC049281'); // CIN
+    expect(ids).toContain('ARKPN8270G');             // PAN
+    expect(ids).toContain('UDYAM-OD-19-0133456');    // MSME Udyam
+    expect(ids).toContain('IN-0426-9439SC');         // Startup India DPIIT
   });
 });
