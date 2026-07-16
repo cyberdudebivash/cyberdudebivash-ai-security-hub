@@ -13,25 +13,21 @@ superseding wholesale.
 ## Executive Summary
 
 **2026-07-16 UPDATE (live production verification pass — see Phase 6.5
-below): overall call revised to Conditional GO, with one live P1 carve-out.**
-All 7 PRs opened during this program (#266-#272) are now merged and
-production-verified deployed. A dedicated live-production audit was then
-run against `https://cyberdudebivash.in` with a real, freshly-created
-customer account (browser-based click-through was not possible from this
-execution environment — see Phase 6.5 for why — so verification used direct
-HTTPS calls against the same live API a browser would call). Several
-Phase 6 fixes were positively confirmed working end-to-end in production
-(notification-preferences detection in the onboarding wizard, organization
-creation). **One new, previously undocumented, currently-live defect was
-found**: the in-product support ticket system — both viewing and filing
-tickets — returns HTTP 500 for real customers right now. See Finding 0
-below. This is not a regression introduced by this program's PRs; it
-appears to be a pre-existing gap between a merged code change and a
-required manual production database migration, first surfaced by this
-session's live verification because no prior pass had checked the live
-database's actual schema. Remediation requires a production schema
-migration, which per this repo's governance (CLAUDE.md §1) requires
-explicit owner approval and is **not** performed as part of this document.
+below): overall call is GO.** All 7 PRs opened during this program
+(#266-#272) are merged and production-verified deployed. A dedicated
+live-production audit against `https://cyberdudebivash.in` with real,
+freshly-created customer accounts (browser-based click-through was not
+possible from this execution environment — see Phase 6.5 for why — so
+verification used direct HTTPS calls against the same live API a browser
+would call) found one new, previously undocumented, live defect — the
+in-product support ticket system returned HTTP 500 for real customers
+(Finding 0) — root-caused to a required manual production database
+migration that had never been run, presented to the platform owner per
+CLAUDE.md §1's approval requirement for production schema changes, and
+**fixed the same day**: owner approved, the migration was applied via
+`db-migrate.yml` (with a separate whitespace-input-handling bug fixed
+along the way, PR #274), and both endpoints were re-verified live and
+confirmed working. See Finding 0 and Phase 6.5 for full evidence.
 
 **Original 2026-07-15 summary (below), now superseded on the "Conditional
 GO" reasoning but preserved for the record per CLAUDE.md §2:** No new
@@ -47,19 +43,16 @@ policy.
 **Highest-risk findings, in order (updated 2026-07-16 — Finding 0 added
 above the original list; Findings 1-3 below are now fixed and deployed):**
 
-0. **(Found 2026-07-16, live production, NOT YET fixed — P1/Critical, pending
-   owner decision)** The in-product support ticket system returns HTTP 500
-   for real customers on both `GET /api/support/tickets/mine` and
-   `POST /api/support/ticket`, live in production, right now. High-confidence
-   root cause: `workers/schema_v51_support_ticket_org_scope.sql` (adds the
-   `organization_id` column both failing queries depend on) requires manual
-   `wrangler d1 execute --remote` application and appears to have never been
-   run against production, even though the application code that depends on
-   it shipped automatically via the normal CI/CD pipeline. See Phase 6.5 and
-   `CAP-PORTAL-004` for full evidence. Customers still have the documented
-   email fallback (`support@cyberdudebivash.in`), so this is not a total
-   support blackout, but the in-product channel this program built is
-   non-functional for every customer today.
+0. **(Found and fixed same-day, 2026-07-16)** The in-product support ticket
+   system returned HTTP 500 for real customers on both
+   `GET /api/support/tickets/mine` and `POST /api/support/ticket`. Root
+   cause: `workers/schema_v51_support_ticket_org_scope.sql` (adds the
+   `organization_id` column both queries depend on) requires manual
+   `wrangler d1 execute --remote` application and had never been run
+   against production, even though the application code that depends on
+   it shipped automatically via the normal CI/CD pipeline. Owner-approved
+   and applied via `db-migrate.yml`; both endpoints re-verified live and
+   confirmed working. See Phase 6.5 and `CAP-PORTAL-004` for full evidence.
 1. **(Fixed, merged, deployed — PR #267)** Every paying customer inactive 7+
    days had received zero retention/win-back offers since the churn-prevention
    code was written — a wrong column name, silently swallowed.
@@ -111,7 +104,7 @@ No code changes were needed for this phase.
 
 ## Findings, Ordered by Business Risk
 
-### 0. Support ticket system returns HTTP 500 in live production — NOT FIXED, added 2026-07-16, pending owner decision
+### 0. Support ticket system returns HTTP 500 in live production — FIXED (migration applied 2026-07-16)
 
 - **Severity**: P1/Critical (customer-facing, currently broken, no code fix
   needed — a production database migration decision)
@@ -141,10 +134,32 @@ No code changes were needed for this phase.
 - **Recommended remediation**: run `db-migrate.yml` against
   `schema_v51_support_ticket_org_scope.sql` on production, then re-verify
   both endpoints live.
-- **Why not auto-fixed**: this is a production database schema change —
-  hard to reverse, affects the shared production D1 instance — which
-  CLAUDE.md §1 and this session's own operating instructions both require
-  explicit owner approval for. Not performed as part of this audit.
+- **Why not auto-fixed initially**: this is a production database schema
+  change — hard to reverse, affects the shared production D1 instance —
+  which CLAUDE.md §1 and this session's own operating instructions both
+  require explicit owner approval for. Presented as a finding; not acted
+  on unilaterally.
+- **Resolution (2026-07-16)**: owner approved running the migration.
+  First two dispatch attempts (runs #6, #7) failed on incidental
+  leading/trailing whitespace in the manually-typed `schema_file` input —
+  unrelated to the migration itself — fixed via a `Normalize inputs` step
+  added to `db-migrate.yml` (PR #274) that trims both text inputs without
+  loosening the `APPLY` confirmation gate. Run #8 succeeded (pre-migration
+  backup captured, schema applied, post-migration check passed). Re-verified
+  immediately with a second fresh production account: `GET
+  /api/support/tickets/mine` → `200 {"data":[]}`; `POST /api/support/ticket`
+  → `200` with a real `ticket_id`; listing again → the ticket appears
+  (read-after-write confirmed). Test account deleted after verification.
+  `CAP-PORTAL-004` updated accordingly — `operational_status` restored to
+  `PILOT ONLY` (from the incident's `NOT READY`); `customer_journey_complete`
+  stays `false` since this was `dynamic_api` verification, not the
+  `dynamic_browser` pass the registry requires for that flag (unchanged
+  from before this incident — the browser pass was always the last mile
+  here, independent of the migration bug). Minor unrelated observation
+  surfaced during re-verification: the ticket-creation response's support
+  contact reads `support@cyberdudebivash.com` while every other verified
+  surface uses `.in` — likely a hardcoded-wrong-domain typo, not yet its
+  own finding, flagged in the registry for follow-up.
 
 ### 1. Churn-prevention query always found zero at-risk customers — FIXED (PR #267)
 
@@ -493,21 +508,18 @@ Full detail and the registry update: `CAP-PORTAL-004` in
 | Is customer onboarding production-ready? | **Mostly.** Login/signup/MFA discoverability: Verified working. The one purpose-built onboarding checklist is now reachable and live-verified (Finding 5, PR #272). Remaining gap: activation nurture for free-tier signups (Finding 6, needs a product decision). |
 | Is customer provisioning production-ready? | **Yes**, for the paid path (Verified — payment webhook → activation email → dashboard access all confirmed). Free-tier provisioning works but has no follow-up nurture. |
 | Is customer engagement production-ready? | **Mostly.** Renewal reminders: fixed and working. Churn/win-back: fixed, merged, and production-verified (PR #267). Trial-expiry reminders: fixed, merged, and production-verified (PR #271). One notification system is fully wired but permanently empty (Finding 4, needs a product decision). |
-| Is customer support production-ready? | **No — UPDATED 2026-07-16.** Code, UI, RBAC, and org scoping all shipped and pass 25 tests, but live production verification (Phase 6.5) found both `GET /api/support/tickets/mine` and `POST /api/support/ticket` return HTTP 500 for real customers, almost certainly because a required manual D1 migration was never applied. `operational_status` corrected from `PILOT ONLY` to `NOT READY` in `CAP-PORTAL-004`. Customers retain the documented email fallback. File attachments and an admin triage UI remain deliberately out of scope regardless. |
+| Is customer support production-ready? | **Yes, for the API/backend — UPDATED 2026-07-16.** Live production verification (Phase 6.5) first found both `GET /api/support/tickets/mine` and `POST /api/support/ticket` returning HTTP 500 for real customers (a required manual D1 migration had never been applied); owner approved running it same-day, and both endpoints are now re-verified live and working. `operational_status` in `CAP-PORTAL-004` is `PILOT ONLY` (not full GA) because the last-mile `dynamic_browser` click-through verification this registry's Production Truth Law requires still hasn't run — unrelated to the migration bug, unchanged from before this incident. File attachments and an admin triage UI remain deliberately out of scope. |
 | Is customer expansion production-ready? | **Partially.** Upgrade nudges work. Usage-limit alerts are computed but never shown to the customer (Finding 8). Win-back was dark, now fixed and deployed (PR #267). |
-| Is commercial launch readiness achieved? | **One live P1 defect (support tickets, Finding 0) blocks calling this a full GO** — customers cannot currently file or view in-product tickets, though email support still works. All 7 of this program's PRs (#266-#272) are merged and production-verified deployed. Remaining open items are 1 Medium finding requiring a product decision (Finding 4/5) plus lower-priority items below. |
+| Is commercial launch readiness achieved? | **Yes.** The one live defect found this pass (support tickets, Finding 0) was fixed same-day. All 7 of this program's PRs (#266-#272) are merged and production-verified deployed. Remaining open items are 1 Medium finding requiring a product decision (Finding 4) plus lower-priority items below — none blocking. |
 
 ---
 
 ## Remaining Work, Prioritized
 
-**Critical (added 2026-07-16)**:
-- Decide whether to run `db-migrate.yml` against
-  `schema_v51_support_ticket_org_scope.sql` on production (Finding 0) —
-  needs explicit owner approval per CLAUDE.md §1 before any action is
-  taken; not a narrow auto-fix since it is a production database schema
-  change. Once applied, re-verify both support-ticket endpoints live before
-  closing this item.
+**Critical**: none remaining — Finding 0 (support-ticket migration) was
+resolved same-day: owner approved, `db-migrate.yml` applied, both endpoints
+re-verified live. ~~Run `db-migrate.yml` against
+`schema_v51_support_ticket_org_scope.sql`~~ — done, run #8, 2026-07-16.
 
 **High**: none remaining — Findings 1-3 (churn-prevention, trial_expiry,
 CORS PATCH) and Finding 5 (onboarding checklist unreachable) are all fixed,
@@ -547,6 +559,8 @@ merged, and production-verified deployed (PRs #266, #267, #271, #272).
 | #270 | Phase 6 audit report (this document) | **Merged** |
 | #271 | Wire `trial_expiry` enrollment + fix wrong email content (Finding 2) | **Merged, deployed, production-verified** |
 | #272 | Surface onboarding checklist on the real dashboard (Finding 5) | **Merged, deployed, production-verified** |
+| #273 | Phase 6.5 live-production audit findings (this document + `CAP-PORTAL-004`) | **Merged** |
+| #274 | Trim whitespace from `db-migrate.yml` workflow_dispatch inputs | **Merged** |
 
 All PRs: full regression suite green at time of each PR (up to 307 files /
 3206+ tests), capability registry validated (0 hard failures), one
@@ -556,8 +570,9 @@ commit `570174ad99767daed7b86b8265fac446aee5a355` via `/api/health` and
 
 **2026-07-16 addendum**: a follow-up live-production audit (Phase 6.5,
 this update) found one new, previously undocumented defect — the support
-ticket system is non-functional in production (Finding 0) — most likely due
-to an unapplied manual D1 migration, not a code defect in any of the PRs
-above. This finding is recorded here and in `CAP-PORTAL-004`, and is
-awaiting an explicit owner decision on running the gated migration
-workflow; no code or database change has been made for it.
+ticket system was non-functional in production (Finding 0), due to an
+unapplied manual D1 migration, not a code defect in any of the PRs above.
+Presented to the platform owner, approved, and fixed same-day: migration
+applied via `db-migrate.yml` (run #8, after PR #274 fixed an unrelated
+input-whitespace issue in the workflow itself), both endpoints re-verified
+live and working. Recorded in `CAP-PORTAL-004`.
