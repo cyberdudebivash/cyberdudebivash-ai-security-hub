@@ -37,7 +37,7 @@ cryptography>=49.0.0
 bcrypt>=4.1.0
 
 # Kafka
-aiokafka>=0.11.0
+aiokafka>=0.14.0
 
 # Data
 orjson>=3.11.9
