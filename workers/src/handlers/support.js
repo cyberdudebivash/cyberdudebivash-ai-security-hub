@@ -1,5 +1,5 @@
 /**
- * SENTINEL APEX™ Support & Help Centre
+ * CYBERDUDEBIVASH AI Security Hub — Support & Help Centre
  * FAQ, platform status, and ticket routing for customer support.
  *
  * Routes:
@@ -60,7 +60,7 @@ const FAQ_DATA = [
     id: 'faq-002',
     category: 'Getting Started',
     question: 'How do I make my first API call?',
-    answer: 'Use your API key in the Authorization header: `Authorization: Bearer YOUR_API_KEY`. Example: `curl -H "Authorization: Bearer <key>" https://intel.cyberdudebivash.com/api/intel/v2/cve?limit=10`',
+    answer: 'Use your API key in the Authorization header: `Authorization: Bearer YOUR_API_KEY`. Example: `curl -H "Authorization: Bearer <key>" https://cyberdudebivash.in/api/intel/cve?limit=10`',
     tags: ['api', 'quickstart'],
   },
   {
@@ -176,7 +176,7 @@ async function handleFAQ(request, env) {
     faqs,
     support_email: 'support@cyberdudebivash.com',
     enterprise_email: 'enterprise@cyberdudebivash.com',
-    docs_url: 'https://intel.cyberdudebivash.com/api/',
+    docs_url: 'https://cyberdudebivash.in/api-docs.html',
   });
 }
 
@@ -203,11 +203,11 @@ async function handleStatus(request, env) {
   return Response.json({
     status: allOperational ? 'operational' : anyDegraded ? 'degraded' : 'outage',
     message: allOperational
-      ? 'All SENTINEL APEX™ systems operational.'
+      ? 'All CYBERDUDEBIVASH AI Security Hub systems operational.'
       : 'Some services are experiencing degraded performance. Our team is investigating.',
     components,
     last_updated: new Date().toISOString(),
-    incident_url: 'https://intel.cyberdudebivash.com/status',
+    incident_url: 'https://cyberdudebivash.in/api/status',
     support_email: 'support@cyberdudebivash.com',
   });
 }
@@ -424,7 +424,7 @@ async function handleSLA(request, env, authCtx) {
     tiers: SLA_TIERS,
     your_sla: tier ? (SLA_TIERS[tier] || SLA_TIERS.FREE) : null,
     your_tier: tier,
-    uptime_history_url: 'https://intel.cyberdudebivash.com/status',
+    uptime_history_url: 'https://cyberdudebivash.in/api/status',
     enterprise_custom_sla: 'Contact enterprise@cyberdudebivash.com for custom SLA agreements.',
   });
 }
@@ -433,16 +433,16 @@ async function handleSLA(request, env, authCtx) {
 async function handleDocs(request, env) {
   return Response.json({
     documentation: [
-      { title: 'API Reference',           url: 'https://intel.cyberdudebivash.com/api/',        description: 'Full API endpoint documentation with examples' },
-      { title: 'Authentication Guide',    url: 'https://intel.cyberdudebivash.com/api/#auth',   description: 'API key setup and JWT authentication' },
-      { title: 'STIX 2.1 Export Guide',  url: 'https://intel.cyberdudebivash.com/api/#stix',   description: 'Structured threat information export' },
-      { title: 'SIEM Integration Guide', url: 'https://intel.cyberdudebivash.com/api/#siem',   description: 'Webhook integration with Splunk, Sentinel, QRadar' },
-      { title: 'Rate Limits',            url: 'https://intel.cyberdudebivash.com/api/#limits', description: 'API quota and rate limiting documentation' },
-      { title: 'IOC Feed Format',        url: 'https://intel.cyberdudebivash.com/api/#ioc',    description: 'IOC data schema and feed format specification' },
-      { title: 'Enterprise SLA',         url: 'https://intel.cyberdudebivash.com/docs/sla',    description: 'Enterprise uptime and support SLA details' },
-      { title: 'Security Policy',        url: 'https://cyberdudebivash.in/security',          description: 'Platform security and data handling policy' },
+      { title: 'API Reference',           url: 'https://cyberdudebivash.in/api-docs.html',              description: 'Full API endpoint documentation with examples' },
+      { title: 'Authentication Guide',    url: 'https://cyberdudebivash.in/api-docs.html#auth',         description: 'API key setup and JWT authentication' },
+      { title: 'STIX 2.1 Export Guide',  url: 'https://cyberdudebivash.in/api-docs.html',               description: 'Structured threat information export' },
+      { title: 'SIEM Integration Guide', url: 'https://cyberdudebivash.in/api-docs.html',               description: 'Webhook integration with Splunk, Sentinel, QRadar' },
+      { title: 'Rate Limits',            url: 'https://cyberdudebivash.in/api-docs.html#rate-limits',   description: 'API quota and rate limiting documentation' },
+      { title: 'IOC Feed Format',        url: 'https://cyberdudebivash.in/api-docs.html',               description: 'IOC data schema and feed format specification' },
+      { title: 'Enterprise SLA',         url: 'https://cyberdudebivash.in/trust-center.html#vd-sla',    description: 'Enterprise uptime and support SLA details' },
+      { title: 'Security Policy',        url: 'https://cyberdudebivash.in/trust-center.html',          description: 'Platform security and data handling policy' },
     ],
-    platform_url: 'https://intel.cyberdudebivash.com',
+    platform_url: 'https://cyberdudebivash.in',
     support_email: 'support@cyberdudebivash.com',
   });
 }

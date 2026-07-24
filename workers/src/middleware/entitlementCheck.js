@@ -1,5 +1,5 @@
 /**
- * SENTINEL APEX™ Entitlement Enforcement Middleware
+ * CYBERDUDEBIVASH AI Security Hub — Entitlement Enforcement Middleware
  * Checks customer_entitlements table (schema v39) before granting feature access.
  * Used by intelAPIHandlers.js, STIX export, SIEM webhooks, and any premium feature gate.
  *
@@ -10,7 +10,14 @@
  *      PRO users: all 5 endpoints (1000 req/day)
  *      TEAM+ users: + STIX, SIEM, multi-seat (10,000 req/day)
  *      ENTERPRISE: unlimited
+ *
+ * Header previously said "SENTINEL APEX(TM)" -- that's a different product on
+ * a different domain (intel.cyberdudebivash.com); this file lives in and
+ * serves this platform (cyberdudebivash.in). Corrected 2026-07-24 alongside
+ * the upgrade_url/trial_url fix below, which had the same mislabeling.
  */
+
+import { UPGRADE_URL } from './auth.js';
 
 // ─── Feature Constants ────────────────────────────────────────────────────────
 export const FEATURES = {
@@ -191,10 +198,16 @@ export function buildUpgradePayload(feature, currentTier = 'FREE') {
     // exact figure the customer will be charged, not a parsed CTA string.
     price_usd: upg.price_usd,
     price_inr: upg.price_inr,
-    upgrade_url: 'https://intel.cyberdudebivash.com/pricing.html',
+    // Was hardcoded to intel.cyberdudebivash.com/pricing.html -- a different
+    // product's domain (SENTINEL APEX, not this platform). A customer hitting
+    // a feature gate here would have been sent to the wrong product's pricing
+    // page entirely. Fixed 2026-07-24 to reuse this platform's own existing
+    // canonical constant (auth.js UPGRADE_URL), already used correctly
+    // elsewhere in this codebase (monetization.js).
+    upgrade_url: UPGRADE_URL,
     cta: `Upgrade to ${upg.required_tier} — ${upg.price_usd} / ${upg.price_inr}`,
     trial_available: currentTier === 'FREE',
-    trial_url: 'https://intel.cyberdudebivash.com/pricing.html#trial',
+    trial_url: UPGRADE_URL,
   };
 }
 

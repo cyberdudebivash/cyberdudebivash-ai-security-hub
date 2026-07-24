@@ -844,7 +844,7 @@ async function phase11_revenueTriggers(env, threatLevel, intelItems) {
         threat_level: threatLevel,
         cve_count:    critical.length,
         top_cve:      critical[0]?.cve_id || critical[0]?.id,
-        upsell_url:   'https://intel.cyberdudebivash.com/upgrade.html?plan=pro&ref=god_mode',
+        upsell_url:   'https://cyberdudebivash.in/upgrade.html?plan=pro&ref=god_mode',
         report_price: '₹14,999',
         cta:          `${critical.length} critical CVEs require immediate action — order emergency threat intel report`,
         triggered_at: new Date().toISOString(),
@@ -860,7 +860,7 @@ async function phase11_revenueTriggers(env, threatLevel, intelItems) {
       upsell_hook:    `${intelItems.length} new vulnerabilities detected by MYTHOS — protect your infrastructure now`,
       cta_primary:    'Get Full Threat Report — ₹14,999',
       cta_secondary:  'Upgrade to PRO — ₹1,499/mo',
-      upgrade_url:    'https://intel.cyberdudebivash.com/upgrade.html?plan=pro&ref=mythos_god_mode',
+      upgrade_url:    'https://cyberdudebivash.in/upgrade.html?plan=pro&ref=mythos_god_mode',
       updated_at:     new Date().toISOString(),
     }), { expirationTtl: 1800 }).catch(() => {});
     triggersSet++;

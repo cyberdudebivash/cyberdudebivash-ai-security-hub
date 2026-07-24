@@ -82,7 +82,7 @@ async function checkIntelQuota(env, authCtx, endpoint) {
   // ── Step 0: Per-minute burst window (advertised alongside the daily quota) ──
   const burst = await checkIntelBurst(env, authCtx, limits);
   if (!burst.allowed) {
-    return { allowed: false, reason: burst.reason, retry_after: burst.retry_after, tier, upgrade: 'https://intel.cyberdudebivash.com/pricing.html' };
+    return { allowed: false, reason: burst.reason, retry_after: burst.retry_after, tier, upgrade: 'https://cyberdudebivash.in/upgrade.html' };
   }
 
   // ── Step 1: Check customer_entitlements table (v39 grants) ─────────────────
@@ -98,7 +98,7 @@ async function checkIntelQuota(env, authCtx, endpoint) {
         const kv  = env.KV || env.SECURITY_HUB_KV;
         try {
           const current = parseInt(await kv?.get(key) || '0', 10);
-          if (current >= limits.daily) return { allowed: false, reason: `Daily limit of ${limits.daily} requests reached`, upgrade: 'https://intel.cyberdudebivash.com/pricing.html', reset: 'tomorrow 00:00 UTC' };
+          if (current >= limits.daily) return { allowed: false, reason: `Daily limit of ${limits.daily} requests reached`, upgrade: 'https://cyberdudebivash.in/upgrade.html', reset: 'tomorrow 00:00 UTC' };
           await kv?.put(key, String(current + 1), { expirationTtl: 86400 });
           return { allowed: true, tier, used: current + 1, limit: limits.daily, remaining: limits.daily - current - 1, source: 'entitlement', stix: limits.stix };
         } catch { return { allowed: true, tier, remaining: 'unknown', source: 'entitlement', stix: limits.stix }; }
@@ -108,7 +108,7 @@ async function checkIntelQuota(env, authCtx, endpoint) {
 
   // ── Step 2: Legacy tier-based check (backward compatibility) ───────────────
   if (!limits.endpoints.includes(endpoint)) {
-    return { allowed: false, reason: `${endpoint.toUpperCase()} endpoint requires PRO or ENTERPRISE plan`, upgrade: 'https://intel.cyberdudebivash.com/pricing.html' };
+    return { allowed: false, reason: `${endpoint.toUpperCase()} endpoint requires PRO or ENTERPRISE plan`, upgrade: 'https://cyberdudebivash.in/upgrade.html' };
   }
 
   if (limits.daily === Infinity) return { allowed: true, tier, remaining: 'unlimited', source: 'tier', stix: limits.stix };
@@ -119,7 +119,7 @@ async function checkIntelQuota(env, authCtx, endpoint) {
   try {
     const current = parseInt(await kv?.get(key) || '0', 10);
     if (current >= limits.daily) {
-      return { allowed: false, reason: `Daily limit of ${limits.daily} requests reached on ${tier} plan`, upgrade: 'https://intel.cyberdudebivash.com/pricing.html', reset: 'tomorrow 00:00 UTC' };
+      return { allowed: false, reason: `Daily limit of ${limits.daily} requests reached on ${tier} plan`, upgrade: 'https://cyberdudebivash.in/upgrade.html', reset: 'tomorrow 00:00 UTC' };
     }
     await kv?.put(key, String(current + 1), { expirationTtl: 86400 });
     return { allowed: true, tier, used: current + 1, limit: limits.daily, remaining: limits.daily - current - 1, source: 'tier', stix: limits.stix };

@@ -368,7 +368,7 @@ export async function handleDocsPortal(request, env, authCtx) {
     service:      'CDB-DOCS-001',
     page:         'CYBERDUDEBIVASH API Documentation Portal',
     version:      'v31.0',
-    base_url:     'https://intel.cyberdudebivash.com/api',
+    base_url:     'https://cyberdudebivash.in/api',
     auth_methods: {
       bearer_token:  'Authorization: Bearer <access_token>  (obtained via /api/auth/login)',
       api_key:       'x-api-key: <api_key>  (obtained from dashboard)',

@@ -66,11 +66,21 @@ export const DRIP_SEQUENCES = {
 };
 
 // ── Email sender defaults ────────────────────────────────────────────────────
-const FROM_EMAIL   = 'Bivash @ Sentinel APEX <bivash@cyberdudebivash.in>';
+// FROM_EMAIL/X-Platform previously said "Sentinel APEX" -- copy-paste residue
+// from the sister threat-intel product; this engine (per the file header)
+// sends AI Security Hub's own drip/lifecycle emails, not Sentinel APEX's.
+// UPGRADE_URL previously pointed at BASE_URL/pricing, a confirmed-live 404
+// on this domain (see workers/src/middleware/auth.js UPGRADE_URL and the
+// entitlementCheck.js/support.js/intelAPIHandlers.js fixes, 2026-07-24) --
+// /upgrade.html is the real page, confirmed live in frontend/upgrade.html
+// and already used this way by developerOnboardingHandler.js and
+// enterpriseTransformHandler.js. Fixed here since every upgrade-nudge,
+// trial-expiry, and quota-warning email in this file links through it.
+const FROM_EMAIL   = 'Bivash @ CyberDudeBivash AI Security Hub <bivash@cyberdudebivash.in>';
 const REPLY_TO     = 'bivashnayak.ai007@gmail.com';
 const BASE_URL     = 'https://cyberdudebivash.in';
 const TOOLS_URL    = 'https://tools.cyberdudebivash.com';
-const UPGRADE_URL  = `${BASE_URL}/pricing`;
+const UPGRADE_URL  = `${BASE_URL}/upgrade.html`;
 const UNSUBSCRIBE_URL = `${BASE_URL}/unsubscribe`;
 
 // ── Shared HTML layout (Task 3 Phase 1) ─────────────────────────────────────
@@ -1211,7 +1221,7 @@ export async function sendEmail(env, { to, subject, html, text, replyTo = REPLY_
         html,
         text,
         reply_to: replyTo,
-        headers: { 'X-Platform': 'CYBERDUDEBIVASH-SentinelAPEX-8.1' },
+        headers: { 'X-Platform': 'CYBERDUDEBIVASH-AI-HUB' },
       };
       const resp = await fetch('https://api.resend.com/emails', {
         method:  'POST',
@@ -1237,7 +1247,7 @@ export async function sendEmail(env, { to, subject, html, text, replyTo = REPLY_
   try {
     const payload = {
       personalizations: [{ to: [{ email: to }] }],
-      from: { email: 'bivash@cyberdudebivash.in', name: 'Bivash @ Sentinel APEX' },
+      from: { email: 'bivash@cyberdudebivash.in', name: 'Bivash @ CyberDudeBivash AI Security Hub' },
       reply_to: { email: replyTo },
       subject,
       content: [

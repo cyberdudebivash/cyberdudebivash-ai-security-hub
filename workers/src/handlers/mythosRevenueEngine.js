@@ -54,7 +54,7 @@ const SUPPORTED_FRAMEWORKS = ['iso27001', 'soc2', 'gdpr', 'pcidss', 'dpdp', 'hip
 const PAYWALL_NOTICE = {
   status: 'LOCKED',
   _tier_notice: 'Upgrade to PRO or ENTERPRISE to unlock full findings, the autonomous remediation plan, and the AI executive brief.',
-  _upgrade_url: 'https://intel.cyberdudebivash.com/upgrade.html?plan=pro',
+  _upgrade_url: 'https://cyberdudebivash.in/upgrade.html?plan=pro',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
