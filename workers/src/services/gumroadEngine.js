@@ -10,9 +10,10 @@
  *   - Upsell nudges based on product purchase
  *
  * Gumroad Products:
- *   Product slug → feature unlock mapping
- *   "sentinel-apex-pro"      → PRO tier (30 days)
- *   "sentinel-apex-enterprise" → ENTERPRISE tier (30 days)
+ *   Product slug → feature unlock mapping (slugs are real Gumroad
+ *   permalinks, verified live 2026-07-24 -- see GUMROAD_PRODUCTS below)
+ *   "pxyfcb" (PRO monthly), "xtnzu" (PRO annual)             → PRO tier
+ *   "cdedlo" (ENTERPRISE monthly), "vxoczs" (ENTERPRISE annual) → ENTERPRISE tier
  *   "domain-report-bundle"   → 10 domain scans (credits)
  *   "redteam-report"         → 3 red team scans (credits)
  *   "compliance-toolkit"     → All compliance frameworks
@@ -23,22 +24,54 @@
  */
 
 // ─── Gumroad Product Catalog ──────────────────────────────────────────────────
+// 'sentinel-apex-pro'/'sentinel-apex-enterprise' were never real Gumroad
+// permalinks -- verified live against the Gumroad v2 API (2026-07-24), the
+// actual products are pxyfcb/xtnzu/cdedlo/vxoczs below. Since license
+// verification and the purchase webhook both key off Gumroad's own
+// product_permalink, the old keys meant every real purchase of these tiers
+// silently failed to fulfill (webhook hit the "unknown_product" branch, no
+// tier upgrade, no error surfaced anywhere). Split into the 4 real SKUs --
+// monthly/annual are separate Gumroad listings, not variants of one product.
+// price_usd is the real Gumroad charge; price_inr is reused as-is from the
+// INR figures this business already charges for these exact tiers via
+// Razorpay on intel.cyberdudebivash.com/upgrade.html, rather than invented
+// from a guessed FX rate.
 export const GUMROAD_PRODUCTS = {
-  'sentinel-apex-pro': {
-    name:       'Sentinel APEX PRO',
+  'pxyfcb': {
+    name:       'Sentinel APEX PRO (Monthly)',
     tier:       'PRO',
     credits:    null,
     duration_days: 30,
     features:   ['full_scans', 'pdf_export', 'api_access', 'email_alerts'],
-    price_inr:  1499,
+    price_usd:  49,
+    price_inr:  3999,
   },
-  'sentinel-apex-enterprise': {
-    name:       'Sentinel APEX ENTERPRISE',
+  'xtnzu': {
+    name:       'Sentinel APEX PRO (Annual)',
+    tier:       'PRO',
+    credits:    null,
+    duration_days: 365,
+    features:   ['full_scans', 'pdf_export', 'api_access', 'email_alerts'],
+    price_usd:  470,
+    price_inr:  38400,
+  },
+  'cdedlo': {
+    name:       'Sentinel APEX ENTERPRISE (Monthly)',
     tier:       'ENTERPRISE',
     credits:    null,
     duration_days: 30,
     features:   ['full_scans', 'soc_dashboard', 'ai_decisions', 'team_access', 'white_label'],
-    price_inr:  4999,
+    price_usd:  499,
+    price_inr:  39999,
+  },
+  'vxoczs': {
+    name:       'Sentinel APEX ENTERPRISE (Annual)',
+    tier:       'ENTERPRISE',
+    credits:    null,
+    duration_days: 365,
+    features:   ['full_scans', 'soc_dashboard', 'ai_decisions', 'team_access', 'white_label'],
+    price_usd:  4790,
+    price_inr:  384000,
   },
   'domain-report-bundle': {
     name:       'Domain Report Bundle (10 scans)',
