@@ -15,7 +15,9 @@ httpx==0.28.1
 
 # ── Task Queue ───────────────────────────────────────────────
 celery[redis]==5.4.0
-redis==8.0.1
+# See requirements.txt for why this stays at 5.1.0 rather than 8.0.1 --
+# celery[redis] 5.4.0 caps redis<6.0.0; no celery 5.x release lifts that cap.
+redis==5.1.0
 kombu==5.3.7
 
 # ── Database ─────────────────────────────────────────────────
