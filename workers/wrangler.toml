@@ -214,7 +214,13 @@ dead_letter_queue  = "scan-jobs-dlq"
 binding = "AI"
 
 # ── Cron Triggers ─────────────────────────────────────────────────────────────
-# v13.0 cron schedule — EXACTLY 5 entries (Cloudflare Free plan hard limit: 5)
+# v13.0 cron schedule — 5 entries. NOTE (2026-07-24): this comment previously
+# claimed a "Cloudflare Free plan hard limit: 5" — confirmed stale. Account
+# owner confirmed the account is on Workers Paid (Bundled/Unbound), not Free;
+# see docs/OPERATIONAL_RISK_REGISTER.md R-09 for the evidence trail. 5 is
+# retained because it matches the current pipeline design below, not because
+# of a plan-imposed cap — Workers Paid does not carry the Free tier's 5-cron
+# ceiling or its tighter subrequest/CPU limits.
 #
 # Engine execution per trigger (all v12 engines run on every scheduled event):
 #   runAnomalyBatch()  — unconditional on every cron invocation → hourly via slot 1
