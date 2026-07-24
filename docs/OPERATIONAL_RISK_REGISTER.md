@@ -5,7 +5,7 @@
 > disposition when a risk is closed or accepted; add new risks at the bottom.
 > Point-in-time context: `docs/audit-history/ENTERPRISE_OPERATIONS_READINESS_2026-07.md`.
 
-**Last reviewed:** 2026-07-04 (Phase IV remediation pass — see `docs/audit-history/PHASE4_REMEDIATION_REPORT_2026-07.md`)
+**Last reviewed:** 2026-07-24 (cross-product URL/brand contamination pass — XB-01 below; prior major pass was 2026-07-04, Phase IV remediation — see `docs/audit-history/PHASE4_REMEDIATION_REPORT_2026-07.md`)
 
 ## Phase IV remediation pass (2026-07-04) — dispositions changed
 
@@ -79,3 +79,11 @@
 | R-16 | KV and Queues are not backed up. | S3 | Counters/caches/in-flight jobs are rebuildable; restoring stale counters would be worse than losing them (see DR runbook §2.4). |
 | R-17 | Worker route `cyberdudebivash.in/api/*` is dashboard-managed, not in wrangler.toml. | S3 | CI token lacks Zone:Workers Routes:Edit by least-privilege choice; route re-creation is a documented manual step in DR runbook §3.6. |
 | R-18 | Scan-job dedup window (1 h KV TTL) means a repeated scan of the same target returns the earlier job. | S3 | Intentional cost/abuse control; documented in `lib/queue.js`. |
+
+---
+
+## Cross-product URL/brand contamination pass (2026-07-24) — new entries
+
+| ID | Risk | Sev | Evidence | Disposition |
+|----|------|-----|----------|-------------|
+| XB-01 | **Own paywall/support/email flows redirected customers to a different product's domain.** `entitlementCheck.js`, `intelAPIHandlers.js`, `mythosGodMode.js`, `mythosRevenueEngine.js`, `enterprisePortalHandlers.js`'s docs portal, and `support.js` (whole file self-labeled "SENTINEL APEX™") all hardcoded `intel.cyberdudebivash.com` (SENTINEL APEX — a separate sister product, separate repo/domain) into this platform's own upgrade CTAs, quota-limit messages, API docs `base_url`, and support FAQ/status/docs URLs — sending this platform's own customers to a different product's site instead of `cyberdudebivash.in`. Separately, `emailEngine.js`'s `UPGRADE_URL` pointed at `cyberdudebivash.in/pricing`, itself a confirmed-live 404, wired into 20 real lifecycle emails (trial-expiry "add a payment method" reminders, quota-warning upgrade nudges, win-back). `FROM_EMAIL`/MailChannels sender name/`X-Platform` header in the same file also said "Sentinel APEX". | S1 (revenue) | Grep sweep of `intel.cyberdudebivash.com` across `workers/src` (~35 occurrences total); cross-checked against 10+ files that correctly use `cyberdudebivash.in` / `X-Platform: CYBERDUDEBIVASH-AI-HUB` elsewhere in the same codebase; `frontend/upgrade.html` confirmed live and confirmed to read the `?plan=`/`?ref=` query params these URLs pass; `cyberdudebivash.in/pricing` previously confirmed 404 earlier this session (vs. `/upgrade.html`, confirmed live) | **CLOSED** (commit `d290805`): all 7 files corrected to `cyberdudebivash.in` — `support.js`'s docs links were retargeted to real live pages (`api-docs.html`, `trust-center.html`, `/api/status`), not just a domain swap. Verified via `npm run lint` (imports the full `src/index.js` router + every transitive handler, zero errors after `npm install`) and `node --check` per changed file. Deliberately left unchanged (confirmed intentional, not this bug class): `cors.js` `PROD_ORIGINS` and the security-center VDP `scope` array (both legitimately enumerate multiple real CYBERDUDEBIVASH domains together, same pattern as `PROD_ORIGINS` itself); `sentinelDefenseEngine.js` / `intelIngestionEngine.js` / `threatIngestion.js` (genuine upstream threat-feed data sources); `sentinelApexMarketplace.js` / `onboarding.js` (explicitly-commented, deliberate SENTINEL APEX resale/onboarding integration — its own USD pricing matches the sister product's real tiers, so pointing there is correct); `solutionTemplatesV2.js` (generated STIX bundles self-labeled "Sentinel APEX Autonomous Intelligence Engine" throughout — internally consistent, not contradictory). No live-traffic data available from this environment on how many real customers hit the broken links before this fix, or how long the drift had existed. |
