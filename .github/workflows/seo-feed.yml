@@ -1,0 +1,52 @@
+name: Refresh SEO Intel Feed
+
+# Regenerates frontend/seo-intel.json from this platform's own live public
+# CVE feed (scripts/seo/generate-seo-feed.mjs -> GET /api/feed.json) and
+# commits it if changed. frontend/ deploys to Cloudflare Pages verbatim
+# (wrangler pages deploy frontend, see deploy.yml) -- committing here is
+# sufficient, no separate build/bundle step exists for this directory.
+#
+# Cadence matches this repo's own existing CVE-alert automation
+# (.github/workflows/automation.yml: "CVE alerts: every 6 hours").
+
+on:
+  schedule:
+    - cron: "20 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "seo-feed"
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Generate SEO intel feed
+        run: node scripts/seo/generate-seo-feed.mjs
+
+      - name: Commit if changed
+        run: |
+          set -euo pipefail
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add frontend/seo-intel.json
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: refresh SEO intel feed (automated)"
+            git push
+          else
+            echo "No change in frontend/seo-intel.json — skipping commit"
+          fi

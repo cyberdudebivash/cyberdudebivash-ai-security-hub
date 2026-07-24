@@ -1,0 +1,847 @@
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "@id": "https://cyberdudebivash.in/seo-intel.json#feed",
+  "name": "CYBERDUDEBIVASH AI Security Hub — Live CVE Threat Feed",
+  "description": "Auto-generated NewsArticle structured-data feed of the latest CVE threat intelligence, sourced from this platform's own public feed.",
+  "numberOfItems": 25,
+  "dateModified": "2026-07-24T07:44:23.390Z",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2025-9205 - MapSVG Lite <= 8.14.0 - Authenticated (Contributor+) Stored Cross-Site Scripting",
+        "url": "https://cyberdudebivash.in/cve/CVE-2025-9205",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE-2025-9205 - MapSVG Lite <= 8.14.0 - Authenticated (Contributor+) Stored Cross-Site Scripting",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "LOW",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 6.1
+          }
+        },
+        "urgency": "Low"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-11354 - Participants Database <= 2.7.8.3 - Missing Authorization to Unauthenticated Arbitrary Record ",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-11354",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE-2026-11354 - Participants Database <= 2.7.8.3 - Missing Authorization to Unauthenticated Arbitrary Record Update / Sensitive Information",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "LOW",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 9.1
+          }
+        },
+        "urgency": "Low"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-11922 - Rate-limit Bypass in zenml-io/zenml",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-11922",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE-2026-11922 - Rate-limit Bypass in zenml-io/zenml",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "LOW",
+        "urgency": "Low"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 4,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-12736 - WPify Woo <= 5.4.16 - Authenticated (Shop Manager+) Privilege Escalation via Arbitrary Option",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-12736",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE-2026-12736 - WPify Woo <= 5.4.16 - Authenticated (Shop Manager+) Privilege Escalation via Arbitrary Option Update via save_option REST E",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "LOW",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 7.8
+          }
+        },
+        "urgency": "Low"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 5,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-13464 - Kirki <= 6.0.14 - Insecure Direct Object Reference to Unauthenticated Sensitive Information D",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-13464",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE-2026-13464 - Kirki <= 6.0.14 - Insecure Direct Object Reference to Unauthenticated Sensitive Information Disclosure via 'context' Parame",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "LOW",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 9.1
+          }
+        },
+        "urgency": "Low"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 6,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-15100 - Post Grid Gutenberg Blocks <= 5.0.32 - Authenticated (Contributor+) Stored Cross-Site Scripti",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-15100",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE-2026-15100 - Post Grid Gutenberg Blocks <= 5.0.32 - Authenticated (Contributor+) Stored Cross-Site Scripting via 'searchnoresult' Block ",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "LOW",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 6.1
+          }
+        },
+        "urgency": "Low"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 7,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-15420 - Nexter Blocks <= 5.0.0 - Authenticated (Subscriber+) Path Traversal to Arbitrary CSS/JS File ",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-15420",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE-2026-15420 - Nexter Blocks <= 5.0.0 - Authenticated (Subscriber+) Path Traversal to Arbitrary CSS/JS File Deletion via 'plus_name' Param",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "LOW",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 6.5
+          }
+        },
+        "urgency": "Low"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 8,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-6454 - Firelight Lightbox <= 2.3.20 - Authenticated (Contributor+) Stored DOM Cross-Site Scripting vi",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-6454",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE-2026-6454 - Firelight Lightbox <= 2.3.20 - Authenticated (Contributor+) Stored DOM Cross-Site Scripting via PDF beforeLoad 'href' Attrib",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "LOW",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 6.1
+          }
+        },
+        "urgency": "Low"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 9,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-54422 - OpenStack Ironic Python Agent Credential Disclosure Vulnerability",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-54422",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE-2026-54422 - OpenStack Ironic Python Agent Credential Disclosure Vulnerability",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "MEDIUM",
+        "urgency": "Moderate"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 10,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-66138 - OpenStack Ironic Python Agent Command Injection Vulnerability",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-66138",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE-2026-66138 - OpenStack Ironic Python Agent Command Injection Vulnerability",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "LOW",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 9
+          }
+        },
+        "urgency": "Low"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 11,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-66139 - OpenStack Zaqar Authentication Bypass",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-66139",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE-2026-66139 - OpenStack Zaqar Authentication Bypass",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "LOW",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 7.5
+          }
+        },
+        "urgency": "Low"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 12,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-66140 - Exim Directory Traversal Privilege Escalation",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-66140",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE-2026-66140 - Exim Directory Traversal Privilege Escalation",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "LOW",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 7.8
+          }
+        },
+        "urgency": "Low"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 13,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-66141 - Exim Pipe Transport Privilege Escalation",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-66141",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE-2026-66141 - Exim Pipe Transport Privilege Escalation",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "LOW",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 7.8
+          }
+        },
+        "urgency": "Low"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 14,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-56165 - Microsoft Account Remote Code Execution Vulnerability",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-56165",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE ID : CVE-2026-56165\n \n Published : July 24, 2026, 1:17 a.m. | 2hours, 3minutes ago\n \n Description : Heap-based buffer overflow in Micros",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "HIGH",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 9.8
+          }
+        },
+        "urgency": "High"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 15,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-62825 - Azure Key Vault Elevation of Privilege Vulnerability",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-62825",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE ID : CVE-2026-62825\n \n Published : July 24, 2026, 1:17 a.m. | 2hours, 3minutes ago\n \n Description : Improper authentication in Azure Key",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "HIGH",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 10
+          }
+        },
+        "urgency": "High"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 16,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-56191 - Microsoft Exchange Online Tampering Vulnerability",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-56191",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE ID : CVE-2026-56191\n \n Published : July 24, 2026, 1:17 a.m. | 2hours, 3minutes ago\n \n Description : Improper authentication in Microsoft",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "HIGH",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 10
+          }
+        },
+        "urgency": "High"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 17,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-50517 - Microsoft M365 Copilot Remote Code Execution Vulnerability",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-50517",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE ID : CVE-2026-50517\n \n Published : July 24, 2026, 1:17 a.m. | 2hours, 4minutes ago\n \n Description : Deserialization of untrusted data in",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "HIGH",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 9.9
+          }
+        },
+        "urgency": "High"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 18,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-54120 - Microsoft Surface Remote Code Execution Vulnerability",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-54120",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE ID : CVE-2026-54120\n \n Published : July 24, 2026, 1:17 a.m. | 2hours, 3minutes ago\n \n Description : Improper input validation in Microso",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "HIGH",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 9.9
+          }
+        },
+        "urgency": "High"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 19,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-56160 - Azure Red Hat OpenShift (ARO) Elevation of Privilege Vulnerability",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-56160",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE ID : CVE-2026-56160\n \n Published : July 24, 2026, 1:17 a.m. | 2hours, 3minutes ago\n \n Description : Improper authorization in Azure Red ",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "HIGH",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 9.1
+          }
+        },
+        "urgency": "High"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 20,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-58275 - Azure DNS Elevation of Privilege Vulnerability",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-58275",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE ID : CVE-2026-58275\n \n Published : July 24, 2026, 1:17 a.m. | 2hours, 3minutes ago\n \n Description : Missing authorization in Azure DNS a",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "HIGH",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 10
+          }
+        },
+        "urgency": "High"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 21,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-56167 - Azure AI Search Elevation of Privilege Vulnerability",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-56167",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE ID : CVE-2026-56167\n \n Published : July 24, 2026, 1:17 a.m. | 2hours, 3minutes ago\n \n Description : Server-side request forgery (ssrf) i",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "HIGH",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 8.5
+          }
+        },
+        "urgency": "High"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 22,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-35425 - Azure API Management (APIM) Remote Code Execution Vulnerability",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-35425",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE ID : CVE-2026-35425\n \n Published : July 24, 2026, 1:16 a.m. | 2hours, 4minutes ago\n \n Description : Improper access control in Azure API",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "HIGH",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 8
+          }
+        },
+        "urgency": "High"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 23,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "Low Security Vulnerability (CVE-2026-16631)",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-16631",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE-2026-16631",
+        "datePublished": "2026-07-23",
+        "dateModified": "2026-07-23",
+        "keywords": "LOW",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 5.3
+          }
+        },
+        "urgency": "Low"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 24,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "Low Security Vulnerability (CVE-2026-16632)",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-16632",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE-2026-16632",
+        "datePublished": "2026-07-23",
+        "dateModified": "2026-07-23",
+        "keywords": "LOW",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 7.3
+          }
+        },
+        "urgency": "Low"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 25,
+      "item": {
+        "@type": "NewsArticle",
+        "headline": "CVE-2026-16653 boazsegev facil.io Public Folder http.c http_sendfile2 path traversal",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-16653",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://cyberdudebivash.in/#organization",
+          "name": "CYBERDUDEBIVASH PRIVATE LIMITED",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://cyberdudebivash.in/og-image-v3.png"
+          }
+        },
+        "articleSection": "Threat Intelligence",
+        "isAccessibleForFree": true,
+        "description": "CVE-2026-16653 boazsegev facil.io Public Folder http.c http_sendfile2 path traversal",
+        "datePublished": "2026-07-23",
+        "dateModified": "2026-07-23",
+        "keywords": "LOW",
+        "about": {
+          "@type": "Thing",
+          "name": "CVSS score",
+          "additionalProperty": {
+            "@type": "PropertyValue",
+            "name": "cvss",
+            "value": 6.5
+          }
+        },
+        "urgency": "Low"
+      }
+    }
+  ],
+  "_generatedBy": "scripts/seo/generate-seo-feed.mjs",
+  "_sourceFeed": "https://cyberdudebivash.in/api/feed.json",
+  "_sourceGeneratedAt": "2026-07-24T07:44:23.408Z",
+  "_sourceItemCount": 25
+}
