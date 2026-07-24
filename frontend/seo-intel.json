@@ -5,7 +5,7 @@
   "name": "CYBERDUDEBIVASH AI Security Hub — Live CVE Threat Feed",
   "description": "Auto-generated NewsArticle structured-data feed of the latest CVE threat intelligence, sourced from this platform's own public feed.",
   "numberOfItems": 25,
-  "dateModified": "2026-07-24T07:44:23.390Z",
+  "dateModified": "2026-07-24T14:14:22.081Z",
   "itemListElement": [
     {
       "@type": "ListItem",
@@ -35,7 +35,7 @@
           "additionalProperty": {
             "@type": "PropertyValue",
             "name": "cvss",
-            "value": 6.1
+            "value": 6.4
           }
         },
         "urgency": "Low"
@@ -162,7 +162,7 @@
           "additionalProperty": {
             "@type": "PropertyValue",
             "name": "cvss",
-            "value": 9.1
+            "value": 5.3
           }
         },
         "urgency": "Low"
@@ -357,7 +357,7 @@
           "additionalProperty": {
             "@type": "PropertyValue",
             "name": "cvss",
-            "value": 7.5
+            "value": 4.8
           }
         },
         "urgency": "Low"
@@ -391,7 +391,7 @@
           "additionalProperty": {
             "@type": "PropertyValue",
             "name": "cvss",
-            "value": 7.8
+            "value": 8.4
           }
         },
         "urgency": "Low"
@@ -425,7 +425,7 @@
           "additionalProperty": {
             "@type": "PropertyValue",
             "name": "cvss",
-            "value": 7.8
+            "value": 7.4
           }
         },
         "urgency": "Low"
@@ -742,8 +742,8 @@
       "position": 23,
       "item": {
         "@type": "NewsArticle",
-        "headline": "Low Security Vulnerability (CVE-2026-16631)",
-        "url": "https://cyberdudebivash.in/cve/CVE-2026-16631",
+        "headline": "Medium Remote Code Execution (CVE-2026-16870)",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-16870",
         "publisher": {
           "@type": "Organization",
           "@id": "https://cyberdudebivash.in/#organization",
@@ -755,20 +755,20 @@
         },
         "articleSection": "Threat Intelligence",
         "isAccessibleForFree": true,
-        "description": "CVE-2026-16631",
-        "datePublished": "2026-07-23",
-        "dateModified": "2026-07-23",
-        "keywords": "LOW",
+        "description": "CVE-2026-16870",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
+        "keywords": "HIGH",
         "about": {
           "@type": "Thing",
           "name": "CVSS score",
           "additionalProperty": {
             "@type": "PropertyValue",
             "name": "cvss",
-            "value": 5.3
+            "value": 8.8
           }
         },
-        "urgency": "Low"
+        "urgency": "High"
       }
     },
     {
@@ -776,8 +776,8 @@
       "position": 24,
       "item": {
         "@type": "NewsArticle",
-        "headline": "Low Security Vulnerability (CVE-2026-16632)",
-        "url": "https://cyberdudebivash.in/cve/CVE-2026-16632",
+        "headline": "Low: Chromium: CVE-2026-16416 Integer overflow in Chromecast (CVE-2026-16416)",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-16416",
         "publisher": {
           "@type": "Organization",
           "@id": "https://cyberdudebivash.in/#organization",
@@ -789,19 +789,10 @@
         },
         "articleSection": "Threat Intelligence",
         "isAccessibleForFree": true,
-        "description": "CVE-2026-16632",
-        "datePublished": "2026-07-23",
-        "dateModified": "2026-07-23",
+        "description": "Chromium: CVE-2026-16416 Integer overflow in Chromecast",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
         "keywords": "LOW",
-        "about": {
-          "@type": "Thing",
-          "name": "CVSS score",
-          "additionalProperty": {
-            "@type": "PropertyValue",
-            "name": "cvss",
-            "value": 7.3
-          }
-        },
         "urgency": "Low"
       }
     },
@@ -810,8 +801,8 @@
       "position": 25,
       "item": {
         "@type": "NewsArticle",
-        "headline": "CVE-2026-16653 boazsegev facil.io Public Folder http.c http_sendfile2 path traversal",
-        "url": "https://cyberdudebivash.in/cve/CVE-2026-16653",
+        "headline": "Low Security Vulnerability (CVE-2026-15821)",
+        "url": "https://cyberdudebivash.in/cve/CVE-2026-15821",
         "publisher": {
           "@type": "Organization",
           "@id": "https://cyberdudebivash.in/#organization",
@@ -823,9 +814,9 @@
         },
         "articleSection": "Threat Intelligence",
         "isAccessibleForFree": true,
-        "description": "CVE-2026-16653 boazsegev facil.io Public Folder http.c http_sendfile2 path traversal",
-        "datePublished": "2026-07-23",
-        "dateModified": "2026-07-23",
+        "description": "CVE-2026-15821",
+        "datePublished": "2026-07-24",
+        "dateModified": "2026-07-24",
         "keywords": "LOW",
         "about": {
           "@type": "Thing",
@@ -833,7 +824,7 @@
           "additionalProperty": {
             "@type": "PropertyValue",
             "name": "cvss",
-            "value": 6.5
+            "value": 6.4
           }
         },
         "urgency": "Low"
@@ -842,6 +833,6 @@
   ],
   "_generatedBy": "scripts/seo/generate-seo-feed.mjs",
   "_sourceFeed": "https://cyberdudebivash.in/api/feed.json",
-  "_sourceGeneratedAt": "2026-07-24T07:44:23.408Z",
+  "_sourceGeneratedAt": "2026-07-24T14:14:22.030Z",
   "_sourceItemCount": 25
 }
