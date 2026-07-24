@@ -8,12 +8,25 @@
 import { UPGRADE_URL } from './auth.js';
 
 // ─── Module Pricing ───────────────────────────────────────────────────────────
+// Kept in sync with lib/razorpay.js's MODULE_PRICES (the "v32 repriced per
+// customer escalation audit / P0-1 remediation" values) -- this table had
+// drifted to the pre-repricing numbers (domain was still showing ₹199 here
+// against a real ₹999, etc.), so a customer could see one price in the free
+// preview and be charged a different one at Razorpay checkout. Found and
+// fixed 2026-07-24. USD figures are illustrative display text only, not a
+// real conversion rate or a currency Razorpay actually charges in here.
+//
+// NOT verified from this environment: what each rzp.io/l/cyberdudebivash-*
+// static Payment Link is actually configured to charge in the Razorpay
+// dashboard -- that's the true source of truth for the amount collected,
+// independent of this constant, and needs the account owner to confirm it
+// matches these prices directly in Razorpay's settings.
 export const MODULE_CONFIG = {
-  domain:     { price:'₹199',        usd:'$3',  name:'Domain Vulnerability Report',  free_findings:2 },
-  ai:         { price:'₹499',        usd:'$7',  name:'AI Security Assessment',       free_findings:2 },
-  redteam:    { price:'₹999',        usd:'$13', name:'Red Team Simulation Report',   free_findings:2 },
+  domain:     { price:'₹999',        usd:'$12', name:'Domain Vulnerability Report',  free_findings:2 },
+  ai:         { price:'₹2,499',      usd:'$30', name:'AI Security Assessment',       free_findings:2 },
+  redteam:    { price:'₹4,999',      usd:'$60', name:'Red Team Simulation Report',   free_findings:2 },
   identity:   { price:'₹799',        usd:'$10', name:'Identity Security Report',     free_findings:2 },
-  compliance: { price:'₹499–₹1,999', usd:'$7+', name:'Compliance Gap Report',        free_findings:1 },
+  compliance: { price:'₹499',        usd:'$7',  name:'Compliance Gap Report',        free_findings:1 },
 };
 
 // ─── Razorpay Payment Link Builder ───────────────────────────────────────────

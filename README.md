@@ -17,11 +17,18 @@ CYBERDUDEBIVASH AI Security Hub is a production-ready, serverless AI cybersecuri
 ### 5 Modules
 | Module | Endpoint | Free Price | Premium Price |
 |--------|----------|-----------|---------------|
-| Domain Vulnerability Scanner | `POST /api/scan/domain` | Free preview | ₹199/report |
-| AI Agent Security Scanner | `POST /api/scan/ai` | Free preview | ₹499/report |
-| Automated Red Team | `POST /api/scan/redteam` | Free preview | ₹999/report |
+| Domain Vulnerability Scanner | `POST /api/scan/domain` | Free preview | ₹999/report |
+| AI Agent Security Scanner | `POST /api/scan/ai` | Free preview | ₹2,499/report |
+| Automated Red Team | `POST /api/scan/redteam` | Free preview | ₹4,999/report |
 | Identity Security Monitor | `POST /api/scan/identity` | Free preview | ₹799/report |
-| Compliance Report Generator | `POST /api/generate/compliance` | Free preview | ₹499–₹1,999/report |
+| Compliance Report Generator | `POST /api/generate/compliance` | Free preview | ₹499/report |
+
+<!-- Prices above match workers/src/lib/razorpay.js MODULE_PRICES and
+     workers/src/middleware/monetization.js MODULE_CONFIG (both reconciled
+     2026-07-24, previously drifted from each other). NOT independently
+     verified against what's actually configured on the live
+     rzp.io/l/cyberdudebivash-* Razorpay Payment Links -- confirm those match
+     directly in the Razorpay dashboard. -->
 
 ---
 
@@ -185,14 +192,20 @@ result = adapter.generate_compliance("Acme Corp", "iso27001")
 
 | Platform | URL |
 |----------|-----|
-| 🌐 Main Website | https://cyberdudebivash.in |
-| 🛡️ Threat Intelligence | https://cyberdudebivash.in/threat-intel |
-| 📦 Production Apps | https://cyberdudebivash.in/apps |
-| 🛠️ Top 10 Tools | https://cyberdudebivash.in/tools |
-| 📊 Threat Dashboard | https://cyberdudebivash.in/dashboard |
-| 🔌 MCP Server | https://cyberdudebivash.in/mcp |
+| 🌐 Official corporate site | https://www.cyberdudebivash.com |
+| 🤖 This platform (AI Security Hub) | https://cyberdudebivash.in |
+| 🛡️ Threat Intelligence (SENTINEL APEX — separate platform) | https://intel.cyberdudebivash.com |
+| 📰 Research blog | https://blog.cyberdudebivash.in |
+| 🛠️ Tools store | https://tools.cyberdudebivash.com |
 | 🐙 GitHub | https://github.com/cyberdudebivash |
 | 🛒 Products (Gumroad) | https://cyberdudebivash.gumroad.com |
+
+<!-- Corrected 2026-07-24: this table previously listed
+     cyberdudebivash.in/threat-intel (real, live 404), /apps, /dashboard,
+     and /mcp as ecosystem paths -- /threat-intel was verified 404, /apps
+     /dashboard /mcp were unverified so removed rather than left as
+     unconfirmed claims. Threat intelligence is a real, separate product
+     (SENTINEL APEX) on its own domain, not a sub-path of this platform. -->
 
 ---
 
