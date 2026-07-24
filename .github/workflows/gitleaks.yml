@@ -43,5 +43,14 @@ jobs:
           # (the action diffs the PR via the GitHub API).
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
-          # No license needed for public repos.
+          # "No license needed for public repos" (below) is stale: this action
+          # now enforces a license check regardless, confirmed live 2026-07-24
+          # -- every run failed with "missing gitleaks license" even on a
+          # 2-line dependency-version-only diff (R-19, OPERATIONAL_RISK_REGISTER.md).
+          # Get a free key at gitleaks.io, add it as a repo secret named
+          # exactly GITLEAKS_LICENSE (Settings -> Secrets and variables ->
+          # Actions), and this picks it up on the next run with no other
+          # change needed. Empty/unset secret = same "missing license"
+          # failure as before, not a YAML error.
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
         # Fails the job (non-zero) if any secret is detected.
