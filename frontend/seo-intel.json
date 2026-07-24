@@ -5,7 +5,7 @@
   "name": "CYBERDUDEBIVASH AI Security Hub — Live CVE Threat Feed",
   "description": "Auto-generated NewsArticle structured-data feed of the latest CVE threat intelligence, sourced from this platform's own public feed.",
   "numberOfItems": 25,
-  "dateModified": "2026-07-24T14:14:22.081Z",
+  "dateModified": "2026-07-24T19:48:06.765Z",
   "itemListElement": [
     {
       "@type": "ListItem",
@@ -833,6 +833,6 @@
   ],
   "_generatedBy": "scripts/seo/generate-seo-feed.mjs",
   "_sourceFeed": "https://cyberdudebivash.in/api/feed.json",
-  "_sourceGeneratedAt": "2026-07-24T14:14:22.030Z",
+  "_sourceGeneratedAt": "2026-07-24T19:48:06.711Z",
   "_sourceItemCount": 25
 }
